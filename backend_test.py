@@ -618,8 +618,7 @@ class WarrantyPortalTester:
             self.log("❌ No access token received for demo admin")
             return False
         
-        # Store original token and use demo token for subsequent tests
-        original_token = self.token
+        # Set the demo token as the main token for subsequent tests
         self.token = demo_token
         
         # Test auth/me endpoint with demo credentials
@@ -628,9 +627,8 @@ class WarrantyPortalTester:
             if response.get('email') != 'admin@demo.com':
                 self.log("❌ Demo admin email mismatch")
                 success = False
-        
-        # Restore original token
-        self.token = original_token
+            else:
+                self.test_data['admin_id'] = response.get('id')
         
         return success
 
