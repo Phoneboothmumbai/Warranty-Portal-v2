@@ -971,6 +971,275 @@ class WarrantyPortalTester:
         
         return success
 
+    def test_license_crud_apis(self):
+        """Test License CRUD APIs for Phase 2B"""
+        self.log("\n=== Testing License CRUD APIs (Phase 2B) ===")
+        
+        if not self.test_data['company_id']:
+            self.log("❌ No company ID available for license tests")
+            return False
+        
+        # Test 1: Create a subscription license
+        subscription_license_data = {
+            "company_id": self.test_data['company_id'],
+            "software_name": "Microsoft Office 365",
+            "vendor": "Microsoft",
+            "license_type": "subscription",
+            "license_key": "XXXXX-XXXXX-XXXXX-XXXXX",
+            "seats": 10,
+            "start_date": "2026-01-01",
+            "end_date": "2027-01-01",
+            "purchase_cost": 15000,
+            "renewal_cost": 12000,
+            "auto_renew": True,
+            "renewal_reminder_days": 30
+        }
+        
+        success, response = self.run_test("Create Subscription License", "POST", "admin/licenses", 200, subscription_license_data)
+        if not success:
+            return False
+        
+        subscription_license_id = response.get('id')
+        self.test_data['subscription_license_id'] = subscription_license_id
+        
+        # Verify response includes label field for SmartSelect
+        if 'label' not in response:
+            self.log("❌ License response missing 'label' field for SmartSelect")
+            return False
+        
+        # Verify response includes calculated status
+        if 'status' not in response:
+            self.log("❌ License response missing calculated 'status' field")
+            return False
+        
+        # Test 2: Create a perpetual license
+        perpetual_license_data = {
+            "company_id": self.test_data['company_id'],
+            "software_name": "Adobe Photoshop CS6",
+            "vendor": "Adobe",
+            "license_type": "perpetual",
+            "license_key": "YYYYY-YYYYY-YYYYY-YYYYY",
+            "seats": 5,
+            "start_date": "2025-01-01",
+            "end_date": None,  # Perpetual license
+            "purchase_cost": 25000,
+            "auto_renew": False
+        }
+        
+        success, response = self.run_test("Create Perpetual License", "POST", "admin/licenses", 200, perpetual_license_data)
+        if not success:
+            return False
+        
+        perpetual_license_id = response.get('id')
+        self.test_data['perpetual_license_id'] = perpetual_license_id
+        
+        # Test 3: List all licenses
+        success, response = self.run_test("List All Licenses", "GET", "admin/licenses", 200)
+        if not success:
+            return False
+        
+        # Verify licenses include required fields
+        if len(response) > 0:
+            license_item = response[0]
+            required_fields = ['id', 'software_name', 'vendor', 'license_type', 'status', 'label', 'company_name']
+            for field in required_fields:
+                if field not in license_item:
+                    self.log(f"❌ License list item missing field '{field}'")
+                    return False
+        
+        # Test 4: List licenses with filters
+        success, _ = self.run_test("List Active Licenses", "GET", "admin/licenses?status=active", 200)
+        if not success:
+            return False
+        
+        success, _ = self.run_test("List Subscription Licenses", "GET", "admin/licenses?license_type=subscription", 200)
+        if not success:
+            return False
+        
+        # Test 5: Get specific license details
+        success, response = self.run_test("Get License Details", "GET", f"admin/licenses/{subscription_license_id}", 200)
+        if not success:
+            return False
+        
+        # Verify detailed response structure
+        required_fields = ['id', 'software_name', 'vendor', 'license_type', 'seats', 'status', 'company_name']
+        for field in required_fields:
+            if field not in response:
+                self.log(f"❌ License details missing field '{field}'")
+                return False
+        
+        # Test 6: Update license
+        update_data = {
+            "seats": 15,
+            "renewal_cost": 13000,
+            "notes": "Updated license for testing"
+        }
+        
+        success, response = self.run_test("Update License", "PUT", f"admin/licenses/{subscription_license_id}", 200, update_data)
+        if not success:
+            return False
+        
+        # Test 7: Get expiring licenses summary
+        success, response = self.run_test("Get Expiring Licenses Summary", "GET", "admin/licenses/expiring/summary", 200)
+        if not success:
+            return False
+        
+        # Verify summary structure
+        required_fields = ['total', 'perpetual', 'active', 'expiring_7_days', 'expiring_30_days', 'expired']
+        for field in required_fields:
+            if field not in response:
+                self.log(f"❌ Expiring licenses summary missing field '{field}'")
+                return False
+        
+        self.log("✅ All License CRUD APIs working correctly")
+        return True
+
+    def test_amc_device_assignment_apis(self):
+        """Test AMC Device Assignment APIs for Phase 2B"""
+        self.log("\n=== Testing AMC Device Assignment APIs (Phase 2B) ===")
+        
+        if not self.test_data.get('amc_contract_id') or not self.test_data.get('device_id'):
+            self.log("❌ No AMC contract ID or device ID available for assignment tests")
+            return False
+        
+        contract_id = self.test_data['amc_contract_id']
+        device_id = self.test_data['device_id']
+        
+        # Test 1: Get assigned devices (should be empty initially)
+        success, response = self.run_test("Get AMC Assigned Devices", "GET", f"admin/amc-contracts/{contract_id}/devices", 200)
+        if not success:
+            return False
+        
+        # Verify response structure
+        required_fields = ['contract', 'assignments', 'total_devices']
+        for field in required_fields:
+            if field not in response:
+                self.log(f"❌ AMC assigned devices response missing field '{field}'")
+                return False
+        
+        # Test 2: Assign single device to AMC contract
+        assignment_data = {
+            "amc_contract_id": contract_id,
+            "device_id": device_id,
+            "coverage_start": "2026-01-01",
+            "coverage_end": "2027-01-01"
+        }
+        
+        success, response = self.run_test("Assign Device to AMC", "POST", f"admin/amc-contracts/{contract_id}/assign-device", 200, assignment_data)
+        if not success:
+            return False
+        
+        # Verify assignment response
+        required_fields = ['id', 'amc_contract_id', 'device_id', 'coverage_start', 'coverage_end']
+        for field in required_fields:
+            if field not in response:
+                self.log(f"❌ Device assignment response missing field '{field}'")
+                return False
+        
+        # Test 3: Get assigned devices again (should have 1 device now)
+        success, response = self.run_test("Get AMC Assigned Devices After Assignment", "GET", f"admin/amc-contracts/{contract_id}/devices", 200)
+        if not success:
+            return False
+        
+        if response.get('total_devices') != 1:
+            self.log(f"❌ Expected 1 assigned device, got {response.get('total_devices')}")
+            return False
+        
+        # Verify assignment includes device details
+        assignments = response.get('assignments', [])
+        if len(assignments) > 0:
+            assignment = assignments[0]
+            device_fields = ['device_brand', 'device_model', 'device_serial', 'device_type']
+            for field in device_fields:
+                if field not in assignment:
+                    self.log(f"❌ Assignment missing device field '{field}'")
+                    return False
+        
+        # Test 4: Preview bulk assignment
+        # Create additional test device for bulk assignment
+        device_data = {
+            "company_id": self.test_data['company_id'],
+            "device_type": "Desktop",
+            "brand": "HP",
+            "model": "EliteDesk 800",
+            "serial_number": f"HP{datetime.now().strftime('%Y%m%d%H%M%S')}BULK",
+            "asset_tag": f"BULK{datetime.now().strftime('%H%M%S')}",
+            "purchase_date": "2024-01-15",
+            "warranty_end_date": "2027-01-15",
+            "status": "active"
+        }
+        
+        success, device_response = self.run_test("Create Device for Bulk Assignment", "POST", "admin/devices", 200, device_data)
+        if not success:
+            return False
+        
+        bulk_device_id = device_response.get('id')
+        bulk_serial = device_data['serial_number']
+        
+        # Preview bulk assignment
+        bulk_preview_data = {
+            "amc_contract_id": contract_id,
+            "device_identifiers": [bulk_serial, "NONEXISTENT123"],
+            "coverage_start": "2026-01-01",
+            "coverage_end": "2027-01-01"
+        }
+        
+        success, response = self.run_test("Preview Bulk AMC Assignment", "POST", f"admin/amc-contracts/{contract_id}/bulk-assign/preview", 200, bulk_preview_data)
+        if not success:
+            return False
+        
+        # Verify preview response structure
+        required_fields = ['will_be_assigned', 'already_assigned', 'not_found', 'wrong_company', 'summary']
+        for field in required_fields:
+            if field not in response:
+                self.log(f"❌ Bulk assignment preview missing field '{field}'")
+                return False
+        
+        # Verify summary structure
+        summary = response.get('summary', {})
+        summary_fields = ['total_input', 'will_assign', 'already_assigned', 'not_found', 'wrong_company']
+        for field in summary_fields:
+            if field not in summary:
+                self.log(f"❌ Bulk assignment summary missing field '{field}'")
+                return False
+        
+        # Should have 1 device to assign and 1 not found
+        if summary.get('will_assign') != 1:
+            self.log(f"❌ Expected 1 device to assign, got {summary.get('will_assign')}")
+            return False
+        
+        if summary.get('not_found') != 1:
+            self.log(f"❌ Expected 1 device not found, got {summary.get('not_found')}")
+            return False
+        
+        # Test 5: Confirm bulk assignment
+        success, response = self.run_test("Confirm Bulk AMC Assignment", "POST", f"admin/amc-contracts/{contract_id}/bulk-assign/confirm", 200, bulk_preview_data)
+        if not success:
+            return False
+        
+        # Verify bulk assignment response
+        required_fields = ['assigned_count', 'assignments', 'skipped']
+        for field in required_fields:
+            if field not in response:
+                self.log(f"❌ Bulk assignment confirmation missing field '{field}'")
+                return False
+        
+        if response.get('assigned_count') != 1:
+            self.log(f"❌ Expected 1 device assigned, got {response.get('assigned_count')}")
+            return False
+        
+        # Test 6: Verify total assigned devices is now 2
+        success, response = self.run_test("Get AMC Assigned Devices Final Check", "GET", f"admin/amc-contracts/{contract_id}/devices", 200)
+        if not success:
+            return False
+        
+        if response.get('total_devices') != 2:
+            self.log(f"❌ Expected 2 total assigned devices, got {response.get('total_devices')}")
+            return False
+        
+        self.log("✅ All AMC Device Assignment APIs working correctly")
+        return True
+
     def run_all_tests(self):
         """Run all tests in sequence"""
         self.log("🚀 Starting Warranty Portal API Tests")
