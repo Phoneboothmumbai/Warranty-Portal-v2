@@ -222,6 +222,7 @@ const ServiceHistory = () => {
 
   const openCreateModal = (deviceId = '') => {
     setEditingService(null);
+    setDeviceAmcCoverage(null);
     setFormData({
       device_id: deviceId || filterDevice || '',
       service_date: new Date().toISOString().split('T')[0],
@@ -231,8 +232,14 @@ const ServiceHistory = () => {
       warranty_impact: 'not_applicable',
       technician_name: '',
       ticket_id: '',
-      notes: ''
+      notes: '',
+      amc_contract_id: '',
+      billing_type: 'covered',
+      chargeable_reason: ''
     });
+    if (deviceId || filterDevice) {
+      checkAmcCoverage(deviceId || filterDevice);
+    }
     setModalOpen(true);
   };
 
@@ -247,8 +254,12 @@ const ServiceHistory = () => {
       warranty_impact: service.warranty_impact || 'not_applicable',
       technician_name: service.technician_name || '',
       ticket_id: service.ticket_id || '',
-      notes: service.notes || ''
+      notes: service.notes || '',
+      amc_contract_id: service.amc_contract_id || '',
+      billing_type: service.billing_type || 'covered',
+      chargeable_reason: service.chargeable_reason || ''
     });
+    checkAmcCoverage(service.device_id);
     setModalOpen(true);
   };
 
