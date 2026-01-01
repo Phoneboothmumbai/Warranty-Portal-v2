@@ -1216,11 +1216,35 @@ async def delete_company(company_id: str, admin: dict = Depends(get_current_admi
 # ==================== ADMIN ENDPOINTS - USERS ====================
 
 @api_router.get("/admin/users")
-async def list_users(company_id: Optional[str] = None, admin: dict = Depends(get_current_admin)):
+async def list_users(
+    company_id: Optional[str] = None,
+    q: Optional[str] = None,
+    limit: int = Query(default=100, le=500),
+    page: int = Query(default=1, ge=1),
+    admin: dict = Depends(get_current_admin)
+):
+    """List users with optional search support"""
     query = {"is_deleted": {"$ne": True}}
     if company_id:
         query["company_id"] = company_id
-    users = await db.users.find(query, {"_id": 0}).to_list(1000)
+    
+    # Add search filter
+    if q and q.strip():
+        search_regex = {"$regex": q.strip(), "$options": "i"}
+        query["$or"] = [
+            {"name": search_regex},
+            {"email": search_regex},
+            {"phone": search_regex},
+            {"department": search_regex}
+        ]
+    
+    skip = (page - 1) * limit
+    users = await db.users.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+    
+    # Add label field for SmartSelect compatibility
+    for u in users:
+        u["label"] = u["name"]
+    
     return users
 
 @api_router.post("/admin/users")
@@ -1232,7 +1256,33 @@ async def create_user(user_data: UserCreate, admin: dict = Depends(get_current_a
     user = User(**user_data.model_dump())
     await db.users.insert_one(user.model_dump())
     await log_audit("user", user.id, "create", {"data": user_data.model_dump()}, admin)
-    return user.model_dump()
+    result = user.model_dump()
+    result["label"] = result["name"]
+    return result
+
+@api_router.post("/admin/users/quick-create")
+async def quick_create_user(user_data: UserCreate, admin: dict = Depends(get_current_admin)):
+    """Quick create user (for inline creation from dropdowns)"""
+    company = await db.companies.find_one({"id": user_data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    # Check if user with same email exists in same company
+    existing = await db.users.find_one(
+        {"email": user_data.email, "company_id": user_data.company_id, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    )
+    if existing:
+        existing["label"] = existing["name"]
+        return existing
+    
+    user = User(**user_data.model_dump())
+    await db.users.insert_one(user.model_dump())
+    await log_audit("user", user.id, "quick_create", {"data": user_data.model_dump()}, admin)
+    
+    result = user.model_dump()
+    result["label"] = result["name"]
+    return result
 
 @api_router.get("/admin/users/{user_id}")
 async def get_user(user_id: str, admin: dict = Depends(get_current_admin)):
