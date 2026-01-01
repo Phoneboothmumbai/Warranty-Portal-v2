@@ -1,0 +1,149 @@
+{
+  "identity": {
+    "name": "E1_WARRANTY_PORTAL",
+    "archetype": "The Digital Vault",
+    "core_philosophy": "Trust through Precision. The interface should feel as reliable as a Swiss bank vault and as simple as a paper receipt.",
+    "vibe": "Clinical, Official, Immutable, Calm.",
+    "anti_patterns": [
+      "Generic 'SaaS Blue' gradients",
+      "Floating 3D illustrations of people",
+      "Dark mode (Strictly Forbidden)",
+      "Low contrast grey text",
+      "Symmetry overload"
+    ]
+  },
+  "typography": {
+    "primary_font": "Manrope",
+    "secondary_font": "JetBrains Mono",
+    "usage": {
+      "headings": "Manrope, font-semibold, tracking-tight. Use for page titles and major section headers.",
+      "body": "Manrope, font-normal, leading-relaxed. Use for general text.",
+      "data_display": "JetBrains Mono, font-medium. CRITICAL: Use for Serial Numbers, Asset Tags, and Dates. This reinforces the 'technical' nature of the data.",
+      "hero_input": "Manrope, font-light, text-4xl or text-5xl. The input should feel massive."
+    },
+    "scale": {
+      "h1": "text-4xl md:text-6xl tracking-tighter",
+      "h2": "text-3xl md:text-4xl tracking-tight",
+      "h3": "text-xl md:text-2xl font-medium",
+      "body": "text-base text-slate-600",
+      "caption": "text-xs uppercase tracking-widest text-slate-400"
+    }
+  },
+  "colors": {
+    "mode": "light-only",
+    "palette": {
+      "background": {
+        "default": "#FFFFFF",
+        "subtle": "#F8FAFC",
+        "paper": "#F1F5F9"
+      },
+      "foreground": {
+        "primary": "#0F172A",
+        "secondary": "#64748B",
+        "muted": "#94A3B8"
+      },
+      "accent": {
+        "name": "Trust Blue",
+        "default": "#0F62FE",
+        "hover": "#0043CE",
+        "subtle": "#E8F0FE",
+        "description": "A deep, intense blue. Use sparingly for primary actions (Buttons, Active States). NEVER use as a background for large areas."
+      },
+      "status": {
+        "active": {
+          "bg": "#ECFDF5",
+          "text": "#047857",
+          "border": "#A7F3D0"
+        },
+        "expired": {
+          "bg": "#F1F5F9",
+          "text": "#64748B",
+          "border": "#CBD5E1"
+        },
+        "warning": {
+          "bg": "#FFFBEB",
+          "text": "#B45309",
+          "border": "#FDE68A"
+        }
+      },
+      "border": {
+        "default": "#E2E8F0",
+        "strong": "#CBD5E1"
+      }
+    }
+  },
+  "layout_strategies": {
+    "public_search": {
+      "name": "The Monolith",
+      "structure": "Centered, single-column layout. The search bar is the hero. No distractions.",
+      "components": [
+        "Massive Input Field (h-20, text-3xl)",
+        "Floating 'Verify' Button",
+        "Minimal Footer"
+      ]
+    },
+    "warranty_result": {
+      "name": "The Receipt",
+      "structure": "A4-proportioned card centered on screen. Looks like a physical document.",
+      "details": "Use a 'torn paper' or 'shadow-lg' effect to separate it from the background. High contrast data pairs (Label: Value)."
+    },
+    "admin_dashboard": {
+      "name": "The Control Grid",
+      "structure": "Dense, information-rich. Use 'gap-px' with a background color to create grid lines between white cells.",
+      "sidebar": "Slim, icon-heavy, collapsible.",
+      "tables": "Zebra striping is BANNED. Use hover-row highlighting and 1px borders."
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-accent text-white rounded-md px-8 py-3 font-medium hover:bg-accent-hover transition-all shadow-sm hover:shadow-md active:scale-95",
+      "secondary": "bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all",
+      "ghost": "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+    },
+    "cards": {
+      "style": "bg-white border border-slate-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] rounded-xl p-6",
+      "hover": "hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300"
+    },
+    "inputs": {
+      "style": "bg-white border border-slate-200 rounded-lg px-4 py-3 text-slate-900 focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all placeholder:text-slate-400"
+    },
+    "status_badge": {
+      "style": "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border"
+    }
+  },
+  "visual_enhancers": {
+    "textures": "Use a subtle 'noise' texture on the page background (opacity 0.02) to prevent the white from feeling sterile.",
+    "shadows": "Use 'diffuse' shadows. Large blur radius, low opacity. e.g., shadow-[0_20px_50px_rgba(0,0,0,0.05)].",
+    "micro_interactions": "Buttons should have a subtle 'click' scale effect. Inputs should glow gently on focus."
+  },
+  "images": {
+    "landing_hero": {
+      "url": "https://images.unsplash.com/photo-1702390753019-e43a19d9371f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHw0fHxtaW5pbWFsaXN0JTIwd2hpdGUlMjBvZmZpY2UlMjBkZXNrJTIwdGVjaG5vbG9neSUyMGRldmljZXN8ZW58MHx8fHwxNzY3MjU3MjIyfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Minimalist workspace with technology",
+      "usage": "Use as a subtle background image with a heavy white overlay (90% opacity) or as a side image in a split layout."
+    },
+    "security_icon": {
+      "url": "https://images.unsplash.com/photo-1541415534056-fad380cd68a5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGdlb21ldHJpYyUyMHNlY3VyaXR5JTIwc2hpZWxkJTIwbWluaW1hbGlzdCUyMHdoaXRlJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3NjcyNTcyMjR8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Abstract geometric security",
+      "usage": "Use for the 'Secure/Verified' success state or login page background."
+    },
+    "placeholders": {
+      "device": "https://images.unsplash.com/photo-1537655949728-d4e1c7c7bf90?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHwyfHxtaW5pbWFsaXN0JTIwd2hpdGUlMjBvZmZpY2UlMjBkZXNrJTIwdGVjaG5vbG9neSUyMGRldmljZXN8ZW58MHx8fHwxNzY3MjU3MjIyfDA&ixlib=rb-4.1.0&q=85"
+    }
+  },
+  "instructions_to_main_agent": [
+    "1. FORCE LIGHT MODE: In `tailwind.config.js`, ensure `darkMode` is set to 'class' but NEVER toggle the class to 'dark'. Hardcode the background to white/slate-50.",
+    "2. FONT SETUP: Import 'Manrope' and 'JetBrains Mono' from Google Fonts in `index.css`.",
+    "3. SHADCN CUSTOMIZATION: Override the default 'radius' to '0.5rem' (8px) or '0.75rem' (12px) for a softer look. Set the 'primary' color to Slate-900, not black.",
+    "4. PDF EXPORT: Use `react-to-print` or `jspdf` for the warranty report. Style the print view to look exactly like the 'Receipt' card.",
+    "5. PUBLIC SEARCH: This is the most important page. Do not make it boring. Use the 'Monolith' layout. The input field should be the star of the show.",
+    "6. ADMIN BRANDING: Create a Context or Hook to allow dynamic injection of the 'Accent' color. Use CSS variables (`--accent`) for this so it can be changed at runtime."
+  ],
+  "universal_guidelines": [
+    "Do not use gradients for text.",
+    "Do not use 'Inter' font.",
+    "Always add `data-testid` to interactive elements.",
+    "Use `sonner` for toasts.",
+    "Use `lucide-react` for icons."
+  ]
+}
