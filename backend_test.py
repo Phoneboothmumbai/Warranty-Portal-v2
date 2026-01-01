@@ -755,6 +755,191 @@ class WarrantyPortalTester:
         
         return success
 
+    def test_sites_crud(self):
+        """Test Sites CRUD operations"""
+        self.log("\n=== Testing Sites CRUD ===")
+        
+        if not self.test_data['company_id']:
+            self.log("❌ No company ID available for sites tests")
+            return False
+        
+        # Create site
+        site_data = {
+            "company_id": self.test_data['company_id'],
+            "name": "Wadhwa 1620 – Mulund",
+            "site_type": "site_project",
+            "address": "Plot 1620, Mulund West",
+            "city": "Mumbai",
+            "primary_contact_name": "Site Manager",
+            "contact_number": "+91 9876543210",
+            "contact_email": "sitemanager@wadhwa.com",
+            "notes": "Test site for deployment testing"
+        }
+        
+        success, response = self.run_test("Create Site", "POST", "admin/sites", 200, site_data)
+        if not success:
+            return False
+        
+        self.test_data['site_id'] = response.get('id')
+        
+        # List all sites
+        success, _ = self.run_test("List All Sites", "GET", "admin/sites", 200)
+        if not success:
+            return False
+        
+        # Get specific site
+        success, response = self.run_test("Get Site Details", "GET", f"admin/sites/{self.test_data['site_id']}", 200)
+        if not success:
+            return False
+        
+        # Verify site response structure
+        required_fields = ['id', 'company_id', 'name', 'site_type', 'address', 'city']
+        for field in required_fields:
+            if field not in response:
+                self.log(f"❌ Missing field '{field}' in site response")
+                return False
+        
+        # Update site
+        update_data = {
+            "notes": "Updated site notes for testing",
+            "contact_email": "updated@wadhwa.com"
+        }
+        
+        success, _ = self.run_test("Update Site", "PUT", f"admin/sites/{self.test_data['site_id']}", 200, update_data)
+        
+        return success
+
+    def test_deployments_crud(self):
+        """Test Deployments CRUD operations"""
+        self.log("\n=== Testing Deployments CRUD ===")
+        
+        if not self.test_data['company_id'] or not self.test_data['site_id']:
+            self.log("❌ No company ID or site ID available for deployments tests")
+            return False
+        
+        # Create deployment with items
+        deployment_data = {
+            "company_id": self.test_data['company_id'],
+            "site_id": self.test_data['site_id'],
+            "name": "Phase 1 CCTV Installation",
+            "deployment_date": "2025-01-01",
+            "installed_by": "Internal Team",
+            "notes": "Test deployment for CCTV system",
+            "items": [
+                {
+                    "item_type": "device",
+                    "category": "CCTV Camera",
+                    "brand": "Hikvision",
+                    "model": "DS-2CD2H43G2-IZS",
+                    "quantity": 4,
+                    "is_serialized": True,
+                    "serial_numbers": ["CAM001", "CAM002", "CAM003", "CAM004"],
+                    "zone_location": "Floor 1 - Lobby",
+                    "warranty_type": "manufacturer",
+                    "warranty_start_date": "2025-01-01",
+                    "warranty_end_date": "2027-12-31"
+                },
+                {
+                    "item_type": "infrastructure",
+                    "category": "NVR",
+                    "brand": "Hikvision",
+                    "model": "DS-7608NI",
+                    "quantity": 1,
+                    "is_serialized": True,
+                    "serial_numbers": ["NVR001"],
+                    "zone_location": "Server Room",
+                    "warranty_type": "manufacturer",
+                    "warranty_start_date": "2025-01-01",
+                    "warranty_end_date": "2027-12-31"
+                }
+            ]
+        }
+        
+        success, response = self.run_test("Create Deployment", "POST", "admin/deployments", 200, deployment_data)
+        if not success:
+            return False
+        
+        self.test_data['deployment_id'] = response.get('id')
+        
+        # Verify deployment response structure
+        required_fields = ['id', 'company_id', 'site_id', 'name', 'deployment_date', 'items']
+        for field in required_fields:
+            if field not in response:
+                self.log(f"❌ Missing field '{field}' in deployment response")
+                return False
+        
+        # Verify items structure
+        items = response.get('items', [])
+        if len(items) != 2:
+            self.log(f"❌ Expected 2 deployment items, got {len(items)}")
+            return False
+        
+        # List all deployments
+        success, _ = self.run_test("List All Deployments", "GET", "admin/deployments", 200)
+        if not success:
+            return False
+        
+        # Get specific deployment with full item details
+        success, response = self.run_test("Get Deployment Details", "GET", f"admin/deployments/{self.test_data['deployment_id']}", 200)
+        if not success:
+            return False
+        
+        # Verify full deployment details
+        if 'items' not in response or len(response['items']) == 0:
+            self.log("❌ Deployment details should include items")
+            return False
+        
+        # Update deployment
+        update_data = {
+            "notes": "Updated deployment notes - installation completed successfully",
+            "installed_by": "External Vendor"
+        }
+        
+        success, _ = self.run_test("Update Deployment", "PUT", f"admin/deployments/{self.test_data['deployment_id']}", 200, update_data)
+        
+        return success
+
+    def test_device_auto_creation_from_deployment(self):
+        """Test that devices are auto-created from deployment items"""
+        self.log("\n=== Testing Device Auto-Creation from Deployment ===")
+        
+        if not self.test_data['deployment_id']:
+            self.log("❌ No deployment ID available for device auto-creation test")
+            return False
+        
+        # Get all devices and check for auto-created ones
+        success, response = self.run_test("List All Devices (Check Auto-Creation)", "GET", "admin/devices", 200)
+        if not success:
+            return False
+        
+        # Look for devices with our deployment_id and site_id
+        auto_created_devices = []
+        expected_serials = ["CAM001", "CAM002", "CAM003", "CAM004", "NVR001"]
+        
+        for device in response:
+            if device.get('serial_number') in expected_serials:
+                auto_created_devices.append(device)
+        
+        if len(auto_created_devices) != 5:
+            self.log(f"❌ Expected 5 auto-created devices, found {len(auto_created_devices)}")
+            return False
+        
+        # Verify auto-created devices have correct properties
+        for device in auto_created_devices:
+            required_fields = ['id', 'company_id', 'serial_number', 'device_type', 'brand', 'model']
+            for field in required_fields:
+                if field not in device:
+                    self.log(f"❌ Auto-created device missing field '{field}'")
+                    return False
+            
+            # Check if device has site_id and deployment_id populated (if supported)
+            if 'site_id' in device and device['site_id'] != self.test_data['site_id']:
+                self.log(f"⚠️  Auto-created device site_id mismatch: expected {self.test_data['site_id']}, got {device.get('site_id')}")
+        
+        self.log(f"✅ Successfully verified {len(auto_created_devices)} auto-created devices")
+        
+        return success
+
     def test_dashboard_alerts_with_amc_contracts(self):
         """Test Dashboard Alerts API with AMC contracts alerts"""
         self.log("\n=== Testing Dashboard Alerts with AMC Contracts ===")
