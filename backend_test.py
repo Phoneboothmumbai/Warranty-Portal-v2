@@ -18,6 +18,7 @@ class WarrantyPortalTester:
             'device_id': None,
             'part_id': None,
             'amc_id': None,
+            'amc_contract_id': None,
             'service_id': None,
             'master_id': None,
             'serial_number': None
