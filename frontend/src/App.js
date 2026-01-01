@@ -18,6 +18,7 @@ import Devices from "./pages/admin/Devices";
 import Parts from "./pages/admin/Parts";
 import AMCManagement from "./pages/admin/AMCManagement";
 import Settings from "./pages/admin/Settings";
+import MasterData from "./pages/admin/MasterData";
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
                 <Route path="devices" element={<Devices />} />
                 <Route path="parts" element={<Parts />} />
                 <Route path="amc" element={<AMCManagement />} />
+                <Route path="master-data" element={<MasterData />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
             </Routes>
