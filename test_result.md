@@ -296,7 +296,7 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 3
+  test_sequence: 4
   run_ui: true
 
 test_plan:
@@ -312,3 +312,5 @@ agent_communication:
     message: "✅ Backend testing completed successfully! All admin APIs working correctly: JWT Auth (95.6% success rate), Master Data CRUD, Service History CRUD, Dashboard Alerts, Device Timeline. Demo admin login functional. 43/45 tests passed. Only minor setup issues (admin already exists) - core functionality is solid. Ready for frontend testing."
   - agent: "testing"
     message: "✅ FRONTEND TESTING COMPLETED SUCCESSFULLY! All admin UI features working perfectly. Login flow ✅, Dashboard with stats and alerts ✅, Master Data Management with all 6 tabs ✅, Service History with timeline view ✅, Devices page with master data integration ✅. All navigation working, no critical console errors. The admin portal is fully functional and ready for production use."
+  - agent: "testing"
+    message: "✅ AMC CONTRACTS V2 MODULE TESTING COMPLETED! All new backend APIs working perfectly: AMC Contracts CRUD (100% success), AMC Coverage Check, Companies Without AMC, Enhanced Dashboard Alerts. Tested with demo admin credentials (admin@demo.com/admin123). All 7 AMC v2 endpoints functional with proper data structure, business logic, and computed fields. Ready for production use."
