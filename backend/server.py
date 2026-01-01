@@ -2274,6 +2274,238 @@ async def add_deployment_item(deployment_id: str, item_data: dict, admin: dict =
     
     return item.model_dump()
 
+# ==================== UNIVERSAL SEARCH ====================
+
+@api_router.get("/search")
+async def universal_search(
+    q: str = Query(..., min_length=1, description="Search query"),
+    limit: int = Query(5, ge=1, le=10, description="Results per category"),
+    admin: dict = Depends(get_current_admin)
+):
+    """
+    Universal search across all entities.
+    Returns grouped results from companies, sites, users, assets, deployments, AMCs, and services.
+    """
+    if not q or len(q.strip()) < 1:
+        return {
+            "companies": [],
+            "sites": [],
+            "users": [],
+            "assets": [],
+            "deployments": [],
+            "amcs": [],
+            "services": []
+        }
+    
+    query = q.strip()
+    # Create case-insensitive regex pattern for partial matching
+    regex_pattern = {"$regex": query, "$options": "i"}
+    
+    results = {
+        "companies": [],
+        "sites": [],
+        "users": [],
+        "assets": [],
+        "deployments": [],
+        "amcs": [],
+        "services": [],
+        "query": query,
+        "total_count": 0
+    }
+    
+    # Search Companies
+    companies = await db.companies.find({
+        "is_deleted": {"$ne": True},
+        "$or": [
+            {"name": regex_pattern},
+            {"contact_email": regex_pattern},
+            {"gst_number": regex_pattern},
+            {"address": regex_pattern}
+        ]
+    }, {"_id": 0}).limit(limit).to_list(limit)
+    
+    for c in companies:
+        results["companies"].append({
+            "id": c["id"],
+            "type": "company",
+            "title": c.get("name"),
+            "subtitle": c.get("contact_email") or c.get("address", ""),
+            "link": f"/admin/companies",
+            "icon": "building"
+        })
+    
+    # Search Sites
+    sites = await db.sites.find({
+        "is_deleted": {"$ne": True},
+        "$or": [
+            {"name": regex_pattern},
+            {"address": regex_pattern},
+            {"city": regex_pattern},
+            {"primary_contact_name": regex_pattern},
+            {"contact_number": regex_pattern}
+        ]
+    }, {"_id": 0}).limit(limit).to_list(limit)
+    
+    for s in sites:
+        company = await db.companies.find_one({"id": s.get("company_id")}, {"_id": 0, "name": 1})
+        results["sites"].append({
+            "id": s["id"],
+            "type": "site",
+            "title": s.get("name"),
+            "subtitle": f"{s.get('city', '')} • {company.get('name', '') if company else ''}",
+            "link": f"/admin/sites",
+            "icon": "map-pin"
+        })
+    
+    # Search Users
+    users = await db.users.find({
+        "is_deleted": {"$ne": True},
+        "$or": [
+            {"name": regex_pattern},
+            {"email": regex_pattern},
+            {"phone": regex_pattern},
+            {"designation": regex_pattern}
+        ]
+    }, {"_id": 0}).limit(limit).to_list(limit)
+    
+    for u in users:
+        results["users"].append({
+            "id": u["id"],
+            "type": "user",
+            "title": u.get("name"),
+            "subtitle": u.get("email") or u.get("phone", ""),
+            "link": f"/admin/users",
+            "icon": "user"
+        })
+    
+    # Search Assets/Devices
+    devices = await db.devices.find({
+        "is_deleted": {"$ne": True},
+        "$or": [
+            {"serial_number": regex_pattern},
+            {"asset_tag": regex_pattern},
+            {"brand": regex_pattern},
+            {"model": regex_pattern},
+            {"device_type": regex_pattern},
+            {"location": regex_pattern}
+        ]
+    }, {"_id": 0}).limit(limit).to_list(limit)
+    
+    for d in devices:
+        company = await db.companies.find_one({"id": d.get("company_id")}, {"_id": 0, "name": 1})
+        results["assets"].append({
+            "id": d["id"],
+            "type": "asset",
+            "title": f"{d.get('brand', '')} {d.get('model', '')}".strip() or d.get("serial_number"),
+            "subtitle": f"S/N: {d.get('serial_number', '')} • {company.get('name', '') if company else ''}",
+            "link": f"/admin/devices",
+            "icon": "laptop",
+            "serial_number": d.get("serial_number"),
+            "asset_tag": d.get("asset_tag")
+        })
+    
+    # Search Deployments
+    deployments = await db.deployments.find({
+        "is_deleted": {"$ne": True},
+        "$or": [
+            {"name": regex_pattern},
+            {"installed_by": regex_pattern},
+            {"notes": regex_pattern}
+        ]
+    }, {"_id": 0}).limit(limit).to_list(limit)
+    
+    # Also search deployment items for serial numbers and categories
+    deployment_items_search = await db.deployments.find({
+        "is_deleted": {"$ne": True},
+        "items": {
+            "$elemMatch": {
+                "$or": [
+                    {"serial_numbers": regex_pattern},
+                    {"category": regex_pattern},
+                    {"brand": regex_pattern},
+                    {"model": regex_pattern}
+                ]
+            }
+        }
+    }, {"_id": 0}).limit(limit).to_list(limit)
+    
+    # Combine and dedupe
+    all_deployments = {d["id"]: d for d in deployments}
+    for d in deployment_items_search:
+        if d["id"] not in all_deployments:
+            all_deployments[d["id"]] = d
+    
+    for d in list(all_deployments.values())[:limit]:
+        site = await db.sites.find_one({"id": d.get("site_id")}, {"_id": 0, "name": 1})
+        results["deployments"].append({
+            "id": d["id"],
+            "type": "deployment",
+            "title": d.get("name"),
+            "subtitle": f"{site.get('name', '') if site else ''} • {len(d.get('items', []))} items",
+            "link": f"/admin/deployments",
+            "icon": "package"
+        })
+    
+    # Search AMC Contracts
+    amcs = await db.amc_contracts.find({
+        "is_deleted": {"$ne": True},
+        "$or": [
+            {"name": regex_pattern},
+            {"amc_type": regex_pattern},
+            {"internal_notes": regex_pattern}
+        ]
+    }, {"_id": 0}).limit(limit).to_list(limit)
+    
+    for a in amcs:
+        company = await db.companies.find_one({"id": a.get("company_id")}, {"_id": 0, "name": 1})
+        status = get_amc_status(a.get("start_date", ""), a.get("end_date", ""))
+        results["amcs"].append({
+            "id": a["id"],
+            "type": "amc",
+            "title": a.get("name"),
+            "subtitle": f"{company.get('name', '') if company else ''} • {status.capitalize()}",
+            "link": f"/admin/amc-contracts",
+            "icon": "file-text",
+            "status": status
+        })
+    
+    # Search Service History
+    services = await db.service_history.find({
+        "is_deleted": {"$ne": True},
+        "$or": [
+            {"ticket_id": regex_pattern},
+            {"action_taken": regex_pattern},
+            {"problem_reported": regex_pattern},
+            {"technician_name": regex_pattern},
+            {"notes": regex_pattern}
+        ]
+    }, {"_id": 0}).limit(limit).to_list(limit)
+    
+    for s in services:
+        device = await db.devices.find_one({"id": s.get("device_id")}, {"_id": 0, "brand": 1, "model": 1, "serial_number": 1})
+        results["services"].append({
+            "id": s["id"],
+            "type": "service",
+            "title": s.get("action_taken", "")[:50] + ("..." if len(s.get("action_taken", "")) > 50 else ""),
+            "subtitle": f"{device.get('brand', '')} {device.get('model', '')} • {s.get('service_type', '')}".strip() if device else s.get("service_type", ""),
+            "link": f"/admin/service-history",
+            "icon": "wrench",
+            "ticket_id": s.get("ticket_id")
+        })
+    
+    # Calculate total count
+    results["total_count"] = (
+        len(results["companies"]) +
+        len(results["sites"]) +
+        len(results["users"]) +
+        len(results["assets"]) +
+        len(results["deployments"]) +
+        len(results["amcs"]) +
+        len(results["services"])
+    )
+    
+    return results
+
 # ==================== ADMIN ENDPOINTS - SETTINGS ====================
 
 @api_router.get("/admin/settings")
