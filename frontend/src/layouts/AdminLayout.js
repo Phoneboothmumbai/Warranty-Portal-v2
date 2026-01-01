@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { Button } from '../components/ui/button';
+import UniversalSearch from '../components/UniversalSearch';
 
 const navItems = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
