@@ -335,6 +335,82 @@ class AMC(BaseModel):
     is_deleted: bool = False
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
+# ==================== AMC V2 (Enhanced) ====================
+
+class AMCCoverageIncludes(BaseModel):
+    onsite_support: bool = False
+    remote_support: bool = False
+    preventive_maintenance: bool = False
+
+class AMCExclusions(BaseModel):
+    hardware_parts: bool = True
+    consumables: bool = True
+    accessories: bool = True
+    third_party_software: bool = True
+    physical_liquid_damage: bool = True
+
+class AMCEntitlements(BaseModel):
+    onsite_visits_per_year: Optional[int] = None  # None = Unlimited
+    remote_support_type: str = "unlimited"  # unlimited, count_based
+    remote_support_count: Optional[int] = None
+    preventive_maintenance_frequency: str = "quarterly"  # quarterly, half_yearly, yearly
+
+class AMCAssetMapping(BaseModel):
+    mapping_type: str = "all_company"  # all_company, selected_assets, device_types
+    selected_asset_ids: List[str] = []
+    selected_device_types: List[str] = []
+
+class AMCContract(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    company_id: str
+    name: str  # e.g., "CoreCare AMC 2025-26"
+    amc_type: str = "comprehensive"  # comprehensive, non_comprehensive, support_only
+    start_date: str
+    end_date: str
+    coverage_includes: dict = Field(default_factory=lambda: AMCCoverageIncludes().model_dump())
+    exclusions: dict = Field(default_factory=lambda: AMCExclusions().model_dump())
+    entitlements: dict = Field(default_factory=lambda: AMCEntitlements().model_dump())
+    asset_mapping: dict = Field(default_factory=lambda: AMCAssetMapping().model_dump())
+    internal_notes: Optional[str] = None
+    is_deleted: bool = False
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class AMCContractCreate(BaseModel):
+    company_id: str
+    name: str
+    amc_type: str = "comprehensive"
+    start_date: str
+    end_date: str
+    coverage_includes: Optional[dict] = None
+    exclusions: Optional[dict] = None
+    entitlements: Optional[dict] = None
+    asset_mapping: Optional[dict] = None
+    internal_notes: Optional[str] = None
+
+class AMCContractUpdate(BaseModel):
+    name: Optional[str] = None
+    amc_type: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    coverage_includes: Optional[dict] = None
+    exclusions: Optional[dict] = None
+    entitlements: Optional[dict] = None
+    asset_mapping: Optional[dict] = None
+    internal_notes: Optional[str] = None
+
+# AMC Visit/Service Usage Tracking
+class AMCUsageRecord(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    amc_contract_id: str
+    service_id: Optional[str] = None
+    usage_type: str  # onsite_visit, remote_support, preventive_maintenance
+    usage_date: str
+    notes: Optional[str] = None
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
 class AMCCreate(BaseModel):
     device_id: str
     start_date: str
