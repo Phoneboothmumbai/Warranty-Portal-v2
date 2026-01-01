@@ -1118,8 +1118,32 @@ async def quick_create_master(item: MasterItemCreate, admin: dict = Depends(get_
 # ==================== ADMIN ENDPOINTS - COMPANIES ====================
 
 @api_router.get("/admin/companies")
-async def list_companies(admin: dict = Depends(get_current_admin)):
-    companies = await db.companies.find({"is_deleted": {"$ne": True}}, {"_id": 0}).to_list(1000)
+async def list_companies(
+    q: Optional[str] = None,
+    limit: int = Query(default=100, le=500),
+    page: int = Query(default=1, ge=1),
+    admin: dict = Depends(get_current_admin)
+):
+    """List companies with optional search support"""
+    query = {"is_deleted": {"$ne": True}}
+    
+    # Add search filter
+    if q and q.strip():
+        search_regex = {"$regex": q.strip(), "$options": "i"}
+        query["$or"] = [
+            {"name": search_regex},
+            {"contact_name": search_regex},
+            {"contact_email": search_regex},
+            {"gst_number": search_regex}
+        ]
+    
+    skip = (page - 1) * limit
+    companies = await db.companies.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+    
+    # Add label field for SmartSelect compatibility
+    for c in companies:
+        c["label"] = c["name"]
+    
     return companies
 
 @api_router.post("/admin/companies")
