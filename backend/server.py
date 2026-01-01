@@ -262,7 +262,7 @@ class ServiceHistory(BaseModel):
     device_id: str
     company_id: str
     service_date: str
-    service_type: str  # repair, part_replacement, inspection, amc_visit, other
+    service_type: str  # repair, part_replacement, inspection, amc_visit, preventive_maintenance, other
     problem_reported: Optional[str] = None
     action_taken: str
     parts_involved: Optional[List[dict]] = None  # [{part_name, old_part, new_part, warranty_started}]
@@ -271,6 +271,11 @@ class ServiceHistory(BaseModel):
     ticket_id: Optional[str] = None
     notes: Optional[str] = None
     attachments: List[ServiceAttachment] = []
+    # AMC Integration fields
+    amc_contract_id: Optional[str] = None
+    amc_covered: bool = False  # Is this service covered under AMC?
+    billing_type: str = "covered"  # covered, chargeable
+    chargeable_reason: Optional[str] = None  # Why is it chargeable? (e.g., "Hardware parts excluded")
     created_by: str
     created_by_name: str
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
@@ -286,6 +291,10 @@ class ServiceHistoryCreate(BaseModel):
     technician_name: Optional[str] = None
     ticket_id: Optional[str] = None
     notes: Optional[str] = None
+    # AMC fields
+    amc_contract_id: Optional[str] = None
+    billing_type: str = "covered"
+    chargeable_reason: Optional[str] = None
 
 class ServiceHistoryUpdate(BaseModel):
     service_date: Optional[str] = None
@@ -297,6 +306,10 @@ class ServiceHistoryUpdate(BaseModel):
     technician_name: Optional[str] = None
     ticket_id: Optional[str] = None
     notes: Optional[str] = None
+    # AMC fields
+    amc_contract_id: Optional[str] = None
+    billing_type: Optional[str] = None
+    chargeable_reason: Optional[str] = None
 
 # ==================== PARTS & AMC (existing) ====================
 
