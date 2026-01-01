@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Plus, Search, Edit2, Trash2, Laptop, MoreVertical, Building2, User, Calendar, Eye, History, FileText } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -6,6 +6,9 @@ import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { SmartSelect } from '../../components/ui/smart-select';
+import { DateDurationInput } from '../../components/ui/date-duration-input';
+import { QuickCreateCompany, QuickCreateUser, QuickCreateMaster } from '../../components/forms';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
