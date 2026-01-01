@@ -267,8 +267,19 @@ class ServiceHistory(BaseModel):
     service_type: str  # repair, part_replacement, inspection, amc_visit, preventive_maintenance, other
     problem_reported: Optional[str] = None
     action_taken: str
-    parts_involved: Optional[List[dict]] = None  # [{part_name, old_part, new_part, warranty_started}]
+    # Enhanced Parts Tracking
+    parts_used: Optional[List[dict]] = None  # List of ServicePartUsed dicts
+    parts_involved: Optional[List[dict]] = None  # Legacy: [{part_name, old_part, new_part, warranty_started}]
+    labor_cost: Optional[float] = None
+    parts_cost: Optional[float] = None
+    total_cost: Optional[float] = None
+    # Warranty Impact
     warranty_impact: str = "not_applicable"  # started, extended, not_applicable
+    extends_device_warranty: bool = False
+    new_warranty_end_date: Optional[str] = None
+    # AMC Impact
+    consumes_amc_quota: bool = False
+    amc_quota_type: Optional[str] = None  # onsite_visit, remote_support, preventive_maintenance
     technician_name: Optional[str] = None
     ticket_id: Optional[str] = None
     notes: Optional[str] = None
@@ -290,8 +301,18 @@ class ServiceHistoryCreate(BaseModel):
     service_type: str
     problem_reported: Optional[str] = None
     action_taken: str
-    parts_involved: Optional[List[dict]] = None
+    # Enhanced Parts
+    parts_used: Optional[List[dict]] = None
+    parts_involved: Optional[List[dict]] = None  # Legacy support
+    labor_cost: Optional[float] = None
+    parts_cost: Optional[float] = None
+    # Warranty Impact
     warranty_impact: str = "not_applicable"
+    extends_device_warranty: bool = False
+    new_warranty_end_date: Optional[str] = None
+    # AMC Impact
+    consumes_amc_quota: bool = False
+    amc_quota_type: Optional[str] = None
     technician_name: Optional[str] = None
     ticket_id: Optional[str] = None
     notes: Optional[str] = None
@@ -305,8 +326,18 @@ class ServiceHistoryUpdate(BaseModel):
     service_type: Optional[str] = None
     problem_reported: Optional[str] = None
     action_taken: Optional[str] = None
+    # Enhanced Parts
+    parts_used: Optional[List[dict]] = None
     parts_involved: Optional[List[dict]] = None
+    labor_cost: Optional[float] = None
+    parts_cost: Optional[float] = None
+    # Warranty Impact
     warranty_impact: Optional[str] = None
+    extends_device_warranty: Optional[bool] = None
+    new_warranty_end_date: Optional[str] = None
+    # AMC Impact
+    consumes_amc_quota: Optional[bool] = None
+    amc_quota_type: Optional[str] = None
     technician_name: Optional[str] = None
     ticket_id: Optional[str] = None
     notes: Optional[str] = None
