@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Building2, Users, Laptop, Wrench, 
-  FileCheck, Settings, LogOut, Shield, Menu, X, ChevronRight, Database, History, FileText, MapPin, Package
+  FileCheck, Settings, LogOut, Shield, Menu, X, ChevronRight, Database, History, FileText, MapPin, Package, Key
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +18,7 @@ const navItems = [
   { path: '/admin/devices', label: 'Devices', icon: Laptop },
   { path: '/admin/deployments', label: 'Deployments', icon: Package },
   { path: '/admin/parts', label: 'Parts', icon: Wrench },
+  { path: '/admin/licenses', label: 'Licenses', icon: Key },
   { path: '/admin/service-history', label: 'Service History', icon: History },
   { path: '/admin/amc-contracts', label: 'AMC Contracts', icon: FileText },
   { path: '/admin/master-data', label: 'Master Data', icon: Database },
