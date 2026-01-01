@@ -81,14 +81,17 @@ const AdminLayout = () => {
           )}
           <span className="font-semibold text-slate-900">{currentPage}</span>
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          data-testid="mobile-menu-btn"
-        >
-          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          <UniversalSearch />
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            data-testid="mobile-menu-btn"
+          >
+            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
       </div>
 
       {/* Mobile Sidebar Overlay */}
