@@ -128,15 +128,6 @@ const ServiceHistory = () => {
       setDeviceAmcCoverage(null);
     }
   };
-      
-      setServices(filteredServices);
-      setDevices(devicesRes.data);
-    } catch (error) {
-      toast.error('Failed to fetch data');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
