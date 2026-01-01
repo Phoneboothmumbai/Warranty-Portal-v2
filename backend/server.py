@@ -744,12 +744,30 @@ async def get_public_settings():
     }
 
 @api_router.get("/masters/public")
-async def get_public_masters(master_type: Optional[str] = None):
-    """Get active masters for public forms"""
+async def get_public_masters(
+    master_type: Optional[str] = None,
+    q: Optional[str] = None,
+    limit: int = Query(default=50, le=200)
+):
+    """Get active masters for public forms with optional search"""
     query = {"is_active": True}
     if master_type:
         query["type"] = master_type
-    masters = await db.masters.find(query, {"_id": 0}).sort("sort_order", 1).to_list(500)
+    
+    # Add search filter
+    if q and q.strip():
+        search_regex = {"$regex": q.strip(), "$options": "i"}
+        query["$or"] = [
+            {"name": search_regex},
+            {"code": search_regex}
+        ]
+    
+    masters = await db.masters.find(query, {"_id": 0}).sort("sort_order", 1).to_list(limit)
+    
+    # Add label for SmartSelect compatibility
+    for m in masters:
+        m["label"] = m["name"]
+    
     return masters
 
 @api_router.get("/warranty/search")
