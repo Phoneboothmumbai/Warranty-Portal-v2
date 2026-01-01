@@ -2945,7 +2945,7 @@ async def list_licenses(
     
     # Filter by status if requested (after calculation)
     if status:
-        licenses = [l for l in licenses if l["status"] == status]
+        licenses = [lic for lic in licenses if lic["status"] == status]
     
     return licenses
 
