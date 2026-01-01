@@ -252,12 +252,7 @@ metadata:
   run_ui: true
 
 test_plan:
-  current_focus:
-    - "Master Data Management Page"
-    - "Service History Page"
-    - "Dashboard with Alerts"
-    - "Devices Page with Master Data Integration"
-    - "Auth Flow with redirect persistence"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
