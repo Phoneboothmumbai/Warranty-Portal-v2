@@ -21,6 +21,7 @@ const MASTER_TYPES = [
   { type: 'condition', label: 'Conditions', icon: CheckCircle, description: 'New, Good, Fair, Poor' },
   { type: 'asset_status', label: 'Asset Statuses', icon: Tag, description: 'Active, In Repair, Retired' },
   { type: 'brand', label: 'Brands', icon: Tag, description: 'Dell, HP, Lenovo, etc.' },
+  { type: 'duration_unit', label: 'Duration Units', icon: RefreshCw, description: 'Days, Months, Years' },
 ];
 
 const MasterData = () => {
