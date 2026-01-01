@@ -2042,19 +2042,33 @@ async def get_companies_without_amc(admin: dict = Depends(get_current_admin)):
 @api_router.get("/admin/sites")
 async def list_sites(
     company_id: Optional[str] = None,
+    q: Optional[str] = None,
+    limit: int = Query(default=100, le=500),
+    page: int = Query(default=1, ge=1),
     admin: dict = Depends(get_current_admin)
 ):
-    """List all sites"""
+    """List all sites with optional search support"""
     query = {"is_deleted": {"$ne": True}}
     if company_id:
         query["company_id"] = company_id
     
-    sites = await db.sites.find(query, {"_id": 0}).to_list(1000)
+    # Add search filter
+    if q and q.strip():
+        search_regex = {"$regex": q.strip(), "$options": "i"}
+        query["$or"] = [
+            {"name": search_regex},
+            {"city": search_regex},
+            {"address": search_regex}
+        ]
+    
+    skip = (page - 1) * limit
+    sites = await db.sites.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     
     # Enrich with company names and counts
     for site in sites:
         company = await db.companies.find_one({"id": site.get("company_id")}, {"_id": 0, "name": 1})
         site["company_name"] = company.get("name") if company else "Unknown"
+        site["label"] = site["name"]  # SmartSelect compatibility
         
         # Count deployments and items
         deployments = await db.deployments.find(
@@ -2083,6 +2097,34 @@ async def create_site(data: SiteCreate, admin: dict = Depends(get_current_admin)
     
     result = site.model_dump()
     result["company_name"] = company.get("name")
+    result["label"] = result["name"]
+    return result
+
+@api_router.post("/admin/sites/quick-create")
+async def quick_create_site(data: SiteCreate, admin: dict = Depends(get_current_admin)):
+    """Quick create site (for inline creation from dropdowns)"""
+    # Validate company exists
+    company = await db.companies.find_one({"id": data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    # Check if site with same name exists for this company
+    existing = await db.sites.find_one(
+        {"name": {"$regex": f"^{data.name}$", "$options": "i"}, "company_id": data.company_id, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    )
+    if existing:
+        existing["label"] = existing["name"]
+        existing["company_name"] = company.get("name")
+        return existing
+    
+    site = Site(**data.model_dump())
+    await db.sites.insert_one(site.model_dump())
+    await log_audit("site", site.id, "quick_create", {"data": data.model_dump()}, admin)
+    
+    result = site.model_dump()
+    result["company_name"] = company.get("name")
+    result["label"] = result["name"]
     return result
 
 @api_router.get("/admin/sites/{site_id}")
