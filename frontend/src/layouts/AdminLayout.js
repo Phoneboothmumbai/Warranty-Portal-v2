@@ -12,12 +12,13 @@ import { Button } from '../components/ui/button';
 const navItems = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin/companies', label: 'Companies', icon: Building2 },
+  { path: '/admin/sites', label: 'Sites', icon: MapPin },
   { path: '/admin/users', label: 'Users', icon: Users },
   { path: '/admin/devices', label: 'Devices', icon: Laptop },
+  { path: '/admin/deployments', label: 'Deployments', icon: Package },
   { path: '/admin/parts', label: 'Parts', icon: Wrench },
   { path: '/admin/service-history', label: 'Service History', icon: History },
   { path: '/admin/amc-contracts', label: 'AMC Contracts', icon: FileText },
-  { path: '/admin/amc', label: 'AMC (Legacy)', icon: FileCheck },
   { path: '/admin/master-data', label: 'Master Data', icon: Database },
   { path: '/admin/settings', label: 'Settings', icon: Settings },
 ];
