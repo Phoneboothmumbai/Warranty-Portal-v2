@@ -1905,6 +1905,369 @@ async def get_companies_without_amc(admin: dict = Depends(get_current_admin)):
     
     return companies_without_amc
 
+# ==================== ADMIN ENDPOINTS - SITES ====================
+
+@api_router.get("/admin/sites")
+async def list_sites(
+    company_id: Optional[str] = None,
+    admin: dict = Depends(get_current_admin)
+):
+    """List all sites"""
+    query = {"is_deleted": {"$ne": True}}
+    if company_id:
+        query["company_id"] = company_id
+    
+    sites = await db.sites.find(query, {"_id": 0}).to_list(1000)
+    
+    # Enrich with company names and counts
+    for site in sites:
+        company = await db.companies.find_one({"id": site.get("company_id")}, {"_id": 0, "name": 1})
+        site["company_name"] = company.get("name") if company else "Unknown"
+        
+        # Count deployments and items
+        deployments = await db.deployments.find(
+            {"site_id": site["id"], "is_deleted": {"$ne": True}},
+            {"_id": 0}
+        ).to_list(100)
+        site["deployments_count"] = len(deployments)
+        
+        # Count total items across deployments
+        total_items = sum(len(d.get("items", [])) for d in deployments)
+        site["items_count"] = total_items
+    
+    return sites
+
+@api_router.post("/admin/sites")
+async def create_site(data: SiteCreate, admin: dict = Depends(get_current_admin)):
+    """Create new site"""
+    # Validate company exists
+    company = await db.companies.find_one({"id": data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    site = Site(**data.model_dump())
+    await db.sites.insert_one(site.model_dump())
+    await log_audit("site", site.id, "create", {"data": data.model_dump()}, admin)
+    
+    result = site.model_dump()
+    result["company_name"] = company.get("name")
+    return result
+
+@api_router.get("/admin/sites/{site_id}")
+async def get_site(site_id: str, admin: dict = Depends(get_current_admin)):
+    """Get site with full details including deployments"""
+    site = await db.sites.find_one({"id": site_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found")
+    
+    # Get company
+    company = await db.companies.find_one({"id": site.get("company_id")}, {"_id": 0})
+    site["company_name"] = company.get("name") if company else "Unknown"
+    
+    # Get deployments
+    deployments = await db.deployments.find(
+        {"site_id": site_id, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    ).to_list(100)
+    site["deployments"] = deployments
+    
+    # Aggregate all items
+    all_items = []
+    for deployment in deployments:
+        for item in deployment.get("items", []):
+            item["deployment_id"] = deployment["id"]
+            item["deployment_name"] = deployment["name"]
+            all_items.append(item)
+    site["all_items"] = all_items
+    
+    # Get active AMCs for this site
+    amc_contracts = await db.amc_contracts.find(
+        {"company_id": site["company_id"], "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    ).to_list(100)
+    
+    active_amcs = []
+    for contract in amc_contracts:
+        status = get_amc_status(contract.get("start_date", ""), contract.get("end_date", ""))
+        if status == "active":
+            # Check if AMC covers this site
+            asset_mapping = contract.get("asset_mapping", {})
+            mapping_type = asset_mapping.get("mapping_type", "all_company")
+            
+            if mapping_type == "all_company":
+                active_amcs.append(contract)
+            # Could add site-specific AMC mapping here in future
+    
+    site["active_amcs"] = active_amcs
+    
+    return site
+
+@api_router.put("/admin/sites/{site_id}")
+async def update_site(site_id: str, updates: SiteUpdate, admin: dict = Depends(get_current_admin)):
+    """Update site"""
+    existing = await db.sites.find_one({"id": site_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Site not found")
+    
+    update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No updates provided")
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    changes = {k: {"old": existing.get(k), "new": v} for k, v in update_data.items() if existing.get(k) != v}
+    
+    await db.sites.update_one({"id": site_id}, {"$set": update_data})
+    await log_audit("site", site_id, "update", changes, admin)
+    
+    return await db.sites.find_one({"id": site_id}, {"_id": 0})
+
+@api_router.delete("/admin/sites/{site_id}")
+async def delete_site(site_id: str, admin: dict = Depends(get_current_admin)):
+    """Soft delete site"""
+    result = await db.sites.update_one({"id": site_id}, {"$set": {"is_deleted": True}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Site not found")
+    await log_audit("site", site_id, "delete", {"is_deleted": True}, admin)
+    return {"message": "Site archived"}
+
+# ==================== ADMIN ENDPOINTS - DEPLOYMENTS ====================
+
+@api_router.get("/admin/deployments")
+async def list_deployments(
+    company_id: Optional[str] = None,
+    site_id: Optional[str] = None,
+    admin: dict = Depends(get_current_admin)
+):
+    """List all deployments"""
+    query = {"is_deleted": {"$ne": True}}
+    if company_id:
+        query["company_id"] = company_id
+    if site_id:
+        query["site_id"] = site_id
+    
+    deployments = await db.deployments.find(query, {"_id": 0}).to_list(1000)
+    
+    # Enrich with company and site names
+    for deployment in deployments:
+        company = await db.companies.find_one({"id": deployment.get("company_id")}, {"_id": 0, "name": 1})
+        site = await db.sites.find_one({"id": deployment.get("site_id")}, {"_id": 0, "name": 1})
+        deployment["company_name"] = company.get("name") if company else "Unknown"
+        deployment["site_name"] = site.get("name") if site else "Unknown"
+        deployment["items_count"] = len(deployment.get("items", []))
+    
+    return deployments
+
+@api_router.post("/admin/deployments")
+async def create_deployment(data: DeploymentCreate, admin: dict = Depends(get_current_admin)):
+    """Create new deployment with items"""
+    # Validate company and site
+    company = await db.companies.find_one({"id": data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    site = await db.sites.find_one({"id": data.site_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found")
+    
+    # Process items - create devices for serialized items
+    processed_items = []
+    for item_data in data.items:
+        item = DeploymentItem(**item_data)
+        
+        # For serialized items, create device records
+        if item.is_serialized and item.serial_numbers:
+            linked_device_ids = []
+            for serial in item.serial_numbers:
+                device_data = {
+                    "id": str(uuid.uuid4()),
+                    "company_id": data.company_id,
+                    "site_id": data.site_id,
+                    "deployment_id": "",  # Will be updated after deployment is created
+                    "device_type": item.category,
+                    "brand": item.brand or "Unknown",
+                    "model": item.model or "Unknown",
+                    "serial_number": serial,
+                    "purchase_date": item.installation_date or data.deployment_date,
+                    "warranty_end_date": item.warranty_end_date,
+                    "location": item.zone_location,
+                    "status": "active",
+                    "condition": "new",
+                    "is_deleted": False,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                linked_device_ids.append(device_data["id"])
+            
+            item.linked_device_ids = linked_device_ids
+        
+        processed_items.append(item.model_dump())
+    
+    # Create deployment
+    deployment = Deployment(
+        company_id=data.company_id,
+        site_id=data.site_id,
+        name=data.name,
+        deployment_date=data.deployment_date,
+        installed_by=data.installed_by,
+        notes=data.notes,
+        items=processed_items,
+        created_by=admin.get("id", ""),
+        created_by_name=admin.get("name", "Admin")
+    )
+    
+    await db.deployments.insert_one(deployment.model_dump())
+    
+    # Now create the device records for serialized items
+    for item in processed_items:
+        if item.get("is_serialized") and item.get("serial_numbers"):
+            for i, serial in enumerate(item["serial_numbers"]):
+                device_id = item["linked_device_ids"][i] if i < len(item.get("linked_device_ids", [])) else str(uuid.uuid4())
+                device_data = {
+                    "id": device_id,
+                    "company_id": data.company_id,
+                    "site_id": data.site_id,
+                    "deployment_id": deployment.id,
+                    "device_type": item.get("category"),
+                    "brand": item.get("brand") or "Unknown",
+                    "model": item.get("model") or "Unknown",
+                    "serial_number": serial,
+                    "purchase_date": item.get("installation_date") or data.deployment_date,
+                    "warranty_end_date": item.get("warranty_end_date"),
+                    "location": item.get("zone_location"),
+                    "status": "active",
+                    "condition": "new",
+                    "is_deleted": False,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                await db.devices.insert_one(device_data)
+    
+    await log_audit("deployment", deployment.id, "create", {"data": data.model_dump()}, admin)
+    
+    result = deployment.model_dump()
+    result["company_name"] = company.get("name")
+    result["site_name"] = site.get("name")
+    result["items_count"] = len(processed_items)
+    return result
+
+@api_router.get("/admin/deployments/{deployment_id}")
+async def get_deployment(deployment_id: str, admin: dict = Depends(get_current_admin)):
+    """Get deployment with full details"""
+    deployment = await db.deployments.find_one({"id": deployment_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    
+    # Get company and site
+    company = await db.companies.find_one({"id": deployment.get("company_id")}, {"_id": 0})
+    site = await db.sites.find_one({"id": deployment.get("site_id")}, {"_id": 0})
+    deployment["company_name"] = company.get("name") if company else "Unknown"
+    deployment["site_name"] = site.get("name") if site else "Unknown"
+    
+    # Enrich items with AMC coverage info
+    for item in deployment.get("items", []):
+        if item.get("amc_contract_id"):
+            amc = await db.amc_contracts.find_one({"id": item["amc_contract_id"]}, {"_id": 0, "name": 1})
+            item["amc_name"] = amc.get("name") if amc else None
+        
+        # Check if covered by any active AMC
+        amc_contracts = await db.amc_contracts.find(
+            {"company_id": deployment["company_id"], "is_deleted": {"$ne": True}},
+            {"_id": 0}
+        ).to_list(10)
+        
+        is_amc_covered = False
+        covering_amc = None
+        for contract in amc_contracts:
+            status = get_amc_status(contract.get("start_date", ""), contract.get("end_date", ""))
+            if status == "active":
+                mapping = contract.get("asset_mapping", {})
+                if mapping.get("mapping_type") == "all_company":
+                    is_amc_covered = True
+                    covering_amc = contract.get("name")
+                    break
+                elif mapping.get("mapping_type") == "device_types":
+                    if item.get("category") in mapping.get("selected_device_types", []):
+                        is_amc_covered = True
+                        covering_amc = contract.get("name")
+                        break
+        
+        item["is_amc_covered"] = is_amc_covered
+        item["covering_amc"] = covering_amc
+    
+    return deployment
+
+@api_router.put("/admin/deployments/{deployment_id}")
+async def update_deployment(deployment_id: str, updates: DeploymentUpdate, admin: dict = Depends(get_current_admin)):
+    """Update deployment"""
+    existing = await db.deployments.find_one({"id": deployment_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    
+    update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No updates provided")
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.deployments.update_one({"id": deployment_id}, {"$set": update_data})
+    await log_audit("deployment", deployment_id, "update", update_data, admin)
+    
+    return await db.deployments.find_one({"id": deployment_id}, {"_id": 0})
+
+@api_router.delete("/admin/deployments/{deployment_id}")
+async def delete_deployment(deployment_id: str, admin: dict = Depends(get_current_admin)):
+    """Soft delete deployment"""
+    result = await db.deployments.update_one({"id": deployment_id}, {"$set": {"is_deleted": True}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    await log_audit("deployment", deployment_id, "delete", {"is_deleted": True}, admin)
+    return {"message": "Deployment archived"}
+
+@api_router.post("/admin/deployments/{deployment_id}/items")
+async def add_deployment_item(deployment_id: str, item_data: dict, admin: dict = Depends(get_current_admin)):
+    """Add item to existing deployment"""
+    deployment = await db.deployments.find_one({"id": deployment_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    
+    item = DeploymentItem(**item_data)
+    
+    # Handle serialized items
+    if item.is_serialized and item.serial_numbers:
+        linked_device_ids = []
+        for serial in item.serial_numbers:
+            device_data = {
+                "id": str(uuid.uuid4()),
+                "company_id": deployment["company_id"],
+                "site_id": deployment["site_id"],
+                "deployment_id": deployment_id,
+                "device_type": item.category,
+                "brand": item.brand or "Unknown",
+                "model": item.model or "Unknown",
+                "serial_number": serial,
+                "purchase_date": item.installation_date or deployment["deployment_date"],
+                "warranty_end_date": item.warranty_end_date,
+                "location": item.zone_location,
+                "status": "active",
+                "condition": "new",
+                "is_deleted": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.devices.insert_one(device_data)
+            linked_device_ids.append(device_data["id"])
+        
+        item.linked_device_ids = linked_device_ids
+    
+    # Add item to deployment
+    await db.deployments.update_one(
+        {"id": deployment_id},
+        {
+            "$push": {"items": item.model_dump()},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+        }
+    )
+    
+    return item.model_dump()
+
 # ==================== ADMIN ENDPOINTS - SETTINGS ====================
 
 @api_router.get("/admin/settings")
