@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -15,43 +15,70 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [admin, setAdmin] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('admin_token'));
+  const [token, setToken] = useState(() => localStorage.getItem('admin_token'));
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(null);
 
-  useEffect(() => {
-    if (token) {
-      fetchAdmin();
-    } else {
+  const logout = useCallback(() => {
+    localStorage.removeItem('admin_token');
+    setToken(null);
+    setAdmin(null);
+    setAuthError(null);
+  }, []);
+
+  const fetchAdmin = useCallback(async (currentToken) => {
+    if (!currentToken) {
       setLoading(false);
+      return;
     }
-  }, [token]);
-
-  const fetchAdmin = async () => {
+    
     try {
       const response = await axios.get(`${API}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${currentToken}` },
+        timeout: 10000 // 10 second timeout
       });
       setAdmin(response.data);
+      setAuthError(null);
     } catch (error) {
       console.error('Auth error:', error);
-      logout();
+      
+      // Only logout on 401 (unauthorized) or 403 (forbidden)
+      // Don't logout on network errors, CORS issues, or server errors
+      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+        logout();
+      } else {
+        // Network error, server error, or CORS - keep token but show error
+        setAuthError('Unable to verify authentication. Please check your connection.');
+        // Still try to show admin panel if we have a valid token structure
+        try {
+          const tokenPayload = JSON.parse(atob(currentToken.split('.')[1]));
+          if (tokenPayload.exp * 1000 > Date.now()) {
+            // Token is not expired, set minimal admin info
+            setAdmin({ email: tokenPayload.sub, name: 'Admin' });
+          } else {
+            logout();
+          }
+        } catch (e) {
+          // Invalid token structure
+          logout();
+        }
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [logout]);
+
+  useEffect(() => {
+    fetchAdmin(token);
+  }, [token, fetchAdmin]);
 
   const login = async (email, password) => {
     const response = await axios.post(`${API}/auth/login`, { email, password });
     const { access_token } = response.data;
     localStorage.setItem('admin_token', access_token);
     setToken(access_token);
+    setAuthError(null);
     return response.data;
-  };
-
-  const logout = () => {
-    localStorage.removeItem('admin_token');
-    setToken(null);
-    setAdmin(null);
   };
 
   const value = {
@@ -60,7 +87,8 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     logout,
-    isAuthenticated: !!admin
+    isAuthenticated: !!admin,
+    authError
   };
 
   return (
