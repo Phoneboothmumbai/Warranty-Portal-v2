@@ -722,28 +722,27 @@ const Devices = () => {
                 />
               </div>
             </div>
-                </select>
-              </div>
-              <div>
-                <label className="form-label">Status</label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="form-select"
-                >
-                  {assetStatuses.length > 0 ? assetStatuses.map(s => (
-                    <option key={s.id} value={s.code?.toLowerCase() || s.name.toLowerCase()}>{s.name}</option>
-                  )) : (
-                    <>
-                      <option value="active">Active</option>
-                      <option value="in_repair">In Repair</option>
-                      <option value="retired">Retired</option>
-                      <option value="lost">Lost</option>
-                      <option value="scrapped">Scrapped</option>
-                    </>
-                  )}
-                </select>
-              </div>
+            
+            <div>
+              <label className="form-label">Status</label>
+              <SmartSelect
+                value={formData.status}
+                onValueChange={(value) => setFormData({ ...formData, status: value })}
+                placeholder="Select Status"
+                searchPlaceholder="Search..."
+                options={assetStatuses.length > 0 
+                  ? assetStatuses.map(s => ({ id: s.code?.toLowerCase() || s.name.toLowerCase(), name: s.name, label: s.name }))
+                  : [
+                      { id: 'active', name: 'Active', label: 'Active' },
+                      { id: 'in_repair', name: 'In Repair', label: 'In Repair' },
+                      { id: 'retired', name: 'Retired', label: 'Retired' },
+                      { id: 'lost', name: 'Lost', label: 'Lost' },
+                      { id: 'scrapped', name: 'Scrapped', label: 'Scrapped' }
+                    ]
+                }
+                displayKey="label"
+                valueKey="id"
+              />
             </div>
             
             <div>
