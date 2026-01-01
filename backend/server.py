@@ -1151,7 +1151,30 @@ async def create_company(company_data: CompanyCreate, admin: dict = Depends(get_
     company = Company(**company_data.model_dump())
     await db.companies.insert_one(company.model_dump())
     await log_audit("company", company.id, "create", {"data": company_data.model_dump()}, admin)
-    return company.model_dump()
+    result = company.model_dump()
+    result["label"] = result["name"]
+    return result
+
+@api_router.post("/admin/companies/quick-create")
+async def quick_create_company(company_data: CompanyCreate, admin: dict = Depends(get_current_admin)):
+    """Quick create company (for inline creation from dropdowns)"""
+    # Check if company with same name exists
+    existing = await db.companies.find_one(
+        {"name": {"$regex": f"^{company_data.name}$", "$options": "i"}, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    )
+    if existing:
+        # Return existing instead of error (idempotent)
+        existing["label"] = existing["name"]
+        return existing
+    
+    company = Company(**company_data.model_dump())
+    await db.companies.insert_one(company.model_dump())
+    await log_audit("company", company.id, "quick_create", {"data": company_data.model_dump()}, admin)
+    
+    result = company.model_dump()
+    result["label"] = result["name"]
+    return result
 
 @api_router.get("/admin/companies/{company_id}")
 async def get_company(company_id: str, admin: dict = Depends(get_current_admin)):
