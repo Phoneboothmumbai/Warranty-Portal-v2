@@ -20,7 +20,7 @@ const navItems = [
 ];
 
 const AdminLayout = () => {
-  const { admin, loading, isAuthenticated, logout } = useAuth();
+  const { admin, loading, isAuthenticated, logout, authError } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,14 +28,20 @@ const AdminLayout = () => {
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
+      // Store the intended destination to redirect after login
+      const currentPath = location.pathname;
+      if (currentPath !== '/admin/login' && currentPath !== '/admin/setup') {
+        sessionStorage.setItem('redirectAfterLogin', currentPath);
+      }
       navigate('/admin/login');
     }
-  }, [loading, isAuthenticated, navigate]);
+  }, [loading, isAuthenticated, navigate, location.pathname]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
         <div className="w-8 h-8 border-4 border-[#0F62FE] border-t-transparent rounded-full animate-spin"></div>
+        <p className="mt-4 text-sm text-slate-500">Loading...</p>
       </div>
     );
   }
@@ -43,6 +49,9 @@ const AdminLayout = () => {
   if (!isAuthenticated) {
     return null;
   }
+
+  // Show warning banner if there's an auth error but user is still authenticated
+  const showAuthWarning = authError && isAuthenticated;
 
   const handleLogout = () => {
     logout();
