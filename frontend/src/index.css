@@ -1,115 +1,253 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --accent: #0F62FE;
+  --accent-hover: #0043CE;
+  --accent-subtle: #E8F0FE;
+}
+
 body {
-    margin: 0;
-    font-family:
-        -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-        "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-        sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #FFFFFF;
+  color: #0F172A;
 }
 
-code {
-    font-family:
-        source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+code, .font-mono {
+  font-family: 'JetBrains Mono', source-code-pro, Menlo, Monaco, Consolas, monospace;
 }
 
-@layer base {
-    :root {
-        --background: 0 0% 100%;
-        --foreground: 0 0% 3.9%;
-        --card: 0 0% 100%;
-        --card-foreground: 0 0% 3.9%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 0 0% 3.9%;
-        --primary: 0 0% 9%;
-        --primary-foreground: 0 0% 98%;
-        --secondary: 0 0% 96.1%;
-        --secondary-foreground: 0 0% 9%;
-        --muted: 0 0% 96.1%;
-        --muted-foreground: 0 0% 45.1%;
-        --accent: 0 0% 96.1%;
-        --accent-foreground: 0 0% 9%;
-        --destructive: 0 84.2% 60.2%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 0 0% 89.8%;
-        --input: 0 0% 89.8%;
-        --ring: 0 0% 3.9%;
-        --chart-1: 12 76% 61%;
-        --chart-2: 173 58% 39%;
-        --chart-3: 197 37% 24%;
-        --chart-4: 43 74% 66%;
-        --chart-5: 27 87% 67%;
-        --radius: 0.5rem;
-    }
-    .dark {
-        --background: 0 0% 3.9%;
-        --foreground: 0 0% 98%;
-        --card: 0 0% 3.9%;
-        --card-foreground: 0 0% 98%;
-        --popover: 0 0% 3.9%;
-        --popover-foreground: 0 0% 98%;
-        --primary: 0 0% 98%;
-        --primary-foreground: 0 0% 9%;
-        --secondary: 0 0% 14.9%;
-        --secondary-foreground: 0 0% 98%;
-        --muted: 0 0% 14.9%;
-        --muted-foreground: 0 0% 63.9%;
-        --accent: 0 0% 14.9%;
-        --accent-foreground: 0 0% 98%;
-        --destructive: 0 62.8% 30.6%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 0 0% 14.9%;
-        --input: 0 0% 14.9%;
-        --ring: 0 0% 83.1%;
-        --chart-1: 220 70% 50%;
-        --chart-2: 160 60% 45%;
-        --chart-3: 30 80% 55%;
-        --chart-4: 280 65% 60%;
-        --chart-5: 340 75% 55%;
-    }
+/* Noise texture overlay for subtle depth */
+.noise-bg::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.02;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  z-index: -1;
 }
 
 @layer base {
-    * {
-        @apply border-border;
-    }
-    body {
-        @apply bg-background text-foreground;
-    }
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 47.4% 11.2%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 47.4% 11.2%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.75rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
 }
 
 @layer base {
-    [data-debug-wrapper="true"] {
-        display: contents !important;
-    }
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
 
-    [data-debug-wrapper="true"] > * {
-        margin-left: inherit;
-        margin-right: inherit;
-        margin-top: inherit;
-        margin-bottom: inherit;
-        padding-left: inherit;
-        padding-right: inherit;
-        padding-top: inherit;
-        padding-bottom: inherit;
-        column-gap: inherit;
-        row-gap: inherit;
-        gap: inherit;
-        border-left-width: inherit;
-        border-right-width: inherit;
-        border-top-width: inherit;
-        border-bottom-width: inherit;
-        border-left-style: inherit;
-        border-right-style: inherit;
-        border-top-style: inherit;
-        border-bottom-style: inherit;
-        border-left-color: inherit;
-        border-right-color: inherit;
-        border-top-color: inherit;
-        border-bottom-color: inherit;
-    }
+/* Custom button styles */
+.btn-primary {
+  @apply bg-[#0F62FE] text-white rounded-lg px-8 py-3 font-medium transition-all shadow-sm;
+}
+.btn-primary:hover {
+  @apply bg-[#0043CE] shadow-md;
+}
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  @apply bg-white text-slate-900 border border-slate-200 rounded-lg px-6 py-2.5 font-medium transition-all;
+}
+.btn-secondary:hover {
+  @apply bg-slate-50 border-slate-300;
+}
+
+/* Card styles */
+.card-elevated {
+  @apply bg-white border border-slate-100 rounded-xl p-6;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.card-elevated:hover {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+
+/* Status badges */
+.badge-active {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border;
+  background-color: #ECFDF5;
+  color: #047857;
+  border-color: #A7F3D0;
+}
+
+.badge-expired {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border;
+  background-color: #F1F5F9;
+  color: #64748B;
+  border-color: #CBD5E1;
+}
+
+.badge-warning {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border;
+  background-color: #FFFBEB;
+  color: #B45309;
+  border-color: #FDE68A;
+}
+
+/* Input styles */
+.input-hero {
+  @apply bg-white border border-slate-200 rounded-xl px-6 py-4 text-xl text-slate-900 w-full transition-all;
+}
+.input-hero:focus {
+  @apply outline-none ring-2 ring-[#0F62FE]/20 border-[#0F62FE];
+}
+.input-hero::placeholder {
+  @apply text-slate-400;
+}
+
+/* Table styles (no zebra striping) */
+.table-modern th {
+  @apply px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50;
+}
+.table-modern td {
+  @apply px-4 py-3 text-sm text-slate-900 border-b border-slate-100;
+}
+.table-modern tr:hover td {
+  @apply bg-slate-50;
+}
+
+/* Sidebar styles */
+.sidebar-link {
+  @apply flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 rounded-lg transition-colors;
+}
+.sidebar-link:hover {
+  @apply bg-slate-100 text-slate-900;
+}
+.sidebar-link.active {
+  @apply bg-[#E8F0FE] text-[#0F62FE] font-medium;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Animation utilities */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease-out forwards;
+}
+
+/* Receipt card styling */
+.receipt-card {
+  @apply bg-white rounded-2xl overflow-hidden;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.05);
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+/* Data pair styling */
+.data-pair {
+  @apply flex justify-between items-center py-2 border-b border-slate-100;
+}
+.data-pair:last-child {
+  @apply border-b-0;
+}
+.data-label {
+  @apply text-sm text-slate-500;
+}
+.data-value {
+  @apply text-sm font-medium text-slate-900;
+}
+
+/* Form styles */
+.form-label {
+  @apply block text-sm font-medium text-slate-700 mb-1.5;
+}
+.form-input {
+  @apply w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 transition-all;
+}
+.form-input:focus {
+  @apply outline-none ring-2 ring-[#0F62FE]/20 border-[#0F62FE];
+}
+.form-input::placeholder {
+  @apply text-slate-400;
+}
+
+/* Select dropdown */
+.form-select {
+  @apply w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white appearance-none cursor-pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748B'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
+}
+.form-select:focus {
+  @apply outline-none ring-2 ring-[#0F62FE]/20 border-[#0F62FE];
+}
+
+/* Grid lines effect for admin */
+.grid-lines {
+  background-image: 
+    linear-gradient(to right, #E2E8F0 1px, transparent 1px),
+    linear-gradient(to bottom, #E2E8F0 1px, transparent 1px);
+  background-size: 24px 24px;
 }
