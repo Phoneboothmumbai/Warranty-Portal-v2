@@ -2841,6 +2841,416 @@ async def upload_logo(file: UploadFile = File(...), admin: dict = Depends(get_cu
     
     return {"message": "Logo uploaded successfully", "logo_base64": logo_base64}
 
+# ==================== ADMIN ENDPOINTS - LICENSES ====================
+
+def calculate_license_status(end_date: Optional[str], reminder_days: int = 30) -> str:
+    """Calculate license status based on end date"""
+    if not end_date:
+        return "active"  # Perpetual license
+    
+    try:
+        end = datetime.strptime(end_date, "%Y-%m-%d").date()
+        today = datetime.now().date()
+        days_until_expiry = (end - today).days
+        
+        if days_until_expiry < 0:
+            return "expired"
+        elif days_until_expiry <= reminder_days:
+            return "expiring"
+        else:
+            return "active"
+    except Exception:
+        return "active"
+
+@api_router.get("/admin/licenses")
+async def list_licenses(
+    company_id: Optional[str] = None,
+    status: Optional[str] = None,
+    license_type: Optional[str] = None,
+    q: Optional[str] = None,
+    limit: int = Query(default=100, le=500),
+    page: int = Query(default=1, ge=1),
+    admin: dict = Depends(get_current_admin)
+):
+    """List all licenses with optional filters"""
+    query = {"is_deleted": {"$ne": True}}
+    
+    if company_id:
+        query["company_id"] = company_id
+    if license_type:
+        query["license_type"] = license_type
+    
+    # Add search filter
+    if q and q.strip():
+        search_regex = {"$regex": q.strip(), "$options": "i"}
+        query["$or"] = [
+            {"software_name": search_regex},
+            {"vendor": search_regex},
+            {"license_key": search_regex}
+        ]
+    
+    skip = (page - 1) * limit
+    licenses = await db.licenses.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+    
+    # Enrich with company names and calculate status
+    for lic in licenses:
+        company = await db.companies.find_one({"id": lic.get("company_id")}, {"_id": 0, "name": 1})
+        lic["company_name"] = company.get("name") if company else "Unknown"
+        lic["label"] = lic["software_name"]
+        
+        # Calculate current status
+        lic["status"] = calculate_license_status(
+            lic.get("end_date"),
+            lic.get("renewal_reminder_days", 30)
+        )
+        
+        # Mask license key
+        if lic.get("license_key"):
+            key = lic["license_key"]
+            if len(key) > 8:
+                lic["license_key_masked"] = key[:4] + "****" + key[-4:]
+            else:
+                lic["license_key_masked"] = "****"
+    
+    # Filter by status if requested (after calculation)
+    if status:
+        licenses = [l for l in licenses if l["status"] == status]
+    
+    return licenses
+
+@api_router.post("/admin/licenses")
+async def create_license(data: LicenseCreate, admin: dict = Depends(get_current_admin)):
+    """Create new license"""
+    # Validate company exists
+    company = await db.companies.find_one({"id": data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    license_data = data.model_dump()
+    license_data["status"] = calculate_license_status(data.end_date, data.renewal_reminder_days)
+    
+    lic = License(**license_data)
+    await db.licenses.insert_one(lic.model_dump())
+    await log_audit("license", lic.id, "create", {"data": data.model_dump()}, admin)
+    
+    result = lic.model_dump()
+    result["company_name"] = company.get("name")
+    result["label"] = result["software_name"]
+    return result
+
+@api_router.get("/admin/licenses/{license_id}")
+async def get_license(license_id: str, admin: dict = Depends(get_current_admin)):
+    """Get license details"""
+    lic = await db.licenses.find_one({"id": license_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not lic:
+        raise HTTPException(status_code=404, detail="License not found")
+    
+    # Get company
+    company = await db.companies.find_one({"id": lic.get("company_id")}, {"_id": 0})
+    lic["company_name"] = company.get("name") if company else "Unknown"
+    
+    # Get assigned devices/users details
+    if lic.get("assigned_device_ids"):
+        devices = await db.devices.find(
+            {"id": {"$in": lic["assigned_device_ids"]}, "is_deleted": {"$ne": True}},
+            {"_id": 0, "id": 1, "brand": 1, "model": 1, "serial_number": 1}
+        ).to_list(100)
+        lic["assigned_devices"] = devices
+    
+    if lic.get("assigned_user_ids"):
+        users = await db.users.find(
+            {"id": {"$in": lic["assigned_user_ids"]}, "is_deleted": {"$ne": True}},
+            {"_id": 0, "id": 1, "name": 1, "email": 1}
+        ).to_list(100)
+        lic["assigned_users"] = users
+    
+    lic["status"] = calculate_license_status(lic.get("end_date"), lic.get("renewal_reminder_days", 30))
+    
+    return lic
+
+@api_router.put("/admin/licenses/{license_id}")
+async def update_license(license_id: str, updates: LicenseUpdate, admin: dict = Depends(get_current_admin)):
+    """Update license"""
+    existing = await db.licenses.find_one({"id": license_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="License not found")
+    
+    update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No updates provided")
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    # Recalculate status if dates changed
+    end_date = update_data.get("end_date", existing.get("end_date"))
+    reminder_days = update_data.get("renewal_reminder_days", existing.get("renewal_reminder_days", 30))
+    update_data["status"] = calculate_license_status(end_date, reminder_days)
+    
+    changes = {k: {"old": existing.get(k), "new": v} for k, v in update_data.items() if existing.get(k) != v}
+    
+    await db.licenses.update_one({"id": license_id}, {"$set": update_data})
+    await log_audit("license", license_id, "update", changes, admin)
+    
+    return await db.licenses.find_one({"id": license_id}, {"_id": 0})
+
+@api_router.delete("/admin/licenses/{license_id}")
+async def delete_license(license_id: str, admin: dict = Depends(get_current_admin)):
+    """Soft delete license"""
+    result = await db.licenses.update_one({"id": license_id}, {"$set": {"is_deleted": True}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="License not found")
+    
+    await log_audit("license", license_id, "delete", {"is_deleted": True}, admin)
+    return {"message": "License deleted"}
+
+@api_router.get("/admin/licenses/expiring/summary")
+async def get_expiring_licenses_summary(admin: dict = Depends(get_current_admin)):
+    """Get summary of expiring licenses"""
+    licenses = await db.licenses.find({"is_deleted": {"$ne": True}}, {"_id": 0}).to_list(1000)
+    
+    today = datetime.now().date()
+    summary = {
+        "total": len(licenses),
+        "perpetual": 0,
+        "active": 0,
+        "expiring_7_days": [],
+        "expiring_30_days": [],
+        "expired": []
+    }
+    
+    for lic in licenses:
+        if not lic.get("end_date"):
+            summary["perpetual"] += 1
+            continue
+        
+        try:
+            end = datetime.strptime(lic["end_date"], "%Y-%m-%d").date()
+            days = (end - today).days
+            
+            company = await db.companies.find_one({"id": lic.get("company_id")}, {"_id": 0, "name": 1})
+            
+            item = {
+                "id": lic["id"],
+                "software_name": lic["software_name"],
+                "company_name": company.get("name") if company else "Unknown",
+                "end_date": lic["end_date"],
+                "days_until_expiry": days,
+                "seats": lic.get("seats", 1)
+            }
+            
+            if days < 0:
+                summary["expired"].append(item)
+            elif days <= 7:
+                summary["expiring_7_days"].append(item)
+            elif days <= 30:
+                summary["expiring_30_days"].append(item)
+            else:
+                summary["active"] += 1
+        except Exception:
+            continue
+    
+    return summary
+
+# ==================== ADMIN ENDPOINTS - AMC DEVICE ASSIGNMENTS ====================
+
+@api_router.get("/admin/amc-contracts/{contract_id}/devices")
+async def get_amc_assigned_devices(contract_id: str, admin: dict = Depends(get_current_admin)):
+    """Get all devices assigned to an AMC contract"""
+    # Verify contract exists
+    contract = await db.amc_contracts.find_one({"id": contract_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not contract:
+        raise HTTPException(status_code=404, detail="AMC Contract not found")
+    
+    assignments = await db.amc_device_assignments.find(
+        {"amc_contract_id": contract_id},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    # Enrich with device details
+    for assignment in assignments:
+        device = await db.devices.find_one({"id": assignment["device_id"]}, {"_id": 0})
+        if device:
+            assignment["device_brand"] = device.get("brand")
+            assignment["device_model"] = device.get("model")
+            assignment["device_serial"] = device.get("serial_number")
+            assignment["device_type"] = device.get("device_type")
+        
+        assignment["status"] = calculate_license_status(assignment.get("coverage_end"))
+    
+    return {
+        "contract": contract,
+        "assignments": assignments,
+        "total_devices": len(assignments)
+    }
+
+@api_router.post("/admin/amc-contracts/{contract_id}/assign-device")
+async def assign_device_to_amc(
+    contract_id: str,
+    data: AMCDeviceAssignmentCreate,
+    admin: dict = Depends(get_current_admin)
+):
+    """Assign a single device to an AMC contract"""
+    # Verify contract exists
+    contract = await db.amc_contracts.find_one({"id": contract_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not contract:
+        raise HTTPException(status_code=404, detail="AMC Contract not found")
+    
+    # Verify device exists
+    device = await db.devices.find_one({"id": data.device_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    
+    # Check if already assigned
+    existing = await db.amc_device_assignments.find_one({
+        "amc_contract_id": contract_id,
+        "device_id": data.device_id
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Device already assigned to this contract")
+    
+    assignment_data = data.model_dump()
+    assignment_data["amc_contract_id"] = contract_id
+    assignment_data["created_by"] = admin["id"]
+    
+    assignment = AMCDeviceAssignment(**assignment_data)
+    await db.amc_device_assignments.insert_one(assignment.model_dump())
+    
+    return assignment.model_dump()
+
+@api_router.post("/admin/amc-contracts/{contract_id}/bulk-assign/preview")
+async def preview_bulk_amc_assignment(
+    contract_id: str,
+    data: AMCBulkAssignmentPreview,
+    admin: dict = Depends(get_current_admin)
+):
+    """Preview bulk device assignment to AMC - validates before actual assignment"""
+    # Verify contract exists
+    contract = await db.amc_contracts.find_one({"id": contract_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not contract:
+        raise HTTPException(status_code=404, detail="AMC Contract not found")
+    
+    results = {
+        "will_be_assigned": [],
+        "already_assigned": [],
+        "not_found": [],
+        "wrong_company": []
+    }
+    
+    contract_company_id = contract.get("company_id")
+    
+    for identifier in data.device_identifiers:
+        identifier = identifier.strip()
+        if not identifier:
+            continue
+        
+        # Search by serial number or asset tag
+        device = await db.devices.find_one({
+            "is_deleted": {"$ne": True},
+            "$or": [
+                {"serial_number": {"$regex": f"^{identifier}$", "$options": "i"}},
+                {"asset_tag": {"$regex": f"^{identifier}$", "$options": "i"}}
+            ]
+        }, {"_id": 0})
+        
+        if not device:
+            results["not_found"].append({"identifier": identifier, "reason": "Device not found"})
+            continue
+        
+        # Check if device belongs to same company
+        if device.get("company_id") != contract_company_id:
+            results["wrong_company"].append({
+                "identifier": identifier,
+                "device_id": device["id"],
+                "device_company": device.get("company_id"),
+                "reason": "Device belongs to different company"
+            })
+            continue
+        
+        # Check if already assigned
+        existing = await db.amc_device_assignments.find_one({
+            "amc_contract_id": contract_id,
+            "device_id": device["id"]
+        })
+        
+        if existing:
+            results["already_assigned"].append({
+                "identifier": identifier,
+                "device_id": device["id"],
+                "serial_number": device.get("serial_number"),
+                "reason": "Already assigned to this contract"
+            })
+        else:
+            results["will_be_assigned"].append({
+                "identifier": identifier,
+                "device_id": device["id"],
+                "serial_number": device.get("serial_number"),
+                "brand": device.get("brand"),
+                "model": device.get("model"),
+                "device_type": device.get("device_type")
+            })
+    
+    results["summary"] = {
+        "total_input": len(data.device_identifiers),
+        "will_assign": len(results["will_be_assigned"]),
+        "already_assigned": len(results["already_assigned"]),
+        "not_found": len(results["not_found"]),
+        "wrong_company": len(results["wrong_company"])
+    }
+    
+    return results
+
+@api_router.post("/admin/amc-contracts/{contract_id}/bulk-assign/confirm")
+async def confirm_bulk_amc_assignment(
+    contract_id: str,
+    data: AMCBulkAssignmentPreview,
+    admin: dict = Depends(get_current_admin)
+):
+    """Confirm and execute bulk device assignment to AMC"""
+    # First run preview to get valid devices
+    preview = await preview_bulk_amc_assignment(contract_id, data, admin)
+    
+    assigned = []
+    for item in preview["will_be_assigned"]:
+        assignment_data = {
+            "amc_contract_id": contract_id,
+            "device_id": item["device_id"],
+            "coverage_start": data.coverage_start,
+            "coverage_end": data.coverage_end,
+            "coverage_source": "bulk_upload",
+            "created_by": admin["id"]
+        }
+        
+        assignment = AMCDeviceAssignment(**assignment_data)
+        await db.amc_device_assignments.insert_one(assignment.model_dump())
+        assigned.append(assignment.model_dump())
+    
+    return {
+        "assigned_count": len(assigned),
+        "assignments": assigned,
+        "skipped": {
+            "already_assigned": len(preview["already_assigned"]),
+            "not_found": len(preview["not_found"]),
+            "wrong_company": len(preview["wrong_company"])
+        }
+    }
+
+@api_router.delete("/admin/amc-contracts/{contract_id}/devices/{device_id}")
+async def unassign_device_from_amc(
+    contract_id: str,
+    device_id: str,
+    admin: dict = Depends(get_current_admin)
+):
+    """Remove device assignment from AMC contract"""
+    result = await db.amc_device_assignments.delete_one({
+        "amc_contract_id": contract_id,
+        "device_id": device_id
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    
+    return {"message": "Device unassigned from contract"}
+
 # ==================== ADMIN DASHBOARD WITH ALERTS ====================
 
 @api_router.get("/admin/dashboard")
