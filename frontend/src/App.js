@@ -45,6 +45,7 @@ function App() {
                 <Route path="devices" element={<Devices />} />
                 <Route path="parts" element={<Parts />} />
                 <Route path="amc" element={<AMCManagement />} />
+                <Route path="service-history" element={<ServiceHistory />} />
                 <Route path="master-data" element={<MasterData />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
