@@ -1452,8 +1452,8 @@ class WarrantyPortalTester:
         # Run tests in order
         tests = [
             ("Basic Endpoints", self.test_basic_endpoints),
-            ("Admin Setup & Auth", self.test_admin_setup_and_auth),
             ("Demo Admin Login", self.test_admin_login_with_demo_credentials),
+            ("P0 Critical Architecture Fixes", self.test_p0_critical_architecture_fixes),
             ("Master Data CRUD", self.test_master_data_crud),
             ("Company CRUD", self.test_company_crud),
             ("User CRUD", self.test_user_crud),
