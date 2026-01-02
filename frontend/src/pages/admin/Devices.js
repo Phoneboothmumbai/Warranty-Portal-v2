@@ -806,34 +806,49 @@ const Devices = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Detail Modal */}
+      {/* Detail Modal - FULL AMC DETAILS */}
       <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Device Details</DialogTitle>
           </DialogHeader>
           {selectedDevice && (
             <div className="space-y-6 mt-4">
+              {/* Device Header with AMC Badge */}
               <div className="flex items-start gap-4">
                 <div className="w-16 h-16 bg-slate-100 rounded-xl flex items-center justify-center">
                   <Laptop className="h-8 w-8 text-slate-600" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className="text-xl font-semibold text-slate-900">
                     {selectedDevice.brand} {selectedDevice.model}
                   </h3>
                   <p className="text-slate-500">{selectedDevice.device_type}</p>
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <span className={`text-xs px-2 py-1 rounded-full capitalize ${statusColors[selectedDevice.status]}`}>
                       {selectedDevice.status?.replace('_', ' ')}
                     </span>
                     <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600 capitalize">
                       {selectedDevice.condition}
                     </span>
+                    {/* AMC Badge */}
+                    {selectedDevice.amc_status === 'active' && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 flex items-center gap-1">
+                        <Shield className="h-3 w-3" />
+                        AMC Active
+                      </span>
+                    )}
+                    {selectedDevice.amc_status === 'expired' && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 flex items-center gap-1">
+                        <Shield className="h-3 w-3" />
+                        AMC Expired
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
               
+              {/* Device Basic Info */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="space-y-3">
                   <div>
@@ -848,7 +863,7 @@ const Devices = () => {
                   )}
                   <div>
                     <p className="text-slate-500">Company</p>
-                    <p className="font-medium">{getCompanyName(selectedDevice.company_id)}</p>
+                    <p className="font-medium">{selectedDevice.company_name || getCompanyName(selectedDevice.company_id)}</p>
                   </div>
                   {selectedDevice.location && (
                     <div>
@@ -869,12 +884,14 @@ const Devices = () => {
                     </div>
                   )}
                   <div>
-                    <p className="text-slate-500">Warranty End</p>
-                    <p className="font-medium">
+                    <p className="text-slate-500">
+                      {selectedDevice.active_amc ? 'Manufacturer Warranty (Overridden by AMC)' : 'Warranty End'}
+                    </p>
+                    <p className={`font-medium ${selectedDevice.active_amc ? 'text-slate-400' : ''}`}>
                       {selectedDevice.warranty_end_date ? (
                         <>
                           {formatDate(selectedDevice.warranty_end_date)}
-                          {isWarrantyActive(selectedDevice.warranty_end_date) && (
+                          {!selectedDevice.active_amc && isWarrantyActive(selectedDevice.warranty_end_date) && (
                             <span className="ml-2 text-xs text-emerald-600">
                               ({getWarrantyDaysLeft(selectedDevice.warranty_end_date)} days left)
                             </span>
@@ -892,8 +909,200 @@ const Devices = () => {
                 </div>
               </div>
               
+              {/* AMC Coverage Details Section - Only show if device has AMC */}
+              {selectedDevice.active_amc && (
+                <div className="border-t pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-semibold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-emerald-600" />
+                      AMC Coverage Details
+                    </h4>
+                    <button
+                      onClick={() => {
+                        setDetailModalOpen(false);
+                        navigate(`/admin/amc-contracts?id=${selectedDevice.active_amc.amc_contract_id}`);
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                    >
+                      View Contract <ExternalLink className="h-3 w-3" />
+                    </button>
+                  </div>
+                  
+                  <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 space-y-4">
+                    {/* AMC Identity */}
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-slate-500">Contract Name</p>
+                        <p className="font-medium text-slate-900">{selectedDevice.active_amc.amc_name}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Contract Type</p>
+                        <p className="font-medium text-slate-900 capitalize">
+                          {selectedDevice.active_amc.amc_type?.replace(/_/g, ' ') || 'Standard'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Coverage Period */}
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <p className="text-slate-500">Start Date</p>
+                        <p className="font-medium">{formatDate(selectedDevice.active_amc.coverage_start)}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">End Date</p>
+                        <p className="font-medium">{formatDate(selectedDevice.active_amc.coverage_end)}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Status</p>
+                        <div className="flex items-center gap-2">
+                          {selectedDevice.active_amc.coverage_active ? (
+                            <>
+                              <CheckCircle className="h-4 w-4 text-emerald-600" />
+                              <span className="font-medium text-emerald-700">Active</span>
+                              <span className="text-xs text-emerald-600">
+                                ({getWarrantyDaysLeft(selectedDevice.active_amc.coverage_end)} days left)
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="h-4 w-4 text-red-500" />
+                              <span className="font-medium text-red-600">Expired</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Coverage Scope */}
+                    {selectedDevice.active_amc.coverage_includes && (
+                      <div className="border-t border-emerald-200 pt-4">
+                        <p className="text-sm font-medium text-slate-700 mb-2">Coverage Scope</p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-xs text-slate-500 mb-2">✅ Covered Items</p>
+                            <div className="flex flex-wrap gap-1">
+                              {(selectedDevice.active_amc.coverage_includes.hardware !== false) && (
+                                <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">Hardware Parts</span>
+                              )}
+                              {(selectedDevice.active_amc.coverage_includes.software !== false) && (
+                                <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">Software</span>
+                              )}
+                              {selectedDevice.active_amc.coverage_includes.onsite_support && (
+                                <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">Onsite Support</span>
+                              )}
+                              {selectedDevice.active_amc.coverage_includes.remote_support && (
+                                <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">Remote Support</span>
+                              )}
+                              {selectedDevice.active_amc.coverage_includes.preventive_maintenance && (
+                                <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">Preventive Maintenance</span>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-500 mb-2">❌ Not Covered</p>
+                            <div className="flex flex-wrap gap-1">
+                              {selectedDevice.active_amc.coverage_includes.hardware === false && (
+                                <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded">Hardware Parts</span>
+                              )}
+                              {selectedDevice.active_amc.coverage_includes.exclusions?.map((item, idx) => (
+                                <span key={idx} className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded">{item}</span>
+                              ))}
+                              {!selectedDevice.active_amc.coverage_includes.exclusions?.length && 
+                               selectedDevice.active_amc.coverage_includes.hardware !== false && (
+                                <span className="text-xs text-slate-400">None specified</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Service Entitlements */}
+                    {selectedDevice.active_amc.entitlements && (
+                      <div className="border-t border-emerald-200 pt-4">
+                        <p className="text-sm font-medium text-slate-700 mb-2">Service Entitlements</p>
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                          {selectedDevice.active_amc.entitlements.visits_per_year && (
+                            <div>
+                              <p className="text-xs text-slate-500">Visits/Year</p>
+                              <p className="font-medium">
+                                {selectedDevice.active_amc.entitlements.visits_per_year === -1 
+                                  ? 'Unlimited' 
+                                  : selectedDevice.active_amc.entitlements.visits_per_year}
+                              </p>
+                            </div>
+                          )}
+                          {selectedDevice.active_amc.entitlements.response_sla && (
+                            <div>
+                              <p className="text-xs text-slate-500">Response SLA</p>
+                              <p className="font-medium">{selectedDevice.active_amc.entitlements.response_sla}</p>
+                            </div>
+                          )}
+                          {selectedDevice.active_amc.entitlements.resolution_sla && (
+                            <div>
+                              <p className="text-xs text-slate-500">Resolution SLA</p>
+                              <p className="font-medium">{selectedDevice.active_amc.entitlements.resolution_sla}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Show expired AMC history if exists but not active */}
+              {selectedDevice.amc_assignments && selectedDevice.amc_assignments.length > 0 && !selectedDevice.active_amc && (
+                <div className="border-t pt-6">
+                  <h4 className="text-sm font-semibold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-slate-400" />
+                    AMC History (Expired)
+                  </h4>
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                    {selectedDevice.amc_assignments.map((amc, idx) => (
+                      <div key={idx} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
+                        <div>
+                          <p className="font-medium text-slate-700">{amc.amc_name}</p>
+                          <p className="text-xs text-slate-500">
+                            {formatDate(amc.coverage_start)} — {formatDate(amc.coverage_end)}
+                          </p>
+                        </div>
+                        <span className="text-xs px-2 py-1 rounded-full bg-red-50 text-red-600">Expired</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Parts Section */}
+              {selectedDevice.parts && selectedDevice.parts.length > 0 && (
+                <div className="border-t pt-6">
+                  <h4 className="text-sm font-semibold text-slate-900 uppercase tracking-wider mb-4">
+                    Replaced Parts ({selectedDevice.parts.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedDevice.parts.map((part, idx) => (
+                      <div key={idx} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg text-sm">
+                        <div>
+                          <p className="font-medium">{part.part_name}</p>
+                          <p className="text-xs text-slate-500">Replaced: {formatDate(part.replaced_date)}</p>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          isWarrantyActive(part.warranty_expiry_date) 
+                            ? 'bg-emerald-50 text-emerald-600' 
+                            : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {isWarrantyActive(part.warranty_expiry_date) ? 'Under Warranty' : 'Warranty Expired'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               {selectedDevice.notes && (
-                <div>
+                <div className="border-t pt-6">
                   <p className="text-slate-500 text-sm">Notes</p>
                   <p className="text-sm mt-1">{selectedDevice.notes}</p>
                 </div>
