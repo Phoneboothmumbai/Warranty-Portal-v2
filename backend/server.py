@@ -1477,14 +1477,87 @@ async def delete_user(user_id: str, admin: dict = Depends(get_current_admin)):
 # ==================== ADMIN ENDPOINTS - DEVICES ====================
 
 @api_router.get("/admin/devices")
-async def list_devices(company_id: Optional[str] = None, status: Optional[str] = None, admin: dict = Depends(get_current_admin)):
+async def list_devices(
+    company_id: Optional[str] = None, 
+    status: Optional[str] = None,
+    amc_status: Optional[str] = None,  # Filter by AMC status: active, none, expired
+    q: Optional[str] = None,
+    limit: int = Query(default=100, le=500),
+    page: int = Query(default=1, ge=1),
+    admin: dict = Depends(get_current_admin)
+):
+    """List devices with AMC status - P0 Fix"""
     query = {"is_deleted": {"$ne": True}}
     if company_id:
         query["company_id"] = company_id
     if status:
         query["status"] = status
-    devices = await db.devices.find(query, {"_id": 0}).to_list(1000)
-    return devices
+    
+    # Add search filter
+    if q and q.strip():
+        search_regex = {"$regex": q.strip(), "$options": "i"}
+        query["$or"] = [
+            {"serial_number": search_regex},
+            {"asset_tag": search_regex},
+            {"brand": search_regex},
+            {"model": search_regex}
+        ]
+    
+    skip = (page - 1) * limit
+    devices = await db.devices.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+    
+    # Enrich each device with AMC status from amc_device_assignments JOIN
+    result = []
+    for device in devices:
+        # Get company name
+        company = await db.companies.find_one({"id": device.get("company_id")}, {"_id": 0, "name": 1})
+        device["company_name"] = company.get("name") if company else "Unknown"
+        
+        # Get assigned user name
+        if device.get("assigned_user_id"):
+            user = await db.users.find_one({"id": device["assigned_user_id"]}, {"_id": 0, "name": 1})
+            device["assigned_user_name"] = user.get("name") if user else None
+        
+        # JOIN amc_device_assignments to get AMC status
+        amc_assignment = await db.amc_device_assignments.find_one({
+            "device_id": device["id"],
+            "status": "active"
+        }, {"_id": 0})
+        
+        if amc_assignment:
+            # Check if coverage is still valid
+            coverage_active = is_warranty_active(amc_assignment.get("coverage_end", ""))
+            if coverage_active:
+                # Get AMC contract details
+                amc_contract = await db.amc_contracts.find_one({
+                    "id": amc_assignment["amc_contract_id"],
+                    "is_deleted": {"$ne": True}
+                }, {"_id": 0, "name": 1, "amc_type": 1})
+                
+                device["amc_status"] = "active"
+                device["amc_contract_id"] = amc_assignment["amc_contract_id"]
+                device["amc_contract_name"] = amc_contract.get("name") if amc_contract else None
+                device["amc_coverage_end"] = amc_assignment.get("coverage_end")
+            else:
+                device["amc_status"] = "expired"
+                device["amc_contract_id"] = amc_assignment["amc_contract_id"]
+                device["amc_coverage_end"] = amc_assignment.get("coverage_end")
+        else:
+            device["amc_status"] = "none"
+            device["amc_contract_id"] = None
+            device["amc_contract_name"] = None
+            device["amc_coverage_end"] = None
+        
+        # Add SmartSelect label
+        device["label"] = f"{device.get('brand', '')} {device.get('model', '')} - {device.get('serial_number', '')}"
+        
+        # Filter by AMC status if requested
+        if amc_status and device["amc_status"] != amc_status:
+            continue
+        
+        result.append(device)
+    
+    return result
 
 @api_router.post("/admin/devices")
 async def create_device(device_data: DeviceCreate, admin: dict = Depends(get_current_admin)):
