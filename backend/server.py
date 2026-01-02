@@ -913,7 +913,15 @@ async def get_public_masters(
 
 @api_router.get("/warranty/search")
 async def search_warranty(q: str):
-    """Search warranty by serial number or asset tag"""
+    """
+    Search warranty by serial number or asset tag
+    
+    P0 FIX - AMC OVERRIDE RULE:
+    IF device has ACTIVE AMC:
+      → Show AMC coverage (ignore device warranty expiry)
+    ELSE:
+      → Show device warranty
+    """
     if not q or len(q.strip()) < 2:
         raise HTTPException(status_code=400, detail="Search query too short")
     
@@ -938,6 +946,7 @@ async def search_warranty(q: str):
     if device.get("status") in ["retired", "scrapped"]:
         return {
             "device": {
+                "id": device.get("id"),
                 "device_type": device.get("device_type"),
                 "brand": device.get("brand"),
                 "model": device.get("model"),
@@ -950,6 +959,8 @@ async def search_warranty(q: str):
             "assigned_user": None,
             "parts": [],
             "amc": None,
+            "amc_contract": None,
+            "coverage_source": None,
             "service_count": 0
         }
     
@@ -964,10 +975,61 @@ async def search_warranty(q: str):
         assigned_user = user.get("name") if user else None
     
     # Calculate device warranty status
-    device_warranty_active = False
     device_warranty_expiry = device.get("warranty_end_date")
-    if device_warranty_expiry:
-        device_warranty_active = is_warranty_active(device_warranty_expiry)
+    device_warranty_active = is_warranty_active(device_warranty_expiry) if device_warranty_expiry else False
+    
+    # P0 FIX: Check AMC from amc_device_assignments JOIN (not old amc collection)
+    active_amc_assignment = await db.amc_device_assignments.find_one({
+        "device_id": device["id"],
+        "status": "active"
+    }, {"_id": 0})
+    
+    amc_contract_info = None
+    amc_coverage_active = False
+    coverage_source = "device_warranty"  # Default
+    effective_coverage_end = device_warranty_expiry
+    
+    if active_amc_assignment:
+        # Check if AMC coverage is still valid
+        amc_coverage_active = is_warranty_active(active_amc_assignment.get("coverage_end", ""))
+        
+        if amc_coverage_active:
+            # Get full AMC contract details
+            amc_contract = await db.amc_contracts.find_one({
+                "id": active_amc_assignment["amc_contract_id"],
+                "is_deleted": {"$ne": True}
+            }, {"_id": 0})
+            
+            if amc_contract:
+                coverage_source = "amc_contract"
+                effective_coverage_end = active_amc_assignment.get("coverage_end")
+                
+                amc_contract_info = {
+                    "contract_id": amc_contract["id"],
+                    "name": amc_contract.get("name"),
+                    "amc_type": amc_contract.get("amc_type"),
+                    "coverage_start": active_amc_assignment.get("coverage_start"),
+                    "coverage_end": active_amc_assignment.get("coverage_end"),
+                    "active": True,
+                    "coverage_includes": amc_contract.get("coverage_includes"),
+                    "entitlements": amc_contract.get("entitlements")
+                }
+    
+    # Also check legacy AMC collection for backward compatibility
+    legacy_amc = await db.amc.find_one({"device_id": device["id"], "is_deleted": {"$ne": True}}, {"_id": 0})
+    legacy_amc_info = None
+    if legacy_amc:
+        legacy_amc_active = is_warranty_active(legacy_amc.get("end_date", ""))
+        legacy_amc_info = {
+            "start_date": legacy_amc.get("start_date"),
+            "end_date": legacy_amc.get("end_date"),
+            "active": legacy_amc_active
+        }
+        
+        # If no active AMC contract but legacy AMC is active, use it
+        if not amc_coverage_active and legacy_amc_active:
+            coverage_source = "legacy_amc"
+            effective_coverage_end = legacy_amc.get("end_date")
     
     # Get parts and their warranty status
     parts_cursor = db.parts.find({"device_id": device["id"], "is_deleted": {"$ne": True}}, {"_id": 0})
@@ -982,22 +1044,18 @@ async def search_warranty(q: str):
             "warranty_active": part_warranty_active
         })
     
-    # Get AMC status
-    amc = await db.amc.find_one({"device_id": device["id"], "is_deleted": {"$ne": True}}, {"_id": 0})
-    amc_info = None
-    if amc:
-        amc_active = is_warranty_active(amc.get("end_date", ""))
-        amc_info = {
-            "start_date": amc.get("start_date"),
-            "end_date": amc.get("end_date"),
-            "active": amc_active
-        }
-    
     # Get service history count (public sees count, not details)
     service_count = await db.service_history.count_documents({"device_id": device["id"]})
     
+    # Determine final warranty status based on AMC OVERRIDE RULE
+    # AMC takes priority over device warranty
+    final_warranty_active = amc_coverage_active or device_warranty_active
+    if amc_coverage_active:
+        final_warranty_active = True  # AMC overrides even if device warranty expired
+    
     return {
         "device": {
+            "id": device.get("id"),
             "device_type": device.get("device_type"),
             "brand": device.get("brand"),
             "model": device.get("model"),
@@ -1005,14 +1063,18 @@ async def search_warranty(q: str):
             "asset_tag": device.get("asset_tag"),
             "purchase_date": device.get("purchase_date"),
             "warranty_end_date": device_warranty_expiry,
-            "warranty_active": device_warranty_active,
+            "warranty_active": final_warranty_active,
+            "device_warranty_active": device_warranty_active,  # Original device warranty status
             "condition": device.get("condition"),
             "status": device.get("status")
         },
         "company_name": company_name,
         "assigned_user": assigned_user,
         "parts": parts,
-        "amc": amc_info,
+        "amc": legacy_amc_info,  # Legacy AMC for backward compatibility
+        "amc_contract": amc_contract_info,  # New AMC contract info
+        "coverage_source": coverage_source,  # "amc_contract", "legacy_amc", or "device_warranty"
+        "effective_coverage_end": effective_coverage_end,
         "service_count": service_count
     }
 
