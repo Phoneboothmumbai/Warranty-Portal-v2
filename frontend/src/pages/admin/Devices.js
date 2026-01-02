@@ -348,7 +348,7 @@ const Devices = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white rounded-xl border border-slate-100 p-4">
           <p className="text-sm text-slate-500">Total Devices</p>
           <p className="text-2xl font-semibold text-slate-900 mt-1">{devices.length}</p>
@@ -363,6 +363,12 @@ const Devices = () => {
           <p className="text-sm text-slate-500">Under Warranty</p>
           <p className="text-2xl font-semibold text-blue-600 mt-1">
             {devices.filter(d => isWarrantyActive(d.warranty_end_date)).length}
+          </p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-100 p-4">
+          <p className="text-sm text-slate-500">With AMC</p>
+          <p className="text-2xl font-semibold text-purple-600 mt-1">
+            {devices.filter(d => d.amc_status === 'active').length}
           </p>
         </div>
         <div className="bg-white rounded-xl border border-slate-100 p-4">
