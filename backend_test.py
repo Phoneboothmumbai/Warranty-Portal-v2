@@ -1240,6 +1240,208 @@ class WarrantyPortalTester:
         self.log("✅ All AMC Device Assignment APIs working correctly")
         return True
 
+    def test_p0_critical_architecture_fixes(self):
+        """Test P0 Critical Architecture Fixes for AMC Status and Warranty Override"""
+        self.log("\n=== Testing P0 Critical Architecture Fixes ===")
+        
+        # Ensure we have demo admin credentials
+        if not self.token:
+            self.log("❌ No authentication token available")
+            return False
+        
+        # Store test device serial for later use
+        test_device_serial = None
+        
+        # Test 1: Device List API with AMC Status
+        self.log("🔍 Testing Device List API with AMC Status...")
+        success, response = self.run_test("Device List with AMC Status", "GET", "admin/devices?limit=5", 200)
+        if not success:
+            return False
+        
+        # Verify each device has AMC status fields
+        if not isinstance(response, list) or len(response) == 0:
+            self.log("❌ Device list should return an array with devices")
+            return False
+        
+        for device in response:
+            required_fields = ['amc_status', 'company_name', 'label']
+            for field in required_fields:
+                if field not in device:
+                    self.log(f"❌ Device missing required field '{field}'")
+                    return False
+            
+            # Check AMC status values
+            if device['amc_status'] not in ['active', 'none', 'expired']:
+                self.log(f"❌ Invalid amc_status value: {device['amc_status']}")
+                return False
+            
+            # Store a device serial for later tests
+            if not test_device_serial and device.get('serial_number'):
+                test_device_serial = device['serial_number']
+        
+        self.log("✅ Device List API includes AMC status correctly")
+        
+        # Test 2: Device Detail API with Full AMC Info
+        if test_device_serial:
+            # Get device ID first
+            device_id = None
+            for device in response:
+                if device.get('serial_number') == test_device_serial:
+                    device_id = device.get('id')
+                    break
+            
+            if device_id:
+                self.log("🔍 Testing Device Detail API with Full AMC Info...")
+                success, device_detail = self.run_test("Device Detail with AMC Info", "GET", f"admin/devices/{device_id}", 200)
+                if not success:
+                    return False
+                
+                # Verify device detail includes AMC fields
+                required_fields = ['amc_status']
+                for field in required_fields:
+                    if field not in device_detail:
+                        self.log(f"❌ Device detail missing field '{field}'")
+                        return False
+                
+                # Check if device has AMC assignments
+                if 'amc_assignments' in device_detail:
+                    assignments = device_detail['amc_assignments']
+                    if isinstance(assignments, list) and len(assignments) > 0:
+                        # Verify assignment structure
+                        assignment = assignments[0]
+                        assignment_fields = ['amc_contract_id', 'coverage_start', 'coverage_end']
+                        for field in assignment_fields:
+                            if field not in assignment:
+                                self.log(f"❌ AMC assignment missing field '{field}'")
+                                return False
+                
+                self.log("✅ Device Detail API includes full AMC info correctly")
+        
+        # Test 3: AMC Contracts Search by Serial Number
+        if test_device_serial:
+            self.log("🔍 Testing AMC Contracts Search by Serial Number...")
+            success, amc_response = self.run_test("AMC Contracts Search by Serial", "GET", f"admin/amc-contracts?serial={test_device_serial}", 200)
+            if not success:
+                return False
+            
+            # Response should be a list (may be empty if no AMC assigned)
+            if not isinstance(amc_response, list):
+                self.log("❌ AMC contracts search should return an array")
+                return False
+            
+            self.log("✅ AMC Contracts Search by Serial Number working correctly")
+        
+        # Test 4: Warranty Search with AMC Override Rule
+        if test_device_serial:
+            self.log("🔍 Testing Warranty Search with AMC Override Rule...")
+            success, warranty_response = self.run_test("Warranty Search with AMC Override", "GET", f"warranty/search?q={test_device_serial}", 200)
+            if not success:
+                return False
+            
+            # Verify warranty response structure
+            required_fields = ['device', 'coverage_source']
+            for field in required_fields:
+                if field not in warranty_response:
+                    self.log(f"❌ Warranty search response missing field '{field}'")
+                    return False
+            
+            # Verify device object has warranty fields
+            device_obj = warranty_response.get('device', {})
+            device_fields = ['warranty_active', 'device_warranty_active']
+            for field in device_fields:
+                if field not in device_obj:
+                    self.log(f"❌ Warranty search device object missing field '{field}'")
+                    return False
+            
+            # Check coverage source
+            coverage_source = warranty_response.get('coverage_source')
+            if coverage_source not in ['amc_contract', 'legacy_amc', 'device_warranty']:
+                self.log(f"❌ Invalid coverage_source: {coverage_source}")
+                return False
+            
+            # If AMC contract is active, verify amc_contract object
+            if coverage_source == 'amc_contract':
+                amc_contract = warranty_response.get('amc_contract')
+                if not amc_contract:
+                    self.log("❌ Missing amc_contract object when coverage_source is amc_contract")
+                    return False
+                
+                amc_fields = ['name', 'amc_type', 'coverage_start', 'coverage_end', 'active']
+                for field in amc_fields:
+                    if field not in amc_contract:
+                        self.log(f"❌ AMC contract object missing field '{field}'")
+                        return False
+                
+                if not amc_contract.get('active'):
+                    self.log("❌ AMC contract should be active when used as coverage source")
+                    return False
+            
+            self.log("✅ Warranty Search with AMC Override Rule working correctly")
+        
+        # Test 5: Test AMC Filter on Devices
+        self.log("🔍 Testing AMC Filter on Devices...")
+        
+        # Test active AMC filter
+        success, active_amc_devices = self.run_test("Filter Devices with Active AMC", "GET", "admin/devices?amc_status=active", 200)
+        if not success:
+            return False
+        
+        if not isinstance(active_amc_devices, list):
+            self.log("❌ AMC filter should return an array")
+            return False
+        
+        # Verify all returned devices have active AMC
+        for device in active_amc_devices:
+            if device.get('amc_status') != 'active':
+                self.log(f"❌ Device with amc_status={device.get('amc_status')} returned in active AMC filter")
+                return False
+        
+        # Test no AMC filter
+        success, no_amc_devices = self.run_test("Filter Devices with No AMC", "GET", "admin/devices?amc_status=none", 200)
+        if not success:
+            return False
+        
+        if not isinstance(no_amc_devices, list):
+            self.log("❌ AMC filter should return an array")
+            return False
+        
+        # Verify all returned devices have no AMC
+        for device in no_amc_devices:
+            if device.get('amc_status') != 'none':
+                self.log(f"❌ Device with amc_status={device.get('amc_status')} returned in no AMC filter")
+                return False
+        
+        self.log("✅ AMC Filter on Devices working correctly")
+        
+        # Test 6: Verify AMC Override Logic
+        self.log("🔍 Testing AMC Override Logic...")
+        
+        # Find a device with expired warranty but active AMC (if any)
+        all_devices_success, all_devices = self.run_test("Get All Devices for Override Test", "GET", "admin/devices", 200)
+        if all_devices_success:
+            for device in all_devices:
+                if device.get('amc_status') == 'active':
+                    device_serial = device.get('serial_number')
+                    if device_serial:
+                        # Test warranty search for this device
+                        success, override_test = self.run_test("Test AMC Override Logic", "GET", f"warranty/search?q={device_serial}", 200)
+                        if success:
+                            device_obj = override_test.get('device', {})
+                            warranty_active = device_obj.get('warranty_active')
+                            device_warranty_active = device_obj.get('device_warranty_active')
+                            coverage_source = override_test.get('coverage_source')
+                            
+                            # If AMC is active, warranty_active should be True regardless of device warranty
+                            if coverage_source == 'amc_contract' and not warranty_active:
+                                self.log("❌ AMC Override Logic failed: warranty_active should be True when AMC is active")
+                                return False
+                            
+                            self.log("✅ AMC Override Logic working correctly")
+                            break
+        
+        self.log("✅ All P0 Critical Architecture Fixes tests passed")
+        return True
+
     def run_all_tests(self):
         """Run all tests in sequence"""
         self.log("🚀 Starting Warranty Portal API Tests")
