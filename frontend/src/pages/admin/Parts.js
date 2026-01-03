@@ -330,31 +330,42 @@ const Parts = () => {
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
             <div>
               <label className="form-label">Device *</label>
-              <select
+              <SmartSelect
                 value={formData.device_id}
-                onChange={(e) => setFormData({ ...formData, device_id: e.target.value })}
-                className="form-select"
-                data-testid="part-device-select"
+                onValueChange={(val) => setFormData({ ...formData, device_id: val })}
+                options={deviceOptions}
+                placeholder="Search and select device..."
+                searchPlaceholder="Search by brand, model, serial..."
+                emptyText="No devices found"
                 disabled={editingPart}
-              >
-                <option value="">Select Device</option>
-                {devices.map(d => (
-                  <option key={d.id} value={d.id}>{d.brand} {d.model} ({d.serial_number})</option>
-                ))}
-              </select>
+                data-testid="part-device-select"
+              />
             </div>
             <div>
               <label className="form-label">Part Name *</label>
-              <select
+              <SmartSelect
                 value={formData.part_name}
-                onChange={(e) => setFormData({ ...formData, part_name: e.target.value })}
-                className="form-select"
+                onValueChange={(val) => setFormData({ ...formData, part_name: val })}
+                options={partTypeOptions}
+                placeholder="Search or add part type..."
+                searchPlaceholder="Search part types..."
+                emptyText="No matching parts"
+                allowCreate={true}
+                createLabel="Add New Part Type"
+                onCreateNew={handleAddPartType}
                 data-testid="part-name-select"
-              >
-                {partTypes.map(p => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
+              />
+            </div>
+            <div>
+              <label className="form-label">Serial Number <span className="text-slate-400 text-xs">(Optional)</span></label>
+              <input
+                type="text"
+                value={formData.serial_number}
+                onChange={(e) => setFormData({ ...formData, serial_number: e.target.value })}
+                className="form-input"
+                placeholder="Enter part serial number..."
+                data-testid="part-serial-number-input"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
