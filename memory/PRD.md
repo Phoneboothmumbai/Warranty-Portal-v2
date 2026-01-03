@@ -56,8 +56,36 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - P1: Admin & User Role Management (Super Admin, Admin, Staff, Service Engineer)
 - P2: Engineer Field Visit Support
 
+## Phase 2C: Bulk Import System (Next Phase)
+All bulk imports will include: Download Template → Upload & Preview → Validation → Confirm & Import → Summary
+
+### High Priority
+| Entity | Import Fields |
+|--------|---------------|
+| **Devices** | Serial No, Asset Tag, Brand, Model, Company, Site, Purchase Date, Warranty End |
+| **Companies** | Name, Contact Person, Email, Phone, Address, GST No |
+| **Users/Contacts** | Name, Email, Phone, Department, Company, Site |
+| **AMC Device Assignments** | AMC Contract ID, Device Serial Numbers |
+
+### Medium Priority
+| Entity | Import Fields |
+|--------|---------------|
+| **Parts** | Part Name, Serial No, Device Serial, Warranty End, Supplier |
+| **Sites/Locations** | Site Name, Company, Address, Contact |
+| **Licenses** | Software Name, License Key, Seats, Company, Expiry Date |
+| **Service History** | Device Serial, Service Date, Type, Notes, Technician |
+
+### Low Priority (Master Data)
+| Entity | Import Fields |
+|--------|---------------|
+| **Device Types** | Name |
+| **Brands** | Name |
+| **Models** | Name, Brand |
+| **Software Products** | Name, Vendor |
+
+**File Formats:** Both CSV and Excel (.xlsx)
+
 ## Future/Backlog
-- Bulk Upload System (CSV/Excel with preview)
 - WhatsApp Integration
 - PDF Export for Service History
 - Customer login portal
