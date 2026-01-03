@@ -1103,7 +1103,31 @@ async def generate_warranty_pdf(serial_number: str):
     async for part in parts_cursor:
         parts.append(part)
     
-    amc = await db.amc.find_one({"device_id": device["id"], "is_deleted": {"$ne": True}}, {"_id": 0})
+    # P0 FIX: Check AMC from amc_device_assignments JOIN (not old amc collection)
+    active_amc_assignment = await db.amc_device_assignments.find_one({
+        "device_id": device["id"],
+        "status": "active"
+    }, {"_id": 0})
+    
+    amc_contract_info = None
+    if active_amc_assignment:
+        # Check if AMC coverage is still valid
+        if is_warranty_active(active_amc_assignment.get("coverage_end", "")):
+            # Get full AMC contract details
+            amc_contract = await db.amc_contracts.find_one({
+                "id": active_amc_assignment["amc_contract_id"],
+                "is_deleted": {"$ne": True}
+            }, {"_id": 0})
+            
+            if amc_contract:
+                amc_contract_info = {
+                    "name": amc_contract.get("name"),
+                    "amc_type": amc_contract.get("amc_type"),
+                    "coverage_start": active_amc_assignment.get("coverage_start"),
+                    "coverage_end": active_amc_assignment.get("coverage_end"),
+                    "coverage_includes": amc_contract.get("coverage_includes"),
+                    "entitlements": amc_contract.get("entitlements")
+                }
     
     settings = await db.settings.find_one({"id": "settings"}, {"_id": 0})
     portal_name = settings.get("company_name", "Warranty Portal") if settings else "Warranty Portal"
