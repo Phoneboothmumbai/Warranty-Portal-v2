@@ -1198,12 +1198,39 @@ async def generate_warranty_pdf(serial_number: str):
         story.append(Spacer(1, 20))
     
     story.append(Paragraph("AMC / Service Coverage", heading_style))
-    if amc:
-        amc_status = "Active" if is_warranty_active(amc.get("end_date", "")) else "Expired"
+    if amc_contract_info:
+        amc_type_display = (amc_contract_info.get("amc_type") or "standard").replace("_", " ").title()
+        coverage_includes = amc_contract_info.get("coverage_includes", {})
+        
+        # Build coverage details string
+        coverage_items = []
+        if coverage_includes.get("onsite_support"):
+            coverage_items.append("Onsite Support")
+        if coverage_includes.get("remote_support"):
+            coverage_items.append("Remote Support")
+        if coverage_includes.get("preventive_maintenance"):
+            coverage_items.append("Preventive Maintenance")
+        coverage_str = ", ".join(coverage_items) if coverage_items else "Standard Coverage"
+        
+        # Build entitlements string
+        entitlements = amc_contract_info.get("entitlements", {})
+        entitlement_items = []
+        if entitlements.get("onsite_visits_per_year"):
+            visits = entitlements["onsite_visits_per_year"]
+            entitlement_items.append(f"{visits} Onsite Visits/Year" if visits != -1 else "Unlimited Onsite Visits")
+        if entitlements.get("remote_support_count"):
+            remote = entitlements["remote_support_count"]
+            entitlement_items.append(f"{remote} Remote Support Sessions" if remote != -1 else "Unlimited Remote Support")
+        entitlement_str = ", ".join(entitlement_items) if entitlement_items else "-"
+        
         amc_data = [
-            ["Start Date", amc.get("start_date", "-")],
-            ["End Date", amc.get("end_date", "-")],
-            ["Status", amc_status]
+            ["Contract Name", amc_contract_info.get("name", "-")],
+            ["AMC Type", amc_type_display],
+            ["Coverage Start", amc_contract_info.get("coverage_start", "-")],
+            ["Coverage End", amc_contract_info.get("coverage_end", "-")],
+            ["Status", "Active"],
+            ["Coverage Includes", coverage_str],
+            ["Entitlements", entitlement_str]
         ]
     else:
         amc_data = [["Status", "No active AMC found for this device"]]
