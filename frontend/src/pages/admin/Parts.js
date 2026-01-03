@@ -16,6 +16,7 @@ const Parts = () => {
   const { token } = useAuth();
   const [parts, setParts] = useState([]);
   const [devices, setDevices] = useState([]);
+  const [partTypes, setPartTypes] = useState(defaultPartTypes);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDevice, setFilterDevice] = useState('');
@@ -24,6 +25,7 @@ const Parts = () => {
   const [formData, setFormData] = useState({
     device_id: '',
     part_name: 'Keyboard',
+    serial_number: '',
     replaced_date: '',
     warranty_months: 3,
     notes: ''
