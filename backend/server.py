@@ -4630,6 +4630,12 @@ async def create_company_ticket(data: ServiceTicketCreate, user: dict = Depends(
     
     await db.service_tickets.insert_one(ticket.model_dump())
     
+    # 7. Get parts/components for this device
+    parts = await db.parts.find(
+        {"device_id": device["id"], "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    ).to_list(50)
+    
     # Build comprehensive osTicket message
     def format_date(date_str):
         if not date_str:
@@ -4648,31 +4654,31 @@ async def create_company_ticket(data: ServiceTicketCreate, user: dict = Depends(
         try:
             end_date = datetime.strptime(device["warranty_end_date"], '%Y-%m-%d')
             today = get_ist_now().replace(tzinfo=None)
-            days_left = (end_date - today).days
+            days_left = (end_date.date() - today.date()).days
             if days_left < 0:
-                warranty_status = "❌ EXPIRED"
+                warranty_status = "[EXPIRED]"
                 warranty_days_left = f"{abs(days_left)} days ago"
             elif days_left <= 30:
-                warranty_status = "⚠️ EXPIRING SOON"
+                warranty_status = "[EXPIRING SOON]"
                 warranty_days_left = f"{days_left} days remaining"
             else:
-                warranty_status = "✅ ACTIVE"
+                warranty_status = "[ACTIVE]"
                 warranty_days_left = f"{days_left} days remaining"
         except:
             pass
     
     osticket_message = f"""
-<h2>🎫 Service Request from Warranty Portal</h2>
+<h2>SERVICE REQUEST FROM WARRANTY PORTAL</h2>
 <p><strong>Portal Ticket #:</strong> {ticket.ticket_number}</p>
 <p><strong>Issue Category:</strong> {data.issue_category or 'General'}</p>
 <p><strong>Priority:</strong> {data.priority if hasattr(data, 'priority') else 'Medium'}</p>
 
 <hr>
-<h3>📝 Issue Description</h3>
+<h3>ISSUE DESCRIPTION</h3>
 <p>{data.description}</p>
 
 <hr>
-<h3>🏢 Company Information</h3>
+<h3>COMPANY INFORMATION</h3>
 <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
 <tr><td><strong>Company Name</strong></td><td>{company.get('name', 'N/A') if company else 'N/A'}</td></tr>
 <tr><td><strong>Company Code</strong></td><td>{company.get('code', 'N/A') if company else 'N/A'}</td></tr>
@@ -4686,7 +4692,7 @@ async def create_company_ticket(data: ServiceTicketCreate, user: dict = Depends(
 </table>
 
 <hr>
-<h3>👤 Ticket Raised By</h3>
+<h3>TICKET RAISED BY</h3>
 <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
 <tr><td><strong>Name</strong></td><td>{user.get('name', 'N/A')}</td></tr>
 <tr><td><strong>Email</strong></td><td>{user.get('email', 'N/A')}</td></tr>
@@ -4695,7 +4701,7 @@ async def create_company_ticket(data: ServiceTicketCreate, user: dict = Depends(
 </table>
 
 <hr>
-<h3>💻 Device Information</h3>
+<h3>DEVICE INFORMATION</h3>
 <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
 <tr><td><strong>Serial Number</strong></td><td><strong>{device.get('serial_number', 'N/A')}</strong></td></tr>
 <tr><td><strong>Device Type</strong></td><td>{device.get('device_type', 'N/A')}</td></tr>
@@ -4713,7 +4719,7 @@ async def create_company_ticket(data: ServiceTicketCreate, user: dict = Depends(
 </table>
 
 <hr>
-<h3>🛡️ Warranty Information</h3>
+<h3>WARRANTY INFORMATION</h3>
 <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
 <tr><td><strong>Warranty Status</strong></td><td><strong>{warranty_status}</strong></td></tr>
 <tr><td><strong>Warranty Start</strong></td><td>{format_date(device.get('warranty_start_date'))}</td></tr>
