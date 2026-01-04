@@ -194,6 +194,11 @@ class Device(BaseModel):
     condition: str = "good"  # new, good, fair, poor
     status: str = "active"  # active, in_repair, retired, lost, scrapped
     notes: Optional[str] = None
+    # Deployment source tracking
+    source: str = "manual"  # manual, deployment
+    deployment_id: Optional[str] = None
+    deployment_item_index: Optional[int] = None
+    site_id: Optional[str] = None
     is_deleted: bool = False
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
@@ -213,6 +218,11 @@ class DeviceCreate(BaseModel):
     condition: str = "good"
     status: str = "active"
     notes: Optional[str] = None
+    # Deployment source tracking
+    source: str = "manual"
+    deployment_id: Optional[str] = None
+    deployment_item_index: Optional[int] = None
+    site_id: Optional[str] = None
 
 class DeviceUpdate(BaseModel):
     company_id: Optional[str] = None
@@ -230,6 +240,7 @@ class DeviceUpdate(BaseModel):
     condition: Optional[str] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    site_id: Optional[str] = None
 
 # ==================== ASSIGNMENT HISTORY ====================
 
