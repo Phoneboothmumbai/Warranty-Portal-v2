@@ -75,7 +75,7 @@ const CompanyTickets = () => {
       });
       toast.success('Service request created successfully');
       setShowNewTicket(false);
-      setNewTicket({ device_id: '', subject: '', description: '', priority: 'medium' });
+      setNewTicket({ device_id: '', issue_category: 'hardware', subject: '', description: '', priority: 'medium' });
       fetchTickets();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to create ticket');
