@@ -56,10 +56,28 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - **Parts Page:** Added SmartSelect dropdowns with search for Device and Part Name, plus "Add New Part Type" option and optional Serial Number field
 - **Deployments Page:** Added SmartSelect dropdowns with search for Company, Site, Category (with "Add New"), and Brand (with "Add New")
 - **PDF Export:** Fixed AMC details not showing in warranty PDF download
+- **Company Login Portal (COMPLETED):**
+  - Full authentication system (login, registration with company code)
+  - Dashboard with stats (devices, warranties, AMC, tickets)
+  - Devices page with search/filter and detail view
+  - Warranty & Coverage page with expiry tracking
+  - Service Requests page (create, view, add comments)
+  - AMC Contracts page
+  - Deployments page
+  - Users/Contacts page
+  - Sites page
+  - Profile page with password change
+  - All tested with 22/22 backend tests passing
+
+## Company Portal Credentials
+- **URL:** /company/login
+- **Test Company Code:** ACME001
+- **Test User:** jane@acme.com / company123
 
 ## Upcoming Tasks
 - P1: Admin & User Role Management (Super Admin, Admin, Staff, Service Engineer)
 - P2: Engineer Field Visit Support
+- P3: Company Portal Email Notifications
 
 ## Phase 2C: Bulk Import System (Next Phase)
 All bulk imports will include: Download Template → Upload & Preview → Validation → Confirm & Import → Summary
