@@ -421,7 +421,14 @@ const Devices = () => {
                           </div>
                           <div>
                             <p className="font-medium text-slate-900">{device.brand} {device.model}</p>
-                            <p className="text-xs text-slate-500">{device.device_type}</p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-500">{device.device_type}</span>
+                              {device.source === 'deployment' && (
+                                <span className="text-xs px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded">
+                                  Deployment
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -436,6 +443,12 @@ const Devices = () => {
                           <Building2 className="h-3.5 w-3.5 text-slate-400" />
                           <span className="text-sm">{getCompanyName(device.company_id)}</span>
                         </div>
+                        {device.site_name && (
+                          <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                            <MapPin className="h-3 w-3" />
+                            {device.site_name}
+                          </p>
+                        )}
                       </td>
                       <td>
                         {device.warranty_end_date ? (
