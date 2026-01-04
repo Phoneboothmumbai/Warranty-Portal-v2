@@ -2961,12 +2961,19 @@ async def update_deployment(deployment_id: str, updates: DeploymentUpdate, admin
 
 @api_router.delete("/admin/deployments/{deployment_id}")
 async def delete_deployment(deployment_id: str, admin: dict = Depends(get_current_admin)):
-    """Soft delete deployment"""
+    """Soft delete deployment and linked devices"""
     result = await db.deployments.update_one({"id": deployment_id}, {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Deployment not found")
+    
+    # Also soft-delete devices created from this deployment
+    await db.devices.update_many(
+        {"deployment_id": deployment_id, "source": "deployment"},
+        {"$set": {"is_deleted": True}}
+    )
+    
     await log_audit("deployment", deployment_id, "delete", {"is_deleted": True}, admin)
-    return {"message": "Deployment archived"}
+    return {"message": "Deployment and linked devices archived"}
 
 @api_router.post("/admin/deployments/{deployment_id}/items")
 async def add_deployment_item(deployment_id: str, item_data: dict, admin: dict = Depends(get_current_admin)):
