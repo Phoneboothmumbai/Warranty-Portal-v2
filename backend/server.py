@@ -949,6 +949,64 @@ def days_until_expiry(expiry_date: str) -> int:
     except:
         return -9999
 
+# ==================== OSTICKET INTEGRATION ====================
+
+async def create_osticket(
+    email: str,
+    name: str,
+    subject: str,
+    message: str,
+    phone: str = "",
+    priority_id: Optional[int] = None
+) -> Optional[str]:
+    """
+    Create a ticket in osTicket system.
+    Returns the osTicket ticket number on success, None on failure.
+    """
+    if not OSTICKET_URL or not OSTICKET_API_KEY:
+        logger.warning("osTicket not configured - skipping ticket sync")
+        return None
+    
+    try:
+        api_url = f"{OSTICKET_URL.rstrip('/')}/api/tickets.json"
+        
+        payload = {
+            "alert": True,
+            "autorespond": True,
+            "source": "API",
+            "name": name,
+            "email": email,
+            "subject": subject,
+            "message": f"data:text/html,{message}",
+        }
+        
+        if phone:
+            payload["phone"] = phone
+        
+        if priority_id:
+            payload["priority"] = priority_id
+        
+        headers = {
+            "X-API-Key": OSTICKET_API_KEY,
+            "Content-Type": "application/json"
+        }
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(api_url, json=payload, headers=headers)
+            
+            if response.status_code == 201:
+                # Success - response body contains the ticket number
+                osticket_id = response.text.strip()
+                logger.info(f"osTicket created successfully: {osticket_id}")
+                return osticket_id
+            else:
+                logger.error(f"osTicket API error: {response.status_code} - {response.text}")
+                return None
+                
+    except Exception as e:
+        logger.error(f"osTicket integration failed: {str(e)}")
+        return None
+
 # ==================== SEED DEFAULT MASTERS ====================
 
 async def seed_default_masters():
