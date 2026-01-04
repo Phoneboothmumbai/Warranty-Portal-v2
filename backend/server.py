@@ -962,6 +962,7 @@ async def create_osticket(
     """
     Create a ticket in osTicket system.
     Returns the osTicket ticket number on success, None on failure.
+    Note: osTicket API keys are IP-restricted. This will only work from the configured server IP.
     """
     if not OSTICKET_URL or not OSTICKET_API_KEY:
         logger.warning("osTicket not configured - skipping ticket sync")
@@ -991,14 +992,18 @@ async def create_osticket(
             "Content-Type": "application/json"
         }
         
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(api_url, json=payload, headers=headers)
+        async with httpx.AsyncClient(timeout=30.0) as http_client:
+            response = await http_client.post(api_url, json=payload, headers=headers)
             
             if response.status_code == 201:
                 # Success - response body contains the ticket number
                 osticket_id = response.text.strip()
                 logger.info(f"osTicket created successfully: {osticket_id}")
                 return osticket_id
+            elif response.status_code == 401:
+                # API key is IP-restricted - log but don't fail
+                logger.warning(f"osTicket API key rejected (IP restriction): {response.text}")
+                return None
             else:
                 logger.error(f"osTicket API error: {response.status_code} - {response.text}")
                 return None
