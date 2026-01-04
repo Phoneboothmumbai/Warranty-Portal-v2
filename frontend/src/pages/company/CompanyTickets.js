@@ -295,6 +295,24 @@ const CompanyTickets = () => {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Issue Category *
+                </label>
+                <select
+                  value={newTicket.issue_category}
+                  onChange={(e) => setNewTicket({ ...newTicket, issue_category: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                  data-testid="ticket-category-select"
+                >
+                  <option value="hardware">Hardware</option>
+                  <option value="software">Software</option>
+                  <option value="network">Network</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
                   Priority
                 </label>
                 <select
