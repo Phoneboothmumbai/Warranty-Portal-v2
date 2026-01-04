@@ -262,6 +262,29 @@ const Deployments = () => {
     const updatedItems = [...formData.items];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
     
+    // Auto-calculate warranty end date when duration or start date changes
+    if (field === 'warranty_start_date' || field === 'warranty_duration' || field === 'warranty_duration_unit') {
+      const item = updatedItems[index];
+      const startDate = field === 'warranty_start_date' ? value : item.warranty_start_date;
+      const duration = field === 'warranty_duration' ? parseInt(value) || 0 : parseInt(item.warranty_duration) || 0;
+      const unit = field === 'warranty_duration_unit' ? value : item.warranty_duration_unit || 'months';
+      
+      if (startDate && duration > 0) {
+        const start = new Date(startDate);
+        let endDate = new Date(start);
+        
+        if (unit === 'days') {
+          endDate.setDate(endDate.getDate() + duration);
+        } else if (unit === 'months') {
+          endDate.setMonth(endDate.getMonth() + duration);
+        } else if (unit === 'years') {
+          endDate.setFullYear(endDate.getFullYear() + duration);
+        }
+        
+        updatedItems[index].warranty_end_date = endDate.toISOString().split('T')[0];
+      }
+    }
+    
     // Auto-adjust serial numbers array based on quantity
     if (field === 'quantity' && updatedItems[index].is_serialized) {
       const qty = parseInt(value) || 1;
