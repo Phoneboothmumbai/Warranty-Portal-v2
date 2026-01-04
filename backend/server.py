@@ -4599,7 +4599,7 @@ async def create_company_ticket(data: ServiceTicketCreate, user: dict = Depends(
         {"_id": 0}
     ).sort("service_date", -1).limit(10).to_list(10)
     
-    # 5. AMC contract details
+    # 5. AMC contract details (new system)
     amc_assignment = await db.amc_device_assignments.find_one({
         "device_id": device["id"],
         "status": "active"
@@ -4611,11 +4611,27 @@ async def create_company_ticket(data: ServiceTicketCreate, user: dict = Depends(
             {"id": amc_assignment.get("amc_contract_id")},
             {"_id": 0}
         )
+        # Merge assignment dates into contract info
+        if amc_contract:
+            amc_contract["coverage_start"] = amc_assignment.get("coverage_start")
+            amc_contract["coverage_end"] = amc_assignment.get("coverage_end")
+    
+    # 5b. Legacy AMC (old system - for backward compatibility)
+    legacy_amc = await db.amc.find_one({
+        "device_id": device["id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
     
     # 6. Deployment details (if device came from deployment)
     deployment = None
     if device.get("deployment_id"):
         deployment = await db.deployments.find_one({"id": device["deployment_id"]}, {"_id": 0})
+    
+    # 7. Previous tickets for this device (for context)
+    previous_tickets = await db.service_tickets.find(
+        {"device_id": device["id"], "is_deleted": {"$ne": True}},
+        {"_id": 0, "ticket_number": 1, "subject": 1, "status": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(5).to_list(5)
     
     # Create the ticket
     ticket = ServiceTicket(
