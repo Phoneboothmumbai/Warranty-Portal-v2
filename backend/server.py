@@ -1780,6 +1780,18 @@ async def list_devices(
         # Add SmartSelect label
         device["label"] = f"{device.get('brand', '')} {device.get('model', '')} - {device.get('serial_number', '')}"
         
+        # Add deployment info if device was created from deployment
+        if device.get("source") == "deployment" and device.get("deployment_id"):
+            deployment = await db.deployments.find_one(
+                {"id": device["deployment_id"], "is_deleted": {"$ne": True}}, 
+                {"_id": 0, "name": 1, "site_id": 1}
+            )
+            if deployment:
+                device["deployment_name"] = deployment.get("name")
+                # Get site name
+                site = await db.sites.find_one({"id": deployment.get("site_id")}, {"_id": 0, "name": 1})
+                device["site_name"] = site.get("name") if site else None
+        
         # Filter by AMC status if requested
         if amc_status and device["amc_status"] != amc_status:
             continue
