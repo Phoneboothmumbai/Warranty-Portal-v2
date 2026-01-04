@@ -36,6 +36,19 @@ const CompanyDetails = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
+  
+  // Portal Users state
+  const [portalUsers, setPortalUsers] = useState([]);
+  const [loadingPortalUsers, setLoadingPortalUsers] = useState(false);
+  const [showAddPortalUser, setShowAddPortalUser] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [newPortalUser, setNewPortalUser] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    role: 'company_viewer'
+  });
 
   useEffect(() => {
     fetchCompanyOverview();
