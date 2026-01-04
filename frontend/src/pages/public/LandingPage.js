@@ -131,7 +131,6 @@ const LandingPage = () => {
       <footer className="px-6 py-6 border-t border-slate-100">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-slate-400">
           <span>© {new Date().getFullYear()} {settings.company_name}. All rights reserved.</span>
-          <span>Powered by Warranty Portal</span>
         </div>
       </footer>
     </div>
