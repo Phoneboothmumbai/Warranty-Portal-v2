@@ -4529,35 +4529,62 @@ async def list_renewal_requests(user: dict = Depends(get_current_company_user)):
 
 @api_router.get("/company/profile")
 async def get_company_profile(user: dict = Depends(get_current_company_user)):
-    """Get company profile"""
+    """Get user profile with company info"""
     company = await db.companies.find_one({
         "id": user["company_id"],
         "is_deleted": {"$ne": True}
-    }, {"_id": 0})
+    }, {"_id": 0, "name": 1})
     
-    if not company:
-        raise HTTPException(status_code=404, detail="Company not found")
-    
-    return company
+    # Return user profile data
+    return {
+        "id": user.get("id"),
+        "name": user.get("name"),
+        "email": user.get("email"),
+        "phone": user.get("phone"),
+        "role": user.get("role"),
+        "company_id": user.get("company_id"),
+        "company_name": company.get("name") if company else "Unknown",
+        "created_at": user.get("created_at")
+    }
 
 @api_router.put("/company/profile")
 async def update_company_profile(
     updates: dict,
     user: dict = Depends(get_current_company_user)
 ):
-    """Update company profile (limited fields only)"""
-    # Only allow updating specific fields
-    allowed_fields = ["contact_person", "contact_phone", "contact_email", "notification_email"]
+    """Update user profile"""
+    # Allow updating user's own profile fields
+    user_fields = ["name", "phone"]
+    password_fields = ["current_password", "new_password"]
     
-    update_data = {k: v for k, v in updates.items() if k in allowed_fields and v is not None}
+    # Handle password change
+    if updates.get("current_password") and updates.get("new_password"):
+        # Verify current password
+        stored_user = await db.company_users.find_one({"id": user["id"]})
+        if not stored_user or not bcrypt.checkpw(
+            updates["current_password"].encode('utf-8'),
+            stored_user["password_hash"].encode('utf-8')
+        ):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
+        
+        # Update password
+        new_hash = bcrypt.hashpw(updates["new_password"].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        await db.company_users.update_one(
+            {"id": user["id"]},
+            {"$set": {"password_hash": new_hash, "updated_at": get_ist_isoformat()}}
+        )
+        return {"message": "Password changed successfully"}
+    
+    # Handle profile update
+    update_data = {k: v for k, v in updates.items() if k in user_fields and v is not None}
     
     if not update_data:
         raise HTTPException(status_code=400, detail="No valid fields to update")
     
     update_data["updated_at"] = get_ist_isoformat()
     
-    await db.companies.update_one(
-        {"id": user["company_id"]},
+    await db.company_users.update_one(
+        {"id": user["id"]},
         {"$set": update_data}
     )
     
