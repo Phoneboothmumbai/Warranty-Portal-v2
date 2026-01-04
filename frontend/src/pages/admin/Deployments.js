@@ -639,31 +639,37 @@ const Deployments = () => {
                       </div>
                       <div>
                         <label className="text-xs text-slate-500">Category</label>
-                        <select
+                        <SmartSelect
                           value={item.category}
-                          onChange={(e) => updateItem(index, 'category', e.target.value)}
-                          className="form-select text-sm"
-                        >
-                          {CATEGORIES.map(c => (
-                            <option key={c.value} value={c.value}>{c.label}</option>
-                          ))}
-                        </select>
+                          onValueChange={(val) => updateItem(index, 'category', val)}
+                          options={categoryOptions}
+                          placeholder="Select category..."
+                          searchPlaceholder="Search categories..."
+                          emptyText="No categories found"
+                          allowCreate={true}
+                          createLabel="Add New Category"
+                          onCreateNew={(val) => {
+                            handleAddCategory(val);
+                            updateItem(index, 'category', val);
+                          }}
+                        />
                       </div>
                       <div>
                         <label className="text-xs text-slate-500">Brand</label>
-                        <input
-                          type="text"
+                        <SmartSelect
                           value={item.brand}
-                          onChange={(e) => updateItem(index, 'brand', e.target.value)}
-                          className="form-input text-sm"
-                          placeholder="Brand"
-                          list={`brands-${index}`}
+                          onValueChange={(val) => updateItem(index, 'brand', val)}
+                          options={brandOptions}
+                          placeholder="Select brand..."
+                          searchPlaceholder="Search brands..."
+                          emptyText="No brands found"
+                          allowCreate={true}
+                          createLabel="Add New Brand"
+                          onCreateNew={(val) => {
+                            handleAddBrand(val);
+                            updateItem(index, 'brand', val);
+                          }}
                         />
-                        <datalist id={`brands-${index}`}>
-                          {brands.map(b => (
-                            <option key={b.id} value={b.name} />
-                          ))}
-                        </datalist>
                       </div>
                       <div>
                         <label className="text-xs text-slate-500">Model</label>
