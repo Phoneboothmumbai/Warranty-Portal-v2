@@ -4040,6 +4040,644 @@ async def get_dashboard_alerts(admin: dict = Depends(get_current_admin)):
     
     return alerts
 
+# ==================== COMPANY PORTAL ENDPOINTS ====================
+
+# --- Company Auth ---
+
+@api_router.post("/company/auth/login")
+async def company_login(login: CompanyLogin):
+    """Company user login"""
+    user = await db.company_users.find_one({
+        "email": login.email.lower(),
+        "is_active": True,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not user or not verify_password(login.password, user.get("password_hash", "")):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    # Update last login
+    await db.company_users.update_one(
+        {"id": user["id"]},
+        {"$set": {"last_login": get_ist_isoformat()}}
+    )
+    
+    # Create token with user type indicator
+    access_token = create_access_token(data={"sub": user["id"], "type": "company_user"})
+    
+    # Get company info
+    company = await db.companies.find_one({"id": user["company_id"]}, {"_id": 0, "name": 1})
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user["id"],
+            "name": user["name"],
+            "email": user["email"],
+            "role": user["role"],
+            "company_id": user["company_id"],
+            "company_name": company.get("name") if company else None
+        }
+    }
+
+@api_router.post("/company/auth/register")
+async def company_user_register(data: CompanyUserRegister):
+    """Self-registration for company users"""
+    # Find company by code
+    company = await db.companies.find_one({
+        "code": data.company_code.upper(),
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not company:
+        raise HTTPException(status_code=404, detail="Invalid company code")
+    
+    # Check if email already exists
+    existing = await db.company_users.find_one({"email": data.email.lower()}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Create user (as viewer by default)
+    user = CompanyUser(
+        company_id=company["id"],
+        email=data.email.lower(),
+        password_hash=get_password_hash(data.password),
+        name=data.name,
+        phone=data.phone,
+        role="company_viewer",
+        created_by="self_registration"
+    )
+    
+    await db.company_users.insert_one(user.model_dump())
+    
+    return {"message": "Registration successful. You can now login.", "email": data.email}
+
+@api_router.get("/company/auth/me")
+async def get_company_user_info(user: dict = Depends(get_current_company_user)):
+    """Get current company user info"""
+    company = await db.companies.find_one({"id": user["company_id"]}, {"_id": 0, "name": 1, "code": 1})
+    return {
+        **user,
+        "company_name": company.get("name") if company else None,
+        "company_code": company.get("code") if company else None
+    }
+
+# --- Company Dashboard ---
+
+@api_router.get("/company/dashboard")
+async def get_company_dashboard(user: dict = Depends(get_current_company_user)):
+    """Get company dashboard summary"""
+    company_id = user["company_id"]
+    today = get_ist_now().date()
+    
+    # Total devices
+    total_devices = await db.devices.count_documents({
+        "company_id": company_id,
+        "is_deleted": {"$ne": True}
+    })
+    
+    # Get all devices for warranty calculations
+    devices = await db.devices.find({
+        "company_id": company_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0, "id": 1, "warranty_end_date": 1}).to_list(1000)
+    
+    warranties_30 = 0
+    warranties_60 = 0
+    warranties_90 = 0
+    
+    for device in devices:
+        end_date = device.get("warranty_end_date")
+        if end_date:
+            try:
+                end = datetime.strptime(end_date, "%Y-%m-%d").date()
+                days_left = (end - today).days
+                if 0 < days_left <= 30:
+                    warranties_30 += 1
+                elif 30 < days_left <= 60:
+                    warranties_60 += 1
+                elif 60 < days_left <= 90:
+                    warranties_90 += 1
+            except:
+                pass
+    
+    # Active AMC contracts
+    active_amc = await db.amc_contracts.count_documents({
+        "company_id": company_id,
+        "is_deleted": {"$ne": True},
+        "end_date": {"$gte": today.isoformat()}
+    })
+    
+    # Open service tickets
+    open_tickets = await db.service_tickets.count_documents({
+        "company_id": company_id,
+        "status": {"$in": ["open", "in_progress"]},
+        "is_deleted": {"$ne": True}
+    })
+    
+    # Recent tickets
+    recent_tickets = await db.service_tickets.find({
+        "company_id": company_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
+    
+    return {
+        "total_devices": total_devices,
+        "warranties_expiring_30_days": warranties_30,
+        "warranties_expiring_60_days": warranties_60,
+        "warranties_expiring_90_days": warranties_90,
+        "active_amc_contracts": active_amc,
+        "open_service_tickets": open_tickets,
+        "recent_tickets": recent_tickets
+    }
+
+# --- Company Devices (Read-Only) ---
+
+@api_router.get("/company/devices")
+async def list_company_devices(
+    user: dict = Depends(get_current_company_user),
+    search: Optional[str] = None,
+    device_type: Optional[str] = None,
+    site_id: Optional[str] = None,
+    warranty_status: Optional[str] = None
+):
+    """List all devices for the company (read-only)"""
+    company_id = user["company_id"]
+    query = {"company_id": company_id, "is_deleted": {"$ne": True}}
+    
+    if device_type:
+        query["device_type"] = device_type
+    if site_id:
+        query["site_id"] = site_id
+    
+    devices = await db.devices.find(query, {"_id": 0}).to_list(1000)
+    today = get_ist_now().date()
+    
+    result = []
+    for device in devices:
+        # Calculate warranty status
+        warranty_end = device.get("warranty_end_date")
+        if warranty_end:
+            try:
+                end = datetime.strptime(warranty_end, "%Y-%m-%d").date()
+                days_left = (end - today).days
+                device["warranty_status"] = "active" if days_left > 0 else "expired"
+                device["warranty_days_left"] = max(0, days_left)
+            except:
+                device["warranty_status"] = "unknown"
+                device["warranty_days_left"] = 0
+        else:
+            device["warranty_status"] = "not_set"
+            device["warranty_days_left"] = 0
+        
+        # Check AMC coverage
+        amc_assignment = await db.amc_device_assignments.find_one({
+            "device_id": device["id"],
+            "status": "active"
+        }, {"_id": 0})
+        
+        if amc_assignment:
+            amc_end = amc_assignment.get("coverage_end")
+            if amc_end and is_warranty_active(amc_end):
+                device["amc_covered"] = True
+                device["amc_coverage_end"] = amc_end
+            else:
+                device["amc_covered"] = False
+        else:
+            device["amc_covered"] = False
+        
+        # Get assigned user name
+        if device.get("assigned_user_id"):
+            assigned_user = await db.users.find_one({"id": device["assigned_user_id"]}, {"_id": 0, "name": 1})
+            device["assigned_user_name"] = assigned_user.get("name") if assigned_user else None
+        
+        # Get site name
+        if device.get("site_id"):
+            site = await db.sites.find_one({"id": device["site_id"]}, {"_id": 0, "name": 1})
+            device["site_name"] = site.get("name") if site else None
+        
+        # Filter by warranty status if specified
+        if warranty_status:
+            if warranty_status == "active" and device["warranty_status"] != "active":
+                continue
+            if warranty_status == "expired" and device["warranty_status"] != "expired":
+                continue
+            if warranty_status == "expiring_soon" and device.get("warranty_days_left", 0) > 30:
+                continue
+        
+        # Apply search filter
+        if search:
+            search_lower = search.lower()
+            searchable = f"{device.get('serial_number', '')} {device.get('asset_tag', '')} {device.get('brand', '')} {device.get('model', '')}".lower()
+            if search_lower not in searchable:
+                continue
+        
+        result.append(device)
+    
+    return result
+
+@api_router.get("/company/devices/{device_id}")
+async def get_company_device(device_id: str, user: dict = Depends(get_current_company_user)):
+    """Get single device details (read-only)"""
+    device = await db.devices.find_one({
+        "id": device_id,
+        "company_id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    
+    # Get parts
+    parts = await db.parts.find({
+        "device_id": device_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).to_list(100)
+    
+    # Get service history
+    services = await db.service_history.find({
+        "device_id": device_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).sort("service_date", -1).to_list(50)
+    
+    # Get AMC info
+    amc_assignment = await db.amc_device_assignments.find_one({
+        "device_id": device_id,
+        "status": "active"
+    }, {"_id": 0})
+    
+    amc_info = None
+    if amc_assignment:
+        amc_contract = await db.amc_contracts.find_one({
+            "id": amc_assignment["amc_contract_id"]
+        }, {"_id": 0})
+        if amc_contract:
+            amc_info = {
+                "contract_name": amc_contract.get("name"),
+                "amc_type": amc_contract.get("amc_type"),
+                "coverage_start": amc_assignment.get("coverage_start"),
+                "coverage_end": amc_assignment.get("coverage_end"),
+                "coverage_includes": amc_contract.get("coverage_includes"),
+                "entitlements": amc_contract.get("entitlements")
+            }
+    
+    return {
+        "device": device,
+        "parts": parts,
+        "service_history": services,
+        "amc_info": amc_info
+    }
+
+# --- Company AMC Contracts ---
+
+@api_router.get("/company/amc-contracts")
+async def list_company_amc_contracts(user: dict = Depends(get_current_company_user)):
+    """List all AMC contracts for the company"""
+    contracts = await db.amc_contracts.find({
+        "company_id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).to_list(100)
+    
+    today = get_ist_now().date()
+    result = []
+    
+    for contract in contracts:
+        end_date = contract.get("end_date")
+        if end_date:
+            try:
+                end = datetime.strptime(end_date, "%Y-%m-%d").date()
+                days_left = (end - today).days
+                contract["status"] = "active" if days_left > 0 else "expired"
+                contract["days_remaining"] = max(0, days_left)
+            except:
+                contract["status"] = "unknown"
+                contract["days_remaining"] = 0
+        
+        # Count covered devices
+        device_count = await db.amc_device_assignments.count_documents({
+            "amc_contract_id": contract["id"],
+            "status": "active"
+        })
+        contract["devices_covered"] = device_count
+        
+        result.append(contract)
+    
+    return result
+
+# --- Company Service Tickets ---
+
+@api_router.get("/company/tickets")
+async def list_company_tickets(
+    user: dict = Depends(get_current_company_user),
+    status: Optional[str] = None
+):
+    """List service tickets for the company"""
+    query = {
+        "company_id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }
+    if status:
+        query["status"] = status
+    
+    tickets = await db.service_tickets.find(query, {"_id": 0}).sort("created_at", -1).to_list(200)
+    
+    # Enrich with device info
+    for ticket in tickets:
+        device = await db.devices.find_one({"id": ticket["device_id"]}, {"_id": 0, "serial_number": 1, "brand": 1, "model": 1, "device_type": 1})
+        if device:
+            ticket["device_info"] = f"{device.get('brand', '')} {device.get('model', '')} ({device.get('serial_number', '')})"
+            ticket["device_type"] = device.get("device_type")
+    
+    return tickets
+
+@api_router.post("/company/tickets")
+async def create_company_ticket(data: ServiceTicketCreate, user: dict = Depends(get_current_company_user)):
+    """Create a new service ticket"""
+    # Verify device belongs to company
+    device = await db.devices.find_one({
+        "id": data.device_id,
+        "company_id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    
+    ticket = ServiceTicket(
+        company_id=user["company_id"],
+        device_id=data.device_id,
+        created_by=user["id"],
+        issue_category=data.issue_category,
+        subject=data.subject,
+        description=data.description,
+        attachments=data.attachments
+    )
+    
+    await db.service_tickets.insert_one(ticket.model_dump())
+    
+    return {"message": "Ticket created successfully", "ticket_number": ticket.ticket_number, "id": ticket.id}
+
+@api_router.get("/company/tickets/{ticket_id}")
+async def get_company_ticket(ticket_id: str, user: dict = Depends(get_current_company_user)):
+    """Get ticket details"""
+    ticket = await db.service_tickets.find_one({
+        "id": ticket_id,
+        "company_id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    # Get device info
+    device = await db.devices.find_one({"id": ticket["device_id"]}, {"_id": 0})
+    ticket["device"] = device
+    
+    # Get creator info
+    creator = await db.company_users.find_one({"id": ticket["created_by"]}, {"_id": 0, "name": 1, "email": 1})
+    ticket["created_by_name"] = creator.get("name") if creator else "Unknown"
+    
+    return ticket
+
+@api_router.post("/company/tickets/{ticket_id}/comments")
+async def add_ticket_comment(ticket_id: str, data: ServiceTicketComment, user: dict = Depends(get_current_company_user)):
+    """Add comment to a ticket"""
+    ticket = await db.service_tickets.find_one({
+        "id": ticket_id,
+        "company_id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    comment = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "user_name": user["name"],
+        "user_type": "company",
+        "comment": data.comment,
+        "attachments": data.attachments,
+        "created_at": get_ist_isoformat()
+    }
+    
+    await db.service_tickets.update_one(
+        {"id": ticket_id},
+        {
+            "$push": {"comments": comment},
+            "$set": {"updated_at": get_ist_isoformat()}
+        }
+    )
+    
+    return {"message": "Comment added", "comment": comment}
+
+# --- Company Renewal Requests ---
+
+@api_router.post("/company/renewal-requests")
+async def create_renewal_request(data: RenewalRequestCreate, user: dict = Depends(get_current_company_user)):
+    """Create a warranty/AMC renewal request"""
+    # Verify device/contract belongs to company
+    if data.device_id:
+        device = await db.devices.find_one({
+            "id": data.device_id,
+            "company_id": user["company_id"],
+            "is_deleted": {"$ne": True}
+        }, {"_id": 0})
+        if not device:
+            raise HTTPException(status_code=404, detail="Device not found")
+    
+    if data.amc_contract_id:
+        contract = await db.amc_contracts.find_one({
+            "id": data.amc_contract_id,
+            "company_id": user["company_id"],
+            "is_deleted": {"$ne": True}
+        }, {"_id": 0})
+        if not contract:
+            raise HTTPException(status_code=404, detail="AMC contract not found")
+    
+    request = RenewalRequest(
+        company_id=user["company_id"],
+        request_type=data.request_type,
+        device_id=data.device_id,
+        amc_contract_id=data.amc_contract_id,
+        requested_by=user["id"],
+        notes=data.notes
+    )
+    
+    await db.renewal_requests.insert_one(request.model_dump())
+    
+    return {"message": "Renewal request submitted", "request_number": request.request_number}
+
+@api_router.get("/company/renewal-requests")
+async def list_renewal_requests(user: dict = Depends(get_current_company_user)):
+    """List renewal requests for the company"""
+    requests = await db.renewal_requests.find({
+        "company_id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    return requests
+
+# --- Company Profile ---
+
+@api_router.get("/company/profile")
+async def get_company_profile(user: dict = Depends(get_current_company_user)):
+    """Get company profile"""
+    company = await db.companies.find_one({
+        "id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    return company
+
+@api_router.put("/company/profile")
+async def update_company_profile(
+    updates: dict,
+    user: dict = Depends(get_current_company_user)
+):
+    """Update company profile (limited fields only)"""
+    # Only allow updating specific fields
+    allowed_fields = ["contact_person", "contact_phone", "contact_email", "notification_email"]
+    
+    update_data = {k: v for k, v in updates.items() if k in allowed_fields and v is not None}
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    update_data["updated_at"] = get_ist_isoformat()
+    
+    await db.companies.update_one(
+        {"id": user["company_id"]},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Profile updated successfully"}
+
+# --- Company Deployments/Users (Read-Only) ---
+
+@api_router.get("/company/deployments")
+async def list_company_deployments(user: dict = Depends(get_current_company_user)):
+    """List deployments for the company"""
+    deployments = await db.deployments.find({
+        "company_id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).sort("deployment_date", -1).to_list(100)
+    
+    for dep in deployments:
+        site = await db.sites.find_one({"id": dep.get("site_id")}, {"_id": 0, "name": 1})
+        dep["site_name"] = site.get("name") if site else None
+        dep["items_count"] = len(dep.get("items", []))
+    
+    return deployments
+
+@api_router.get("/company/users")
+async def list_company_users_contacts(user: dict = Depends(get_current_company_user)):
+    """List users/contacts for the company"""
+    users = await db.users.find({
+        "company_id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).to_list(500)
+    
+    return users
+
+@api_router.get("/company/sites")
+async def list_company_sites(user: dict = Depends(get_current_company_user)):
+    """List sites for the company"""
+    sites = await db.sites.find({
+        "company_id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).to_list(100)
+    
+    return sites
+
+# --- Admin: Company User Management ---
+
+@api_router.get("/admin/company-users")
+async def list_company_users(
+    company_id: Optional[str] = None,
+    admin: dict = Depends(get_current_admin)
+):
+    """List company portal users (admin only)"""
+    query = {"is_deleted": {"$ne": True}}
+    if company_id:
+        query["company_id"] = company_id
+    
+    users = await db.company_users.find(query, {"_id": 0, "password_hash": 0}).to_list(500)
+    
+    # Add company names
+    for u in users:
+        company = await db.companies.find_one({"id": u["company_id"]}, {"_id": 0, "name": 1})
+        u["company_name"] = company.get("name") if company else None
+    
+    return users
+
+@api_router.post("/admin/company-users")
+async def create_company_user(data: CompanyUserCreate, admin: dict = Depends(get_current_admin)):
+    """Create company portal user (admin only)"""
+    # Check if company exists
+    company = await db.companies.find_one({"id": data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    # Check if email already exists
+    existing = await db.company_users.find_one({"email": data.email.lower()}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    user = CompanyUser(
+        company_id=data.company_id,
+        email=data.email.lower(),
+        password_hash=get_password_hash(data.password),
+        name=data.name,
+        phone=data.phone,
+        role=data.role,
+        created_by=admin.get("email")
+    )
+    
+    await db.company_users.insert_one(user.model_dump())
+    
+    return {"message": "Company user created", "id": user.id}
+
+@api_router.put("/admin/company-users/{user_id}")
+async def update_company_user(user_id: str, updates: CompanyUserUpdate, admin: dict = Depends(get_current_admin)):
+    """Update company portal user (admin only)"""
+    update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No updates provided")
+    
+    result = await db.company_users.update_one({"id": user_id}, {"$set": update_data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": "User updated"}
+
+@api_router.post("/admin/company-users/{user_id}/reset-password")
+async def reset_company_user_password(user_id: str, new_password: str, admin: dict = Depends(get_current_admin)):
+    """Reset company user password (admin only)"""
+    result = await db.company_users.update_one(
+        {"id": user_id},
+        {"$set": {"password_hash": get_password_hash(new_password)}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": "Password reset successfully"}
+
+@api_router.delete("/admin/company-users/{user_id}")
+async def delete_company_user(user_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete company portal user (admin only)"""
+    result = await db.company_users.update_one({"id": user_id}, {"$set": {"is_deleted": True}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": "User deleted"}
+
 # Include the router
 app.include_router(api_router)
 
