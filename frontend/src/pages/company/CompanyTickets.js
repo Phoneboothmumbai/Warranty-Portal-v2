@@ -23,6 +23,7 @@ const CompanyTickets = () => {
   const [submitting, setSubmitting] = useState(false);
   const [newTicket, setNewTicket] = useState({
     device_id: searchParams.get('device') || '',
+    issue_category: 'hardware',
     subject: '',
     description: '',
     priority: 'medium'
