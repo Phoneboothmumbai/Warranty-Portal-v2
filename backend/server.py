@@ -12,6 +12,17 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Any
 import uuid
 from datetime import datetime, timezone, timedelta
+
+# Indian Standard Time (IST = UTC+5:30)
+IST = timezone(timedelta(hours=5, minutes=30))
+
+def get_ist_now():
+    """Get current datetime in IST"""
+    return datetime.now(IST)
+
+def get_ist_isoformat():
+    """Get current datetime in IST as ISO format string"""
+    return datetime.now(IST).isoformat()
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 import base64
