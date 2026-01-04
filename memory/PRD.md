@@ -111,5 +111,5 @@ All bulk imports will include: Download Template → Upload & Preview → Valida
 ## Future/Backlog
 - WhatsApp Integration
 - PDF Export for Service History
-- Customer login portal
 - Fix eslint/lint warnings
+- Backend refactoring (split server.py into routers/services)
