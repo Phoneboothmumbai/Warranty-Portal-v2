@@ -40,13 +40,22 @@ const LandingPage = () => {
           )}
           <span className="text-lg font-semibold text-slate-900">{settings.company_name}</span>
         </div>
-        <a 
-          href="/admin/login" 
-          className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
-          data-testid="admin-login-link"
-        >
-          Admin Portal
-        </a>
+        <div className="flex items-center gap-4">
+          <a 
+            href="/company/login" 
+            className="text-sm font-medium text-[#0F62FE] hover:text-[#0043CE] transition-colors"
+            data-testid="company-login-link"
+          >
+            Company Login
+          </a>
+          <a 
+            href="/admin/login" 
+            className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
+            data-testid="admin-login-link"
+          >
+            Admin Portal
+          </a>
+        </div>
       </header>
 
       {/* Hero Section - The Monolith */}
