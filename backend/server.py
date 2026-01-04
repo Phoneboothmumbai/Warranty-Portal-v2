@@ -4732,7 +4732,7 @@ async def create_company_ticket(data: ServiceTicketCreate, user: dict = Depends(
     if site:
         osticket_message += f"""
 <hr>
-<h3>📍 Site / Location Details</h3>
+<h3>SITE / LOCATION DETAILS</h3>
 <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
 <tr><td><strong>Site Name</strong></td><td>{site.get('name', 'N/A')}</td></tr>
 <tr><td><strong>Site Code</strong></td><td>{site.get('code', 'N/A')}</td></tr>
@@ -4750,7 +4750,7 @@ async def create_company_ticket(data: ServiceTicketCreate, user: dict = Depends(
     if assigned_user:
         osticket_message += f"""
 <hr>
-<h3>👤 Assigned User (Device User)</h3>
+<h3>ASSIGNED USER (DEVICE USER)</h3>
 <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
 <tr><td><strong>Name</strong></td><td>{assigned_user.get('name', 'N/A')}</td></tr>
 <tr><td><strong>Email</strong></td><td>{assigned_user.get('email', 'N/A')}</td></tr>
@@ -4760,12 +4760,43 @@ async def create_company_ticket(data: ServiceTicketCreate, user: dict = Depends(
 </table>
 """
 
-    # Add AMC Contract if available
-    if amc_contract:
-        amc_status = "✅ ACTIVE" if is_warranty_active(amc_contract.get('end_date', '')) else "❌ EXPIRED"
+    # Add Parts/Components if available
+    if parts:
         osticket_message += f"""
 <hr>
-<h3>📋 AMC Contract Details</h3>
+<h3>PARTS / COMPONENTS ({len(parts)} items)</h3>
+<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+<tr style="background-color: #f0f0f0;">
+<th>Part Name</th><th>Serial Number</th><th>Replaced Date</th><th>Warranty (Months)</th><th>Warranty Expiry</th><th>Status</th>
+</tr>
+"""
+        for part in parts:
+            part_warranty_active = is_warranty_active(part.get("warranty_expiry_date", ""))
+            part_status = "[COVERED]" if part_warranty_active else "[EXPIRED]"
+            osticket_message += f"""
+<tr>
+<td>{part.get('part_name', 'N/A')}</td>
+<td>{part.get('serial_number', 'N/A')}</td>
+<td>{format_date(part.get('replaced_date'))}</td>
+<td>{part.get('warranty_months', 'N/A')}</td>
+<td>{format_date(part.get('warranty_expiry_date'))}</td>
+<td>{part_status}</td>
+</tr>
+"""
+        osticket_message += "</table>"
+    else:
+        osticket_message += """
+<hr>
+<h3>PARTS / COMPONENTS</h3>
+<p><em>No replacement parts recorded for this device.</em></p>
+"""
+
+    # Add AMC Contract if available
+    if amc_contract:
+        amc_status = "[ACTIVE]" if is_warranty_active(amc_contract.get('end_date', '')) else "[EXPIRED]"
+        osticket_message += f"""
+<hr>
+<h3>AMC CONTRACT DETAILS</h3>
 <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
 <tr><td><strong>Contract Number</strong></td><td>{amc_contract.get('contract_number', 'N/A')}</td></tr>
 <tr><td><strong>AMC Status</strong></td><td><strong>{amc_status}</strong></td></tr>
@@ -4782,7 +4813,7 @@ async def create_company_ticket(data: ServiceTicketCreate, user: dict = Depends(
     if deployment:
         osticket_message += f"""
 <hr>
-<h3>📦 Deployment Information</h3>
+<h3>DEPLOYMENT INFORMATION</h3>
 <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
 <tr><td><strong>Deployment Number</strong></td><td>{deployment.get('deployment_number', 'N/A')}</td></tr>
 <tr><td><strong>Deployment Date</strong></td><td>{format_date(deployment.get('deployment_date'))}</td></tr>
@@ -4796,19 +4827,21 @@ async def create_company_ticket(data: ServiceTicketCreate, user: dict = Depends(
     if service_history:
         osticket_message += f"""
 <hr>
-<h3>🔧 Service History (Last {len(service_history)} Records)</h3>
+<h3>SERVICE HISTORY (Last {len(service_history)} Records)</h3>
 <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
 <tr style="background-color: #f0f0f0;">
 <th>Date</th><th>Service Type</th><th>Problem</th><th>Resolution</th><th>Technician</th><th>Status</th>
 </tr>
 """
         for svc in service_history:
+            problem = svc.get('problem_reported', 'N/A')
+            resolution = svc.get('resolution', 'N/A')
             osticket_message += f"""
 <tr>
 <td>{format_date(svc.get('service_date'))}</td>
 <td>{svc.get('service_type', 'N/A')}</td>
-<td>{svc.get('problem_reported', 'N/A')[:50]}...</td>
-<td>{svc.get('resolution', 'N/A')[:50] if svc.get('resolution') else 'N/A'}...</td>
+<td>{problem[:100] if problem else 'N/A'}{'...' if problem and len(problem) > 100 else ''}</td>
+<td>{resolution[:100] if resolution else 'N/A'}{'...' if resolution and len(resolution) > 100 else ''}</td>
 <td>{svc.get('technician_name', 'N/A')}</td>
 <td>{svc.get('status', 'N/A')}</td>
 </tr>
@@ -4817,7 +4850,7 @@ async def create_company_ticket(data: ServiceTicketCreate, user: dict = Depends(
     else:
         osticket_message += """
 <hr>
-<h3>🔧 Service History</h3>
+<h3>SERVICE HISTORY</h3>
 <p><em>No previous service records found for this device.</em></p>
 """
 
