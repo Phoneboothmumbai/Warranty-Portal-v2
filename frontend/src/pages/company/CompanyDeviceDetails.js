@@ -203,7 +203,7 @@ const CompanyDeviceDetails = () => {
       </div>
 
       {/* Service History */}
-      {device.service_history && device.service_history.length > 0 && (
+      {serviceHistory && serviceHistory.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100">
             <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
@@ -212,16 +212,16 @@ const CompanyDeviceDetails = () => {
             </h2>
           </div>
           <div className="divide-y divide-slate-100">
-            {device.service_history.map((record, index) => (
+            {serviceHistory.map((record, index) => (
               <div key={index} className="p-4 hover:bg-slate-50">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-slate-900">{record.service_type}</p>
-                    <p className="text-sm text-slate-500 mt-1">{record.description}</p>
+                    <p className="text-sm text-slate-500 mt-1">{record.problem_reported || record.description}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-slate-900">{formatDate(record.service_date)}</p>
-                    <p className="text-xs text-slate-500">{record.technician}</p>
+                    <p className="text-xs text-slate-500">{record.technician_name || record.technician}</p>
                   </div>
                 </div>
               </div>
