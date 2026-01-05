@@ -543,6 +543,10 @@ const Deployments = () => {
                             <Edit2 className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleSyncDevices(deployment)}>
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Sync to Devices
+                          </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => handleDelete(deployment)}
                             className="text-red-600"
