@@ -17,6 +17,9 @@ const CompanyDeviceDetails = () => {
   const { token } = useCompanyAuth();
   const navigate = useNavigate();
   const [device, setDevice] = useState(null);
+  const [parts, setParts] = useState([]);
+  const [serviceHistory, setServiceHistory] = useState([]);
+  const [amcInfo, setAmcInfo] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,7 +31,11 @@ const CompanyDeviceDetails = () => {
       const response = await axios.get(`${API}/company/devices/${deviceId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setDevice(response.data);
+      // API returns { device: {...}, parts: [...], service_history: [...], amc_info: {...} }
+      setDevice(response.data.device);
+      setParts(response.data.parts || []);
+      setServiceHistory(response.data.service_history || []);
+      setAmcInfo(response.data.amc_info);
     } catch (error) {
       toast.error('Failed to load device details');
       navigate('/company/devices');
