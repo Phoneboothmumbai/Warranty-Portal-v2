@@ -196,6 +196,20 @@ const Deployments = () => {
     }
   };
 
+  const handleSyncDevices = async (deployment) => {
+    try {
+      const response = await axios.post(
+        `${API}/admin/deployments/${deployment.id}/sync-devices`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(response.data.message);
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to sync devices');
+    }
+  };
+
   const openCreateModal = () => {
     setEditingDeployment(null);
     const companySites = filterCompany ? sites.filter(s => s.company_id === filterCompany) : sites;
