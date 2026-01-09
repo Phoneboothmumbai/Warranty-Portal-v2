@@ -118,6 +118,9 @@ const CompanyDeviceDetails = () => {
 
   const isPrinter = device?.category?.toLowerCase().includes('printer') || 
                     device?.device_type?.toLowerCase().includes('printer');
+  
+  const hasConsumables = device?.consumables?.length > 0;
+  const canOrderConsumables = isPrinter && hasConsumables;
 
   const getWarrantyStatus = () => {
     if (!device?.warranty_end_date) return { status: 'unknown', label: 'Unknown', color: 'slate' };
