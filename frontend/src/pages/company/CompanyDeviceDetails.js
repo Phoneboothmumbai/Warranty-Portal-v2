@@ -146,7 +146,7 @@ const CompanyDeviceDetails = () => {
             <div>
               <h1 className="text-2xl font-bold text-slate-900">{device.serial_number}</h1>
               <p className="text-slate-500 mt-1">
-                {device.category} • {device.brand} {device.model}
+                {device.device_type || device.category} • {device.brand} {device.model}
               </p>
               {device.site_name && (
                 <div className="flex items-center gap-1.5 text-sm text-slate-500 mt-2">
