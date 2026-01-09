@@ -6,9 +6,30 @@ import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
+import { BulkImport } from '../../components/ui/bulk-import';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// Bulk import column definitions
+const bulkImportColumns = [
+  { key: 'name', label: 'Company Name', required: true, example: 'Acme Corp' },
+  { key: 'company_code', label: 'Company Code', required: false, example: 'ACME001' },
+  { key: 'industry', label: 'Industry', required: false, example: 'Technology' },
+  { key: 'contact_name', label: 'Contact Name', required: false, example: 'John Doe' },
+  { key: 'contact_email', label: 'Contact Email', required: false, example: 'john@acme.com' },
+  { key: 'contact_phone', label: 'Contact Phone', required: false, example: '9876543210' },
+  { key: 'address', label: 'Address', required: false, example: '123 Main St' },
+  { key: 'city', label: 'City', required: false, example: 'Mumbai' },
+  { key: 'state', label: 'State', required: false, example: 'Maharashtra' },
+  { key: 'pincode', label: 'Pincode', required: false, example: '400001' },
+  { key: 'gst_number', label: 'GST Number', required: false, example: '27AAACA1234A1Z5' },
+];
+
+const sampleData = [
+  { name: 'Acme Corporation', company_code: 'ACME001', industry: 'Technology', contact_name: 'John Doe', contact_email: 'john@acme.com', contact_phone: '9876543210', address: '123 Tech Park', city: 'Mumbai', state: 'Maharashtra', pincode: '400001', gst_number: '27AAACA1234A1Z5' },
+  { name: 'Beta Industries', company_code: 'BETA002', industry: 'Manufacturing', contact_name: 'Jane Smith', contact_email: 'jane@beta.com', contact_phone: '9876543211', address: '456 Industrial Area', city: 'Pune', state: 'Maharashtra', pincode: '411001', gst_number: '27AAACB1234B1Z6' },
+];
 
 const Companies = () => {
   const { token } = useAuth();
