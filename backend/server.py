@@ -401,6 +401,26 @@ class AssignmentHistory(BaseModel):
     changed_by_name: str
     created_at: str = Field(default_factory=lambda: get_ist_isoformat())
 
+# ==================== CONSUMABLE ORDERS ====================
+
+class ConsumableOrder(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    order_number: str = Field(default_factory=lambda: f"ORD-{get_ist_now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}")
+    company_id: str
+    device_id: str
+    requested_by: str  # company_user id
+    requested_by_name: str
+    requested_by_email: str
+    consumable_type: Optional[str] = None
+    consumable_model: Optional[str] = None
+    quantity: int = 1
+    notes: Optional[str] = None
+    status: str = "pending"  # pending, processing, fulfilled, cancelled
+    osticket_id: Optional[str] = None
+    is_deleted: bool = False
+    created_at: str = Field(default_factory=lambda: get_ist_isoformat())
+
 # ==================== SERVICE HISTORY ====================
 
 class ServiceAttachment(BaseModel):
