@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   Package, ShoppingCart, Plus, Minus, MapPin, Building2, 
-  Clock, CheckCircle2, Truck, FileText, ChevronRight
+  Clock, CheckCircle2, Truck, FileText, ChevronRight, Search, X
 } from 'lucide-react';
 import { useCompanyAuth } from '../../context/CompanyAuthContext';
 import { Button } from '../../components/ui/button';
@@ -18,6 +18,7 @@ const CompanyOfficeSupplies = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('catalog');
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Cart state
   const [cart, setCart] = useState({});
