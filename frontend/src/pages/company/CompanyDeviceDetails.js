@@ -22,6 +22,14 @@ const CompanyDeviceDetails = () => {
   const [serviceHistory, setServiceHistory] = useState([]);
   const [amcInfo, setAmcInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Consumable order state
+  const [orderModalOpen, setOrderModalOpen] = useState(false);
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [orderForm, setOrderForm] = useState({
+    quantity: 1,
+    notes: ''
+  });
 
   useEffect(() => {
     fetchDevice();
