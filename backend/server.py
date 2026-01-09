@@ -1894,6 +1894,241 @@ async def delete_company(company_id: str, admin: dict = Depends(get_current_admi
     await log_audit("company", company_id, "delete", {"is_deleted": True}, admin)
     return {"message": "Company archived"}
 
+# ==================== BULK IMPORT ENDPOINTS ====================
+
+@api_router.post("/admin/bulk-import/companies")
+async def bulk_import_companies(data: dict, admin: dict = Depends(get_current_admin)):
+    """Bulk import companies from CSV data"""
+    records = data.get("records", [])
+    if not records:
+        raise HTTPException(status_code=400, detail="No records provided")
+    
+    success_count = 0
+    errors = []
+    
+    for idx, record in enumerate(records):
+        try:
+            # Check required fields
+            if not record.get("name"):
+                errors.append({"row": idx + 2, "message": "Company name is required"})
+                continue
+            
+            # Check for duplicate company code
+            if record.get("company_code"):
+                existing = await db.companies.find_one({
+                    "company_code": record["company_code"],
+                    "is_deleted": {"$ne": True}
+                })
+                if existing:
+                    errors.append({"row": idx + 2, "message": f"Company code {record['company_code']} already exists"})
+                    continue
+            
+            company = Company(
+                name=record.get("name"),
+                company_code=record.get("company_code") or f"C{str(uuid.uuid4())[:6].upper()}",
+                industry=record.get("industry"),
+                contact_name=record.get("contact_name"),
+                contact_email=record.get("contact_email"),
+                contact_phone=record.get("contact_phone"),
+                address=record.get("address"),
+                city=record.get("city"),
+                state=record.get("state"),
+                country=record.get("country", "India"),
+                pincode=record.get("pincode"),
+                gst_number=record.get("gst_number"),
+                notes=record.get("notes"),
+                status="active"
+            )
+            
+            await db.companies.insert_one(company.model_dump())
+            success_count += 1
+            
+        except Exception as e:
+            errors.append({"row": idx + 2, "message": str(e)})
+    
+    return {"success": success_count, "errors": errors}
+
+@api_router.post("/admin/bulk-import/sites")
+async def bulk_import_sites(data: dict, admin: dict = Depends(get_current_admin)):
+    """Bulk import sites from CSV data"""
+    records = data.get("records", [])
+    if not records:
+        raise HTTPException(status_code=400, detail="No records provided")
+    
+    # Get company mapping by code and name
+    companies = await db.companies.find({"is_deleted": {"$ne": True}}, {"_id": 0}).to_list(1000)
+    company_by_code = {c.get("company_code", "").upper(): c["id"] for c in companies if c.get("company_code")}
+    company_by_name = {c["name"].lower(): c["id"] for c in companies}
+    
+    success_count = 0
+    errors = []
+    
+    for idx, record in enumerate(records):
+        try:
+            if not record.get("name"):
+                errors.append({"row": idx + 2, "message": "Site name is required"})
+                continue
+            
+            # Find company by code or name
+            company_id = None
+            if record.get("company_code"):
+                company_id = company_by_code.get(record["company_code"].upper())
+            if not company_id and record.get("company_name"):
+                company_id = company_by_name.get(record["company_name"].lower())
+            
+            if not company_id:
+                errors.append({"row": idx + 2, "message": "Company not found"})
+                continue
+            
+            site = Site(
+                company_id=company_id,
+                name=record.get("name"),
+                site_code=record.get("site_code"),
+                address=record.get("address"),
+                city=record.get("city"),
+                state=record.get("state"),
+                pincode=record.get("pincode"),
+                country=record.get("country", "India"),
+                contact_person=record.get("contact_person"),
+                contact_phone=record.get("contact_phone"),
+                contact_email=record.get("contact_email"),
+                notes=record.get("notes"),
+                status="active"
+            )
+            
+            await db.sites.insert_one(site.model_dump())
+            success_count += 1
+            
+        except Exception as e:
+            errors.append({"row": idx + 2, "message": str(e)})
+    
+    return {"success": success_count, "errors": errors}
+
+@api_router.post("/admin/bulk-import/devices")
+async def bulk_import_devices(data: dict, admin: dict = Depends(get_current_admin)):
+    """Bulk import devices from CSV data"""
+    records = data.get("records", [])
+    if not records:
+        raise HTTPException(status_code=400, detail="No records provided")
+    
+    # Get lookups
+    companies = await db.companies.find({"is_deleted": {"$ne": True}}, {"_id": 0}).to_list(1000)
+    company_by_code = {c.get("company_code", "").upper(): c["id"] for c in companies if c.get("company_code")}
+    company_by_name = {c["name"].lower(): c["id"] for c in companies}
+    
+    success_count = 0
+    errors = []
+    
+    for idx, record in enumerate(records):
+        try:
+            # Required fields
+            if not record.get("serial_number"):
+                errors.append({"row": idx + 2, "message": "Serial number is required"})
+                continue
+            if not record.get("brand"):
+                errors.append({"row": idx + 2, "message": "Brand is required"})
+                continue
+            if not record.get("model"):
+                errors.append({"row": idx + 2, "message": "Model is required"})
+                continue
+            
+            # Find company
+            company_id = None
+            if record.get("company_code"):
+                company_id = company_by_code.get(record["company_code"].upper())
+            if not company_id and record.get("company_name"):
+                company_id = company_by_name.get(record["company_name"].lower())
+            
+            if not company_id:
+                errors.append({"row": idx + 2, "message": "Company not found"})
+                continue
+            
+            # Check for duplicate serial number
+            existing = await db.devices.find_one({
+                "serial_number": record["serial_number"],
+                "is_deleted": {"$ne": True}
+            })
+            if existing:
+                errors.append({"row": idx + 2, "message": f"Serial number {record['serial_number']} already exists"})
+                continue
+            
+            device = Device(
+                company_id=company_id,
+                device_type=record.get("device_type", "Laptop"),
+                brand=record.get("brand"),
+                model=record.get("model"),
+                serial_number=record.get("serial_number"),
+                asset_tag=record.get("asset_tag"),
+                purchase_date=record.get("purchase_date", get_ist_isoformat().split("T")[0]),
+                purchase_cost=float(record["purchase_cost"]) if record.get("purchase_cost") else None,
+                vendor=record.get("vendor"),
+                warranty_end_date=record.get("warranty_end_date"),
+                location=record.get("location"),
+                condition=record.get("condition", "good"),
+                status=record.get("status", "active"),
+                notes=record.get("notes")
+            )
+            
+            await db.devices.insert_one(device.model_dump())
+            success_count += 1
+            
+        except Exception as e:
+            errors.append({"row": idx + 2, "message": str(e)})
+    
+    return {"success": success_count, "errors": errors}
+
+@api_router.post("/admin/bulk-import/supply-products")
+async def bulk_import_supply_products(data: dict, admin: dict = Depends(get_current_admin)):
+    """Bulk import supply products from CSV data"""
+    records = data.get("records", [])
+    if not records:
+        raise HTTPException(status_code=400, detail="No records provided")
+    
+    # Get category mapping
+    categories = await db.supply_categories.find({"is_deleted": {"$ne": True}}, {"_id": 0}).to_list(100)
+    category_by_name = {c["name"].lower(): c["id"] for c in categories}
+    
+    success_count = 0
+    errors = []
+    
+    for idx, record in enumerate(records):
+        try:
+            if not record.get("name"):
+                errors.append({"row": idx + 2, "message": "Product name is required"})
+                continue
+            
+            # Find category
+            category_id = None
+            if record.get("category"):
+                category_id = category_by_name.get(record["category"].lower())
+            
+            if not category_id:
+                # Create category if it doesn't exist
+                if record.get("category"):
+                    new_cat = SupplyCategory(name=record["category"])
+                    await db.supply_categories.insert_one(new_cat.model_dump())
+                    category_id = new_cat.id
+                    category_by_name[record["category"].lower()] = category_id
+                else:
+                    errors.append({"row": idx + 2, "message": "Category is required"})
+                    continue
+            
+            product = SupplyProduct(
+                category_id=category_id,
+                name=record.get("name"),
+                description=record.get("description"),
+                unit=record.get("unit", "piece"),
+                internal_notes=record.get("internal_notes")
+            )
+            
+            await db.supply_products.insert_one(product.model_dump())
+            success_count += 1
+            
+        except Exception as e:
+            errors.append({"row": idx + 2, "message": str(e)})
+    
+    return {"success": success_count, "errors": errors}
+
 @api_router.get("/admin/companies/{company_id}/overview")
 async def get_company_overview(company_id: str, admin: dict = Depends(get_current_admin)):
     """Get comprehensive company 360° view with all related data"""
