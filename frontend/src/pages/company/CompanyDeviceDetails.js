@@ -26,10 +26,8 @@ const CompanyDeviceDetails = () => {
   // Consumable order state
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [orderLoading, setOrderLoading] = useState(false);
-  const [orderForm, setOrderForm] = useState({
-    quantity: 1,
-    notes: ''
-  });
+  const [selectedConsumables, setSelectedConsumables] = useState({});
+  const [orderNotes, setOrderNotes] = useState('');
 
   useEffect(() => {
     fetchDevice();
@@ -53,26 +51,64 @@ const CompanyDeviceDetails = () => {
     }
   };
 
+  const toggleConsumable = (consumableId) => {
+    setSelectedConsumables(prev => {
+      const newState = { ...prev };
+      if (newState[consumableId]) {
+        delete newState[consumableId];
+      } else {
+        newState[consumableId] = 1; // Default quantity 1
+      }
+      return newState;
+    });
+  };
+
+  const updateConsumableQty = (consumableId, qty) => {
+    setSelectedConsumables(prev => ({
+      ...prev,
+      [consumableId]: Math.max(1, parseInt(qty) || 1)
+    }));
+  };
+
   const handleOrderConsumable = async () => {
-    if (orderForm.quantity < 1) {
-      toast.error('Quantity must be at least 1');
+    const selectedIds = Object.keys(selectedConsumables);
+    if (selectedIds.length === 0) {
+      toast.error('Please select at least one consumable to order');
       return;
     }
+    
+    // Build order items from selected consumables
+    const consumables = device.consumables || [];
+    const orderItems = selectedIds.map(id => {
+      const consumable = consumables.find(c => c.id === id);
+      return {
+        consumable_id: id,
+        name: consumable?.name || 'Consumable',
+        consumable_type: consumable?.consumable_type || 'Consumable',
+        model_number: consumable?.model_number || '',
+        brand: consumable?.brand,
+        color: consumable?.color,
+        quantity: selectedConsumables[id]
+      };
+    });
     
     setOrderLoading(true);
     try {
       const response = await axios.post(
         `${API}/company/devices/${deviceId}/order-consumable`,
         {
-          quantity: orderForm.quantity,
-          notes: orderForm.notes
+          items: orderItems,
+          notes: orderNotes
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      toast.success(`Order ${response.data.order_number} submitted successfully!`);
+      const itemCount = response.data.items_count || orderItems.length;
+      const totalQty = response.data.total_quantity || orderItems.reduce((s, i) => s + i.quantity, 0);
+      toast.success(`Order ${response.data.order_number} submitted! (${itemCount} items, ${totalQty} units)`);
       setOrderModalOpen(false);
-      setOrderForm({ quantity: 1, notes: '' });
+      setSelectedConsumables({});
+      setOrderNotes('');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to submit order');
     } finally {
