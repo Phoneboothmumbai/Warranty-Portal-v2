@@ -96,6 +96,7 @@ function App() {
                   <Route path="deployments" element={<CompanyDeployments />} />
                   <Route path="users" element={<CompanyUsers />} />
                   <Route path="sites" element={<CompanySites />} />
+                  <Route path="office-supplies" element={<CompanyOfficeSupplies />} />
                   <Route path="profile" element={<CompanyProfile />} />
                 </Route>
               </Routes>
