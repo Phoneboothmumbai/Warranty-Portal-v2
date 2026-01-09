@@ -1913,19 +1913,20 @@ async def bulk_import_companies(data: dict, admin: dict = Depends(get_current_ad
                 errors.append({"row": idx + 2, "message": "Company name is required"})
                 continue
             
-            # Check for duplicate company code
-            if record.get("company_code"):
+            # Check for duplicate company code (field is 'code' in Company model)
+            company_code = record.get("company_code") or record.get("code")
+            if company_code:
                 existing = await db.companies.find_one({
-                    "company_code": record["company_code"],
+                    "code": company_code,
                     "is_deleted": {"$ne": True}
                 })
                 if existing:
-                    errors.append({"row": idx + 2, "message": f"Company code {record['company_code']} already exists"})
+                    errors.append({"row": idx + 2, "message": f"Company code {company_code} already exists"})
                     continue
             
             company = Company(
                 name=record.get("name"),
-                company_code=record.get("company_code") or f"C{str(uuid.uuid4())[:6].upper()}",
+                code=company_code or f"C{str(uuid.uuid4())[:6].upper()}",
                 industry=record.get("industry"),
                 contact_name=record.get("contact_name"),
                 contact_email=record.get("contact_email"),
