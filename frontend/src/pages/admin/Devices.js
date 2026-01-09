@@ -846,6 +846,71 @@ const Devices = () => {
               />
             </div>
             
+            {/* Consumable Details - Show only for Printers */}
+            {formData.device_type?.toLowerCase().includes('printer') && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-4">
+                <h4 className="text-sm font-semibold text-amber-800 uppercase tracking-wider flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Consumable Details (for Ink/Toner Orders)
+                </h4>
+                <p className="text-xs text-amber-700">
+                  These details will be used when customers order consumables for this printer.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label">Consumable Type</label>
+                    <select
+                      value={formData.consumable_type}
+                      onChange={(e) => setFormData({ ...formData, consumable_type: e.target.value })}
+                      className="form-select"
+                      data-testid="consumable-type-select"
+                    >
+                      <option value="">Select type...</option>
+                      <option value="Toner Cartridge">Toner Cartridge</option>
+                      <option value="Ink Cartridge">Ink Cartridge</option>
+                      <option value="Drum Unit">Drum Unit</option>
+                      <option value="Ink Tank">Ink Tank</option>
+                      <option value="Ribbon">Ribbon</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="form-label">Consumable Model/Part No.</label>
+                    <input
+                      type="text"
+                      value={formData.consumable_model}
+                      onChange={(e) => setFormData({ ...formData, consumable_model: e.target.value })}
+                      className="form-input"
+                      placeholder="e.g., HP 26A, Canon 325"
+                      data-testid="consumable-model-input"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label">Consumable Brand</label>
+                    <input
+                      type="text"
+                      value={formData.consumable_brand}
+                      onChange={(e) => setFormData({ ...formData, consumable_brand: e.target.value })}
+                      className="form-input"
+                      placeholder="e.g., HP, Canon, Brother"
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Consumable Notes</label>
+                    <input
+                      type="text"
+                      value={formData.consumable_notes}
+                      onChange={(e) => setFormData({ ...formData, consumable_notes: e.target.value })}
+                      className="form-input"
+                      placeholder="Compatible models, yield info..."
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="flex justify-end gap-3 pt-4">
               <Button type="button" variant="outline" onClick={closeModal}>
                 Cancel
