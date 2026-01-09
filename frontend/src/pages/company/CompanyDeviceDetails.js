@@ -199,8 +199,8 @@ const CompanyDeviceDetails = () => {
               <dd className="font-medium text-slate-900">{device.serial_number}</dd>
             </div>
             <div className="flex justify-between py-2 border-b border-slate-100">
-              <dt className="text-slate-500">Category</dt>
-              <dd className="font-medium text-slate-900">{device.category || 'N/A'}</dd>
+              <dt className="text-slate-500">Type</dt>
+              <dd className="font-medium text-slate-900">{device.device_type || device.category || 'N/A'}</dd>
             </div>
             <div className="flex justify-between py-2 border-b border-slate-100">
               <dt className="text-slate-500">Brand</dt>
