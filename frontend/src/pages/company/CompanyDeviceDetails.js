@@ -368,6 +368,97 @@ const CompanyDeviceDetails = () => {
         </div>
       )}
 
+      {/* Order Consumables Modal */}
+      <Dialog open={orderModalOpen} onOpenChange={setOrderModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-amber-600" />
+              Order Consumables
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            {/* Printer Info */}
+            <div className="bg-slate-50 rounded-lg p-4">
+              <p className="text-sm text-slate-500">Ordering for:</p>
+              <p className="font-medium text-slate-900">{device.brand} {device.model}</p>
+              <p className="text-xs text-slate-500 font-mono">{device.serial_number}</p>
+            </div>
+
+            {/* Consumable Details */}
+            {(device.consumable_type || device.consumable_model) && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-sm font-medium text-amber-800 mb-2">Configured Consumable:</p>
+                <div className="text-sm text-amber-700 space-y-1">
+                  {device.consumable_type && <p>Type: {device.consumable_type}</p>}
+                  {device.consumable_model && <p>Model/Part: {device.consumable_model}</p>}
+                  {device.consumable_brand && <p>Brand: {device.consumable_brand}</p>}
+                </div>
+              </div>
+            )}
+
+            {/* Order Form */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Quantity</label>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={orderForm.quantity}
+                onChange={(e) => setOrderForm({ ...orderForm, quantity: parseInt(e.target.value) || 1 })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                data-testid="consumable-quantity-input"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Notes (Optional)</label>
+              <textarea
+                value={orderForm.notes}
+                onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
+                placeholder="Any special requirements or instructions..."
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                rows={3}
+                data-testid="consumable-notes-input"
+              />
+            </div>
+
+            <p className="text-xs text-slate-500">
+              This request will be sent to the support team for processing. You will be contacted regarding pricing and delivery.
+            </p>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setOrderModalOpen(false)}
+                disabled={orderLoading}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleOrderConsumable}
+                disabled={orderLoading}
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+                data-testid="submit-consumable-order-btn"
+              >
+                {orderLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Package className="h-4 w-4 mr-2" />
+                    Submit Order
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Related Tickets - removed since tickets aren't returned from this API */}
     </div>
   );
