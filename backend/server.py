@@ -419,6 +419,16 @@ class AssignmentHistory(BaseModel):
 
 # ==================== CONSUMABLE ORDERS ====================
 
+class ConsumableOrderItem(BaseModel):
+    """Individual item in a consumable order"""
+    consumable_id: str  # Reference to the consumable item in device.consumables
+    name: str  # e.g., "Black Toner"
+    consumable_type: str
+    model_number: str
+    brand: Optional[str] = None
+    color: Optional[str] = None
+    quantity: int = 1
+
 class ConsumableOrder(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -428,9 +438,12 @@ class ConsumableOrder(BaseModel):
     requested_by: str  # company_user id
     requested_by_name: str
     requested_by_email: str
+    # Legacy single consumable fields (for backward compatibility)
     consumable_type: Optional[str] = None
     consumable_model: Optional[str] = None
     quantity: int = 1
+    # NEW: Multiple items support
+    items: List[dict] = Field(default_factory=list)  # List of ConsumableOrderItem dicts
     notes: Optional[str] = None
     status: str = "pending"  # pending, processing, fulfilled, cancelled
     osticket_id: Optional[str] = None
