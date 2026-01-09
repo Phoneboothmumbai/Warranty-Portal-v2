@@ -4714,6 +4714,235 @@ async def get_company_device(device_id: str, user: dict = Depends(get_current_co
         "amc_info": amc_info
     }
 
+# --- Consumable Orders ---
+
+@api_router.post("/company/devices/{device_id}/order-consumable")
+async def order_consumable(device_id: str, order_data: dict, user: dict = Depends(get_current_company_user)):
+    """Order consumables for a printer device"""
+    # Verify device belongs to company
+    device = await db.devices.find_one({
+        "id": device_id,
+        "company_id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    
+    # Check if it's a printer
+    device_type = (device.get("device_type") or "").lower()
+    if "printer" not in device_type:
+        raise HTTPException(status_code=400, detail="Consumable orders are only available for printers")
+    
+    # Get company details
+    company = await db.companies.find_one({"id": user["company_id"]}, {"_id": 0})
+    
+    # Get site details
+    site = None
+    if device.get("site_id"):
+        site = await db.sites.find_one({"id": device["site_id"]}, {"_id": 0})
+    
+    # Get consumable order history for this device
+    order_history = await db.consumable_orders.find(
+        {"device_id": device_id, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(10).to_list(10)
+    
+    # Get service history
+    service_history = await db.service_history.find(
+        {"device_id": device_id, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    ).sort("service_date", -1).limit(5).to_list(5)
+    
+    # Create the order
+    order = ConsumableOrder(
+        company_id=user["company_id"],
+        device_id=device_id,
+        requested_by=user["id"],
+        requested_by_name=user.get("name", "Unknown"),
+        requested_by_email=user.get("email", ""),
+        consumable_type=order_data.get("consumable_type") or device.get("consumable_type"),
+        consumable_model=order_data.get("consumable_model") or device.get("consumable_model"),
+        quantity=order_data.get("quantity", 1),
+        notes=order_data.get("notes")
+    )
+    
+    await db.consumable_orders.insert_one(order.model_dump())
+    
+    # Helper function
+    def format_date(date_str):
+        if not date_str:
+            return "N/A"
+        try:
+            if 'T' in str(date_str):
+                return str(date_str).split('T')[0]
+            return str(date_str)
+        except:
+            return str(date_str)
+    
+    # Build osTicket message
+    osticket_message = f"""
+<h2>CONSUMABLE ORDER REQUEST</h2>
+<p><strong>Order Number:</strong> {order.order_number}</p>
+<p><strong>Order Date:</strong> {format_date(order.created_at)}</p>
+
+<hr>
+<h3>CONSUMABLE REQUIRED</h3>
+<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+<tr style="background-color: #e0f2e9;"><td><strong>Consumable Type</strong></td><td><strong>{order.consumable_type or device.get('consumable_type') or 'Not Specified'}</strong></td></tr>
+<tr style="background-color: #e0f2e9;"><td><strong>Consumable Model/Part No.</strong></td><td><strong>{order.consumable_model or device.get('consumable_model') or 'Not Specified'}</strong></td></tr>
+<tr><td><strong>Consumable Brand</strong></td><td>{device.get('consumable_brand') or 'Not Specified'}</td></tr>
+<tr><td><strong>Quantity Required</strong></td><td>{order.quantity}</td></tr>
+<tr><td><strong>Special Notes</strong></td><td>{order.notes or 'None'}</td></tr>
+</table>
+
+<hr>
+<h3>PRINTER DETAILS</h3>
+<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+<tr><td><strong>Serial Number</strong></td><td><strong>{device.get('serial_number', 'N/A')}</strong></td></tr>
+<tr><td><strong>Brand</strong></td><td>{device.get('brand', 'N/A')}</td></tr>
+<tr><td><strong>Model</strong></td><td>{device.get('model', 'N/A')}</td></tr>
+<tr><td><strong>Asset Tag</strong></td><td>{device.get('asset_tag', 'N/A')}</td></tr>
+<tr><td><strong>Location</strong></td><td>{device.get('location', 'N/A')}</td></tr>
+<tr><td><strong>Status</strong></td><td>{device.get('status', 'N/A')}</td></tr>
+<tr><td><strong>Condition</strong></td><td>{device.get('condition', 'N/A')}</td></tr>
+<tr><td><strong>Consumable Notes</strong></td><td>{device.get('consumable_notes', 'N/A')}</td></tr>
+</table>
+
+<hr>
+<h3>COMPANY INFORMATION</h3>
+<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+<tr><td><strong>Company Name</strong></td><td>{company.get('name', 'N/A') if company else 'N/A'}</td></tr>
+<tr><td><strong>Contact Person</strong></td><td>{company.get('contact_name', 'N/A') if company else 'N/A'}</td></tr>
+<tr><td><strong>Contact Email</strong></td><td>{company.get('contact_email', 'N/A') if company else 'N/A'}</td></tr>
+<tr><td><strong>Contact Phone</strong></td><td>{company.get('contact_phone', 'N/A') if company else 'N/A'}</td></tr>
+<tr><td><strong>Address</strong></td><td>{company.get('address', 'N/A') if company else 'N/A'}</td></tr>
+</table>
+
+<hr>
+<h3>ORDERED BY</h3>
+<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+<tr><td><strong>Name</strong></td><td>{user.get('name', 'N/A')}</td></tr>
+<tr><td><strong>Email</strong></td><td>{user.get('email', 'N/A')}</td></tr>
+<tr><td><strong>Phone</strong></td><td>{user.get('phone', 'N/A')}</td></tr>
+</table>
+"""
+
+    # Add Site Information if available
+    if site:
+        osticket_message += f"""
+<hr>
+<h3>DELIVERY LOCATION (Site)</h3>
+<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+<tr><td><strong>Site Name</strong></td><td>{site.get('name', 'N/A')}</td></tr>
+<tr><td><strong>Address</strong></td><td>{site.get('address', 'N/A')}</td></tr>
+<tr><td><strong>City</strong></td><td>{site.get('city', 'N/A')}</td></tr>
+<tr><td><strong>State</strong></td><td>{site.get('state', 'N/A')}</td></tr>
+<tr><td><strong>Pincode</strong></td><td>{site.get('pincode', 'N/A')}</td></tr>
+<tr><td><strong>Contact Person</strong></td><td>{site.get('contact_person', 'N/A')}</td></tr>
+<tr><td><strong>Contact Phone</strong></td><td>{site.get('contact_phone', 'N/A')}</td></tr>
+</table>
+"""
+
+    # Add Order History
+    if order_history:
+        osticket_message += f"""
+<hr>
+<h3>PREVIOUS CONSUMABLE ORDERS FOR THIS PRINTER ({len(order_history)} records)</h3>
+<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+<tr style="background-color: #f0f0f0;">
+<th>Order #</th><th>Date</th><th>Item</th><th>Qty</th><th>Status</th>
+</tr>
+"""
+        for hist in order_history:
+            if hist.get('order_number') != order.order_number:  # Skip current order
+                osticket_message += f"""
+<tr>
+<td>{hist.get('order_number', 'N/A')}</td>
+<td>{format_date(hist.get('created_at'))}</td>
+<td>{hist.get('consumable_type', 'N/A')} - {hist.get('consumable_model', 'N/A')}</td>
+<td>{hist.get('quantity', 1)}</td>
+<td>{hist.get('status', 'N/A').upper()}</td>
+</tr>
+"""
+        osticket_message += "</table>"
+    else:
+        osticket_message += """
+<hr>
+<h3>PREVIOUS CONSUMABLE ORDERS</h3>
+<p><em>This is the first consumable order for this printer.</em></p>
+"""
+
+    # Add Service History
+    if service_history:
+        osticket_message += f"""
+<hr>
+<h3>RECENT SERVICE HISTORY ({len(service_history)} records)</h3>
+<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+<tr style="background-color: #f0f0f0;">
+<th>Date</th><th>Service Type</th><th>Problem</th><th>Status</th>
+</tr>
+"""
+        for svc in service_history:
+            osticket_message += f"""
+<tr>
+<td>{format_date(svc.get('service_date'))}</td>
+<td>{svc.get('service_type', 'N/A')}</td>
+<td>{(svc.get('problem_reported', 'N/A') or 'N/A')[:50]}...</td>
+<td>{svc.get('status', 'N/A')}</td>
+</tr>
+"""
+        osticket_message += "</table>"
+
+    osticket_message += f"""
+<hr>
+<p style="color: #666; font-size: 12px;">
+<em>This consumable order was submitted from the Warranty & Asset Tracking Portal.<br>
+Order Created: {get_ist_isoformat()}</em>
+</p>
+"""
+
+    # Create osTicket
+    consumable_info = f"{order.consumable_type or 'Consumable'} - {order.consumable_model or device.get('model', '')}"
+    osticket_id = await create_osticket(
+        email=user.get("email", "noreply@warranty-portal.com"),
+        name=user.get("name", "Portal User"),
+        subject=f"[{order.order_number}] Consumable Order: {consumable_info}",
+        message=osticket_message,
+        phone=user.get("phone", "")
+    )
+    
+    # Update order with osTicket ID
+    if osticket_id:
+        await db.consumable_orders.update_one(
+            {"id": order.id},
+            {"$set": {"osticket_id": osticket_id}}
+        )
+    
+    return {
+        "message": "Consumable order submitted successfully",
+        "order_number": order.order_number,
+        "id": order.id,
+        "osticket_id": osticket_id
+    }
+
+@api_router.get("/company/consumable-orders")
+async def list_company_consumable_orders(user: dict = Depends(get_current_company_user)):
+    """List consumable orders for the company"""
+    orders = await db.consumable_orders.find(
+        {"company_id": user["company_id"], "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Enrich with device info
+    for order in orders:
+        device = await db.devices.find_one({"id": order["device_id"]}, {"_id": 0, "serial_number": 1, "brand": 1, "model": 1})
+        if device:
+            order["device_serial"] = device.get("serial_number")
+            order["device_name"] = f"{device.get('brand', '')} {device.get('model', '')}"
+    
+    return orders
+
 # --- Company AMC Contracts ---
 
 @api_router.get("/company/amc-contracts")
