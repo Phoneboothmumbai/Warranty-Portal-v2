@@ -178,27 +178,17 @@ class TestBulkImportSites:
         """Test successful bulk import of sites"""
         unique_id = str(uuid.uuid4())[:6].upper()
         
-        # First get a company to use
-        companies_response = requests.get(
-            f"{BASE_URL}/api/admin/companies",
-            headers=admin_headers
-        )
-        assert companies_response.status_code == 200
-        companies = companies_response.json()
-        assert len(companies) > 0, "No companies found for site import test"
-        
-        company = companies[0]
-        
+        # Use company name for lookup (more reliable)
         records = [
             {
                 "name": f"TEST_BulkSite1_{unique_id}",
-                "company_code": company.get("company_code"),
+                "company_name": "Acme Corporation",
                 "site_type": "office",
                 "address": "456 Bulk Site Road",
                 "city": "Pune",
                 "state": "Maharashtra",
                 "pincode": "411001",
-                "contact_name": "Site Contact",
+                "contact_person": "Site Contact",
                 "contact_phone": "9876543212"
             }
         ]
@@ -213,7 +203,7 @@ class TestBulkImportSites:
         data = response.json()
         assert "success" in data
         assert "errors" in data
-        assert data["success"] >= 1, f"Expected at least 1 successful import, got {data['success']}"
+        assert data["success"] >= 1, f"Expected at least 1 successful import, got {data['success']}. Errors: {data.get('errors')}"
     
     def test_bulk_import_sites_missing_name(self, admin_headers):
         """Test bulk import sites with missing required field"""
