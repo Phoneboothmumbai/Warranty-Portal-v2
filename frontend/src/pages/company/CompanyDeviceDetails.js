@@ -53,6 +53,36 @@ const CompanyDeviceDetails = () => {
     }
   };
 
+  const handleOrderConsumable = async () => {
+    if (orderForm.quantity < 1) {
+      toast.error('Quantity must be at least 1');
+      return;
+    }
+    
+    setOrderLoading(true);
+    try {
+      const response = await axios.post(
+        `${API}/company/devices/${deviceId}/order-consumable`,
+        {
+          quantity: orderForm.quantity,
+          notes: orderForm.notes
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      toast.success(`Order ${response.data.order_number} submitted successfully!`);
+      setOrderModalOpen(false);
+      setOrderForm({ quantity: 1, notes: '' });
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to submit order');
+    } finally {
+      setOrderLoading(false);
+    }
+  };
+
+  const isPrinter = device?.category?.toLowerCase().includes('printer') || 
+                    device?.device_type?.toLowerCase().includes('printer');
+
   const getWarrantyStatus = () => {
     if (!device?.warranty_end_date) return { status: 'unknown', label: 'Unknown', color: 'slate' };
     
