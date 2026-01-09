@@ -149,6 +149,29 @@ const Devices = () => {
     fetchCompanyUsers(companyId);
   };
 
+  // Consumable management functions
+  const addConsumable = () => {
+    const newConsumable = { 
+      ...emptyConsumable, 
+      id: `temp-${Date.now()}` 
+    };
+    setFormData({ 
+      ...formData, 
+      consumables: [...formData.consumables, newConsumable] 
+    });
+  };
+
+  const updateConsumable = (index, field, value) => {
+    const updated = [...formData.consumables];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormData({ ...formData, consumables: updated });
+  };
+
+  const removeConsumable = (index) => {
+    const updated = formData.consumables.filter((_, i) => i !== index);
+    setFormData({ ...formData, consumables: updated });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.company_id || !formData.serial_number || !formData.brand || !formData.model || !formData.device_type) {
@@ -158,14 +181,17 @@ const Devices = () => {
 
     const submitData = { ...formData };
     // Clean up optional fields
-    ['assigned_user_id', 'asset_tag', 'warranty_end_date', 'vendor', 'location', 'notes', 
-     'consumable_type', 'consumable_model', 'consumable_brand', 'consumable_notes'].forEach(field => {
+    ['assigned_user_id', 'asset_tag', 'warranty_end_date', 'vendor', 'location', 'notes'].forEach(field => {
       if (!submitData[field]) delete submitData[field];
     });
     if (submitData.purchase_cost) {
       submitData.purchase_cost = parseFloat(submitData.purchase_cost);
     } else {
       delete submitData.purchase_cost;
+    }
+    // Clean up empty consumables
+    if (submitData.consumables) {
+      submitData.consumables = submitData.consumables.filter(c => c.name || c.model_number);
     }
 
     try {
