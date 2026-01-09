@@ -162,12 +162,25 @@ const CompanyDeviceDetails = () => {
               <Shield className="h-5 w-5" />
               Warranty: {warranty.label}
             </div>
-            <Link to={`/company/tickets?device=${device.id}`}>
-              <Button className="bg-emerald-600 hover:bg-emerald-700" data-testid="raise-ticket-btn">
-                <Ticket className="h-4 w-4 mr-2" />
-                Raise Service Request
-              </Button>
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              {isPrinter && (
+                <Button 
+                  onClick={() => setOrderModalOpen(true)}
+                  variant="outline"
+                  className="border-amber-500 text-amber-700 hover:bg-amber-50"
+                  data-testid="order-consumables-btn"
+                >
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  Order Consumables
+                </Button>
+              )}
+              <Link to={`/company/tickets?device=${device.id}`}>
+                <Button className="bg-emerald-600 hover:bg-emerald-700" data-testid="raise-ticket-btn">
+                  <Ticket className="h-4 w-4 mr-2" />
+                  Raise Service Request
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
