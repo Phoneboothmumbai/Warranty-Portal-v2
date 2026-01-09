@@ -222,14 +222,22 @@ const Sites = () => {
           <h1 className="text-2xl font-semibold text-slate-900">Sites & Locations</h1>
           <p className="text-slate-500 mt-1">Manage company sites, branches, and project locations</p>
         </div>
-        <Button 
-          onClick={openCreateModal}
-          className="bg-[#0F62FE] hover:bg-[#0043CE] text-white"
-          data-testid="add-site-btn"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Site
-        </Button>
+        <div className="flex gap-2">
+          <BulkImport
+            entityName="Sites"
+            columns={bulkImportColumns}
+            onImport={handleBulkImport}
+            sampleData={sampleData}
+          />
+          <Button 
+            onClick={openCreateModal}
+            className="bg-[#0F62FE] hover:bg-[#0043CE] text-white"
+            data-testid="add-site-btn"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Site
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
