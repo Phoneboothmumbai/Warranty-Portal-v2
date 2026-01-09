@@ -7,6 +7,7 @@ import { CompanyAuthProvider } from "./context/CompanyAuthContext";
 // Public Pages
 import LandingPage from "./pages/public/LandingPage";
 import WarrantyResult from "./pages/public/WarrantyResult";
+import PublicDevicePage from "./pages/public/PublicDevicePage";
 
 // Admin Pages
 import AdminLogin from "./pages/admin/AdminLogin";
