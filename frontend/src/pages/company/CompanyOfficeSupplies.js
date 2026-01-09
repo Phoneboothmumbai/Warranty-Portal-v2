@@ -348,6 +348,18 @@ const CompanyOfficeSupplies = () => {
               </div>
             </div>
           ))}
+          
+          {/* Empty state when search has no results */}
+          {searchQuery && filteredCatalog.length === 0 && (
+            <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+              <Search className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+              <h3 className="text-lg font-medium text-slate-900 mb-2">No products found</h3>
+              <p className="text-slate-500 mb-4">Try searching with different keywords</p>
+              <Button onClick={() => setSearchQuery('')} variant="outline">
+                Clear Search
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
         /* Orders View */
