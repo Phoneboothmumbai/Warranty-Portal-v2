@@ -394,14 +394,22 @@ const Devices = () => {
           <h1 className="text-2xl font-semibold text-slate-900">Devices</h1>
           <p className="text-slate-500 mt-1">Manage devices and assets</p>
         </div>
-        <Button 
-          onClick={openCreateModal}
-          className="bg-[#0F62FE] hover:bg-[#0043CE] text-white"
-          data-testid="add-device-btn"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Device
-        </Button>
+        <div className="flex gap-2">
+          <BulkImport
+            entityName="Devices"
+            columns={bulkImportColumns}
+            onImport={handleBulkImport}
+            sampleData={deviceSampleData}
+          />
+          <Button 
+            onClick={openCreateModal}
+            className="bg-[#0F62FE] hover:bg-[#0043CE] text-white"
+            data-testid="add-device-btn"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Device
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
