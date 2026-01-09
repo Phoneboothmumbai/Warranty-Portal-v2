@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
+import { BulkImport } from '../../components/ui/bulk-import';
 import { toast } from 'sonner';
 import { SmartSelect } from '../../components/ui/smart-select';
 import { DateDurationInput } from '../../components/ui/date-duration-input';
@@ -12,6 +13,28 @@ import { QuickCreateCompany, QuickCreateUser, QuickCreateMaster } from '../../co
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// Bulk import configuration
+const bulkImportColumns = [
+  { key: 'serial_number', label: 'Serial Number', required: true, example: 'ABC123456' },
+  { key: 'company_code', label: 'Company Code', required: true, example: 'ACME001' },
+  { key: 'company_name', label: 'Company Name (alt)', required: false, example: 'Acme Corp' },
+  { key: 'device_type', label: 'Device Type', required: false, example: 'Laptop' },
+  { key: 'brand', label: 'Brand', required: true, example: 'Dell' },
+  { key: 'model', label: 'Model', required: true, example: 'Latitude 5520' },
+  { key: 'asset_tag', label: 'Asset Tag', required: false, example: 'ACME-001' },
+  { key: 'purchase_date', label: 'Purchase Date', required: false, example: '2024-01-15' },
+  { key: 'warranty_end_date', label: 'Warranty End', required: false, example: '2027-01-15' },
+  { key: 'vendor', label: 'Vendor', required: false, example: 'Dell India' },
+  { key: 'location', label: 'Location', required: false, example: 'Floor 2, Desk 15' },
+  { key: 'condition', label: 'Condition', required: false, example: 'good' },
+  { key: 'status', label: 'Status', required: false, example: 'active' },
+];
+
+const deviceSampleData = [
+  { serial_number: 'DEL-001-2024', company_code: 'ACME001', device_type: 'Laptop', brand: 'Dell', model: 'Latitude 5520', asset_tag: 'ACME-LAP-001', purchase_date: '2024-01-15', warranty_end_date: '2027-01-15', vendor: 'Dell India', location: 'Floor 2, Desk 15', condition: 'good', status: 'active' },
+  { serial_number: 'HP-002-2024', company_code: 'ACME001', device_type: 'Printer', brand: 'HP', model: 'LaserJet Pro M404', asset_tag: 'ACME-PRN-001', purchase_date: '2024-02-20', warranty_end_date: '2026-02-20', vendor: 'HP Store', location: 'Reception', condition: 'new', status: 'active' },
+];
 
 // Empty consumable item template
 const emptyConsumable = {
