@@ -1,31 +1,20 @@
+"""
+Warranty & Asset Tracking Portal - Main Server
+==============================================
+This is a refactored version with modular architecture.
+Models, services, and utilities are now in separate modules.
+"""
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Form, Query
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
-from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Any
 import uuid
 from datetime import datetime, timezone, timedelta
 import httpx
-
-# Indian Standard Time (IST = UTC+5:30)
-IST = timezone(timedelta(hours=5, minutes=30))
-
-def get_ist_now():
-    """Get current datetime in IST"""
-    return datetime.now(IST)
-
-def get_ist_isoformat():
-    """Get current datetime in IST as ISO format string"""
-    return datetime.now(IST).isoformat()
-from jose import JWTError, jwt
-from passlib.context import CryptContext
 import base64
 from io import BytesIO
 from reportlab.lib.pagesizes import A4
@@ -36,30 +25,55 @@ from reportlab.lib.units import inch
 import shutil
 import json
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+# Import from modular structure
+from config import ROOT_DIR, UPLOAD_DIR, OSTICKET_URL, OSTICKET_API_KEY, SECRET_KEY, ALGORITHM, IST
+from database import db, client
+from utils.helpers import get_ist_now, get_ist_isoformat, calculate_warranty_expiry, is_warranty_active, days_until_expiry
+from services.auth import (
+    verify_password, get_password_hash, create_access_token,
+    get_current_admin, get_current_company_user, require_company_admin,
+    log_audit, security
+)
+from services.osticket import create_osticket
+from services.seeding import seed_default_masters, seed_default_supplies
 
-# Create uploads directory
-UPLOAD_DIR = ROOT_DIR / "uploads"
-UPLOAD_DIR.mkdir(exist_ok=True)
-
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
-
-# osTicket Configuration
-OSTICKET_URL = os.environ.get('OSTICKET_URL', '')
-OSTICKET_API_KEY = os.environ.get('OSTICKET_API_KEY', '')
-
-# JWT Config
-SECRET_KEY = os.environ.get('JWT_SECRET', 'warranty-portal-secret-key-change-in-prod')
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 480
-
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-security = HTTPBearer()
+# Import all models
+from models.auth import Token, AdminUser, AdminLogin, AdminCreate
+from models.common import MasterItem, MasterItemCreate, MasterItemUpdate, AuditLog, Settings, SettingsUpdate
+from models.company import (
+    Company, CompanyCreate, CompanyUpdate,
+    User, UserCreate, UserUpdate,
+    CompanyUser, CompanyUserCreate, CompanyUserUpdate,
+    CompanyUserRegister, CompanyLogin
+)
+from models.device import (
+    ConsumableItem, Device, DeviceCreate, DeviceUpdate,
+    AssignmentHistory, Part, PartCreate, PartUpdate,
+    ConsumableOrderItem, ConsumableOrder
+)
+from models.service import (
+    ServiceTicket, ServiceTicketCreate, ServiceTicketComment,
+    RenewalRequest, RenewalRequestCreate,
+    ServiceAttachment, ServiceHistory, ServiceHistoryCreate, ServiceHistoryUpdate,
+    ServicePartUsed
+)
+from models.amc import (
+    AMC, AMCCreate, AMCUpdate,
+    AMCCoverageIncludes, AMCExclusions, AMCEntitlements, AMCAssetMapping,
+    AMCContract, AMCContractCreate, AMCContractUpdate,
+    AMCUsageRecord, AMCDeviceAssignment, AMCDeviceAssignmentCreate,
+    AMCBulkAssignmentPreview
+)
+from models.site import (
+    Site, SiteCreate, SiteUpdate,
+    DeploymentItem, Deployment, DeploymentCreate, DeploymentUpdate
+)
+from models.license import License, LicenseCreate, LicenseUpdate
+from models.supplies import (
+    SupplyCategory, SupplyCategoryCreate, SupplyCategoryUpdate,
+    SupplyProduct, SupplyProductCreate, SupplyProductUpdate,
+    SupplyOrderItem, SupplyOrderLocation, SupplyOrder
+)
 
 # Create the main app
 app = FastAPI(title="Warranty & Asset Tracking Portal")
