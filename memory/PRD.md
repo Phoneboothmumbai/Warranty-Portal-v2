@@ -90,6 +90,30 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
   - All 13 backend API tests passing (100%)
   - All frontend UI features verified working
 
+- **Office Supplies Feature (COMPLETED):**
+  - **Company Portal** (`/company/office-supplies`):
+    - Catalog view with categories (Stationery, Printer Consumables)
+    - Add items to cart with +/- quantity controls
+    - "View Cart" button appears when items are added
+    - Place Order modal with delivery location selection
+    - Can use registered site OR enter new address
+    - Notes/Special Instructions field for urgent requests
+    - My Orders tab shows order history with status
+  - **Admin Panel** (`/admin/supply-products`, `/admin/supply-orders`):
+    - Supply Products page: Manage categories and products
+    - Categories section with inline edit/delete
+    - Products table with status toggle, search, filter by category
+    - Supply Orders page: View all orders with status cards
+    - Filter by status, company, search by order number
+    - Update order status (Requested → Approved → Processing → Delivered)
+    - Add admin notes to orders
+    - Order details modal with full information
+  - **Backend:**
+    - Auto-seeded 2 categories, 16 products on startup
+    - osTicket integration for order tickets
+    - Full CRUD APIs for categories, products, orders
+  - **Testing:** 22/22 backend tests passed (100%)
+
 ## Company Portal Credentials
 - **URL:** /company/login
 - **Test Company Code:** ACME001
