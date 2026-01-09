@@ -69,6 +69,16 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
   - Profile page with password change
   - All tested with 22/22 backend tests passing
 
+## Recent Updates (Jan 9, 2026)
+- **Order Consumables Feature (COMPLETED):**
+  - Admin Panel: Added consumable fields (Type, Model/Part No, Brand, Notes) to Device form - visible when device type is "Printer"
+  - Company Portal: Added "Order Consumables" button on device details page for printers
+  - Company Portal: Order modal with quantity and notes fields
+  - Backend: `POST /api/company/devices/{device_id}/order-consumable` endpoint creates order in `consumable_orders` collection
+  - Backend: osTicket integration sends detailed order request ticket (IP-restricted to production server)
+  - All 11 backend API tests passing
+  - All frontend UI features verified working
+
 ## Company Portal Credentials
 - **URL:** /company/login
 - **Test Company Code:** ACME001
