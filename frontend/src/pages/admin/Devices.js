@@ -250,6 +250,15 @@ const Devices = () => {
     }
   };
 
+  const handleBulkImport = async (records) => {
+    const response = await axios.post(`${API}/admin/bulk-import/devices`, 
+      { records },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    fetchData();
+    return response.data;
+  };
+
   const openCreateModal = () => {
     setEditingDevice(null);
     setFormData({
