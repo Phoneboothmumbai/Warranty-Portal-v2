@@ -106,6 +106,15 @@ const Companies = () => {
     }
   };
 
+  const handleBulkImport = async (records) => {
+    const response = await axios.post(`${API}/admin/bulk-import/companies`, 
+      { records },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    fetchCompanies();
+    return response.data;
+  };
+
   const openCreateModal = () => {
     setEditingCompany(null);
     setFormData({
