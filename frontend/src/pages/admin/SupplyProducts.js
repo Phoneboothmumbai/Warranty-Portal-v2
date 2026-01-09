@@ -257,6 +257,12 @@ const SupplyProducts = () => {
           <p className="text-slate-500 mt-1">Manage supply categories and products</p>
         </div>
         <div className="flex gap-2">
+          <BulkImport
+            entityName="Products"
+            columns={bulkImportColumns}
+            onImport={handleBulkImport}
+            sampleData={productSampleData}
+          />
           <Button variant="outline" onClick={() => openCategoryModal()} data-testid="add-category-btn">
             <FolderOpen className="h-4 w-4 mr-2" />
             Add Category
