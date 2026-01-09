@@ -483,6 +483,304 @@ async def generate_warranty_pdf(serial_number: str):
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
+# ==================== QR CODE & QUICK SERVICE REQUEST ====================
+
+class QuickServiceRequest(BaseModel):
+    """Quick service request without login"""
+    name: str
+    email: str
+    phone: Optional[str] = None
+    issue_category: str = "other"  # hardware, software, network, other
+    description: str
+
+
+@api_router.get("/device/{identifier}/qr")
+async def generate_device_qr_code(
+    identifier: str,
+    size: int = Query(default=200, ge=100, le=500)
+):
+    """
+    Generate QR code for a device (by serial number or asset tag).
+    The QR code links to the public device info page.
+    """
+    # Find device by serial number or asset tag
+    device = await db.devices.find_one(
+        {"$and": [
+            {"is_deleted": {"$ne": True}},
+            {"$or": [
+                {"serial_number": {"$regex": f"^{identifier}$", "$options": "i"}},
+                {"asset_tag": {"$regex": f"^{identifier}$", "$options": "i"}}
+            ]}
+        ]},
+        {"_id": 0, "serial_number": 1}
+    )
+    
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    
+    # Get frontend URL from environment or use default
+    frontend_url = os.environ.get('FRONTEND_URL', '')
+    if not frontend_url:
+        # Try to extract from CORS origins or use a placeholder
+        cors_origins = os.environ.get('CORS_ORIGINS', '')
+        if cors_origins and cors_origins != '*':
+            frontend_url = cors_origins.split(',')[0].strip()
+        else:
+            frontend_url = "https://your-portal-url.com"
+    
+    # Create QR code URL pointing to public device page
+    device_url = f"{frontend_url}/device/{device['serial_number']}"
+    
+    # Generate QR code
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=10,
+        border=2,
+    )
+    qr.add_data(device_url)
+    qr.make(fit=True)
+    
+    # Create image
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Resize if needed
+    if size != 200:
+        img = img.resize((size, size))
+    
+    # Convert to bytes
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+    
+    return StreamingResponse(
+        buffer,
+        media_type="image/png",
+        headers={
+            "Content-Disposition": f"inline; filename=qr_{identifier}.png",
+            "Cache-Control": "public, max-age=86400"
+        }
+    )
+
+
+@api_router.get("/device/{identifier}/info")
+async def get_public_device_info(identifier: str):
+    """
+    Get public device information including warranty status and service history.
+    Used by the QR code scan page.
+    """
+    # Find device by serial number or asset tag
+    device = await db.devices.find_one(
+        {"$and": [
+            {"is_deleted": {"$ne": True}},
+            {"$or": [
+                {"serial_number": {"$regex": f"^{identifier}$", "$options": "i"}},
+                {"asset_tag": {"$regex": f"^{identifier}$", "$options": "i"}}
+            ]}
+        ]},
+        {"_id": 0}
+    )
+    
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    
+    # Get company info
+    company = await db.companies.find_one(
+        {"id": device["company_id"], "is_deleted": {"$ne": True}}, 
+        {"_id": 0, "name": 1, "id": 1}
+    )
+    
+    # Get assigned user
+    assigned_user = None
+    if device.get("assigned_user_id"):
+        user = await db.users.find_one(
+            {"id": device["assigned_user_id"], "is_deleted": {"$ne": True}}, 
+            {"_id": 0, "name": 1}
+        )
+        assigned_user = user.get("name") if user else None
+    
+    # Get site info
+    site_info = None
+    if device.get("site_id"):
+        site = await db.sites.find_one(
+            {"id": device["site_id"], "is_deleted": {"$ne": True}},
+            {"_id": 0, "name": 1, "address": 1}
+        )
+        if site:
+            site_info = {"name": site.get("name"), "address": site.get("address")}
+    
+    # Check warranty status
+    device_warranty_active = is_warranty_active(device.get("warranty_end_date", "")) if device.get("warranty_end_date") else False
+    
+    # Check AMC
+    amc_info = None
+    active_amc = await db.amc_device_assignments.find_one({
+        "device_id": device["id"],
+        "status": "active"
+    }, {"_id": 0})
+    
+    if active_amc and is_warranty_active(active_amc.get("coverage_end", "")):
+        contract = await db.amc_contracts.find_one(
+            {"id": active_amc["amc_contract_id"], "is_deleted": {"$ne": True}},
+            {"_id": 0, "name": 1, "amc_type": 1}
+        )
+        if contract:
+            amc_info = {
+                "name": contract.get("name"),
+                "type": contract.get("amc_type"),
+                "coverage_end": active_amc.get("coverage_end"),
+                "active": True
+            }
+    
+    # Get recent service history (last 5)
+    service_history = await db.service_history.find(
+        {"device_id": device["id"]},
+        {"_id": 0, "service_date": 1, "service_type": 1, "action_taken": 1, "technician_name": 1}
+    ).sort("service_date", -1).limit(5).to_list(5)
+    
+    # Get parts
+    parts = await db.parts.find(
+        {"device_id": device["id"], "is_deleted": {"$ne": True}},
+        {"_id": 0, "part_name": 1, "warranty_expiry_date": 1}
+    ).to_list(20)
+    
+    for part in parts:
+        part["warranty_active"] = is_warranty_active(part.get("warranty_expiry_date", ""))
+    
+    return {
+        "device": {
+            "id": device.get("id"),
+            "device_type": device.get("device_type"),
+            "brand": device.get("brand"),
+            "model": device.get("model"),
+            "serial_number": device.get("serial_number"),
+            "asset_tag": device.get("asset_tag"),
+            "purchase_date": device.get("purchase_date"),
+            "warranty_end_date": device.get("warranty_end_date"),
+            "warranty_active": device_warranty_active or (amc_info is not None),
+            "condition": device.get("condition"),
+            "status": device.get("status"),
+            "location": device.get("location")
+        },
+        "company": {
+            "id": company.get("id") if company else None,
+            "name": company.get("name") if company else "Unknown"
+        },
+        "assigned_user": assigned_user,
+        "site": site_info,
+        "amc": amc_info,
+        "service_history": service_history,
+        "parts": parts,
+        "service_count": await db.service_history.count_documents({"device_id": device["id"]})
+    }
+
+
+@api_router.post("/device/{identifier}/quick-request")
+async def create_quick_service_request(identifier: str, request: QuickServiceRequest):
+    """
+    Create a quick service request without login.
+    This is for urgent issues when users scan QR code and need help immediately.
+    """
+    # Find device
+    device = await db.devices.find_one(
+        {"$and": [
+            {"is_deleted": {"$ne": True}},
+            {"$or": [
+                {"serial_number": {"$regex": f"^{identifier}$", "$options": "i"}},
+                {"asset_tag": {"$regex": f"^{identifier}$", "$options": "i"}}
+            ]}
+        ]},
+        {"_id": 0}
+    )
+    
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    
+    # Get company info
+    company = await db.companies.find_one(
+        {"id": device["company_id"], "is_deleted": {"$ne": True}},
+        {"_id": 0, "name": 1, "notification_email": 1, "contact_email": 1}
+    )
+    company_name = company.get("name") if company else "Unknown"
+    
+    # Create ticket number
+    ticket_number = f"QSR-{get_ist_now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}"
+    
+    # Create the quick service request record
+    quick_request = {
+        "id": str(uuid.uuid4()),
+        "ticket_number": ticket_number,
+        "device_id": device["id"],
+        "company_id": device["company_id"],
+        "requester_name": request.name,
+        "requester_email": request.email,
+        "requester_phone": request.phone,
+        "issue_category": request.issue_category,
+        "description": request.description,
+        "status": "open",
+        "source": "qr_scan",
+        "created_at": get_ist_isoformat(),
+        "osticket_id": None
+    }
+    
+    # Store in database
+    await db.quick_service_requests.insert_one(quick_request)
+    
+    # Create osTicket if configured
+    osticket_result = await create_osticket(
+        email=request.email,
+        name=request.name,
+        subject=f"[Quick Request] {request.issue_category.title()} Issue - {device.get('brand')} {device.get('model')}",
+        message=f"""
+        <h3>Quick Service Request via QR Scan</h3>
+        <p><strong>Ticket:</strong> {ticket_number}</p>
+        
+        <h4>Requester Details</h4>
+        <ul>
+            <li><strong>Name:</strong> {request.name}</li>
+            <li><strong>Email:</strong> {request.email}</li>
+            <li><strong>Phone:</strong> {request.phone or 'Not provided'}</li>
+        </ul>
+        
+        <h4>Device Details</h4>
+        <ul>
+            <li><strong>Company:</strong> {company_name}</li>
+            <li><strong>Device:</strong> {device.get('brand')} {device.get('model')}</li>
+            <li><strong>Serial Number:</strong> {device.get('serial_number')}</li>
+            <li><strong>Asset Tag:</strong> {device.get('asset_tag') or 'N/A'}</li>
+            <li><strong>Location:</strong> {device.get('location') or 'Not specified'}</li>
+        </ul>
+        
+        <h4>Issue Details</h4>
+        <ul>
+            <li><strong>Category:</strong> {request.issue_category.title()}</li>
+            <li><strong>Description:</strong><br/>{request.description}</li>
+        </ul>
+        
+        <p><em>This request was submitted via QR code scan (no login required).</em></p>
+        """,
+        phone=request.phone or ""
+    )
+    
+    if osticket_result.get("ticket_id"):
+        await db.quick_service_requests.update_one(
+            {"id": quick_request["id"]},
+            {"$set": {"osticket_id": osticket_result["ticket_id"]}}
+        )
+    
+    return {
+        "success": True,
+        "ticket_number": ticket_number,
+        "message": "Your service request has been submitted successfully. Our team will contact you shortly.",
+        "osticket_id": osticket_result.get("ticket_id"),
+        "device": {
+            "brand": device.get("brand"),
+            "model": device.get("model"),
+            "serial_number": device.get("serial_number")
+        }
+    }
+
+
 # ==================== AUTH ENDPOINTS ====================
 
 @api_router.post("/auth/login", response_model=Token)
