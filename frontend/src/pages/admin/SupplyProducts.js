@@ -221,6 +221,15 @@ const SupplyProducts = () => {
     }
   };
 
+  const handleBulkImport = async (records) => {
+    const response = await axios.post(`${API}/admin/bulk-import/supply-products`, 
+      { records },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    fetchData();
+    return response.data;
+  };
+
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = !filterCategory || product.category_id === filterCategory;
