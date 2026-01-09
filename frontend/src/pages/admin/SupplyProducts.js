@@ -8,9 +8,24 @@ import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
+import { BulkImport } from '../../components/ui/bulk-import';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// Bulk import configuration
+const bulkImportColumns = [
+  { key: 'name', label: 'Product Name', required: true, example: 'A4 Paper (500 sheets)' },
+  { key: 'category', label: 'Category', required: true, example: 'Stationery' },
+  { key: 'description', label: 'Description', required: false, example: 'High quality printing paper' },
+  { key: 'unit', label: 'Unit', required: false, example: 'ream' },
+  { key: 'internal_notes', label: 'Internal Notes', required: false, example: 'Vendor: XYZ, Cost: Rs 250' },
+];
+
+const productSampleData = [
+  { name: 'A4 Paper (500 sheets)', category: 'Stationery', description: 'High quality printing paper', unit: 'ream', internal_notes: 'Vendor: XYZ' },
+  { name: 'Black Toner HP 26A', category: 'Printer Consumables', description: 'Compatible with HP LaserJet Pro', unit: 'cartridge', internal_notes: 'High yield' },
+];
 
 const SupplyProducts = () => {
   const { token } = useAuth();
