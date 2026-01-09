@@ -171,6 +171,24 @@ const CompanyOfficeSupplies = () => {
     return <Icon className="h-4 w-4" />;
   };
 
+  // Filter catalog by search query
+  const getFilteredCatalog = () => {
+    if (!searchQuery.trim()) return catalog;
+    
+    const query = searchQuery.toLowerCase();
+    return catalog.map(category => ({
+      ...category,
+      products: category.products.filter(product => 
+        product.name.toLowerCase().includes(query) ||
+        (product.description && product.description.toLowerCase().includes(query))
+      )
+    })).filter(category => category.products.length > 0);
+  };
+
+  const filteredCatalog = getFilteredCatalog();
+  const totalProducts = catalog.reduce((sum, cat) => sum + cat.products.length, 0);
+  const filteredProductCount = filteredCatalog.reduce((sum, cat) => sum + cat.products.length, 0);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
