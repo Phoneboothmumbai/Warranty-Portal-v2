@@ -259,6 +259,26 @@ const Devices = () => {
     return response.data;
   };
 
+  const handleDownloadQR = (device) => {
+    // Open QR code in new tab for download
+    const qrUrl = `${API}/device/${encodeURIComponent(device.serial_number)}/qr?size=300`;
+    
+    // Create a temporary link to download
+    const link = document.createElement('a');
+    link.href = qrUrl;
+    link.download = `QR_${device.serial_number}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('QR Code downloading...');
+  };
+
+  const handleOpenPublicPage = (device) => {
+    // Open the public device page in a new tab
+    window.open(`/device/${encodeURIComponent(device.serial_number)}`, '_blank');
+  };
+
   const openCreateModal = () => {
     setEditingDevice(null);
     setFormData({
