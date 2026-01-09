@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
+import { BulkImport } from '../../components/ui/bulk-import';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -18,6 +19,26 @@ const SITE_TYPES = [
   { value: 'warehouse', label: 'Warehouse' },
   { value: 'site_project', label: 'Site / Project' },
   { value: 'branch', label: 'Branch' },
+];
+
+// Bulk import configuration
+const bulkImportColumns = [
+  { key: 'name', label: 'Site Name', required: true, example: 'Main Office' },
+  { key: 'company_code', label: 'Company Code', required: true, example: 'ACME001' },
+  { key: 'company_name', label: 'Company Name (alt)', required: false, example: 'Acme Corp' },
+  { key: 'site_code', label: 'Site Code', required: false, example: 'ACME-MUM-01' },
+  { key: 'address', label: 'Address', required: false, example: '123 Main St' },
+  { key: 'city', label: 'City', required: false, example: 'Mumbai' },
+  { key: 'state', label: 'State', required: false, example: 'Maharashtra' },
+  { key: 'pincode', label: 'Pincode', required: false, example: '400001' },
+  { key: 'contact_person', label: 'Contact Person', required: false, example: 'John Doe' },
+  { key: 'contact_phone', label: 'Contact Phone', required: false, example: '9876543210' },
+  { key: 'contact_email', label: 'Contact Email', required: false, example: 'john@acme.com' },
+];
+
+const sampleData = [
+  { name: 'Head Office', company_code: 'ACME001', site_code: 'HO-01', address: '123 Tech Park', city: 'Mumbai', state: 'Maharashtra', pincode: '400001', contact_person: 'John Doe', contact_phone: '9876543210', contact_email: 'john@acme.com' },
+  { name: 'Branch Office', company_code: 'ACME001', site_code: 'BR-01', address: '456 Business Center', city: 'Pune', state: 'Maharashtra', pincode: '411001', contact_person: 'Jane Smith', contact_phone: '9876543211', contact_email: 'jane@acme.com' },
 ];
 
 const Sites = () => {
