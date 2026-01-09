@@ -249,12 +249,48 @@ const CompanyOfficeSupplies = () => {
       {activeTab === 'catalog' ? (
         /* Catalog View */
         <div className="space-y-6">
-          {catalog.map(category => (
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-12 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              data-testid="catalog-search"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-full"
+              >
+                <X className="h-4 w-4 text-slate-400" />
+              </button>
+            )}
+          </div>
+          
+          {/* Search Results Info */}
+          {searchQuery && (
+            <p className="text-sm text-slate-500">
+              Showing {filteredProductCount} of {totalProducts} products
+              {filteredProductCount === 0 && (
+                <span className="ml-2 text-amber-600">— Try a different search term</span>
+              )}
+            </p>
+          )}
+
+          {filteredCatalog.map(category => (
             <div key={category.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
               <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
                 <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
                   <span className="text-xl">{category.icon}</span>
                   {category.name}
+                  {searchQuery && (
+                    <span className="text-sm font-normal text-slate-400">
+                      ({category.products.length} matches)
+                    </span>
+                  )}
                 </h2>
                 {category.description && (
                   <p className="text-sm text-slate-500 mt-1">{category.description}</p>
