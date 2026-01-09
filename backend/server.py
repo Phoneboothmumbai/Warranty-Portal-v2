@@ -4977,8 +4977,12 @@ Order Created: {get_ist_isoformat()}</em>
 </p>
 """
 
-    # Create osTicket
-    consumable_info = f"{order.consumable_type or 'Consumable'} - {order.consumable_model or device.get('model', '')}"
+    # Create osTicket - build subject for multi-item orders
+    if len(order_items) == 1:
+        consumable_info = f"{order_items[0].get('name', 'Consumable')} x {order_items[0].get('quantity', 1)}"
+    else:
+        consumable_info = f"{len(order_items)} items, {total_quantity} units"
+    
     osticket_result = await create_osticket(
         email=user.get("email", "noreply@warranty-portal.com"),
         name=user.get("name", "Portal User"),
@@ -5001,6 +5005,8 @@ Order Created: {get_ist_isoformat()}</em>
         "message": "Consumable order submitted successfully",
         "order_number": order.order_number,
         "id": order.id,
+        "items_count": len(order_items),
+        "total_quantity": total_quantity,
         "osticket_id": osticket_id,
         "osticket_error": osticket_error
     }
