@@ -262,19 +262,32 @@ const Devices = () => {
     return response.data;
   };
 
-  const handleDownloadQR = (device) => {
+  const handleDownloadQR = async (device) => {
     // Download single device QR code as PDF
-    const qrUrl = `${API}/device/${encodeURIComponent(device.serial_number)}/qr`;
-    
-    // Create a temporary link to download
-    const link = document.createElement('a');
-    link.href = qrUrl;
-    link.download = `QR_${device.serial_number}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast.success('QR Code PDF downloading...');
+    try {
+      toast.loading('Generating QR Code PDF...');
+      
+      const response = await axios.get(`${API}/device/${encodeURIComponent(device.serial_number)}/qr`, {
+        responseType: 'blob'
+      });
+      
+      // Create download link
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `QR_${device.serial_number}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.dismiss();
+      toast.success('QR Code PDF downloaded!');
+    } catch (error) {
+      toast.dismiss();
+      toast.error(error.response?.data?.detail || 'Failed to download QR Code');
+    }
   };
 
   const handleOpenPublicPage = (device) => {
