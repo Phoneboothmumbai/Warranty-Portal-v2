@@ -3,6 +3,7 @@ import { Toaster } from "sonner";
 import { AuthProvider } from "./context/AuthContext";
 import { SettingsProvider } from "./context/SettingsContext";
 import { CompanyAuthProvider } from "./context/CompanyAuthContext";
+import { EngineerAuthProvider } from "./context/EngineerAuthContext";
 
 // Public Pages
 import LandingPage from "./pages/public/LandingPage";
@@ -46,6 +47,11 @@ import CompanySites from "./pages/company/CompanySites";
 import CompanyProfile from "./pages/company/CompanyProfile";
 import CompanyWarranty from "./pages/company/CompanyWarranty";
 import CompanyOfficeSupplies from "./pages/company/CompanyOfficeSupplies";
+
+// Engineer Portal Pages
+import EngineerLogin from "./pages/engineer/EngineerLogin";
+import EngineerDashboard from "./pages/engineer/EngineerDashboard";
+import EngineerVisitDetail from "./pages/engineer/EngineerVisitDetail";
 
 function App() {
   return (
