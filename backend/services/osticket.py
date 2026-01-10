@@ -81,13 +81,19 @@ async def fetch_osticket_details(ticket_id: str) -> dict:
     """
     Fetch ticket details from osTicket.
     Returns ticket info including status and thread/replies.
+    
+    Note: Standard osTicket API has limited read capabilities.
+    The /api/tickets/{id} endpoint may not be available depending on osTicket version
+    and installed plugins. Consider using osTicket's "Ticket Export" plugin or
+    direct database access for full sync capabilities.
     """
     if not OSTICKET_URL or not OSTICKET_API_KEY:
         return {"error": "osTicket not configured", "data": None}
     
     try:
-        # osTicket API endpoint for fetching ticket
-        api_url = f"{OSTICKET_URL.rstrip('/')}/api/tickets/{ticket_id}"
+        # Try the standard ticket endpoint first
+        # Note: This endpoint may require osTicket REST API plugin
+        api_url = f"{OSTICKET_URL.rstrip('/')}/api/tickets/{ticket_id}.json"
         
         headers = {
             "X-API-Key": OSTICKET_API_KEY,
@@ -105,17 +111,20 @@ async def fetch_osticket_details(ticket_id: str) -> dict:
                 try:
                     data = response.json()
                     return {"data": data, "error": None}
-                except:
+                except Exception:
                     # osTicket sometimes returns non-JSON
                     return {"data": {"raw": response.text}, "error": None}
             elif response.status_code == 401:
-                return {"data": None, "error": "API key rejected (IP restriction)"}
+                return {"data": None, "error": "API access denied. Check API key and IP restrictions."}
             elif response.status_code == 404:
                 return {"data": None, "error": "Ticket not found in osTicket"}
+            elif response.status_code == 400:
+                # 400 often means the endpoint doesn't exist or requires a plugin
+                return {"data": None, "error": "osTicket API does not support ticket retrieval. Install REST API plugin or check osTicket settings."}
             else:
-                return {"data": None, "error": f"API error {response.status_code}"}
+                return {"data": None, "error": f"osTicket API error ({response.status_code})"}
                 
     except Exception as e:
         logger.error(f"osTicket fetch failed: {str(e)}")
-        return {"data": None, "error": str(e)}
+        return {"data": None, "error": f"Connection error: {str(e)}"}
 
