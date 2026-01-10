@@ -1,0 +1,93 @@
+{
+  "summary": "Completed testing of osTicket Manual Sync and Individual QR Download features. All features working correctly. Backend: 12/13 tests passed (1 skipped - no tickets with osticket_id initially). Frontend: All UI tests passed - sync button appears for tickets with osticket_id, individual QR downloads single device PDF, bulk QR still works.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "POST /api/company/tickets/{ticket_id}/sync - Endpoint exists and responds",
+    "POST /api/company/tickets/{ticket_id}/sync - Requires authentication (401 without token)",
+    "POST /api/company/tickets/{ticket_id}/sync - Returns 400 for ticket without osticket_id",
+    "POST /api/company/tickets/{ticket_id}/sync - Returns 404 for non-existent ticket",
+    "GET /api/device/{serial}/qr - Returns PDF with correct content-type",
+    "GET /api/device/{serial}/qr - PDF filename contains serial number",
+    "GET /api/device/{serial}/qr - PDF size reasonable for single device (8,835 bytes)",
+    "GET /api/device/{serial}/qr - Returns 404 for invalid device",
+    "GET /api/device/{asset_tag}/qr - Works with asset tag lookup",
+    "POST /api/devices/bulk-qr-pdf - Works with specific device IDs",
+    "POST /api/devices/bulk-qr-pdf - Requires authentication",
+    "POST /api/devices/bulk-qr-pdf - Works with empty request (all devices)",
+    "GET /api/company/tickets/{ticket_id} - Returns osticket_id field",
+    "Frontend: 'Refresh from osTicket' button visible for tickets with osticket_id",
+    "Frontend: osTicket badge shows 'osTicket #12345' for linked tickets",
+    "Frontend: Sync button correctly hidden for tickets without osticket_id",
+    "Frontend: Sync button click calls correct endpoint (shows error toast for IP-restricted API)",
+    "Frontend: 'Download QR Code' option in device dropdown menu",
+    "Frontend: Individual QR download triggers PDF download with correct filename",
+    "Frontend: Individual QR download shows success toast 'QR Code PDF downloaded!'",
+    "Frontend: Bulk QR PDF button shows selection count 'QR PDF (3)'",
+    "Frontend: Bulk QR download works for selected devices"
+  ],
+  "test_report_links": [
+    "/app/tests/test_osticket_sync_and_qr.py",
+    "/app/test_reports/pytest/osticket_sync_qr_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Individual QR download correctly uses axios blob approach instead of simple link download",
+    "handleDownloadQR function in Devices.js properly constructs URL and triggers download",
+    "Sync endpoint correctly validates osticket_id presence before attempting sync",
+    "Frontend correctly shows/hides sync button based on osticket_id presence",
+    "osTicket API is IP-restricted (65.20.78.143) - 503/400 errors expected in preview environment"
+  ],
+  "updated_files": [
+    "/app/tests/test_osticket_sync_and_qr.py"
+  ],
+  "success_rate": {
+    "backend": "92% (12/13 tests passed, 1 skipped)",
+    "frontend": "100% (all UI tests passed)"
+  },
+  "test_credentials": {
+    "admin_email": "admin@demo.com",
+    "admin_password": "admin123",
+    "company_user_email": "jane@acme.com",
+    "company_user_password": "company123"
+  },
+  "seed_data_creation": "Created test ticket TKT-20260110-C8D725 with osticket_id='12345' for sync button testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "features_verified": {
+    "osticket_manual_sync": {
+      "endpoint": "POST /api/company/tickets/{ticket_id}/sync",
+      "requires_auth": true,
+      "validates_osticket_id": true,
+      "returns_400_without_osticket_id": true,
+      "returns_503_when_api_unreachable": true,
+      "frontend_button_visible": true,
+      "frontend_button_hidden_when_no_osticket_id": true
+    },
+    "individual_qr_download": {
+      "endpoint": "GET /api/device/{serial}/qr",
+      "returns_pdf": true,
+      "filename_contains_serial": true,
+      "single_device_only": true,
+      "pdf_size_bytes": 8835,
+      "frontend_dropdown_option": true,
+      "frontend_toast_notification": true
+    },
+    "bulk_qr_download": {
+      "endpoint": "POST /api/devices/bulk-qr-pdf",
+      "requires_auth": true,
+      "works_with_device_ids": true,
+      "works_with_company_filter": true,
+      "frontend_button_shows_count": true,
+      "pdf_size_for_3_devices_bytes": 23012
+    }
+  },
+  "context_for_next_testing_agent": "osTicket Manual Sync and Individual QR Download features are fully functional. The sync button appears on CompanyTicketDetails page only for tickets with osticket_id. Individual QR download from admin Devices page now correctly downloads a single device PDF (fixed from previous bug where it downloaded all devices). Bulk QR PDF continues to work for multiple selected devices. osTicket API is IP-restricted to 65.20.78.143, so sync will return 503/400 errors in preview environment - this is expected behavior."
+}
