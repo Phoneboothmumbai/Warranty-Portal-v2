@@ -225,19 +225,27 @@ const CompanyTicketDetails = () => {
                   <div key={index} className="p-4">
                     <div className="flex items-start gap-3">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        c.user_type === 'admin' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
+                        c.user_type === 'admin' ? 'bg-blue-100 text-blue-700' 
+                        : c.user_type === 'osticket_staff' ? 'bg-purple-100 text-purple-700'
+                        : 'bg-emerald-100 text-emerald-700'
                       }`}>
                         <User className="h-4 w-4" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium text-slate-900">{c.user_name}</span>
                           {c.user_type === 'admin' && (
                             <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 text-xs rounded">Admin</span>
                           )}
+                          {c.user_type === 'osticket_staff' && (
+                            <span className="px-1.5 py-0.5 bg-purple-50 text-purple-700 text-xs rounded">osTicket</span>
+                          )}
                           <span className="text-xs text-slate-400">{formatDate(c.created_at)}</span>
+                          {c.source === 'osticket_sync' && (
+                            <span className="text-xs text-purple-500">(synced)</span>
+                          )}
                         </div>
-                        <p className="text-slate-600 mt-1 whitespace-pre-wrap">{c.content}</p>
+                        <p className="text-slate-600 mt-1 whitespace-pre-wrap">{c.content || c.comment}</p>
                       </div>
                     </div>
                   </div>
