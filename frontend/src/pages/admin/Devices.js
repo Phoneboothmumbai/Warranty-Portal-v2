@@ -473,6 +473,16 @@ const Devices = () => {
             sampleData={deviceSampleData}
           />
           <Button 
+            onClick={handleBulkQRDownload}
+            variant="outline"
+            className="border-slate-300 hover:bg-slate-50"
+            data-testid="bulk-qr-download-btn"
+            disabled={devices.length === 0}
+          >
+            <QrCode className="h-4 w-4 mr-2" />
+            Bulk QR PDF
+          </Button>
+          <Button 
             onClick={openCreateModal}
             className="bg-[#0F62FE] hover:bg-[#0043CE] text-white"
             data-testid="add-device-btn"
