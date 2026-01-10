@@ -135,9 +135,10 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - **Test Company Code:** ACME001
 - **Test User:** jane@acme.com / company123
 
-## Upcoming Tasks
+## Upcoming Tasks (Updated Jan 10, 2026)
+- P1: Complete Engineer Field Visit Workflow (check-in/out, actions, parts, photos)
 - P1: Admin & User Role Management (Super Admin, Admin, Staff, Service Engineer)
-- P2: Engineer Field Visit Support
+- P2: Email Notifications (ticket updates, warranty alerts)
 - P3: Company Portal Email Notifications
 
 ## Phase 2C: Bulk Import System (Next Phase)
