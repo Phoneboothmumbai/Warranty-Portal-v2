@@ -102,3 +102,28 @@ async def log_audit(entity_type: str, entity_id: str, action: str, changes: dict
         await db.audit_logs.insert_one(audit.model_dump())
     except Exception as e:
         logger.error(f"Audit log failed: {e}")
+
+
+async def get_current_engineer(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get current engineer from JWT token"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        engineer_id: str = payload.get("sub")
+        user_type: str = payload.get("type")
+        if engineer_id is None or user_type != "engineer":
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    engineer = await db.engineers.find_one(
+        {"id": engineer_id, "is_active": True, "is_deleted": {"$ne": True}}, 
+        {"_id": 0, "password_hash": 0}
+    )
+    if engineer is None:
+        raise credentials_exception
+    return engineer
