@@ -163,7 +163,7 @@ const CompanyTicketDetails = () => {
               </span>
               {ticket.osticket_id && (
                 <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
-                  osTicket #{ticket.osticket_id}
+                  Ticket #{ticket.osticket_id}
                 </span>
               )}
             </div>
