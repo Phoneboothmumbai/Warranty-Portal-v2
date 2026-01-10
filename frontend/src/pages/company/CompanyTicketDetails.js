@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   ArrowLeft, Ticket, Clock, CheckCircle2, AlertCircle, Loader2,
-  MessageSquare, Send, User, Calendar, Laptop, RefreshCw
+  MessageSquare, Send, User, Calendar, Laptop
 } from 'lucide-react';
 import { useCompanyAuth } from '../../context/CompanyAuthContext';
 import { Button } from '../../components/ui/button';
@@ -19,7 +19,6 @@ const CompanyTicketDetails = () => {
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     fetchTicket();
