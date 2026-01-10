@@ -279,6 +279,57 @@ const Devices = () => {
     window.open(`/device/${encodeURIComponent(device.serial_number)}`, '_blank');
   };
 
+  const handleBulkQRDownload = async () => {
+    try {
+      toast.loading('Generating QR codes PDF...');
+      
+      // Build request based on current filters
+      const requestData = {
+        columns: 3,
+        qr_size: 120
+      };
+      
+      // If specific devices are selected (future enhancement), use device_ids
+      // For now, use company or site filter
+      if (filterCompany) {
+        requestData.company_id = filterCompany;
+      }
+      
+      const response = await axios.post(`${API}/devices/bulk-qr-pdf`, requestData, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      // Create download link
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Get filename from response headers or use default
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = 'QR_Codes.pdf';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename=(.+)/);
+        if (filenameMatch) {
+          filename = filenameMatch[1].replace(/"/g, '');
+        }
+      }
+      
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.dismiss();
+      toast.success(`QR codes PDF downloaded! Contains ${devices.length} devices.`);
+    } catch (error) {
+      toast.dismiss();
+      toast.error(error.response?.data?.detail || 'Failed to generate QR codes PDF');
+    }
+  };
+
   const openCreateModal = () => {
     setEditingDevice(null);
     setFormData({
