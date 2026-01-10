@@ -5793,6 +5793,135 @@ async def add_ticket_comment(ticket_id: str, data: ServiceTicketComment, user: d
     
     return {"message": "Comment added", "comment": comment}
 
+
+@api_router.post("/company/tickets/{ticket_id}/sync")
+async def sync_ticket_from_osticket(ticket_id: str, user: dict = Depends(get_current_company_user)):
+    """
+    Manual sync: Fetch latest ticket status and replies from osTicket.
+    This allows users to see updates from osTicket without requiring webhooks.
+    """
+    from services.osticket import fetch_osticket_details
+    
+    # Get ticket from our database
+    ticket = await db.service_tickets.find_one({
+        "id": ticket_id,
+        "company_id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    osticket_id = ticket.get("osticket_id")
+    if not osticket_id:
+        raise HTTPException(
+            status_code=400, 
+            detail="This ticket is not linked to osTicket. No external reference to sync."
+        )
+    
+    # Fetch from osTicket API
+    result = await fetch_osticket_details(osticket_id)
+    
+    if result.get("error"):
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not sync from osTicket: {result['error']}"
+        )
+    
+    osticket_data = result.get("data")
+    if not osticket_data:
+        raise HTTPException(status_code=404, detail="No data returned from osTicket")
+    
+    # Map osTicket status to our status
+    status_mapping = {
+        "open": "open",
+        "new": "open",
+        "in progress": "in_progress",
+        "in-progress": "in_progress",
+        "pending": "pending",
+        "on hold": "on_hold",
+        "resolved": "resolved",
+        "closed": "closed",
+        "answered": "in_progress",
+        "overdue": "overdue"
+    }
+    
+    update_data = {
+        "updated_at": get_ist_isoformat(),
+        "last_synced_at": get_ist_isoformat()
+    }
+    
+    # Handle different osTicket API response formats
+    synced_info = {
+        "synced_at": get_ist_isoformat(),
+        "changes": []
+    }
+    
+    # Extract status from osTicket data
+    os_status = osticket_data.get("status") or osticket_data.get("status_name", "")
+    if os_status:
+        new_status = status_mapping.get(os_status.lower().strip(), None)
+        if new_status and new_status != ticket.get("status"):
+            update_data["status"] = new_status
+            synced_info["changes"].append(f"Status updated to '{new_status}'")
+            
+            if new_status == "resolved":
+                update_data["resolved_at"] = get_ist_isoformat()
+            elif new_status == "closed":
+                update_data["closed_at"] = get_ist_isoformat()
+    
+    # Extract thread/messages if available
+    thread = osticket_data.get("thread") or osticket_data.get("messages") or []
+    new_comments_count = 0
+    
+    if thread and isinstance(thread, list):
+        existing_comment_ids = set()
+        for c in ticket.get("comments", []):
+            if c.get("osticket_message_id"):
+                existing_comment_ids.add(c["osticket_message_id"])
+        
+        for msg in thread:
+            msg_id = str(msg.get("id") or msg.get("message_id", ""))
+            if msg_id and msg_id not in existing_comment_ids:
+                # New message from osTicket
+                comment = {
+                    "id": str(uuid.uuid4()),
+                    "osticket_message_id": msg_id,
+                    "user_id": None,
+                    "user_name": msg.get("poster") or msg.get("staff_name") or "osTicket Staff",
+                    "user_type": "osticket_staff",
+                    "comment": msg.get("body") or msg.get("message") or msg.get("content", ""),
+                    "attachments": [],
+                    "created_at": msg.get("created") or get_ist_isoformat(),
+                    "source": "osticket_sync"
+                }
+                
+                await db.service_tickets.update_one(
+                    {"id": ticket_id},
+                    {"$push": {"comments": comment}}
+                )
+                new_comments_count += 1
+        
+        if new_comments_count > 0:
+            synced_info["changes"].append(f"{new_comments_count} new message(s) synced")
+    
+    # Apply updates
+    await db.service_tickets.update_one({"id": ticket_id}, {"$set": update_data})
+    
+    # Fetch updated ticket
+    updated_ticket = await db.service_tickets.find_one({"id": ticket_id}, {"_id": 0})
+    
+    # Get device info for response
+    device = await db.devices.find_one({"id": updated_ticket["device_id"]}, {"_id": 0})
+    updated_ticket["device"] = device
+    
+    return {
+        "success": True,
+        "message": "Ticket synced from osTicket" if synced_info["changes"] else "Already up to date",
+        "changes": synced_info["changes"],
+        "ticket": updated_ticket
+    }
+
 # --- Company Renewal Requests ---
 
 @api_router.post("/company/renewal-requests")
