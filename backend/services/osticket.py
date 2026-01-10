@@ -75,3 +75,47 @@ async def create_osticket(
         error_msg = f"Connection failed: {str(e)}"
         logger.error(f"osTicket integration failed: {error_msg}")
         return {"ticket_id": None, "error": error_msg}
+
+
+async def fetch_osticket_details(ticket_id: str) -> dict:
+    """
+    Fetch ticket details from osTicket.
+    Returns ticket info including status and thread/replies.
+    """
+    if not OSTICKET_URL or not OSTICKET_API_KEY:
+        return {"error": "osTicket not configured", "data": None}
+    
+    try:
+        # osTicket API endpoint for fetching ticket
+        api_url = f"{OSTICKET_URL.rstrip('/')}/api/tickets/{ticket_id}"
+        
+        headers = {
+            "X-API-Key": OSTICKET_API_KEY,
+            "Content-Type": "application/json"
+        }
+        
+        logger.info(f"Fetching osTicket details: {api_url}")
+        
+        async with httpx.AsyncClient(timeout=30.0) as http_client:
+            response = await http_client.get(api_url, headers=headers)
+            
+            logger.info(f"osTicket fetch response: status={response.status_code}")
+            
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    return {"data": data, "error": None}
+                except:
+                    # osTicket sometimes returns non-JSON
+                    return {"data": {"raw": response.text}, "error": None}
+            elif response.status_code == 401:
+                return {"data": None, "error": "API key rejected (IP restriction)"}
+            elif response.status_code == 404:
+                return {"data": None, "error": "Ticket not found in osTicket"}
+            else:
+                return {"data": None, "error": f"API error {response.status_code}"}
+                
+    except Exception as e:
+        logger.error(f"osTicket fetch failed: {str(e)}")
+        return {"data": None, "error": str(e)}
+
