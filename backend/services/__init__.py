@@ -6,6 +6,7 @@ from services.auth import (
     get_current_admin,
     get_current_company_user,
     require_company_admin,
+    get_current_engineer,
     log_audit,
     security
 )
