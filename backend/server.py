@@ -1311,7 +1311,9 @@ async def list_companies(
 
 @api_router.post("/admin/companies")
 async def create_company(company_data: CompanyCreate, admin: dict = Depends(get_current_admin)):
-    company = Company(**company_data.model_dump())
+    # Filter out None values to allow Company model defaults to work
+    company_dict = {k: v for k, v in company_data.model_dump().items() if v is not None}
+    company = Company(**company_dict)
     await db.companies.insert_one(company.model_dump())
     await log_audit("company", company.id, "create", {"data": company_data.model_dump()}, admin)
     result = company.model_dump()
