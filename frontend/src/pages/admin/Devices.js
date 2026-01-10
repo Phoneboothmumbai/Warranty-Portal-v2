@@ -282,19 +282,57 @@ const Devices = () => {
     window.open(`/device/${encodeURIComponent(device.serial_number)}`, '_blank');
   };
 
+  // Checkbox selection handlers
+  const handleSelectDevice = (deviceId) => {
+    setSelectedDeviceIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(deviceId)) {
+        newSet.delete(deviceId);
+      } else {
+        newSet.add(deviceId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    const filteredDevices = devices.filter(d => 
+      (!searchQuery || 
+        d.serial_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.model?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.asset_tag?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    );
+    
+    if (selectedDeviceIds.size === filteredDevices.length) {
+      // Deselect all
+      setSelectedDeviceIds(new Set());
+    } else {
+      // Select all filtered devices
+      setSelectedDeviceIds(new Set(filteredDevices.map(d => d.id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedDeviceIds(new Set());
+  };
+
   const handleBulkQRDownload = async () => {
     try {
-      toast.loading('Generating QR codes PDF...');
+      const selectedCount = selectedDeviceIds.size;
+      toast.loading(`Generating QR codes PDF for ${selectedCount > 0 ? selectedCount : 'all'} devices...`);
       
-      // Build request based on current filters
+      // Build request based on selection or filters
       const requestData = {
         columns: 3,
         qr_size: 120
       };
       
-      // If specific devices are selected (future enhancement), use device_ids
-      // For now, use company or site filter
-      if (filterCompany) {
+      // Priority: Selected devices > Company filter > All devices
+      if (selectedDeviceIds.size > 0) {
+        requestData.device_ids = Array.from(selectedDeviceIds);
+      } else if (filterCompany) {
         requestData.company_id = filterCompany;
       }
       
@@ -326,7 +364,13 @@ const Devices = () => {
       window.URL.revokeObjectURL(url);
       
       toast.dismiss();
-      toast.success(`QR codes PDF downloaded! Contains ${devices.length} devices.`);
+      const count = selectedCount > 0 ? selectedCount : devices.length;
+      toast.success(`QR codes PDF downloaded! Contains ${count} devices.`);
+      
+      // Clear selection after download
+      if (selectedCount > 0) {
+        clearSelection();
+      }
     } catch (error) {
       toast.dismiss();
       toast.error(error.response?.data?.detail || 'Failed to generate QR codes PDF');
