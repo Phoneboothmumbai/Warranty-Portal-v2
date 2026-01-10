@@ -1331,7 +1331,9 @@ async def quick_create_company(company_data: CompanyCreate, admin: dict = Depend
         existing["label"] = existing["name"]
         return existing
     
-    company = Company(**company_data.model_dump())
+    # Filter out None values to allow Company model defaults to work
+    company_dict = {k: v for k, v in company_data.model_dump().items() if v is not None}
+    company = Company(**company_dict)
     await db.companies.insert_one(company.model_dump())
     await log_audit("company", company.id, "quick_create", {"data": company_data.model_dump()}, admin)
     
