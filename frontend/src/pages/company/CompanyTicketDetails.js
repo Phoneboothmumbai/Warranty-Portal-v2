@@ -84,8 +84,15 @@ const CompanyTicketDetails = () => {
         fetchTicket();
       }
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Failed to sync from osTicket';
-      toast.error(errorMsg);
+      const errorMsg = error.response?.data?.detail || 'Failed to sync ticket';
+      // Show a more user-friendly message for common errors
+      if (errorMsg.includes('does not support') || errorMsg.includes('plugin')) {
+        toast.error('Sync not available. osTicket REST API plugin required.');
+      } else if (errorMsg.includes('IP') || errorMsg.includes('denied')) {
+        toast.error('Sync unavailable from this location.');
+      } else {
+        toast.error(errorMsg);
+      }
     } finally {
       setSyncing(false);
     }
