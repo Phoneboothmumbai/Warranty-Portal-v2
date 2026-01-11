@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { 
   Bot, User, Send, Loader2, ArrowRight, MessageSquare,
-  Sparkles, X, ChevronDown
+  Sparkles, ChevronDown, Laptop, CheckCircle
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
@@ -21,7 +21,7 @@ const AISupportChat = ({
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId] = useState(() => `session_${Date.now()}`);
   const [selectedDevice, setSelectedDevice] = useState(null);
-  const [showDeviceSelect, setShowDeviceSelect] = useState(false);
+  const [chatStarted, setChatStarted] = useState(false);
   const [canEscalate, setCanEscalate] = useState(false);
   const messagesEndRef = useRef(null);
 
@@ -33,14 +33,19 @@ const AISupportChat = ({
     scrollToBottom();
   }, [messages]);
 
-  // Initial greeting
-  useEffect(() => {
+  const startChat = () => {
+    if (!selectedDevice) {
+      toast.error('Please select a device first');
+      return;
+    }
+    setChatStarted(true);
+    // Initial greeting
     const greeting = {
       role: 'assistant',
-      content: "Hi! I'm your AI Support Assistant. I can help troubleshoot common IT issues before creating a ticket.\n\nWhat issue are you experiencing today?"
+      content: `Hi! I'm here to help with basic troubleshooting for your ${selectedDevice.brand} ${selectedDevice.model}.\n\nI can assist with simple issues like restarting, checking connections, or basic settings. For complex problems, I'll connect you with our technical team.\n\nWhat issue are you experiencing?`
     };
     setMessages([greeting]);
-  }, []);
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -66,9 +71,9 @@ const AISupportChat = ({
       };
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Enable escalation after AI suggests it or after 3 user messages
+      // Enable escalation after AI suggests it or after 2 user messages (faster escalation)
       const userMsgCount = messages.filter(m => m.role === 'user').length + 1;
-      if (response.data.should_escalate || userMsgCount >= 3) {
+      if (response.data.should_escalate || userMsgCount >= 2) {
         setCanEscalate(true);
       }
 
@@ -76,7 +81,7 @@ const AISupportChat = ({
       toast.error('Failed to get AI response');
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: "I'm having trouble connecting. Would you like to create a support ticket instead?"
+        content: "I'm having trouble connecting. Please create a support ticket for assistance."
       }]);
       setCanEscalate(true);
     } finally {
@@ -91,7 +96,25 @@ const AISupportChat = ({
     }
   };
 
+  const saveHistory = async (resolved) => {
+    try {
+      await axios.post(`${API}/company/ai-support/save-history`, {
+        device_id: selectedDevice.id,
+        messages: messages,
+        resolved: resolved,
+        session_id: sessionId
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (error) {
+      console.error('Failed to save chat history:', error);
+    }
+  };
+
   const handleEscalate = async () => {
+    // Save history first
+    await saveHistory(false);
+    
     try {
       // Generate summary from conversation
       const response = await axios.post(`${API}/company/ai-support/generate-summary`, {
@@ -117,11 +140,105 @@ const AISupportChat = ({
     }
   };
 
-  const handleResolved = () => {
-    toast.success('Glad we could help!');
+  const handleResolved = async () => {
+    await saveHistory(true);
+    toast.success('Glad we could help! Chat saved to device history.');
     onResolved?.();
   };
 
+  // Device Selection Screen
+  if (!chatStarted) {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden" data-testid="ai-support-chat">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                <Bot className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-white font-semibold">AI Support Assistant</h3>
+                <p className="text-violet-200 text-sm">Select your device to get started</p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onSkip}
+              className="text-white/80 hover:text-white hover:bg-white/10"
+            >
+              Skip to ticket <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Device Selection */}
+        <div className="p-6">
+          <p className="text-slate-600 mb-4 text-sm">
+            Please select the device you need help with. This helps us provide better support and track your device's service history.
+          </p>
+          
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {devices.length === 0 ? (
+              <div className="text-center py-8 text-slate-500">
+                <Laptop className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                <p>No devices found</p>
+                <Button
+                  variant="link"
+                  onClick={onSkip}
+                  className="text-violet-600 mt-2"
+                >
+                  Create ticket without device
+                </Button>
+              </div>
+            ) : (
+              devices.map(device => (
+                <button
+                  key={device.id}
+                  onClick={() => setSelectedDevice(device)}
+                  className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+                    selectedDevice?.id === device.id
+                      ? 'border-violet-500 bg-violet-50'
+                      : 'border-slate-200 hover:border-violet-300 hover:bg-slate-50'
+                  }`}
+                  data-testid={`device-option-${device.id}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-slate-900">
+                        {device.brand} {device.model}
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        SN: {device.serial_number} • {device.device_type}
+                      </p>
+                    </div>
+                    {selectedDevice?.id === device.id && (
+                      <CheckCircle className="h-5 w-5 text-violet-600" />
+                    )}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+
+          {devices.length > 0 && (
+            <Button
+              onClick={startChat}
+              disabled={!selectedDevice}
+              className="w-full mt-4 bg-violet-600 hover:bg-violet-700"
+              data-testid="start-chat-btn"
+            >
+              <Bot className="h-4 w-4 mr-2" />
+              Start AI Support Chat
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Chat Interface
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden" data-testid="ai-support-chat">
       {/* Header */}
@@ -133,63 +250,16 @@ const AISupportChat = ({
             </div>
             <div>
               <h3 className="text-white font-semibold">AI Support Assistant</h3>
-              <p className="text-violet-200 text-sm">Let's try to solve this together</p>
+              <p className="text-violet-200 text-sm">
+                {selectedDevice?.brand} {selectedDevice?.model} • {selectedDevice?.serial_number}
+              </p>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onSkip}
-            className="text-white/80 hover:text-white hover:bg-white/10"
-          >
-            Skip to ticket <ArrowRight className="h-4 w-4 ml-1" />
-          </Button>
         </div>
       </div>
 
-      {/* Device Selection */}
-      {devices.length > 0 && (
-        <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
-          <div className="relative">
-            <button
-              onClick={() => setShowDeviceSelect(!showDeviceSelect)}
-              className="w-full flex items-center justify-between px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm hover:border-violet-300 transition-colors"
-            >
-              <span className={selectedDevice ? 'text-slate-900' : 'text-slate-500'}>
-                {selectedDevice 
-                  ? `${selectedDevice.brand} ${selectedDevice.model} (${selectedDevice.serial_number})`
-                  : 'Select a device (optional)'
-                }
-              </span>
-              <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${showDeviceSelect ? 'rotate-180' : ''}`} />
-            </button>
-            
-            {showDeviceSelect && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                <button
-                  onClick={() => { setSelectedDevice(null); setShowDeviceSelect(false); }}
-                  className="w-full px-3 py-2 text-left text-sm text-slate-500 hover:bg-slate-50"
-                >
-                  No specific device
-                </button>
-                {devices.map(device => (
-                  <button
-                    key={device.id}
-                    onClick={() => { setSelectedDevice(device); setShowDeviceSelect(false); }}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-violet-50 border-t border-slate-100"
-                  >
-                    <span className="font-medium">{device.brand} {device.model}</span>
-                    <span className="text-slate-500 ml-2">({device.serial_number})</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Messages */}
-      <div className="h-80 overflow-y-auto p-4 space-y-4">
+      <div className="h-72 overflow-y-auto p-4 space-y-4">
         {messages.map((msg, idx) => (
           <div
             key={idx}
