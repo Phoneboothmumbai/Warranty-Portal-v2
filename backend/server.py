@@ -4985,11 +4985,54 @@ async def get_company_device(device_id: str, user: dict = Depends(get_current_co
         "is_deleted": {"$ne": True}
     }, {"_id": 0}).to_list(100)
     
-    # Get service history
+    # Get service history from service_history collection
     services = await db.service_history.find({
         "device_id": device_id,
         "is_deleted": {"$ne": True}
     }, {"_id": 0}).sort("service_date", -1).to_list(50)
+    
+    # Get service tickets for this device
+    tickets = await db.service_tickets.find({
+        "device_id": device_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0, "id": 1, "ticket_number": 1, "subject": 1, "status": 1, "priority": 1, "created_at": 1, "resolved_at": 1}).sort("created_at", -1).to_list(50)
+    
+    # Format tickets as service history entries
+    for ticket in tickets:
+        services.append({
+            "id": ticket.get("id"),
+            "type": "service_ticket",
+            "service_type": "Service Ticket",
+            "description": ticket.get("subject", "Service Request"),
+            "status": ticket.get("status"),
+            "priority": ticket.get("priority"),
+            "ticket_number": ticket.get("ticket_number"),
+            "service_date": ticket.get("created_at"),
+            "resolved_date": ticket.get("resolved_at")
+        })
+    
+    # Get AI support chat history for this device
+    ai_chats = await db.ai_support_history.find({
+        "device_id": device_id
+    }, {"_id": 0}).sort("created_at", -1).to_list(50)
+    
+    # Format AI chats as service history entries
+    for chat in ai_chats:
+        user_messages = [m.get("content", "")[:100] for m in chat.get("messages", []) if m.get("role") == "user"]
+        issue_summary = user_messages[0] if user_messages else "AI Support Chat"
+        services.append({
+            "id": chat.get("id"),
+            "type": "ai_support",
+            "service_type": "AI Support Chat",
+            "description": issue_summary,
+            "resolved_by_ai": chat.get("resolved_by_ai", False),
+            "messages_count": len(chat.get("messages", [])),
+            "service_date": chat.get("created_at"),
+            "user_name": chat.get("user_name")
+        })
+    
+    # Sort all service history by date (most recent first)
+    services.sort(key=lambda x: x.get("service_date") or x.get("created_at") or "", reverse=True)
     
     # Get AMC info
     amc_assignment = await db.amc_device_assignments.find_one({
