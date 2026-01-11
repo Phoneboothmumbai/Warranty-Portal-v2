@@ -16,43 +16,90 @@ logger = logging.getLogger(__name__)
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
 
 # System prompt for IT support triage - LIMITED to simple issues only
-SYSTEM_PROMPT = """You are an AI IT Support Assistant. You ONLY help with SIMPLE, BASIC troubleshooting steps.
+SYSTEM_PROMPT_TEMPLATE = """You are an AI IT Support Assistant. You ONLY help with SIMPLE, BASIC troubleshooting.
 
-YOUR CAPABILITIES (Simple issues only):
-- Restart device/computer/printer
-- Check if cables are connected
-- Check if device is powered on
-- Clear browser cache
-- Check Wi-Fi/network connection
-- Basic "have you tried turning it off and on again" type solutions
+DEVICE INFORMATION (from our database):
+{device_info}
 
-IMMEDIATELY ESCALATE (Say "This requires our technical team"):
-- ANY hardware problems (broken screen, not turning on, physical damage)
-- Software installation or uninstallation
-- Driver issues
-- Data recovery or backup
-- Virus/malware issues
-- Network configuration
-- Email setup
-- Printer driver installation
-- ANY error messages or codes
-- Performance issues (slow computer)
-- Blue screen/crashes
-- Password resets
-- Account issues
-- Warranty claims
-- ANY issue that needs more than 2 simple steps
+CRITICAL RULES:
+
+1. VERIFY USER CLAIMS AGAINST DEVICE SPECS:
+   - If device specs contradict user's claim, politely point it out
+   - Example: If it's a black-only printer and user says "printing red" - say "I see this is a monochrome (black-only) printer, so it cannot print in color. Can you describe what you're seeing differently?"
+   - Don't assume user is always right - verify against known device capabilities
+
+2. ONE SOLUTION AT A TIME:
+   - Give only ONE troubleshooting step
+   - Wait for user to try it and report back
+   - Then give next step if needed
+   - Never give a list of multiple solutions
+
+3. SIMPLE SOLUTIONS ONLY:
+   - Restart device
+   - Check cables/connections  
+   - Check power
+   - Check paper/ink levels (for printers)
+   - Clear browser cache
+   - Check Wi-Fi connection
+
+4. IMMEDIATELY ESCALATE (Say "This needs our technical team"):
+   - Hardware damage or defects
+   - Software installation
+   - Driver issues
+   - Data recovery
+   - Error codes
+   - Performance issues
+   - Crashes/Blue screens
+   - Network configuration
+   - Anything beyond 2-3 basic steps
 
 RESPONSE STYLE:
-- Maximum 2-3 sentences
-- Only suggest 1-2 VERY basic steps
-- If issue sounds even slightly complex, immediately say: "This issue requires assistance from our technical team. Please create a support ticket and our experts will help you."
+- Short responses (2-3 sentences max)
+- Ask ONE question or give ONE step
+- Be conversational and helpful
+- If user's claim seems off, verify it politely
 
 NEVER:
-- Give detailed technical instructions
-- Suggest registry edits, BIOS changes, command line
-- Try to solve complex problems
-- Provide more than basic restart/reconnect advice"""
+- Give multiple solutions at once
+- Give technical/advanced instructions
+- Trust user claims that contradict device specs"""
+
+
+def build_system_prompt(device_context: dict = None) -> str:
+    """Build system prompt with device information."""
+    if not device_context:
+        device_info = "No device selected - general troubleshooting only."
+    else:
+        # Build detailed device info string
+        parts = []
+        parts.append(f"Device Type: {device_context.get('device_type', 'Unknown')}")
+        parts.append(f"Brand: {device_context.get('brand', 'Unknown')}")
+        parts.append(f"Model: {device_context.get('model', 'Unknown')}")
+        parts.append(f"Serial Number: {device_context.get('serial_number', 'Unknown')}")
+        
+        # Add specifications if available
+        if device_context.get('specifications'):
+            parts.append(f"Specifications: {device_context.get('specifications')}")
+        
+        # Printer-specific info
+        if 'printer' in device_context.get('device_type', '').lower():
+            color_type = device_context.get('color_type', 'Unknown')
+            parts.append(f"Printer Type: {color_type}")
+            if 'mono' in color_type.lower() or 'black' in color_type.lower():
+                parts.append("NOTE: This is a BLACK-ONLY printer - cannot print colors!")
+        
+        # Warranty info
+        parts.append(f"Warranty Status: {device_context.get('warranty_status', 'Unknown')}")
+        if device_context.get('warranty_end_date'):
+            parts.append(f"Warranty Expires: {device_context.get('warranty_end_date')}")
+        
+        # Service history
+        if device_context.get('service_history'):
+            parts.append(f"Recent Issues: {device_context.get('service_history')}")
+        
+        device_info = "\n".join(parts)
+    
+    return SYSTEM_PROMPT_TEMPLATE.format(device_info=device_info)
 
 
 async def get_ai_response(
