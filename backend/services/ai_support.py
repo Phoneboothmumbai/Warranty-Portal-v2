@@ -155,21 +155,15 @@ async def get_ai_response(
         msg = UserMessage(text=user_message)
         response = await chat.send_message(msg)
         
-        # Check if AI suggests escalation - more aggressive detection
+        # Check if AI suggests escalation
         escalation_phrases = [
-            "create a support ticket",
-            "create a ticket",
+            "create ticket",
+            "click the",
+            "button below",
             "technical team",
-            "escalate",
-            "human support",
-            "further attention",
-            "service technician",
-            "requires assistance",
-            "experts will help",
-            "our team",
+            "tech support team",
             "support team",
-            "needs our technical",
-            "needs technical"
+            "needs assistance"
         ]
         should_escalate = any(phrase in response.lower() for phrase in escalation_phrases)
         
