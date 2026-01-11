@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { 
-  Bot, User, Send, Loader2, ArrowRight, MessageSquare,
-  Sparkles, ChevronDown, Laptop, CheckCircle
+  Bot, User, Send, Loader2, MessageSquare,
+  Sparkles, Laptop, CheckCircle
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
