@@ -1624,6 +1624,117 @@ const Devices = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Service History Modal */}
+      <Dialog open={serviceHistoryModalOpen} onOpenChange={setServiceHistoryModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-slate-600" />
+              Service History
+            </DialogTitle>
+          </DialogHeader>
+          {serviceHistoryDevice && (
+            <div className="mt-4">
+              {/* Device Info Header */}
+              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg mb-4">
+                <Laptop className="h-8 w-8 text-slate-400" />
+                <div>
+                  <p className="font-medium text-slate-900">
+                    {serviceHistoryDevice.brand} {serviceHistoryDevice.model}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    SN: {serviceHistoryDevice.serial_number}
+                  </p>
+                </div>
+              </div>
+
+              {/* Service History List */}
+              {serviceHistoryLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-600 rounded-full animate-spin" />
+                </div>
+              ) : serviceHistoryData.length === 0 ? (
+                <div className="text-center py-12 text-slate-500">
+                  <History className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                  <p>No service history found</p>
+                  <p className="text-sm">Service tickets and AI support chats will appear here</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {serviceHistoryData.map((record, index) => (
+                    <div 
+                      key={record.id || index} 
+                      className="p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              record.type === 'ai_support' 
+                                ? 'bg-violet-100 text-violet-700'
+                                : record.type === 'service_ticket'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-slate-100 text-slate-700'
+                            }`}>
+                              {record.service_type}
+                            </span>
+                            {record.type === 'ai_support' && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                record.resolved_by_ai 
+                                  ? 'bg-emerald-100 text-emerald-700' 
+                                  : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {record.resolved_by_ai ? 'Resolved by AI' : 'Escalated'}
+                              </span>
+                            )}
+                            {record.type === 'service_ticket' && record.status && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${
+                                record.status === 'resolved' || record.status === 'closed'
+                                  ? 'bg-emerald-100 text-emerald-700'
+                                  : record.status === 'in_progress'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {record.status.replace('_', ' ')}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-slate-700">{record.description}</p>
+                          {record.ticket_number && (
+                            <p className="text-xs text-slate-500 mt-1">
+                              Ticket: {record.ticket_number}
+                            </p>
+                          )}
+                          {record.technician && (
+                            <p className="text-xs text-slate-500 mt-1">
+                              Technician: {record.technician}
+                            </p>
+                          )}
+                          {record.user_name && (
+                            <p className="text-xs text-slate-500 mt-1">
+                              User: {record.user_name}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right ml-4">
+                          <p className="text-sm font-medium text-slate-600">
+                            {record.date ? new Date(record.date).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            }) : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
