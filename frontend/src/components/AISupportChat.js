@@ -3,11 +3,11 @@ import {
   Bot, User, Send, Loader2, ArrowRight, MessageSquare,
   Sparkles, X, ChevronDown
 } from 'lucide-react';
-import { Button } from '../../components/ui/button';
+import { Button } from './ui/button';
 import { toast } from 'sonner';
 import axios from 'axios';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const AISupportChat = ({ 
   token, 
