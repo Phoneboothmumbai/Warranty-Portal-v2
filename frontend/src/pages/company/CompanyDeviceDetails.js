@@ -299,20 +299,51 @@ const CompanyDeviceDetails = () => {
           <div className="px-6 py-4 border-b border-slate-100">
             <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
               <Wrench className="h-5 w-5 text-slate-400" />
-              Service History
+              Service History ({serviceHistory.length})
             </h2>
           </div>
           <div className="divide-y divide-slate-100">
             {serviceHistory.map((record, index) => (
               <div key={index} className="p-4 hover:bg-slate-50">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-slate-900">{record.service_type}</p>
-                    <p className="text-sm text-slate-500 mt-1">{record.problem_reported || record.description}</p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-slate-900">{record.service_type}</p>
+                      {record.type === 'ai_support' && (
+                        <span className={`px-2 py-0.5 text-xs rounded-full ${
+                          record.resolved_by_ai 
+                            ? 'bg-emerald-50 text-emerald-700' 
+                            : 'bg-amber-50 text-amber-700'
+                        }`}>
+                          {record.resolved_by_ai ? 'Resolved by AI' : 'Escalated'}
+                        </span>
+                      )}
+                      {record.type === 'service_ticket' && (
+                        <span className={`px-2 py-0.5 text-xs rounded-full ${
+                          record.status === 'resolved' || record.status === 'closed'
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : record.status === 'in_progress'
+                            ? 'bg-blue-50 text-blue-700'
+                            : 'bg-amber-50 text-amber-700'
+                        }`}>
+                          {record.status?.replace('_', ' ')}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-slate-500 mt-1">
+                      {record.problem_reported || record.description}
+                    </p>
+                    {record.ticket_number && (
+                      <p className="text-xs text-slate-400 mt-1">
+                        Ticket: {record.ticket_number}
+                      </p>
+                    )}
                   </div>
-                  <div className="text-right">
+                  <div className="text-right ml-4">
                     <p className="text-sm font-medium text-slate-900">{formatDate(record.service_date)}</p>
-                    <p className="text-xs text-slate-500">{record.technician_name || record.technician}</p>
+                    <p className="text-xs text-slate-500">
+                      {record.technician_name || record.technician || record.user_name || ''}
+                    </p>
                   </div>
                 </div>
               </div>
