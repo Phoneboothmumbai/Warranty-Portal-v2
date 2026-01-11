@@ -22,7 +22,19 @@ const AISupportChat = ({
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [chatStarted, setChatStarted] = useState(false);
   const [canEscalate, setCanEscalate] = useState(false);
+  const [deviceSearch, setDeviceSearch] = useState('');
   const messagesEndRef = useRef(null);
+
+  // Filter devices based on search
+  const filteredDevices = devices.filter(device => {
+    const searchLower = deviceSearch.toLowerCase();
+    return (
+      device.brand?.toLowerCase().includes(searchLower) ||
+      device.model?.toLowerCase().includes(searchLower) ||
+      device.serial_number?.toLowerCase().includes(searchLower) ||
+      device.device_type?.toLowerCase().includes(searchLower)
+    );
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
