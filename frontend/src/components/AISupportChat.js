@@ -152,45 +152,29 @@ const AISupportChat = ({
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden" data-testid="ai-support-chat">
         {/* Header */}
         <div className="bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                <Bot className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h3 className="text-white font-semibold">AI Support Assistant</h3>
-                <p className="text-violet-200 text-sm">Select your device to get started</p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+              <Bot className="h-5 w-5 text-white" />
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onSkip}
-              className="text-white/80 hover:text-white hover:bg-white/10"
-            >
-              Skip to ticket <ArrowRight className="h-4 w-4 ml-1" />
-            </Button>
+            <div>
+              <h3 className="text-white font-semibold">AI Support Assistant</h3>
+              <p className="text-violet-200 text-sm">Select your device to continue</p>
+            </div>
           </div>
         </div>
 
         {/* Device Selection */}
         <div className="p-6">
           <p className="text-slate-600 mb-4 text-sm">
-            Please select the device you need help with. This helps us provide better support and track your device's service history.
+            Please select the device you need help with. This is required to provide accurate support.
           </p>
           
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {devices.length === 0 ? (
               <div className="text-center py-8 text-slate-500">
                 <Laptop className="h-12 w-12 mx-auto mb-3 text-slate-300" />
-                <p>No devices found</p>
-                <Button
-                  variant="link"
-                  onClick={onSkip}
-                  className="text-violet-600 mt-2"
-                >
-                  Create ticket without device
-                </Button>
+                <p>No devices found for your company</p>
+                <p className="text-sm mt-2">Please contact admin to add devices first.</p>
               </div>
             ) : (
               devices.map(device => (
@@ -226,11 +210,11 @@ const AISupportChat = ({
             <Button
               onClick={startChat}
               disabled={!selectedDevice}
-              className="w-full mt-4 bg-violet-600 hover:bg-violet-700"
+              className="w-full mt-4 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="start-chat-btn"
             >
               <Bot className="h-4 w-4 mr-2" />
-              Start AI Support Chat
+              {selectedDevice ? 'Start AI Support Chat' : 'Select a device to continue'}
             </Button>
           )}
         </div>
