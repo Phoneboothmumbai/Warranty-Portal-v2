@@ -235,30 +235,47 @@ The monolithic `server.py` has been refactored into a modular architecture:
 - **Easier testing**: Individual modules can be unit tested
 - **Clearer separation of concerns**: Config, DB, models, services all isolated
 
-## osTicket Manual Sync Feature (COMPLETED - Jan 10, 2026)
-Manual "Refresh from osTicket" button to sync ticket status and replies without requiring webhooks.
+## osTicket Manual Sync Feature (REMOVED - Jan 11, 2026)
+Feature was removed as osTicket's standard API doesn't support reading tickets without additional plugins.
+- The "Ticket #" badge still displays the osTicket reference number on ticket details page
+
+## AI Support Triage Bot (COMPLETED - Jan 11, 2026)
+AI-powered chatbot that helps users troubleshoot issues BEFORE creating support tickets.
+
+### Flow
+1. User clicks "New Request" → AI Chat modal opens
+2. AI greets user and asks about their issue
+3. User describes problem → AI provides troubleshooting steps
+4. If resolved → User clicks "Issue Resolved" → No ticket created
+5. If not resolved → User clicks "Create Ticket" → Ticket form pre-filled with AI conversation
 
 ### Features Implemented
-1. **Backend Sync Endpoint**
-   - Endpoint: `POST /api/company/tickets/{ticket_id}/sync`
-   - Requires company user authentication
-   - Validates ticket has osticket_id before syncing
-   - Fetches ticket details from osTicket API
-   - Maps osTicket status to portal status (open, in_progress, resolved, closed)
-   - Imports new messages/replies as comments with `osticket_staff` user_type
-   - Returns list of changes made
+1. **Backend AI Service** (`backend/services/ai_support.py`)
+   - Uses GPT-4o-mini via Emergent LLM Key
+   - Context-aware: knows about selected device/warranty info
+   - Escalation detection: suggests creating ticket when needed
+   - System prompt optimized for IT support troubleshooting
 
-2. **Frontend Sync Button**
-   - Purple "Refresh from osTicket" button on CompanyTicketDetails page
-   - Only visible for tickets with osticket_id
-   - Shows spinner during sync
-   - Displays toast with changes or "Already up to date"
-   - Comments from osTicket show purple badge "osTicket" and "(synced)" indicator
+2. **Backend Endpoints**
+   - `POST /api/company/ai-support/chat` - Send message, get AI response
+   - `POST /api/company/ai-support/generate-summary` - Generate ticket subject/description from chat
+
+3. **Frontend AI Chat Modal** (`frontend/src/components/AISupportChat.js`)
+   - Purple-themed chat interface
+   - Device selector dropdown (optional context)
+   - "Skip to ticket" option for users who want to bypass AI
+   - "Issue Resolved" and "Create Ticket" buttons appear after 3+ messages
+   - Pre-fills ticket form with AI conversation when escalating
 
 ### Test Results
-- 12/13 backend tests passed (1 skipped)
+- 10/10 backend tests passed
 - 100% frontend UI tests passed
-- osTicket API is IP-restricted (65.20.78.143) - 503 errors expected in preview environment
+- Full end-to-end flow verified
+
+### Benefits
+- Reduces L1 support ticket volume
+- Users get instant help for common issues
+- Tickets include troubleshooting context for technicians
 
 ## Individual QR Download Bug Fix (COMPLETED - Jan 10, 2026)
 Fixed recurring bug where clicking "Download QR Code" for single device downloaded all devices.
