@@ -798,6 +798,10 @@ const Devices = () => {
                               <Edit2 className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openServiceHistoryModal(device)}>
+                              <History className="h-4 w-4 mr-2" />
+                              Service History
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleDownloadQR(device)}>
                               <QrCode className="h-4 w-4 mr-2" />
