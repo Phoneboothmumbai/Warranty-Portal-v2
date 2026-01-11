@@ -2186,6 +2186,75 @@ async def get_assignment_history(device_id: str, admin: dict = Depends(get_curre
     history = await db.assignment_history.find({"device_id": device_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
     return history
 
+@api_router.get("/admin/devices/{device_id}/service-history")
+async def get_device_service_history(device_id: str, admin: dict = Depends(get_current_admin)):
+    """Get comprehensive service history for a device (service records, tickets, AI chats)"""
+    device = await db.devices.find_one({"id": device_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    
+    history = []
+    
+    # Get service history records
+    services = await db.service_history.find({
+        "device_id": device_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).sort("service_date", -1).to_list(100)
+    
+    for s in services:
+        history.append({
+            "id": s.get("id"),
+            "type": "service_record",
+            "service_type": s.get("service_type", "Service"),
+            "description": s.get("problem_reported") or s.get("action_taken") or s.get("description", ""),
+            "technician": s.get("technician_name"),
+            "date": s.get("service_date"),
+            "status": s.get("status")
+        })
+    
+    # Get service tickets
+    tickets = await db.service_tickets.find({
+        "device_id": device_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    for t in tickets:
+        history.append({
+            "id": t.get("id"),
+            "type": "service_ticket",
+            "service_type": "Service Ticket",
+            "ticket_number": t.get("ticket_number"),
+            "description": t.get("subject"),
+            "date": t.get("created_at"),
+            "status": t.get("status"),
+            "priority": t.get("priority"),
+            "resolved_date": t.get("resolved_at")
+        })
+    
+    # Get AI support chat history
+    ai_chats = await db.ai_support_history.find({
+        "device_id": device_id
+    }, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    for chat in ai_chats:
+        user_messages = [m.get("content", "")[:100] for m in chat.get("messages", []) if m.get("role") == "user"]
+        issue_summary = user_messages[0] if user_messages else "AI Support Chat"
+        history.append({
+            "id": chat.get("id"),
+            "type": "ai_support",
+            "service_type": "AI Support Chat",
+            "description": issue_summary,
+            "resolved_by_ai": chat.get("resolved_by_ai", False),
+            "messages_count": len(chat.get("messages", [])),
+            "date": chat.get("created_at"),
+            "user_name": chat.get("user_name")
+        })
+    
+    # Sort by date (most recent first)
+    history.sort(key=lambda x: x.get("date") or "", reverse=True)
+    
+    return history
+
 @api_router.get("/admin/devices/{device_id}/timeline")
 async def get_device_timeline(device_id: str, admin: dict = Depends(get_current_admin)):
     """Get unified timeline for a device (assignments, services, parts, AMC)"""
