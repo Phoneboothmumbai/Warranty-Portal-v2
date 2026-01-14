@@ -811,7 +811,7 @@ const Subscriptions = () => {
           <form onSubmit={handleCreateTicket} className="space-y-4 mt-4">
             {selectedSubscription && (
               <div className="p-3 bg-slate-50 rounded-lg text-sm">
-                <p><strong>Subscription:</strong> {selectedSubscription.provider_name}</p>
+                <p><strong>Subscription:</strong> {getProviderName(selectedSubscription.provider)}</p>
                 <p><strong>Domain:</strong> {selectedSubscription.domain}</p>
               </div>
             )}
