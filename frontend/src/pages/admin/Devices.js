@@ -177,7 +177,7 @@ const Devices = () => {
   };
 
   const handleCompanyChange = (companyId) => {
-    setFormData({ ...formData, company_id: companyId, assigned_user_id: '' });
+    setFormData({ ...formData, company_id: companyId, assigned_user_id: '', assigned_employee_id: '' });
     fetchCompanyUsers(companyId);
   };
 
