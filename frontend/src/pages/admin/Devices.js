@@ -420,6 +420,7 @@ const Devices = () => {
     setFormData({
       company_id: filterCompany || '',
       assigned_user_id: '',
+      assigned_employee_id: '',
       device_type: deviceTypes[0]?.name || 'Laptop',
       brand: '',
       model: '',
@@ -433,6 +434,7 @@ const Devices = () => {
       condition: 'good',
       status: 'active',
       notes: '',
+      configuration: '',
       consumables: []
     });
     if (filterCompany) {
