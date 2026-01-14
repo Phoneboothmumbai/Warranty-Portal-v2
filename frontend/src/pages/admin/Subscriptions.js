@@ -309,11 +309,6 @@ const Subscriptions = () => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency }).format(amount);
   };
 
-  const getProviderIcon = (provider) => {
-    const p = PROVIDERS.find(pr => pr.id === provider);
-    return p?.icon || '⚪';
-  };
-
   // Stats
   const stats = {
     total: subscriptions.length,
