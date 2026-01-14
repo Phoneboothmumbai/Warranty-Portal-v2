@@ -456,9 +456,11 @@ const Subscriptions = () => {
                   <tr key={sub.id} className="hover:bg-slate-50" data-testid={`subscription-row-${sub.id}`}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl">{getProviderIcon(sub.provider)}</span>
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                          <Mail className="h-4 w-4 text-blue-600" />
+                        </div>
                         <div>
-                          <p className="font-medium text-slate-900">{sub.provider_name}</p>
+                          <p className="font-medium text-slate-900">{getProviderName(sub.provider)}</p>
                           <p className="text-sm text-blue-600 flex items-center gap-1">
                             <Globe className="h-3 w-3" />
                             {sub.domain}
