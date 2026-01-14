@@ -908,16 +908,16 @@ const Devices = () => {
                 />
               </div>
               <div>
-                <label className="form-label">Assigned User</label>
+                <label className="form-label">Device User</label>
                 <SmartSelect
-                  value={formData.assigned_user_id}
-                  onValueChange={(value) => setFormData({ ...formData, assigned_user_id: value })}
-                  placeholder={!formData.company_id ? "Select company first" : "Select User (optional)"}
-                  searchPlaceholder="Search users..."
-                  emptyText="No users found"
+                  value={formData.assigned_employee_id}
+                  onValueChange={(value) => setFormData({ ...formData, assigned_employee_id: value })}
+                  placeholder={!formData.company_id ? "Select company first" : "Select Employee (optional)"}
+                  searchPlaceholder="Search employees..."
+                  emptyText="No employees found"
                   disabled={!formData.company_id}
                   fetchOptions={formData.company_id ? async (q) => {
-                    const res = await axios.get(`${API}/admin/users`, {
+                    const res = await axios.get(`${API}/admin/company-employees`, {
                       params: { q, company_id: formData.company_id, limit: 20 },
                       headers: { Authorization: `Bearer ${token}` }
                     });
@@ -927,9 +927,9 @@ const Devices = () => {
                   displayKey="name"
                   valueKey="id"
                   allowCreate={!!formData.company_id}
-                  createLabel="Add New User"
+                  createLabel="Add New Employee"
                   renderCreateForm={formData.company_id ? ({ initialValue, onSuccess, onCancel }) => (
-                    <QuickCreateUser
+                    <QuickCreateEmployee
                       initialValue={initialValue}
                       companyId={formData.company_id}
                       onSuccess={onSuccess}
