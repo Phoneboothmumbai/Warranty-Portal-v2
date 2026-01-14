@@ -31,6 +31,7 @@ import Licenses from "./pages/admin/Licenses";
 import SupplyProducts from "./pages/admin/SupplyProducts";
 import SupplyOrders from "./pages/admin/SupplyOrders";
 import Employees from "./pages/admin/Employees";
+import Subscriptions from "./pages/admin/Subscriptions";
 
 // Company Portal Pages
 import CompanyLayout from "./layouts/CompanyLayout";
@@ -80,6 +81,7 @@ function App() {
                     <Route path="companies/:companyId" element={<CompanyDetails />} />
                     <Route path="users" element={<Users />} />
                     <Route path="employees" element={<Employees />} />
+                    <Route path="subscriptions" element={<Subscriptions />} />
                     <Route path="devices" element={<Devices />} />
                     <Route path="parts" element={<Parts />} />
                     <Route path="amc" element={<AMCManagement />} />
