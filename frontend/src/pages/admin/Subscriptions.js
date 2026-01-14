@@ -952,6 +952,214 @@ const Subscriptions = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* User Change Modal */}
+      <Dialog open={userChangeModalOpen} onOpenChange={setUserChangeModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Subscription Users</DialogTitle>
+          </DialogHeader>
+          
+          {selectedSubscription && (
+            <div className="space-y-6 mt-4">
+              {/* Current Status */}
+              <div className="bg-slate-50 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-500">Subscription</p>
+                    <p className="font-semibold">{getProviderName(selectedSubscription.provider)} - {selectedSubscription.domain}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-slate-500">Current Users</p>
+                    <p className="text-3xl font-bold text-blue-600">{selectedSubscription.num_users}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Add/Remove Users Form */}
+              <form onSubmit={handleUserChange} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label">Action *</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setUserChangeData({ ...userChangeData, change_type: 'add' })}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg border-2 transition-all ${
+                          userChangeData.change_type === 'add' 
+                            ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        Add Users
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUserChangeData({ ...userChangeData, change_type: 'remove' })}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg border-2 transition-all ${
+                          userChangeData.change_type === 'remove' 
+                            ? 'border-red-500 bg-red-50 text-red-700' 
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <UserMinus className="h-4 w-4" />
+                        Remove Users
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="form-label">Number of Users *</label>
+                    <input
+                      type="number"
+                      value={userChangeData.user_count}
+                      onChange={(e) => setUserChangeData({ ...userChangeData, user_count: parseInt(e.target.value) || 1 })}
+                      className="form-input"
+                      min="1"
+                      max={userChangeData.change_type === 'remove' ? selectedSubscription.num_users : undefined}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label">Effective Date *</label>
+                    <input
+                      type="date"
+                      value={userChangeData.effective_date}
+                      onChange={(e) => setUserChangeData({ ...userChangeData, effective_date: e.target.value })}
+                      className="form-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Reason</label>
+                    <select
+                      value={userChangeData.reason}
+                      onChange={(e) => setUserChangeData({ ...userChangeData, reason: e.target.value })}
+                      className="form-select"
+                    >
+                      <option value="">Select reason...</option>
+                      {userChangeData.change_type === 'add' ? (
+                        <>
+                          <option value="New hire">New hire</option>
+                          <option value="Department expansion">Department expansion</option>
+                          <option value="Project requirement">Project requirement</option>
+                          <option value="Other">Other</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="Resignation">Resignation</option>
+                          <option value="Termination">Termination</option>
+                          <option value="Department restructure">Department restructure</option>
+                          <option value="Cost optimization">Cost optimization</option>
+                          <option value="Other">Other</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="form-label">Notes</label>
+                  <textarea
+                    value={userChangeData.notes}
+                    onChange={(e) => setUserChangeData({ ...userChangeData, notes: e.target.value })}
+                    className="form-input"
+                    rows={2}
+                    placeholder="Additional notes about this change..."
+                  />
+                </div>
+
+                {/* Preview */}
+                <div className={`p-3 rounded-lg ${userChangeData.change_type === 'add' ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
+                  <p className="text-sm">
+                    <strong>Preview:</strong> User count will change from{' '}
+                    <span className="font-bold">{selectedSubscription.num_users}</span> to{' '}
+                    <span className="font-bold">
+                      {userChangeData.change_type === 'add' 
+                        ? selectedSubscription.num_users + (userChangeData.user_count || 0)
+                        : Math.max(0, selectedSubscription.num_users - (userChangeData.user_count || 0))
+                      }
+                    </span>
+                  </p>
+                </div>
+                
+                <div className="flex justify-end">
+                  <Button 
+                    type="submit" 
+                    className={userChangeData.change_type === 'add' 
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white' 
+                      : 'bg-red-600 hover:bg-red-700 text-white'
+                    }
+                  >
+                    {userChangeData.change_type === 'add' ? (
+                      <><UserPlus className="h-4 w-4 mr-2" /> Add Users</>
+                    ) : (
+                      <><UserMinus className="h-4 w-4 mr-2" /> Remove Users</>
+                    )}
+                  </Button>
+                </div>
+              </form>
+
+              {/* Change History */}
+              <div>
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  User Change History
+                </h4>
+                {userChanges.length > 0 ? (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {userChanges.map((change) => (
+                      <div 
+                        key={change.id} 
+                        className={`p-3 rounded-lg border ${
+                          change.change_type === 'add' 
+                            ? 'bg-emerald-50 border-emerald-200' 
+                            : 'bg-red-50 border-red-200'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-2">
+                            {change.change_type === 'add' ? (
+                              <UserPlus className="h-4 w-4 text-emerald-600" />
+                            ) : (
+                              <UserMinus className="h-4 w-4 text-red-600" />
+                            )}
+                            <div>
+                              <p className="font-medium text-sm">
+                                {change.change_type === 'add' ? '+' : '-'}{change.user_count} user(s)
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {change.previous_count} → {change.new_count} users
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right text-xs text-slate-500">
+                            <p>{new Date(change.effective_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                            <p>by {change.changed_by_name}</p>
+                          </div>
+                        </div>
+                        {change.reason && (
+                          <p className="text-xs text-slate-600 mt-1">
+                            <strong>Reason:</strong> {change.reason}
+                          </p>
+                        )}
+                        {change.notes && (
+                          <p className="text-xs text-slate-500 mt-1">{change.notes}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded-lg">
+                    No user changes recorded yet
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
