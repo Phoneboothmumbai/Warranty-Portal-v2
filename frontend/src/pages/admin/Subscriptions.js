@@ -11,48 +11,6 @@ import { QuickCreateCompany } from '../../components/forms';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-// Provider options
-const PROVIDERS = [
-  { id: 'google_workspace', name: 'Google Workspace', icon: '🔵' },
-  { id: 'microsoft_365', name: 'Microsoft 365', icon: '🟠' },
-  { id: 'titan', name: 'Titan Email', icon: '🟣' },
-  { id: 'zoho', name: 'Zoho Mail', icon: '🔴' },
-  { id: 'other', name: 'Other', icon: '⚪' }
-];
-
-// Plan options by provider
-const PLANS = {
-  google_workspace: [
-    { id: 'business_starter', name: 'Business Starter' },
-    { id: 'business_standard', name: 'Business Standard' },
-    { id: 'business_plus', name: 'Business Plus' },
-    { id: 'enterprise_standard', name: 'Enterprise Standard' },
-    { id: 'enterprise_plus', name: 'Enterprise Plus' }
-  ],
-  microsoft_365: [
-    { id: 'business_basic', name: 'Business Basic' },
-    { id: 'business_standard', name: 'Business Standard' },
-    { id: 'business_premium', name: 'Business Premium' },
-    { id: 'e3', name: 'Enterprise E3' },
-    { id: 'e5', name: 'Enterprise E5' }
-  ],
-  titan: [
-    { id: 'lite', name: 'Titan Lite' },
-    { id: 'premium', name: 'Titan Premium' },
-    { id: 'enterprise', name: 'Titan Enterprise' }
-  ],
-  zoho: [
-    { id: 'mail_lite', name: 'Mail Lite' },
-    { id: 'mail_premium', name: 'Mail Premium' },
-    { id: 'workplace', name: 'Workplace' }
-  ],
-  other: [
-    { id: 'basic', name: 'Basic' },
-    { id: 'standard', name: 'Standard' },
-    { id: 'premium', name: 'Premium' }
-  ]
-};
-
 const statusColors = {
   active: 'bg-emerald-100 text-emerald-700',
   expiring_soon: 'bg-amber-100 text-amber-700',
@@ -82,15 +40,20 @@ const Subscriptions = () => {
   const [selectedSubscription, setSelectedSubscription] = useState(null);
   const [editingSubscription, setEditingSubscription] = useState(null);
   
+  // Master data from API
+  const [providers, setProviders] = useState([]);
+  const [plans, setPlans] = useState([]);
+  const [billingCycles, setBillingCycles] = useState([]);
+  
   const [formData, setFormData] = useState({
     company_id: '',
-    provider: 'google_workspace',
+    provider: '',
     domain: '',
-    plan_type: 'business_starter',
+    plan_type: '',
     plan_name: '',
     num_users: 1,
     price_per_user: '',
-    billing_cycle: 'yearly',
+    billing_cycle: 'YEARLY',
     total_price: '',
     currency: 'INR',
     start_date: '',
@@ -106,6 +69,33 @@ const Subscriptions = () => {
     issue_type: 'other',
     priority: 'medium'
   });
+
+  // Fetch master data on mount
+  useEffect(() => {
+    const fetchMasterData = async () => {
+      try {
+        const [provRes, planRes, cycleRes] = await Promise.all([
+          axios.get(`${API}/admin/masters`, { params: { master_type: 'subscription_provider' }, headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${API}/admin/masters`, { params: { master_type: 'subscription_plan' }, headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${API}/admin/masters`, { params: { master_type: 'billing_cycle' }, headers: { Authorization: `Bearer ${token}` } })
+        ]);
+        setProviders(provRes.data);
+        setPlans(planRes.data);
+        setBillingCycles(cycleRes.data);
+        
+        // Set defaults if available
+        if (provRes.data.length > 0) {
+          setFormData(prev => ({ ...prev, provider: provRes.data[0].code }));
+        }
+        if (planRes.data.length > 0) {
+          setFormData(prev => ({ ...prev, plan_type: planRes.data[0].code, plan_name: planRes.data[0].name }));
+        }
+      } catch (error) {
+        console.error('Failed to load master data', error);
+      }
+    };
+    fetchMasterData();
+  }, [token]);
 
   const fetchData = useCallback(async () => {
     try {
