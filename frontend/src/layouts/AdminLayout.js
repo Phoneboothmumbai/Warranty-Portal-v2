@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Building2, Users, Laptop, Wrench, 
-  FileCheck, Settings, LogOut, Shield, Menu, X, ChevronRight, Database, History, FileText, MapPin, Package, Key, ShoppingBag, ClipboardList
+  FileCheck, Settings, LogOut, Shield, Menu, X, ChevronRight, Database, History, FileText, MapPin, Package, Key, ShoppingBag, ClipboardList, UserCircle
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
