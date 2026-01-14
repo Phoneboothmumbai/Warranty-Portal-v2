@@ -30,6 +30,7 @@ import Deployments from "./pages/admin/Deployments";
 import Licenses from "./pages/admin/Licenses";
 import SupplyProducts from "./pages/admin/SupplyProducts";
 import SupplyOrders from "./pages/admin/SupplyOrders";
+import Employees from "./pages/admin/Employees";
 
 // Company Portal Pages
 import CompanyLayout from "./layouts/CompanyLayout";
