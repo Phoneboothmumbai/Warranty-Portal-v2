@@ -135,7 +135,24 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - **Test Company Code:** ACME001
 - **Test User:** jane@acme.com / company123
 
-## Upcoming Tasks (Updated Jan 10, 2026)
+## Recent Updates (Jan 14, 2026)
+- **Company Employees & Device User Feature (COMPLETED):**
+  - **New `/admin/employees` page:** Manage employees who can be assigned to devices
+  - **Bulk Import:** Upload employees via CSV/Excel with template download
+  - **Device Form Enhancements:**
+    - "Device User" dropdown now fetches from `company_employees` collection
+    - Inline employee creation via "Add New Employee" option
+    - "Configuration Details" field for Laptops/Desktops/Tablets (e.g., "i7, 16GB RAM, 512GB SSD")
+    - Configuration field is hidden for Printers and other device types
+  - **Backend:**
+    - New `company_employees` collection with full CRUD API
+    - `GET/POST/PUT/DELETE /api/admin/company-employees`
+    - `POST /api/admin/company-employees/bulk-import`
+    - `GET /api/admin/company-employees/template/download`
+    - Device model updated with `assigned_employee_id` and `configuration` fields
+  - **Testing:** 16/16 backend tests passed (100%)
+
+## Upcoming Tasks (Updated Jan 14, 2026)
 - P1: Complete Engineer Field Visit Workflow (check-in/out, actions, parts, photos)
 - P1: Admin & User Role Management (Super Admin, Admin, Staff, Service Engineer)
 - P2: Email Notifications (ticket updates, warranty alerts)
