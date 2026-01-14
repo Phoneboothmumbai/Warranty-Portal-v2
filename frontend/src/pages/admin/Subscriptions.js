@@ -587,8 +587,8 @@ const Subscriptions = () => {
                   onChange={(e) => handleProviderChange(e.target.value)}
                   className="form-select"
                 >
-                  {PROVIDERS.map(p => (
-                    <option key={p.id} value={p.id}>{p.icon} {p.name}</option>
+                  {providers.map(p => (
+                    <option key={p.code} value={p.code}>{p.name}</option>
                   ))}
                 </select>
               </div>
@@ -599,8 +599,8 @@ const Subscriptions = () => {
                   onChange={(e) => handlePlanChange(e.target.value)}
                   className="form-select"
                 >
-                  {(PLANS[formData.provider] || PLANS.other).map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
+                  {plans.map(p => (
+                    <option key={p.code} value={p.code}>{p.name}</option>
                   ))}
                 </select>
               </div>
