@@ -333,7 +333,12 @@ const Employees = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.map((employee) => (
-                <tr key={employee.id} className="hover:bg-slate-50" data-testid={`employee-row-${employee.id}`}>
+                <tr 
+                  key={employee.id} 
+                  className="hover:bg-slate-50 cursor-pointer" 
+                  data-testid={`employee-row-${employee.id}`}
+                  onClick={() => navigate(`/admin/employees/${employee.id}`)}
+                >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-sm font-medium">
@@ -372,7 +377,7 @@ const Employees = () => {
                   <td className="px-4 py-3">
                     <span className="text-sm text-slate-600">{employee.location || '-'}</span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button className="p-1.5 hover:bg-slate-100 rounded-lg" data-testid={`employee-actions-${employee.id}`}>
@@ -380,10 +385,15 @@ const Employees = () => {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigate(`/admin/employees/${employee.id}`)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Profile
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openEditModal(employee)}>
                           <Edit2 className="h-4 w-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(employee)}>
                           <Trash2 className="h-4 w-4 mr-2" />
                           Delete
