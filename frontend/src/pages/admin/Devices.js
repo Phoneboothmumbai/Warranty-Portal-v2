@@ -80,6 +80,7 @@ const Devices = () => {
   const [formData, setFormData] = useState({
     company_id: '',
     assigned_user_id: '',
+    assigned_employee_id: '',  // NEW: Employee from company_employees
     device_type: '',
     brand: '',
     model: '',
@@ -93,6 +94,7 @@ const Devices = () => {
     condition: 'good',
     status: 'active',
     notes: '',
+    configuration: '',  // NEW: Configuration for Laptops/Desktops/Tablets
     // Multiple consumables for printers
     consumables: []
   });
