@@ -242,7 +242,7 @@ const EmployeeDetails = () => {
                   <div 
                     key={device.id} 
                     className="bg-slate-50 rounded-lg p-4 hover:bg-slate-100 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/admin/devices?q=${device.serial_number}`)}
+                    onClick={() => navigate(`/admin/devices/${device.id}`)}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4">
