@@ -1921,6 +1921,260 @@ async def delete_user(user_id: str, admin: dict = Depends(get_current_admin)):
     await log_audit("user", user_id, "delete", {"is_deleted": True}, admin)
     return {"message": "User archived"}
 
+
+# ==================== ADMIN ENDPOINTS - COMPANY EMPLOYEES ====================
+
+@api_router.get("/admin/company-employees")
+async def list_company_employees(
+    company_id: Optional[str] = None,
+    q: Optional[str] = None,
+    is_active: Optional[bool] = None,
+    limit: int = Query(default=100, le=500),
+    page: int = Query(default=1, ge=1),
+    admin: dict = Depends(get_current_admin)
+):
+    """List company employees (device users) with optional filters"""
+    query = {"is_deleted": {"$ne": True}}
+    if company_id:
+        query["company_id"] = company_id
+    if is_active is not None:
+        query["is_active"] = is_active
+    
+    # Add search filter
+    if q and q.strip():
+        search_regex = {"$regex": q.strip(), "$options": "i"}
+        query["$or"] = [
+            {"name": search_regex},
+            {"email": search_regex},
+            {"employee_id": search_regex},
+            {"department": search_regex}
+        ]
+    
+    skip = (page - 1) * limit
+    employees = await db.company_employees.find(query, {"_id": 0}).sort("name", 1).skip(skip).limit(limit).to_list(limit)
+    total = await db.company_employees.count_documents(query)
+    
+    # Add company name to each employee
+    company_ids = list(set(e.get("company_id") for e in employees if e.get("company_id")))
+    companies = {}
+    if company_ids:
+        companies_cursor = db.companies.find({"id": {"$in": company_ids}}, {"_id": 0, "id": 1, "name": 1})
+        async for c in companies_cursor:
+            companies[c["id"]] = c["name"]
+    
+    for emp in employees:
+        emp["company_name"] = companies.get(emp.get("company_id"), "Unknown")
+        emp["label"] = emp["name"]  # For SmartSelect
+    
+    return employees
+
+
+@api_router.post("/admin/company-employees")
+async def create_company_employee(employee: CompanyEmployeeCreate, admin: dict = Depends(get_current_admin)):
+    """Create a new company employee"""
+    # Verify company exists
+    company = await db.companies.find_one({"id": employee.company_id, "is_deleted": {"$ne": True}})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    new_employee = CompanyEmployee(**employee.model_dump())
+    await db.company_employees.insert_one(new_employee.model_dump())
+    await log_audit("company_employee", new_employee.id, "create", new_employee.model_dump(), admin)
+    
+    result = new_employee.model_dump()
+    result["company_name"] = company.get("name")
+    return result
+
+
+@api_router.post("/admin/company-employees/quick-create")
+async def quick_create_company_employee(
+    company_id: str = Form(...),
+    name: str = Form(...),
+    email: Optional[str] = Form(None),
+    department: Optional[str] = Form(None),
+    admin: dict = Depends(get_current_admin)
+):
+    """Quick create employee for inline forms"""
+    company = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    new_employee = CompanyEmployee(
+        company_id=company_id,
+        name=name,
+        email=email,
+        department=department
+    )
+    await db.company_employees.insert_one(new_employee.model_dump())
+    
+    result = new_employee.model_dump()
+    result["company_name"] = company.get("name")
+    result["label"] = name
+    return result
+
+
+@api_router.get("/admin/company-employees/{employee_id}")
+async def get_company_employee(employee_id: str, admin: dict = Depends(get_current_admin)):
+    """Get a specific employee"""
+    employee = await db.company_employees.find_one({"id": employee_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    return employee
+
+
+@api_router.put("/admin/company-employees/{employee_id}")
+async def update_company_employee(employee_id: str, data: CompanyEmployeeUpdate, admin: dict = Depends(get_current_admin)):
+    """Update an employee"""
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No data to update")
+    
+    result = await db.company_employees.update_one({"id": employee_id, "is_deleted": {"$ne": True}}, {"$set": update_data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    await log_audit("company_employee", employee_id, "update", update_data, admin)
+    return {"message": "Employee updated"}
+
+
+@api_router.delete("/admin/company-employees/{employee_id}")
+async def delete_company_employee(employee_id: str, admin: dict = Depends(get_current_admin)):
+    """Soft delete an employee"""
+    result = await db.company_employees.update_one({"id": employee_id}, {"$set": {"is_deleted": True}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    await log_audit("company_employee", employee_id, "delete", {"is_deleted": True}, admin)
+    return {"message": "Employee archived"}
+
+
+@api_router.post("/admin/company-employees/bulk-import")
+async def bulk_import_company_employees(
+    file: UploadFile = File(...),
+    admin: dict = Depends(get_current_admin)
+):
+    """
+    Bulk import company employees from CSV/Excel file.
+    Required columns: company_code OR company_name, name
+    Optional columns: employee_id, email, phone, department, designation, location
+    """
+    import pandas as pd
+    
+    # Read file
+    content = await file.read()
+    filename = file.filename.lower()
+    
+    try:
+        if filename.endswith('.csv'):
+            df = pd.read_csv(BytesIO(content))
+        elif filename.endswith(('.xlsx', '.xls')):
+            df = pd.read_excel(BytesIO(content))
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file format. Use CSV or Excel.")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error reading file: {str(e)}")
+    
+    # Normalize column names
+    df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_')
+    
+    # Check required columns
+    if 'name' not in df.columns:
+        raise HTTPException(status_code=400, detail="Missing required column: name")
+    
+    if 'company_code' not in df.columns and 'company_name' not in df.columns:
+        raise HTTPException(status_code=400, detail="Missing required column: company_code or company_name")
+    
+    # Build company lookup
+    companies = await db.companies.find({"is_deleted": {"$ne": True}}, {"_id": 0, "id": 1, "name": 1, "code": 1}).to_list(1000)
+    company_by_code = {c["code"].upper(): c for c in companies if c.get("code")}
+    company_by_name = {c["name"].lower(): c for c in companies}
+    
+    results = {"created": 0, "errors": [], "skipped": 0}
+    
+    for idx, row in df.iterrows():
+        row_num = idx + 2  # Excel row (1-indexed + header)
+        
+        try:
+            name = str(row.get('name', '')).strip()
+            if not name or name == 'nan':
+                results["errors"].append({"row": row_num, "error": "Name is required"})
+                continue
+            
+            # Find company
+            company = None
+            company_code = str(row.get('company_code', '')).strip().upper()
+            company_name = str(row.get('company_name', '')).strip().lower()
+            
+            if company_code and company_code != 'NAN':
+                company = company_by_code.get(company_code)
+                if not company:
+                    results["errors"].append({"row": row_num, "error": f"Company code '{company_code}' not found"})
+                    continue
+            elif company_name and company_name != 'nan':
+                company = company_by_name.get(company_name)
+                if not company:
+                    results["errors"].append({"row": row_num, "error": f"Company name '{company_name}' not found"})
+                    continue
+            else:
+                results["errors"].append({"row": row_num, "error": "Company code or name is required"})
+                continue
+            
+            # Create employee
+            employee_data = {
+                "company_id": company["id"],
+                "name": name,
+                "employee_id": str(row.get('employee_id', '')).strip() if pd.notna(row.get('employee_id')) else None,
+                "email": str(row.get('email', '')).strip() if pd.notna(row.get('email')) else None,
+                "phone": str(row.get('phone', '')).strip() if pd.notna(row.get('phone')) else None,
+                "department": str(row.get('department', '')).strip() if pd.notna(row.get('department')) else None,
+                "designation": str(row.get('designation', '')).strip() if pd.notna(row.get('designation')) else None,
+                "location": str(row.get('location', '')).strip() if pd.notna(row.get('location')) else None,
+            }
+            
+            # Clean None values that are empty strings
+            employee_data = {k: (v if v and v != 'nan' else None) for k, v in employee_data.items()}
+            employee_data["company_id"] = company["id"]  # Ensure company_id is set
+            employee_data["name"] = name
+            
+            new_employee = CompanyEmployee(**employee_data)
+            await db.company_employees.insert_one(new_employee.model_dump())
+            results["created"] += 1
+            
+        except Exception as e:
+            results["errors"].append({"row": row_num, "error": str(e)})
+    
+    return results
+
+
+@api_router.get("/admin/company-employees/template/download")
+async def download_employee_template(admin: dict = Depends(get_current_admin)):
+    """Download CSV template for bulk employee import"""
+    import csv
+    
+    buffer = BytesIO()
+    # Write UTF-8 BOM for Excel compatibility
+    buffer.write(b'\xef\xbb\xbf')
+    
+    wrapper = __import__('io').TextIOWrapper(buffer, encoding='utf-8', newline='')
+    writer = csv.writer(wrapper)
+    
+    # Header row
+    writer.writerow(['company_code', 'name', 'employee_id', 'email', 'phone', 'department', 'designation', 'location'])
+    
+    # Sample data rows
+    writer.writerow(['ACME001', 'John Smith', 'EMP001', 'john.smith@acme.com', '9876543210', 'IT', 'Senior Engineer', 'Floor 2, Desk 15'])
+    writer.writerow(['ACME001', 'Jane Doe', 'EMP002', 'jane.doe@acme.com', '9876543211', 'HR', 'Manager', 'Floor 1, Cabin 3'])
+    writer.writerow(['ACME001', 'Bob Wilson', '', 'bob@acme.com', '', 'Sales', '', ''])
+    
+    wrapper.flush()
+    buffer.seek(0)
+    
+    return StreamingResponse(
+        buffer,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=employee_import_template.csv"}
+    )
+
+
 # ==================== ADMIN ENDPOINTS - DEVICES ====================
 
 @api_router.get("/admin/devices")
