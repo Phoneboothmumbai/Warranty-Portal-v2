@@ -23,6 +23,7 @@ class Device(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     company_id: str
     assigned_user_id: Optional[str] = None
+    assigned_employee_id: Optional[str] = None  # NEW: Employee from company_employees
     device_type: str
     brand: str
     model: str
@@ -36,6 +37,8 @@ class Device(BaseModel):
     condition: str = "good"
     status: str = "active"
     notes: Optional[str] = None
+    # NEW: Configuration details for Laptops/Desktops/Tablets
+    configuration: Optional[str] = None
     # Deployment source tracking
     source: str = "manual"
     deployment_id: Optional[str] = None
@@ -55,6 +58,7 @@ class Device(BaseModel):
 class DeviceCreate(BaseModel):
     company_id: str
     assigned_user_id: Optional[str] = None
+    assigned_employee_id: Optional[str] = None  # NEW: Employee from company_employees
     device_type: str
     brand: str
     model: str
@@ -68,6 +72,8 @@ class DeviceCreate(BaseModel):
     condition: str = "good"
     status: str = "active"
     notes: Optional[str] = None
+    # NEW: Configuration details for Laptops/Desktops/Tablets
+    configuration: Optional[str] = None
     # Deployment source tracking
     source: str = "manual"
     deployment_id: Optional[str] = None
@@ -85,6 +91,7 @@ class DeviceCreate(BaseModel):
 class DeviceUpdate(BaseModel):
     company_id: Optional[str] = None
     assigned_user_id: Optional[str] = None
+    assigned_employee_id: Optional[str] = None  # NEW: Employee from company_employees
     device_type: Optional[str] = None
     brand: Optional[str] = None
     model: Optional[str] = None
@@ -98,6 +105,8 @@ class DeviceUpdate(BaseModel):
     condition: Optional[str] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    # NEW: Configuration details for Laptops/Desktops/Tablets
+    configuration: Optional[str] = None
     site_id: Optional[str] = None
     # Consumable details - Legacy
     consumable_type: Optional[str] = None
