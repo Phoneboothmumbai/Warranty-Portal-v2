@@ -196,24 +196,26 @@ const Subscriptions = () => {
     setEditingSubscription(null);
   };
 
-  const handleProviderChange = (provider) => {
-    const plans = PLANS[provider] || PLANS.other;
+  const handleProviderChange = (providerCode) => {
+    const provider = providers.find(p => p.code === providerCode);
     setFormData({
       ...formData,
-      provider,
-      plan_type: plans[0]?.id || 'basic',
-      plan_name: plans[0]?.name || 'Basic'
+      provider: providerCode
     });
   };
 
-  const handlePlanChange = (planType) => {
-    const plans = PLANS[formData.provider] || PLANS.other;
-    const plan = plans.find(p => p.id === planType);
+  const handlePlanChange = (planCode) => {
+    const plan = plans.find(p => p.code === planCode);
     setFormData({
       ...formData,
-      plan_type: planType,
-      plan_name: plan?.name || planType
+      plan_type: planCode,
+      plan_name: plan?.name || planCode
     });
+  };
+
+  const getProviderName = (code) => {
+    const p = providers.find(pr => pr.code === code);
+    return p?.name || code;
   };
 
   const handleSubmit = async (e) => {
