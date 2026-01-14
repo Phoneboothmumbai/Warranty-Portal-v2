@@ -5346,6 +5346,117 @@ async def create_subscription_ticket_admin(
     return result
 
 
+# --- Subscription User Change Tracking ---
+
+from models.subscription import SubscriptionUserChange, SubscriptionUserChangeCreate
+
+@api_router.get("/admin/subscriptions/{subscription_id}/user-changes")
+async def get_subscription_user_changes(
+    subscription_id: str,
+    admin: dict = Depends(get_current_admin)
+):
+    """Get user change history for a subscription"""
+    # Verify subscription exists
+    sub = await db.email_subscriptions.find_one({"id": subscription_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    
+    changes = await db.subscription_user_changes.find(
+        {"subscription_id": subscription_id}
+    ).sort("created_at", -1).to_list(500)
+    
+    # Remove _id from results
+    for change in changes:
+        change.pop("_id", None)
+    
+    return changes
+
+
+@api_router.post("/admin/subscriptions/{subscription_id}/user-changes")
+async def add_subscription_user_change(
+    subscription_id: str,
+    change_data: SubscriptionUserChangeCreate,
+    admin: dict = Depends(get_current_admin)
+):
+    """Add or remove users from a subscription"""
+    # Get subscription
+    sub = await db.email_subscriptions.find_one({"id": subscription_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    
+    current_count = sub.get("num_users", 0)
+    
+    # Calculate new count
+    if change_data.change_type == "add":
+        new_count = current_count + change_data.user_count
+    elif change_data.change_type == "remove":
+        new_count = max(0, current_count - change_data.user_count)
+        if change_data.user_count > current_count:
+            raise HTTPException(status_code=400, detail=f"Cannot remove {change_data.user_count} users. Current count is {current_count}")
+    else:
+        raise HTTPException(status_code=400, detail="Invalid change_type. Must be 'add' or 'remove'")
+    
+    # Create change record
+    change = SubscriptionUserChange(
+        subscription_id=subscription_id,
+        change_type=change_data.change_type,
+        user_count=change_data.user_count,
+        previous_count=current_count,
+        new_count=new_count,
+        effective_date=change_data.effective_date,
+        reason=change_data.reason,
+        notes=change_data.notes,
+        changed_by=admin.get("id", "admin"),
+        changed_by_name=admin.get("name", "Admin")
+    )
+    
+    await db.subscription_user_changes.insert_one(change.model_dump())
+    
+    # Update subscription user count
+    await db.email_subscriptions.update_one(
+        {"id": subscription_id},
+        {"$set": {"num_users": new_count, "updated_at": get_ist_isoformat()}}
+    )
+    
+    result = change.model_dump()
+    result["message"] = f"User count updated from {current_count} to {new_count}"
+    return result
+
+
+@api_router.get("/admin/subscriptions/{subscription_id}/user-summary")
+async def get_subscription_user_summary(
+    subscription_id: str,
+    admin: dict = Depends(get_current_admin)
+):
+    """Get user summary with change history for a subscription"""
+    # Get subscription
+    sub = await db.email_subscriptions.find_one({"id": subscription_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    
+    # Get all changes
+    changes = await db.subscription_user_changes.find(
+        {"subscription_id": subscription_id}
+    ).sort("created_at", 1).to_list(500)
+    
+    for change in changes:
+        change.pop("_id", None)
+    
+    # Calculate stats
+    total_added = sum(c.get("user_count", 0) for c in changes if c.get("change_type") == "add")
+    total_removed = sum(c.get("user_count", 0) for c in changes if c.get("change_type") == "remove")
+    
+    return {
+        "subscription_id": subscription_id,
+        "current_users": sub.get("num_users", 0),
+        "initial_users": sub.get("num_users", 0) - total_added + total_removed,
+        "total_added": total_added,
+        "total_removed": total_removed,
+        "change_count": len(changes),
+        "changes": changes
+    }
+
+
 # ==================== COMPANY PORTAL ENDPOINTS ====================
 
 # --- Company Auth ---
