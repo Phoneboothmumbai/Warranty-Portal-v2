@@ -1150,6 +1150,29 @@ const Devices = () => {
               />
             </div>
             
+            {/* Configuration Details - Show for Laptops, Desktops, Tablets */}
+            {['laptop', 'desktop', 'tablet'].some(type => 
+              formData.device_type?.toLowerCase().includes(type)
+            ) && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                <label className="form-label text-blue-800 flex items-center gap-2">
+                  <Laptop className="h-4 w-4" />
+                  Configuration Details (Optional)
+                </label>
+                <textarea
+                  value={formData.configuration}
+                  onChange={(e) => setFormData({ ...formData, configuration: e.target.value })}
+                  className="form-input bg-white"
+                  rows={3}
+                  placeholder="e.g., Intel i7-12700H, 16GB RAM, 512GB SSD, Windows 11 Pro, 14&quot; FHD Display"
+                  data-testid="device-configuration-input"
+                />
+                <p className="text-xs text-blue-600">
+                  Enter hardware specifications like processor, RAM, storage, OS, display size, etc.
+                </p>
+              </div>
+            )}
+            
             {/* Consumable Details - Show only for Printers */}
             {formData.device_type?.toLowerCase().includes('printer') && (
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-4">
