@@ -2026,6 +2026,91 @@ async def get_company_employee(employee_id: str, admin: dict = Depends(get_curre
     return employee
 
 
+@api_router.get("/admin/company-employees/{employee_id}/full-profile")
+async def get_company_employee_full_profile(employee_id: str, admin: dict = Depends(get_current_admin)):
+    """Get employee with all related data: devices, licenses, subscriptions, service history"""
+    # Get employee
+    employee = await db.company_employees.find_one({"id": employee_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Get company info
+    company = await db.companies.find_one({"id": employee.get("company_id")}, {"_id": 0, "name": 1, "id": 1})
+    employee["company_name"] = company.get("name") if company else "Unknown"
+    
+    # Get assigned devices
+    devices = await db.devices.find({
+        "assigned_employee_id": employee_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).to_list(100)
+    
+    # Enrich devices with warranty info
+    for device in devices:
+        # Calculate warranty status
+        if device.get("warranty_end_date"):
+            try:
+                from datetime import datetime
+                end_date = datetime.fromisoformat(device["warranty_end_date"].replace("Z", "+00:00"))
+                now = datetime.now(end_date.tzinfo) if end_date.tzinfo else datetime.now()
+                days_remaining = (end_date - now).days
+                device["warranty_days_remaining"] = days_remaining
+                device["warranty_status"] = "active" if days_remaining > 30 else ("expiring" if days_remaining > 0 else "expired")
+            except:
+                device["warranty_status"] = "unknown"
+    
+    # Get licenses assigned to this employee
+    licenses = await db.licenses.find({
+        "assigned_to": employee_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).to_list(100)
+    
+    # Get service history for employee's devices
+    device_ids = [d.get("id") for d in devices]
+    service_history = []
+    if device_ids:
+        service_history = await db.service_records.find({
+            "device_id": {"$in": device_ids},
+            "is_deleted": {"$ne": True}
+        }, {"_id": 0}).sort("service_date", -1).to_list(50)
+    
+    # Get tickets raised by or for this employee's devices
+    tickets = await db.tickets.find({
+        "$or": [
+            {"device_id": {"$in": device_ids}},
+            {"created_by_email": employee.get("email")}
+        ],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).sort("created_at", -1).to_list(20)
+    
+    # Get email subscriptions for the company (employee might have access)
+    subscriptions = await db.email_subscriptions.find({
+        "company_id": employee.get("company_id"),
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).to_list(20)
+    
+    # Calculate summary stats
+    summary = {
+        "total_devices": len(devices),
+        "active_devices": len([d for d in devices if d.get("status") == "active"]),
+        "devices_under_warranty": len([d for d in devices if d.get("warranty_status") == "active"]),
+        "devices_warranty_expiring": len([d for d in devices if d.get("warranty_status") == "expiring"]),
+        "total_licenses": len(licenses),
+        "active_licenses": len([l for l in licenses if l.get("status") == "active"]),
+        "open_tickets": len([t for t in tickets if t.get("status") in ["open", "in_progress"]]),
+        "total_service_records": len(service_history)
+    }
+    
+    return {
+        "employee": employee,
+        "summary": summary,
+        "devices": devices,
+        "licenses": licenses,
+        "subscriptions": subscriptions,
+        "service_history": service_history,
+        "tickets": tickets
+    }
+
+
 @api_router.put("/admin/company-employees/{employee_id}")
 async def update_company_employee(employee_id: str, data: CompanyEmployeeUpdate, admin: dict = Depends(get_current_admin)):
     """Update an employee"""
