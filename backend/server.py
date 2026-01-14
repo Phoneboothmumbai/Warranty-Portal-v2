@@ -46,7 +46,8 @@ from models.company import (
     Company, CompanyCreate, CompanyUpdate,
     User, UserCreate, UserUpdate,
     CompanyUser, CompanyUserCreate, CompanyUserUpdate,
-    CompanyUserRegister, CompanyLogin
+    CompanyUserRegister, CompanyLogin,
+    CompanyEmployee, CompanyEmployeeCreate, CompanyEmployeeUpdate
 )
 from models.device import (
     ConsumableItem, Device, DeviceCreate, DeviceUpdate,
