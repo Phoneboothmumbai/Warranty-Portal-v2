@@ -128,13 +128,13 @@ const Subscriptions = () => {
     setEditingSubscription(null);
     setFormData({
       company_id: filterCompany || '',
-      provider: 'google_workspace',
+      provider: providers.length > 0 ? providers[0].code : '',
       domain: '',
-      plan_type: 'business_starter',
-      plan_name: 'Business Starter',
+      plan_type: plans.length > 0 ? plans[0].code : '',
+      plan_name: plans.length > 0 ? plans[0].name : '',
       num_users: 1,
       price_per_user: '',
-      billing_cycle: 'yearly',
+      billing_cycle: billingCycles.find(c => c.code === 'YEARLY')?.code || (billingCycles.length > 0 ? billingCycles[0].code : 'YEARLY'),
       total_price: '',
       currency: 'INR',
       start_date: new Date().toISOString().split('T')[0],
