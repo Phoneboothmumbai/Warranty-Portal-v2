@@ -6130,6 +6130,162 @@ async def save_ai_chat_history(data: AISupportHistoryRequest, user: dict = Depen
     
     return {"success": True, "history_id": history_record["id"]}
 
+
+# --- Company Email Subscriptions ---
+
+@api_router.get("/company/subscriptions")
+async def list_company_subscriptions(user: dict = Depends(get_current_company_user)):
+    """List email/cloud subscriptions for the company"""
+    subscriptions = await db.email_subscriptions.find({
+        "company_id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).sort("renewal_date", 1).to_list(100)
+    
+    # Update status based on renewal date
+    for sub in subscriptions:
+        sub["status"] = calculate_subscription_status(sub.get("renewal_date"), 30)
+        if not sub.get("provider_name"):
+            sub["provider_name"] = SUBSCRIPTION_PROVIDERS.get(sub.get("provider"), sub.get("provider", "Unknown"))
+    
+    return subscriptions
+
+
+@api_router.get("/company/subscriptions/{subscription_id}")
+async def get_company_subscription(subscription_id: str, user: dict = Depends(get_current_company_user)):
+    """Get subscription details for company portal"""
+    sub = await db.email_subscriptions.find_one({
+        "id": subscription_id,
+        "company_id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    
+    sub["status"] = calculate_subscription_status(sub.get("renewal_date"), 30)
+    if not sub.get("provider_name"):
+        sub["provider_name"] = SUBSCRIPTION_PROVIDERS.get(sub.get("provider"), sub.get("provider", "Unknown"))
+    
+    # Get tickets for this subscription
+    tickets = await db.subscription_tickets.find({
+        "subscription_id": subscription_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).sort("created_at", -1).limit(20).to_list(20)
+    sub["tickets"] = tickets
+    
+    return sub
+
+
+@api_router.post("/company/subscriptions/{subscription_id}/tickets")
+async def create_company_subscription_ticket(
+    subscription_id: str,
+    data: SubscriptionTicketCreate,
+    user: dict = Depends(get_current_company_user)
+):
+    """Create ticket for subscription issue (company portal)"""
+    # Verify subscription belongs to company
+    sub = await db.email_subscriptions.find_one({
+        "id": subscription_id,
+        "company_id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    
+    # Get company
+    company = await db.companies.find_one({"id": user["company_id"]}, {"_id": 0})
+    
+    # Generate ticket number
+    ticket_number = f"SUB-{get_ist_now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}"
+    
+    ticket_data = {
+        "ticket_number": ticket_number,
+        "subscription_id": subscription_id,
+        "company_id": user["company_id"],
+        "subject": data.subject,
+        "description": data.description,
+        "issue_type": data.issue_type,
+        "priority": data.priority,
+        "status": "open",
+        "reported_by": user["id"],
+        "reported_by_name": user.get("name", ""),
+        "reported_by_email": user.get("email", "")
+    }
+    
+    ticket = SubscriptionTicket(**ticket_data)
+    await db.subscription_tickets.insert_one(ticket.model_dump())
+    
+    # Create osTicket
+    osticket_result = await create_osticket(
+        email=user.get("email", ""),
+        name=user.get("name", "User"),
+        subject=f"[{sub.get('provider_name')}] {data.subject}",
+        message=f"""
+        <h3>Email/Cloud Subscription Issue</h3>
+        <p><strong>Ticket:</strong> {ticket_number}</p>
+        
+        <h4>Subscription Details</h4>
+        <ul>
+            <li><strong>Provider:</strong> {sub.get('provider_name')}</li>
+            <li><strong>Domain:</strong> {sub.get('domain')}</li>
+            <li><strong>Company:</strong> {company.get('name') if company else 'Unknown'}</li>
+            <li><strong>Plan:</strong> {sub.get('plan_name', sub.get('plan_type'))}</li>
+        </ul>
+        
+        <h4>Issue Details</h4>
+        <ul>
+            <li><strong>Type:</strong> {data.issue_type.replace('_', ' ').title()}</li>
+            <li><strong>Priority:</strong> {data.priority.title()}</li>
+            <li><strong>Reported By:</strong> {user.get('name')} ({user.get('email')})</li>
+            <li><strong>Description:</strong><br/>{data.description}</li>
+        </ul>
+        """,
+        phone=""
+    )
+    
+    if osticket_result.get("ticket_id"):
+        await db.subscription_tickets.update_one(
+            {"id": ticket.id},
+            {"$set": {"osticket_id": osticket_result["ticket_id"]}}
+        )
+    
+    result = ticket.model_dump()
+    result["osticket_id"] = osticket_result.get("ticket_id")
+    return result
+
+
+@api_router.get("/company/subscription-tickets")
+async def list_company_subscription_tickets(
+    user: dict = Depends(get_current_company_user),
+    status: Optional[str] = None
+):
+    """List all subscription tickets for the company"""
+    query = {
+        "company_id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }
+    if status:
+        query["status"] = status
+    
+    tickets = await db.subscription_tickets.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    # Add subscription info
+    sub_ids = list(set(t.get("subscription_id") for t in tickets if t.get("subscription_id")))
+    subscriptions = {}
+    if sub_ids:
+        subs_cursor = db.email_subscriptions.find({"id": {"$in": sub_ids}}, {"_id": 0, "id": 1, "domain": 1, "provider_name": 1})
+        async for s in subs_cursor:
+            subscriptions[s["id"]] = s
+    
+    for ticket in tickets:
+        sub = subscriptions.get(ticket.get("subscription_id"), {})
+        ticket["domain"] = sub.get("domain", "Unknown")
+        ticket["provider_name"] = sub.get("provider_name", "Unknown")
+    
+    return tickets
+
+
 # --- Company Service Tickets ---
 
 @api_router.get("/company/tickets")
