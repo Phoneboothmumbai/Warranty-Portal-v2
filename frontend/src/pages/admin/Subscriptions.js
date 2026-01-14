@@ -720,9 +720,11 @@ const Subscriptions = () => {
           {selectedSubscription && (
             <div className="space-y-6 mt-4">
               <div className="flex items-center gap-4">
-                <span className="text-4xl">{getProviderIcon(selectedSubscription.provider)}</span>
+                <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Mail className="h-6 w-6 text-blue-600" />
+                </div>
                 <div>
-                  <h3 className="text-xl font-semibold">{selectedSubscription.provider_name}</h3>
+                  <h3 className="text-xl font-semibold">{getProviderName(selectedSubscription.provider)}</h3>
                   <p className="text-blue-600 flex items-center gap-1">
                     <Globe className="h-4 w-4" />
                     {selectedSubscription.domain}
