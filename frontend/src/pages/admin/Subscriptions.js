@@ -368,8 +368,8 @@ const Subscriptions = () => {
           className="form-select w-48"
         >
           <option value="">All Providers</option>
-          {PROVIDERS.map(p => (
-            <option key={p.id} value={p.id}>{p.icon} {p.name}</option>
+          {providers.map(p => (
+            <option key={p.code} value={p.code}>{p.name}</option>
           ))}
         </select>
         <select
