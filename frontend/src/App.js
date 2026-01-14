@@ -79,6 +79,7 @@ function App() {
                     <Route path="companies" element={<Companies />} />
                     <Route path="companies/:companyId" element={<CompanyDetails />} />
                     <Route path="users" element={<Users />} />
+                    <Route path="employees" element={<Employees />} />
                     <Route path="devices" element={<Devices />} />
                     <Route path="parts" element={<Parts />} />
                     <Route path="amc" element={<AMCManagement />} />
