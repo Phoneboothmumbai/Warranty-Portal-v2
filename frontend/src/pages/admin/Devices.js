@@ -450,6 +450,7 @@ const Devices = () => {
     setFormData({
       company_id: device.company_id,
       assigned_user_id: device.assigned_user_id || '',
+      assigned_employee_id: device.assigned_employee_id || '',
       device_type: device.device_type,
       brand: device.brand,
       model: device.model,
@@ -463,6 +464,7 @@ const Devices = () => {
       condition: device.condition || 'good',
       status: device.status,
       notes: device.notes || '',
+      configuration: device.configuration || '',
       consumables: device.consumables || []
     });
     await fetchCompanyUsers(device.company_id);
