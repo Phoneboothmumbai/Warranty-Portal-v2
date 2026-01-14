@@ -636,8 +636,9 @@ const Subscriptions = () => {
                   onChange={(e) => setFormData({ ...formData, billing_cycle: e.target.value })}
                   className="form-select"
                 >
-                  <option value="monthly">Monthly</option>
-                  <option value="yearly">Yearly</option>
+                  {billingCycles.map(c => (
+                    <option key={c.code} value={c.code}>{c.name}</option>
+                  ))}
                 </select>
               </div>
             </div>
