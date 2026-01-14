@@ -5062,6 +5062,290 @@ async def list_field_visits(
     return visits
 
 
+# ==================== ADMIN ENDPOINTS - EMAIL SUBSCRIPTIONS ====================
+
+# Provider display names
+SUBSCRIPTION_PROVIDERS = {
+    "google_workspace": "Google Workspace",
+    "titan": "Titan Email",
+    "microsoft_365": "Microsoft 365",
+    "zoho": "Zoho Mail",
+    "other": "Other"
+}
+
+def calculate_subscription_status(renewal_date: str, reminder_days: int = 30) -> str:
+    """Calculate subscription status based on renewal date"""
+    if not renewal_date:
+        return "active"
+    
+    from datetime import datetime
+    try:
+        renewal = datetime.fromisoformat(renewal_date.replace('Z', '+00:00'))
+        now = datetime.now(renewal.tzinfo) if renewal.tzinfo else datetime.now()
+        days_left = (renewal - now).days
+        
+        if days_left < 0:
+            return "expired"
+        elif days_left <= reminder_days:
+            return "expiring_soon"
+        else:
+            return "active"
+    except:
+        return "active"
+
+
+@api_router.get("/admin/subscriptions")
+async def list_subscriptions(
+    company_id: Optional[str] = None,
+    provider: Optional[str] = None,
+    status: Optional[str] = None,
+    q: Optional[str] = None,
+    limit: int = Query(default=100, le=500),
+    page: int = Query(default=1, ge=1),
+    admin: dict = Depends(get_current_admin)
+):
+    """List email/cloud subscriptions with filters"""
+    query = {"is_deleted": {"$ne": True}}
+    
+    if company_id:
+        query["company_id"] = company_id
+    if provider:
+        query["provider"] = provider
+    
+    if q and q.strip():
+        search_regex = {"$regex": q.strip(), "$options": "i"}
+        query["$or"] = [
+            {"domain": search_regex},
+            {"admin_email": search_regex},
+            {"provider_name": search_regex},
+            {"plan_name": search_regex}
+        ]
+    
+    skip = (page - 1) * limit
+    subscriptions = await db.email_subscriptions.find(query, {"_id": 0}).sort("renewal_date", 1).skip(skip).limit(limit).to_list(limit)
+    
+    # Get company names
+    company_ids = list(set(s.get("company_id") for s in subscriptions if s.get("company_id")))
+    companies = {}
+    if company_ids:
+        companies_cursor = db.companies.find({"id": {"$in": company_ids}}, {"_id": 0, "id": 1, "name": 1})
+        async for c in companies_cursor:
+            companies[c["id"]] = c["name"]
+    
+    # Enrich subscriptions
+    for sub in subscriptions:
+        sub["company_name"] = companies.get(sub.get("company_id"), "Unknown")
+        # Update status based on renewal date
+        sub["status"] = calculate_subscription_status(sub.get("renewal_date"), 30)
+        # Set provider display name if not set
+        if not sub.get("provider_name"):
+            sub["provider_name"] = SUBSCRIPTION_PROVIDERS.get(sub.get("provider"), sub.get("provider", "Unknown"))
+    
+    # Filter by status after calculation
+    if status:
+        subscriptions = [s for s in subscriptions if s["status"] == status]
+    
+    return subscriptions
+
+
+@api_router.post("/admin/subscriptions")
+async def create_subscription(data: EmailSubscriptionCreate, admin: dict = Depends(get_current_admin)):
+    """Create new email subscription"""
+    # Validate company
+    company = await db.companies.find_one({"id": data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    sub_data = data.model_dump()
+    
+    # Set provider display name
+    if not sub_data.get("provider_name"):
+        sub_data["provider_name"] = SUBSCRIPTION_PROVIDERS.get(sub_data.get("provider"), sub_data.get("provider", "Other"))
+    
+    # Calculate status
+    sub_data["status"] = calculate_subscription_status(sub_data.get("renewal_date"), 30)
+    
+    # Calculate total price if not provided
+    if not sub_data.get("total_price") and sub_data.get("price_per_user") and sub_data.get("num_users"):
+        multiplier = 12 if sub_data.get("billing_cycle") == "yearly" else 1
+        sub_data["total_price"] = sub_data["price_per_user"] * sub_data["num_users"] * multiplier
+    
+    subscription = EmailSubscription(**sub_data)
+    await db.email_subscriptions.insert_one(subscription.model_dump())
+    await log_audit("email_subscription", subscription.id, "create", sub_data, admin)
+    
+    result = subscription.model_dump()
+    result["company_name"] = company.get("name")
+    return result
+
+
+@api_router.get("/admin/subscriptions/{subscription_id}")
+async def get_subscription(subscription_id: str, admin: dict = Depends(get_current_admin)):
+    """Get subscription details"""
+    sub = await db.email_subscriptions.find_one({"id": subscription_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    
+    # Get company
+    company = await db.companies.find_one({"id": sub.get("company_id")}, {"_id": 0})
+    sub["company_name"] = company.get("name") if company else "Unknown"
+    
+    # Update status
+    sub["status"] = calculate_subscription_status(sub.get("renewal_date"), 30)
+    
+    # Get related tickets
+    tickets = await db.subscription_tickets.find(
+        {"subscription_id": subscription_id, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(10).to_list(10)
+    sub["recent_tickets"] = tickets
+    
+    return sub
+
+
+@api_router.put("/admin/subscriptions/{subscription_id}")
+async def update_subscription(subscription_id: str, data: EmailSubscriptionUpdate, admin: dict = Depends(get_current_admin)):
+    """Update subscription"""
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No data to update")
+    
+    # Update provider name if provider changed
+    if update_data.get("provider") and not update_data.get("provider_name"):
+        update_data["provider_name"] = SUBSCRIPTION_PROVIDERS.get(update_data["provider"], update_data["provider"])
+    
+    # Recalculate total price
+    if "price_per_user" in update_data or "num_users" in update_data:
+        sub = await db.email_subscriptions.find_one({"id": subscription_id}, {"_id": 0})
+        if sub:
+            price = update_data.get("price_per_user", sub.get("price_per_user", 0))
+            users = update_data.get("num_users", sub.get("num_users", 1))
+            cycle = update_data.get("billing_cycle", sub.get("billing_cycle", "yearly"))
+            if price and users:
+                multiplier = 12 if cycle == "yearly" else 1
+                update_data["total_price"] = price * users * multiplier
+    
+    update_data["updated_at"] = get_ist_isoformat()
+    
+    result = await db.email_subscriptions.update_one(
+        {"id": subscription_id, "is_deleted": {"$ne": True}},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    
+    await log_audit("email_subscription", subscription_id, "update", update_data, admin)
+    return {"message": "Subscription updated"}
+
+
+@api_router.delete("/admin/subscriptions/{subscription_id}")
+async def delete_subscription(subscription_id: str, admin: dict = Depends(get_current_admin)):
+    """Soft delete subscription"""
+    result = await db.email_subscriptions.update_one(
+        {"id": subscription_id},
+        {"$set": {"is_deleted": True, "updated_at": get_ist_isoformat()}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    
+    await log_audit("email_subscription", subscription_id, "delete", {"is_deleted": True}, admin)
+    return {"message": "Subscription deleted"}
+
+
+@api_router.get("/admin/subscriptions/{subscription_id}/tickets")
+async def get_subscription_tickets(
+    subscription_id: str,
+    status: Optional[str] = None,
+    limit: int = Query(default=50, le=200),
+    admin: dict = Depends(get_current_admin)
+):
+    """Get tickets for a subscription"""
+    query = {"subscription_id": subscription_id, "is_deleted": {"$ne": True}}
+    if status:
+        query["status"] = status
+    
+    tickets = await db.subscription_tickets.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    return tickets
+
+
+@api_router.post("/admin/subscriptions/{subscription_id}/tickets")
+async def create_subscription_ticket_admin(
+    subscription_id: str,
+    subject: str = Form(...),
+    description: str = Form(...),
+    issue_type: str = Form("other"),
+    priority: str = Form("medium"),
+    admin: dict = Depends(get_current_admin)
+):
+    """Create ticket for subscription issue (admin)"""
+    # Get subscription
+    sub = await db.email_subscriptions.find_one({"id": subscription_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    
+    # Get company
+    company = await db.companies.find_one({"id": sub.get("company_id")}, {"_id": 0})
+    
+    # Generate ticket number
+    ticket_number = f"SUB-{get_ist_now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}"
+    
+    ticket_data = {
+        "ticket_number": ticket_number,
+        "subscription_id": subscription_id,
+        "company_id": sub.get("company_id"),
+        "subject": subject,
+        "description": description,
+        "issue_type": issue_type,
+        "priority": priority,
+        "status": "open",
+        "reported_by": admin.get("id", "admin"),
+        "reported_by_name": admin.get("name", "Admin"),
+        "reported_by_email": admin.get("email", "")
+    }
+    
+    ticket = SubscriptionTicket(**ticket_data)
+    await db.subscription_tickets.insert_one(ticket.model_dump())
+    
+    # Create osTicket
+    osticket_result = await create_osticket(
+        email=admin.get("email", sub.get("admin_email", "")),
+        name=admin.get("name", "Admin"),
+        subject=f"[{sub.get('provider_name')}] {subject}",
+        message=f"""
+        <h3>Email/Cloud Subscription Issue</h3>
+        <p><strong>Ticket:</strong> {ticket_number}</p>
+        
+        <h4>Subscription Details</h4>
+        <ul>
+            <li><strong>Provider:</strong> {sub.get('provider_name')}</li>
+            <li><strong>Domain:</strong> {sub.get('domain')}</li>
+            <li><strong>Company:</strong> {company.get('name') if company else 'Unknown'}</li>
+            <li><strong>Plan:</strong> {sub.get('plan_name', sub.get('plan_type'))}</li>
+            <li><strong>Users:</strong> {sub.get('num_users')}</li>
+        </ul>
+        
+        <h4>Issue Details</h4>
+        <ul>
+            <li><strong>Type:</strong> {issue_type.replace('_', ' ').title()}</li>
+            <li><strong>Priority:</strong> {priority.title()}</li>
+            <li><strong>Description:</strong><br/>{description}</li>
+        </ul>
+        """,
+        phone=""
+    )
+    
+    if osticket_result.get("ticket_id"):
+        await db.subscription_tickets.update_one(
+            {"id": ticket.id},
+            {"$set": {"osticket_id": osticket_result["ticket_id"]}}
+        )
+    
+    result = ticket.model_dump()
+    result["osticket_id"] = osticket_result.get("ticket_id")
+    return result
+
+
 # ==================== COMPANY PORTAL ENDPOINTS ====================
 
 # --- Company Auth ---
