@@ -9,7 +9,7 @@ import { BulkImport } from '../../components/ui/bulk-import';
 import { toast } from 'sonner';
 import { SmartSelect } from '../../components/ui/smart-select';
 import { DateDurationInput } from '../../components/ui/date-duration-input';
-import { QuickCreateCompany, QuickCreateUser, QuickCreateMaster } from '../../components/forms';
+import { QuickCreateCompany, QuickCreateUser, QuickCreateMaster, QuickCreateEmployee } from '../../components/forms';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
