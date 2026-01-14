@@ -563,6 +563,10 @@ const Subscriptions = () => {
                             <Mail className="h-4 w-4 mr-2" />
                             View Details
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openUserChangeModal(sub)}>
+                            <Users className="h-4 w-4 mr-2" />
+                            Manage Users
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEditModal(sub)}>
                             <Edit2 className="h-4 w-4 mr-2" />
                             Edit
