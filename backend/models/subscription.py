@@ -102,3 +102,28 @@ class SubscriptionTicketCreate(BaseModel):
     description: str
     issue_type: str = "other"
     priority: str = "medium"
+
+
+class SubscriptionUserChange(BaseModel):
+    """Track user additions/removals for a subscription"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    subscription_id: str
+    change_type: str  # "add" or "remove"
+    user_count: int  # Number of users added/removed
+    previous_count: int  # User count before change
+    new_count: int  # User count after change
+    effective_date: str  # When the change took effect
+    reason: Optional[str] = None  # e.g., "New hires", "Resignations", "Department expansion"
+    notes: Optional[str] = None
+    changed_by: str  # Admin user ID who made the change
+    changed_by_name: str  # Admin user name
+    created_at: str = Field(default_factory=get_ist_isoformat)
+
+
+class SubscriptionUserChangeCreate(BaseModel):
+    change_type: str  # "add" or "remove"
+    user_count: int  # Number of users to add/remove
+    effective_date: str
+    reason: Optional[str] = None
+    notes: Optional[str] = None
