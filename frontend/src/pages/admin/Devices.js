@@ -213,7 +213,7 @@ const Devices = () => {
 
     const submitData = { ...formData };
     // Clean up optional fields
-    ['assigned_user_id', 'asset_tag', 'warranty_end_date', 'vendor', 'location', 'notes'].forEach(field => {
+    ['assigned_user_id', 'assigned_employee_id', 'asset_tag', 'warranty_end_date', 'vendor', 'location', 'notes', 'configuration'].forEach(field => {
       if (!submitData[field]) delete submitData[field];
     });
     if (submitData.purchase_cost) {
