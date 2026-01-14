@@ -126,3 +126,44 @@ class CompanyUserRegister(BaseModel):
 class CompanyLogin(BaseModel):
     email: str
     password: str
+
+
+# ==================== Company Employees (Device Users) ====================
+
+class CompanyEmployee(BaseModel):
+    """Employees who can be assigned to devices (different from portal users)"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    company_id: str
+    employee_id: Optional[str] = None  # Company's internal employee ID
+    name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    department: Optional[str] = None
+    designation: Optional[str] = None
+    location: Optional[str] = None  # Office location, floor, desk
+    is_active: bool = True
+    is_deleted: bool = False
+    created_at: str = Field(default_factory=get_ist_isoformat)
+
+
+class CompanyEmployeeCreate(BaseModel):
+    company_id: str
+    employee_id: Optional[str] = None
+    name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    department: Optional[str] = None
+    designation: Optional[str] = None
+    location: Optional[str] = None
+
+
+class CompanyEmployeeUpdate(BaseModel):
+    employee_id: Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    department: Optional[str] = None
+    designation: Optional[str] = None
+    location: Optional[str] = None
+    is_active: Optional[bool] = None
