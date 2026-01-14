@@ -37,8 +37,10 @@ const Subscriptions = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
+  const [userChangeModalOpen, setUserChangeModalOpen] = useState(false);
   const [selectedSubscription, setSelectedSubscription] = useState(null);
   const [editingSubscription, setEditingSubscription] = useState(null);
+  const [userChanges, setUserChanges] = useState([]);
   
   // Master data from API
   const [providers, setProviders] = useState([]);
@@ -68,6 +70,14 @@ const Subscriptions = () => {
     description: '',
     issue_type: 'other',
     priority: 'medium'
+  });
+
+  const [userChangeData, setUserChangeData] = useState({
+    change_type: 'add',
+    user_count: 1,
+    effective_date: new Date().toISOString().split('T')[0],
+    reason: '',
+    notes: ''
   });
 
   // Fetch master data on mount
