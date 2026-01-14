@@ -201,6 +201,63 @@ const Subscriptions = () => {
     setTicketModalOpen(true);
   };
 
+  const openUserChangeModal = async (subscription) => {
+    setSelectedSubscription(subscription);
+    setUserChangeData({
+      change_type: 'add',
+      user_count: 1,
+      effective_date: new Date().toISOString().split('T')[0],
+      reason: '',
+      notes: ''
+    });
+    // Fetch user change history
+    try {
+      const res = await axios.get(`${API}/admin/subscriptions/${subscription.id}/user-changes`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUserChanges(res.data);
+    } catch (error) {
+      setUserChanges([]);
+    }
+    setUserChangeModalOpen(true);
+  };
+
+  const handleUserChange = async (e) => {
+    e.preventDefault();
+    if (!userChangeData.user_count || userChangeData.user_count < 1) {
+      toast.error('Please enter a valid user count');
+      return;
+    }
+
+    try {
+      await axios.post(`${API}/admin/subscriptions/${selectedSubscription.id}/user-changes`, userChangeData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(`Successfully ${userChangeData.change_type === 'add' ? 'added' : 'removed'} ${userChangeData.user_count} user(s)`);
+      fetchData();
+      // Refresh history
+      const res = await axios.get(`${API}/admin/subscriptions/${selectedSubscription.id}/user-changes`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUserChanges(res.data);
+      // Update selected subscription
+      const subRes = await axios.get(`${API}/admin/subscriptions/${selectedSubscription.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSelectedSubscription(subRes.data);
+      // Reset form
+      setUserChangeData({
+        change_type: 'add',
+        user_count: 1,
+        effective_date: new Date().toISOString().split('T')[0],
+        reason: '',
+        notes: ''
+      });
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update users');
+    }
+  };
+
   const closeModal = () => {
     setModalOpen(false);
     setEditingSubscription(null);
