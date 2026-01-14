@@ -2282,7 +2282,9 @@ async def create_device(device_data: DeviceCreate, admin: dict = Depends(get_cur
     if existing:
         raise HTTPException(status_code=400, detail="Serial number already exists")
     
-    device = Device(**device_data.model_dump())
+    # Filter out None values to avoid validation errors with default_factory fields
+    device_dict = {k: v for k, v in device_data.model_dump().items() if v is not None}
+    device = Device(**device_dict)
     await db.devices.insert_one(device.model_dump())
     
     # Log initial assignment if user is assigned
