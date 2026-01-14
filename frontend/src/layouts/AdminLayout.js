@@ -15,6 +15,7 @@ const navItems = [
   { path: '/admin/companies', label: 'Companies', icon: Building2 },
   { path: '/admin/sites', label: 'Sites', icon: MapPin },
   { path: '/admin/users', label: 'Users', icon: Users },
+  { path: '/admin/employees', label: 'Employees', icon: UserCircle },
   { path: '/admin/devices', label: 'Devices', icon: Laptop },
   { path: '/admin/deployments', label: 'Deployments', icon: Package },
   { path: '/admin/parts', label: 'Parts', icon: Wrench },
