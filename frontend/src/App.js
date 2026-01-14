@@ -32,6 +32,7 @@ import SupplyProducts from "./pages/admin/SupplyProducts";
 import SupplyOrders from "./pages/admin/SupplyOrders";
 import Employees from "./pages/admin/Employees";
 import EmployeeDetails from "./pages/admin/EmployeeDetails";
+import AdminDeviceDetails from "./pages/admin/AdminDeviceDetails";
 import Subscriptions from "./pages/admin/Subscriptions";
 
 // Company Portal Pages
