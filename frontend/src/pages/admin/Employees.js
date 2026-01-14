@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Search, Edit2, Trash2, Users, MoreVertical, Building2, Upload, Download, User } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Users, MoreVertical, Building2, Upload, Download, User, Eye } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '../../components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { SmartSelect } from '../../components/ui/smart-select';
 import { QuickCreateCompany } from '../../components/forms';
@@ -12,6 +13,7 @@ import { QuickCreateCompany } from '../../components/forms';
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const Employees = () => {
+  const navigate = useNavigate();
   const { token } = useAuth();
   const [employees, setEmployees] = useState([]);
   const [companies, setCompanies] = useState([]);
