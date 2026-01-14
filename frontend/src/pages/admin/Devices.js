@@ -721,9 +721,10 @@ const Devices = () => {
                     <tr 
                       key={device.id} 
                       data-testid={`device-row-${device.id}`}
-                      className={isSelected ? 'bg-blue-50/50' : ''}
+                      className={`${isSelected ? 'bg-blue-50/50' : ''} hover:bg-slate-50 cursor-pointer`}
+                      onClick={() => navigate(`/admin/devices/${device.id}`)}
                     >
-                      <td>
+                      <td onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={isSelected}
