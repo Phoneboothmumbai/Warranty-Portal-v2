@@ -77,6 +77,10 @@ from models.supplies import (
     SupplyProduct, SupplyProductCreate, SupplyProductUpdate,
     SupplyOrderItem, SupplyOrderLocation, SupplyOrder
 )
+from models.subscription import (
+    EmailSubscription, EmailSubscriptionCreate, EmailSubscriptionUpdate,
+    SubscriptionTicket, SubscriptionTicketCreate
+)
 
 # Create the main app
 app = FastAPI(title="Warranty & Asset Tracking Portal")
