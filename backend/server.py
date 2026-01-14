@@ -2149,13 +2149,11 @@ async def bulk_import_company_employees(
 async def download_employee_template(admin: dict = Depends(get_current_admin)):
     """Download CSV template for bulk employee import"""
     import csv
+    import io
     
-    buffer = BytesIO()
-    # Write UTF-8 BOM for Excel compatibility
-    buffer.write(b'\xef\xbb\xbf')
-    
-    wrapper = __import__('io').TextIOWrapper(buffer, encoding='utf-8', newline='')
-    writer = csv.writer(wrapper)
+    # Create CSV content as string first
+    output = io.StringIO()
+    writer = csv.writer(output)
     
     # Header row
     writer.writerow(['company_code', 'name', 'employee_id', 'email', 'phone', 'department', 'designation', 'location'])
@@ -2165,7 +2163,11 @@ async def download_employee_template(admin: dict = Depends(get_current_admin)):
     writer.writerow(['ACME001', 'Jane Doe', 'EMP002', 'jane.doe@acme.com', '9876543211', 'HR', 'Manager', 'Floor 1, Cabin 3'])
     writer.writerow(['ACME001', 'Bob Wilson', '', 'bob@acme.com', '', 'Sales', '', ''])
     
-    wrapper.flush()
+    # Convert to bytes with UTF-8 BOM for Excel compatibility
+    csv_content = output.getvalue()
+    buffer = BytesIO()
+    buffer.write(b'\xef\xbb\xbf')  # UTF-8 BOM
+    buffer.write(csv_content.encode('utf-8'))
     buffer.seek(0)
     
     return StreamingResponse(
