@@ -89,6 +89,33 @@ async def seed_default_masters():
         {"type": "duration_unit", "name": "Days", "code": "DAYS", "description": "Calendar days", "sort_order": 1},
         {"type": "duration_unit", "name": "Months", "code": "MONTHS", "description": "Calendar months", "sort_order": 2},
         {"type": "duration_unit", "name": "Years", "code": "YEARS", "description": "Calendar years", "sort_order": 3},
+        
+        # Subscription Providers
+        {"type": "subscription_provider", "name": "Google Workspace", "code": "GOOGLE_WORKSPACE", "description": "Google's business email and productivity suite", "sort_order": 1},
+        {"type": "subscription_provider", "name": "Microsoft 365", "code": "MICROSOFT_365", "description": "Microsoft's cloud productivity suite", "sort_order": 2},
+        {"type": "subscription_provider", "name": "Titan Email", "code": "TITAN", "description": "Professional email hosting by Titan", "sort_order": 3},
+        {"type": "subscription_provider", "name": "Zoho Mail", "code": "ZOHO", "description": "Zoho's business email service", "sort_order": 4},
+        {"type": "subscription_provider", "name": "Other", "code": "OTHER", "description": "Other email/cloud provider", "sort_order": 99},
+        
+        # Subscription Plans
+        {"type": "subscription_plan", "name": "Business Starter", "code": "BUSINESS_STARTER", "description": "Entry-level business plan", "sort_order": 1},
+        {"type": "subscription_plan", "name": "Business Standard", "code": "BUSINESS_STANDARD", "description": "Standard business plan", "sort_order": 2},
+        {"type": "subscription_plan", "name": "Business Plus", "code": "BUSINESS_PLUS", "description": "Advanced business plan", "sort_order": 3},
+        {"type": "subscription_plan", "name": "Business Premium", "code": "BUSINESS_PREMIUM", "description": "Premium business plan", "sort_order": 4},
+        {"type": "subscription_plan", "name": "Enterprise Starter", "code": "ENTERPRISE_STARTER", "description": "Entry-level enterprise plan", "sort_order": 5},
+        {"type": "subscription_plan", "name": "Enterprise Standard", "code": "ENTERPRISE_STANDARD", "description": "Standard enterprise plan", "sort_order": 6},
+        {"type": "subscription_plan", "name": "Enterprise Plus", "code": "ENTERPRISE_PLUS", "description": "Advanced enterprise plan", "sort_order": 7},
+        {"type": "subscription_plan", "name": "E3", "code": "E3", "description": "Microsoft Enterprise E3", "sort_order": 8},
+        {"type": "subscription_plan", "name": "E5", "code": "E5", "description": "Microsoft Enterprise E5", "sort_order": 9},
+        {"type": "subscription_plan", "name": "Lite", "code": "LITE", "description": "Basic/Lite plan", "sort_order": 10},
+        {"type": "subscription_plan", "name": "Premium", "code": "PREMIUM", "description": "Premium tier plan", "sort_order": 11},
+        {"type": "subscription_plan", "name": "Custom", "code": "CUSTOM", "description": "Custom/Other plan", "sort_order": 99},
+        
+        # Billing Cycles
+        {"type": "billing_cycle", "name": "Monthly", "code": "MONTHLY", "description": "Billed every month", "sort_order": 1},
+        {"type": "billing_cycle", "name": "Quarterly", "code": "QUARTERLY", "description": "Billed every 3 months", "sort_order": 2},
+        {"type": "billing_cycle", "name": "Half Yearly", "code": "HALF_YEARLY", "description": "Billed every 6 months", "sort_order": 3},
+        {"type": "billing_cycle", "name": "Yearly", "code": "YEARLY", "description": "Billed annually", "sort_order": 4},
     ]
     
     for item in defaults:
