@@ -22,6 +22,10 @@ const MASTER_TYPES = [
   { type: 'asset_status', label: 'Asset Statuses', icon: Tag, description: 'Active, In Repair, Retired' },
   { type: 'brand', label: 'Brands', icon: Tag, description: 'Dell, HP, Lenovo, etc.' },
   { type: 'duration_unit', label: 'Duration Units', icon: RefreshCw, description: 'Days, Months, Years' },
+  { type: 'divider', label: 'Subscriptions' },
+  { type: 'subscription_provider', label: 'Providers', icon: Settings2, description: 'Google Workspace, Microsoft 365, etc.' },
+  { type: 'subscription_plan', label: 'Plans', icon: Tag, description: 'Business Starter, Enterprise, etc.' },
+  { type: 'billing_cycle', label: 'Billing Cycles', icon: RefreshCw, description: 'Monthly, Yearly, etc.' },
 ];
 
 const MasterData = () => {
@@ -191,7 +195,14 @@ const MasterData = () => {
 
       {/* Type Tabs */}
       <div className="bg-white rounded-xl border border-slate-100 p-1 flex flex-wrap gap-1">
-        {MASTER_TYPES.map((type) => {
+        {MASTER_TYPES.map((type, index) => {
+          if (type.type === 'divider') {
+            return (
+              <div key={`divider-${index}`} className="flex items-center px-2">
+                <span className="text-xs text-slate-400 font-medium uppercase">{type.label}</span>
+              </div>
+            );
+          }
           const Icon = type.icon;
           return (
             <button
