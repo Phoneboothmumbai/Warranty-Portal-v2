@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Plus, Search, Edit2, Trash2, Mail, MoreVertical, Building2, Calendar, Users, AlertTriangle, CheckCircle, Clock, Globe, DollarSign, Ticket } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Mail, MoreVertical, Building2, Calendar, Users, AlertTriangle, CheckCircle, Clock, Globe, DollarSign, Ticket, UserPlus, UserMinus, History } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
