@@ -812,7 +812,7 @@ const Devices = () => {
                           {device.status?.replace('_', ' ')}
                         </span>
                       </td>
-                      <td>
+                      <td onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
@@ -820,7 +820,7 @@ const Devices = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openDetailModal(device)}>
+                            <DropdownMenuItem onClick={() => navigate(`/admin/devices/${device.id}`)}>
                               <Eye className="h-4 w-4 mr-2" />
                               View Details
                             </DropdownMenuItem>
