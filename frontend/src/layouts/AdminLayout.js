@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Building2, Users, Laptop, Wrench, 
-  FileCheck, Settings, LogOut, Shield, Menu, X, ChevronRight, Database, History, FileText, MapPin, Package, Key, ShoppingBag, ClipboardList, UserCircle, Mail, Keyboard, Layers, AlertTriangle
+  FileCheck, Settings, LogOut, Shield, Menu, X, ChevronRight, ChevronDown, Database, History, FileText, MapPin, Package, Key, ShoppingBag, ClipboardList, UserCircle, Mail, Keyboard, Layers, AlertTriangle, Briefcase, HardDrive, FileBarChart
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -10,30 +10,71 @@ import { useSettings } from '../context/SettingsContext';
 import { Button } from '../components/ui/button';
 import UniversalSearch from '../components/UniversalSearch';
 
-const navItems = [
-  { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/admin/renewal-alerts', label: 'Renewal Alerts', icon: AlertTriangle },
-  { path: '/admin/companies', label: 'Companies', icon: Building2 },
-  { path: '/admin/sites', label: 'Sites', icon: MapPin },
-  { path: '/admin/users', label: 'Users', icon: Users },
-  { path: '/admin/employees', label: 'Employees', icon: UserCircle },
-  { path: '/admin/subscriptions', label: 'Subscriptions', icon: Mail },
-  { type: 'divider', label: 'Assets' },
-  { path: '/admin/devices', label: 'Devices', icon: Laptop },
-  { path: '/admin/accessories', label: 'Accessories', icon: Keyboard },
-  { path: '/admin/asset-groups', label: 'Asset Groups', icon: Layers },
-  { path: '/admin/deployments', label: 'Deployments', icon: Package },
-  { path: '/admin/parts', label: 'Parts', icon: Wrench },
-  { path: '/admin/licenses', label: 'Licenses', icon: Key },
-  { path: '/admin/service-history', label: 'Service History', icon: History },
-  { path: '/admin/amc-contracts', label: 'AMC Contracts', icon: FileText },
-  { type: 'divider', label: 'Office Supplies' },
-  { path: '/admin/supply-products', label: 'Products', icon: ShoppingBag },
-  { path: '/admin/supply-orders', label: 'Orders', icon: ClipboardList },
-  { type: 'divider', label: 'Settings' },
-  { path: '/admin/master-data', label: 'Master Data', icon: Database },
-  { path: '/admin/settings', label: 'Settings', icon: Settings },
+// Grouped navigation structure
+const navGroups = [
+  {
+    id: 'main',
+    items: [
+      { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { path: '/admin/renewal-alerts', label: 'Renewal Alerts', icon: AlertTriangle },
+    ]
+  },
+  {
+    id: 'organization',
+    label: 'Organization',
+    icon: Building2,
+    items: [
+      { path: '/admin/companies', label: 'Companies', icon: Building2 },
+      { path: '/admin/sites', label: 'Sites', icon: MapPin },
+      { path: '/admin/users', label: 'Users', icon: Users },
+      { path: '/admin/employees', label: 'Employees', icon: UserCircle },
+    ]
+  },
+  {
+    id: 'assets',
+    label: 'Assets',
+    icon: Laptop,
+    items: [
+      { path: '/admin/devices', label: 'Devices', icon: Laptop },
+      { path: '/admin/accessories', label: 'Accessories', icon: Keyboard },
+      { path: '/admin/asset-groups', label: 'Asset Groups', icon: Layers },
+      { path: '/admin/parts', label: 'Parts', icon: Wrench },
+      { path: '/admin/deployments', label: 'Deployments', icon: Package },
+    ]
+  },
+  {
+    id: 'contracts',
+    label: 'Contracts & Licenses',
+    icon: FileText,
+    items: [
+      { path: '/admin/licenses', label: 'Licenses', icon: Key },
+      { path: '/admin/amc-contracts', label: 'AMC Contracts', icon: FileText },
+      { path: '/admin/subscriptions', label: 'Subscriptions', icon: Mail },
+      { path: '/admin/service-history', label: 'Service History', icon: History },
+    ]
+  },
+  {
+    id: 'supplies',
+    label: 'Office Supplies',
+    icon: ShoppingBag,
+    items: [
+      { path: '/admin/supply-products', label: 'Products', icon: ShoppingBag },
+      { path: '/admin/supply-orders', label: 'Orders', icon: ClipboardList },
+    ]
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    icon: Settings,
+    items: [
+      { path: '/admin/master-data', label: 'Master Data', icon: Database },
+      { path: '/admin/settings', label: 'Settings', icon: Settings },
+    ]
+  },
 ];
+
+// Flatten for finding current page
+const allNavItems = navGroups.flatMap(g => g.items);
 
 const AdminLayout = () => {
   const { admin, loading, isAuthenticated, logout, authError } = useAuth();
@@ -41,6 +82,11 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState(() => {
+    // Auto-expand group containing current path
+    const currentGroup = navGroups.find(g => g.items.some(i => location.pathname.startsWith(i.path)));
+    return currentGroup ? { [currentGroup.id]: true } : { main: true };
+  });
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
