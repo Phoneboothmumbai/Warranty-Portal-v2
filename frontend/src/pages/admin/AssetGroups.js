@@ -392,7 +392,7 @@ const AssetGroups = () => {
                 <SmartSelect
                   value={formData.company_id}
                   onValueChange={(val) => setFormData({ ...formData, company_id: val, device_ids: [], accessory_ids: [], primary_device_id: '' })}
-                  options={companies.map(c => ({ value: c.id, label: c.name }))}
+                  options={companies.map(c => ({ id: c.id, label: c.name }))}
                   placeholder="Select company"
                   quickCreate={<QuickCreateCompany onCreated={(c) => { setCompanies([...companies, c]); setFormData({ ...formData, company_id: c.id }); }} />}
                 />
