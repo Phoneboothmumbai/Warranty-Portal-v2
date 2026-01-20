@@ -43,6 +43,9 @@ class SupplyProduct(BaseModel):
     name: str
     description: Optional[str] = None
     unit: str = "piece"
+    price: Optional[float] = None  # Price per unit
+    image_url: Optional[str] = None  # Product image URL
+    sku: Optional[str] = None  # Stock Keeping Unit
     internal_notes: Optional[str] = None
     is_active: bool = True
     is_deleted: bool = False
@@ -54,6 +57,9 @@ class SupplyProductCreate(BaseModel):
     name: str
     description: Optional[str] = None
     unit: str = "piece"
+    price: Optional[float] = None
+    image_url: Optional[str] = None
+    sku: Optional[str] = None
     internal_notes: Optional[str] = None
 
 
@@ -62,6 +68,9 @@ class SupplyProductUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     unit: Optional[str] = None
+    price: Optional[float] = None
+    image_url: Optional[str] = None
+    sku: Optional[str] = None
     internal_notes: Optional[str] = None
     is_active: Optional[bool] = None
 
