@@ -3,7 +3,7 @@ import axios from 'axios';
 import { 
   Plus, Search, Edit2, Trash2, Settings2, X, MoreVertical, 
   Laptop, Wrench, Activity, CheckCircle, Tag, RefreshCw,
-  ChevronDown, ChevronRight, GripVertical
+  ChevronDown, ChevronRight, GripVertical, Layers, Keyboard
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
