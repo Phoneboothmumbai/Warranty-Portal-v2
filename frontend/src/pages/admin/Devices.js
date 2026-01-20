@@ -71,6 +71,17 @@ const Devices = () => {
   // Checkbox selection for bulk QR
   const [selectedDeviceIds, setSelectedDeviceIds] = useState(new Set());
   
+  // Asset Transfer modal state
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [transferDevice, setTransferDevice] = useState(null);
+  const [transferData, setTransferData] = useState({
+    to_employee_id: '',
+    transfer_date: new Date().toISOString().split('T')[0],
+    reason: '',
+    notes: ''
+  });
+  const [transferLoading, setTransferLoading] = useState(false);
+  
   // Master data
   const [deviceTypes, setDeviceTypes] = useState([]);
   const [brands, setBrands] = useState([]);
