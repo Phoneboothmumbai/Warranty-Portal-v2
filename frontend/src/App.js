@@ -90,6 +90,9 @@ function App() {
                     <Route path="subscriptions" element={<Subscriptions />} />
                     <Route path="devices" element={<Devices />} />
                     <Route path="devices/:deviceId" element={<AdminDeviceDetails />} />
+                    <Route path="accessories" element={<Accessories />} />
+                    <Route path="asset-groups" element={<AssetGroups />} />
+                    <Route path="renewal-alerts" element={<RenewalAlerts />} />
                     <Route path="parts" element={<Parts />} />
                     <Route path="amc" element={<AMCManagement />} />
                     <Route path="amc-contracts" element={<AMCContracts />} />
