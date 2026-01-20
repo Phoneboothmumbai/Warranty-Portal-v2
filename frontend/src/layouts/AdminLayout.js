@@ -133,6 +133,7 @@ const AdminLayout = () => {
     if (currentGroup && !expandedGroups[currentGroup.id]) {
       setExpandedGroups(prev => ({ ...prev, [currentGroup.id]: true }));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
   const currentPage = allNavItems.find(item => location.pathname.startsWith(item.path))?.label || 'Dashboard';
