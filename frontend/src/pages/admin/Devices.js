@@ -888,6 +888,10 @@ const Devices = () => {
                               <History className="h-4 w-4 mr-2" />
                               Service History
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openTransferModal(device)}>
+                              <ArrowRightLeft className="h-4 w-4 mr-2" />
+                              Transfer Asset
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleDownloadQR(device)}>
                               <QrCode className="h-4 w-4 mr-2" />
