@@ -396,7 +396,9 @@ const SupplyProducts = () => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Product</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Category</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">SKU</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Unit</th>
+              <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase">Price</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Status</th>
               <th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase">Actions</th>
             </tr>
@@ -404,7 +406,7 @@ const SupplyProducts = () => {
           <tbody className="divide-y divide-slate-100">
             {filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
                   <Package className="h-12 w-12 mx-auto text-slate-300 mb-3" />
                   <p>No products found</p>
                 </td>
@@ -414,13 +416,21 @@ const SupplyProducts = () => {
                 <tr key={product.id} className="hover:bg-slate-50">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-                        <Box className="h-5 w-5 text-slate-400" />
-                      </div>
+                      {product.image_url ? (
+                        <img 
+                          src={product.image_url} 
+                          alt={product.name}
+                          className="w-12 h-12 object-cover rounded-lg border border-slate-200"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
+                          <Box className="h-6 w-6 text-slate-400" />
+                        </div>
+                      )}
                       <div>
                         <p className="font-medium text-slate-900">{product.name}</p>
                         {product.description && (
-                          <p className="text-sm text-slate-500">{product.description}</p>
+                          <p className="text-sm text-slate-500 line-clamp-1">{product.description}</p>
                         )}
                       </div>
                     </div>
@@ -430,7 +440,17 @@ const SupplyProducts = () => {
                       {product.category_name || getCategoryName(product.category_id)}
                     </span>
                   </td>
+                  <td className="px-6 py-4 text-slate-600 text-sm">
+                    {product.sku || '-'}
+                  </td>
                   <td className="px-6 py-4 text-slate-600">{product.unit}</td>
+                  <td className="px-6 py-4 text-right">
+                    {product.price ? (
+                      <span className="font-semibold text-slate-900">₹{product.price.toLocaleString('en-IN')}</span>
+                    ) : (
+                      <span className="text-slate-400">-</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
                       product.is_active 
