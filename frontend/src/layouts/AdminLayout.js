@@ -120,7 +120,22 @@ const AdminLayout = () => {
     navigate('/admin/login');
   };
 
-  const currentPage = navItems.find(item => location.pathname.startsWith(item.path))?.label || 'Dashboard';
+  const toggleGroup = (groupId) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [groupId]: !prev[groupId]
+    }));
+  };
+
+  // Auto-expand group when navigating
+  useEffect(() => {
+    const currentGroup = navGroups.find(g => g.items.some(i => location.pathname.startsWith(i.path)));
+    if (currentGroup && !expandedGroups[currentGroup.id]) {
+      setExpandedGroups(prev => ({ ...prev, [currentGroup.id]: true }));
+    }
+  }, [location.pathname]);
+
+  const currentPage = allNavItems.find(item => location.pathname.startsWith(item.path))?.label || 'Dashboard';
 
   return (
     <div className="min-h-screen bg-slate-50">
