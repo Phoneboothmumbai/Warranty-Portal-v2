@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Plus, Search, Edit2, Trash2, Laptop, MoreVertical, Building2, User, Calendar, Eye, History, FileText, Shield, CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink, MapPin, Package, X, QrCode, Download } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Laptop, MoreVertical, Building2, User, Calendar, Eye, History, FileText, Shield, CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink, MapPin, Package, X, QrCode, Download, ArrowRightLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
