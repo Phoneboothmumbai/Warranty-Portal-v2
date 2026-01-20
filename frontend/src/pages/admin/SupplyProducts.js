@@ -499,25 +499,89 @@ const SupplyProducts = () => {
 
       {/* Product Modal */}
       <Dialog open={productModalOpen} onOpenChange={setProductModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingProduct ? 'Edit Product' : 'Add Product'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleProductSubmit} className="space-y-4 mt-4">
+            {/* Image Upload */}
             <div>
-              <label className="form-label">Category *</label>
-              <select
-                value={productForm.category_id}
-                onChange={(e) => setProductForm({ ...productForm, category_id: e.target.value })}
-                className="form-select"
-                required
-              >
-                <option value="">Select category...</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
-                ))}
-              </select>
+              <label className="form-label">Product Image</label>
+              <div className="flex items-start gap-4">
+                {productForm.image_url ? (
+                  <div className="relative">
+                    <img 
+                      src={productForm.image_url} 
+                      alt="Product" 
+                      className="w-24 h-24 object-cover rounded-lg border border-slate-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setProductForm({ ...productForm, image_url: '' })}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                    >
+                      <XCircle className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="w-24 h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition-colors">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      disabled={imageUploading}
+                    />
+                    {imageUploading ? (
+                      <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Upload className="h-6 w-6 text-slate-400" />
+                        <span className="text-xs text-slate-500 mt-1">Upload</span>
+                      </>
+                    )}
+                  </label>
+                )}
+                <div className="flex-1">
+                  <p className="text-sm text-slate-500">Or enter image URL:</p>
+                  <input
+                    type="url"
+                    value={productForm.image_url}
+                    onChange={(e) => setProductForm({ ...productForm, image_url: e.target.value })}
+                    className="form-input mt-1"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                </div>
+              </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">Category *</label>
+                <select
+                  value={productForm.category_id}
+                  onChange={(e) => setProductForm({ ...productForm, category_id: e.target.value })}
+                  className="form-select"
+                  required
+                >
+                  <option value="">Select category...</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">SKU</label>
+                <input
+                  type="text"
+                  value={productForm.sku}
+                  onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })}
+                  className="form-input"
+                  placeholder="e.g., A4-500-WHT"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="form-label">Product Name *</label>
               <input
@@ -539,26 +603,45 @@ const SupplyProducts = () => {
                 placeholder="Optional description"
               />
             </div>
-            <div>
-              <label className="form-label">Unit</label>
-              <select
-                value={productForm.unit}
-                onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })}
-                className="form-select"
-              >
-                <option value="piece">Piece</option>
-                <option value="pack">Pack</option>
-                <option value="box">Box</option>
-                <option value="ream">Ream</option>
-                <option value="set">Set</option>
-                <option value="cartridge">Cartridge</option>
-                <option value="roll">Roll</option>
-                <option value="bottle">Bottle</option>
-                <option value="pack of 10">Pack of 10</option>
-                <option value="pack of 50">Pack of 50</option>
-                <option value="pack of 100">Pack of 100</option>
-              </select>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">Unit</label>
+                <select
+                  value={productForm.unit}
+                  onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })}
+                  className="form-select"
+                >
+                  <option value="piece">Piece</option>
+                  <option value="pack">Pack</option>
+                  <option value="box">Box</option>
+                  <option value="ream">Ream</option>
+                  <option value="set">Set</option>
+                  <option value="cartridge">Cartridge</option>
+                  <option value="roll">Roll</option>
+                  <option value="bottle">Bottle</option>
+                  <option value="pack of 10">Pack of 10</option>
+                  <option value="pack of 50">Pack of 50</option>
+                  <option value="pack of 100">Pack of 100</option>
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Price (₹)</label>
+                <div className="relative">
+                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input
+                    type="number"
+                    value={productForm.price}
+                    onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                    className="form-input pl-9"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
             </div>
+
             <div>
               <label className="form-label">Internal Notes (Admin only)</label>
               <textarea
