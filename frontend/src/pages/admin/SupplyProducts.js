@@ -166,13 +166,18 @@ const SupplyProducts = () => {
     }
 
     try {
+      const payload = {
+        ...productForm,
+        price: productForm.price ? parseFloat(productForm.price) : null
+      };
+
       if (editingProduct) {
-        await axios.put(`${API}/admin/supply-products/${editingProduct.id}`, productForm, {
+        await axios.put(`${API}/admin/supply-products/${editingProduct.id}`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Product updated');
       } else {
-        await axios.post(`${API}/admin/supply-products`, productForm, {
+        await axios.post(`${API}/admin/supply-products`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Product created');
