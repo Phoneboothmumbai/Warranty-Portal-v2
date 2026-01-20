@@ -87,6 +87,15 @@ const AdminLayout = () => {
     return currentGroup ? { [currentGroup.id]: true } : { main: true };
   });
 
+  // Auto-expand group when navigating - must be before any early returns
+  useEffect(() => {
+    const currentGroup = navGroups.find(g => g.items.some(i => location.pathname.startsWith(i.path)));
+    if (currentGroup && !expandedGroups[currentGroup.id]) {
+      setExpandedGroups(prev => ({ ...prev, [currentGroup.id]: true }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       // Store the intended destination to redirect after login
@@ -125,15 +134,6 @@ const AdminLayout = () => {
       [groupId]: !prev[groupId]
     }));
   };
-
-  // Auto-expand group when navigating
-  useEffect(() => {
-    const currentGroup = navGroups.find(g => g.items.some(i => location.pathname.startsWith(i.path)));
-    if (currentGroup && !expandedGroups[currentGroup.id]) {
-      setExpandedGroups(prev => ({ ...prev, [currentGroup.id]: true }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
 
   const currentPage = allNavItems.find(item => location.pathname.startsWith(item.path))?.label || 'Dashboard';
 
