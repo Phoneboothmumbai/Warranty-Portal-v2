@@ -5542,6 +5542,332 @@ async def get_subscription_user_summary(
     }
 
 
+# ==================== ASSET GROUPS & ACCESSORIES ====================
+
+from models.asset_group import (
+    AssetGroup, AssetGroupCreate, AssetGroupUpdate,
+    Accessory, AccessoryCreate, AccessoryUpdate
+)
+
+# --- Asset Groups ---
+
+@api_router.get("/admin/asset-groups")
+async def list_asset_groups(
+    company_id: str = None,
+    group_type: str = None,
+    status: str = None,
+    limit: int = 100,
+    admin: dict = Depends(get_current_admin)
+):
+    """List all asset groups with optional filters"""
+    query = {"is_deleted": {"$ne": True}}
+    if company_id:
+        query["company_id"] = company_id
+    if group_type:
+        query["group_type"] = group_type
+    if status:
+        query["status"] = status
+    
+    groups = await db.asset_groups.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    
+    # Enrich with company names and device counts
+    for group in groups:
+        company = await db.companies.find_one({"id": group.get("company_id")}, {"_id": 0, "name": 1})
+        group["company_name"] = company.get("name") if company else "Unknown"
+        group["device_count"] = len(group.get("device_ids", []))
+        group["accessory_count"] = len(group.get("accessory_ids", []))
+    
+    return groups
+
+
+@api_router.post("/admin/asset-groups")
+async def create_asset_group(group_data: AssetGroupCreate, admin: dict = Depends(get_current_admin)):
+    """Create a new asset group"""
+    group = AssetGroup(**group_data.model_dump())
+    await db.asset_groups.insert_one(group.model_dump())
+    return group.model_dump()
+
+
+@api_router.get("/admin/asset-groups/{group_id}")
+async def get_asset_group(group_id: str, admin: dict = Depends(get_current_admin)):
+    """Get asset group with all linked devices and accessories"""
+    group = await db.asset_groups.find_one({"id": group_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not group:
+        raise HTTPException(status_code=404, detail="Asset group not found")
+    
+    # Get company
+    company = await db.companies.find_one({"id": group.get("company_id")}, {"_id": 0, "name": 1})
+    group["company_name"] = company.get("name") if company else "Unknown"
+    
+    # Get linked devices
+    device_ids = group.get("device_ids", [])
+    devices = []
+    if device_ids:
+        devices = await db.devices.find({"id": {"$in": device_ids}, "is_deleted": {"$ne": True}}, {"_id": 0}).to_list(100)
+    group["devices"] = devices
+    
+    # Get linked accessories
+    accessory_ids = group.get("accessory_ids", [])
+    accessories = []
+    if accessory_ids:
+        accessories = await db.accessories.find({"id": {"$in": accessory_ids}, "is_deleted": {"$ne": True}}, {"_id": 0}).to_list(100)
+    group["accessories"] = accessories
+    
+    # Get primary device
+    if group.get("primary_device_id"):
+        primary = await db.devices.find_one({"id": group["primary_device_id"]}, {"_id": 0})
+        group["primary_device"] = primary
+    
+    return group
+
+
+@api_router.put("/admin/asset-groups/{group_id}")
+async def update_asset_group(group_id: str, update_data: AssetGroupUpdate, admin: dict = Depends(get_current_admin)):
+    """Update an asset group"""
+    group = await db.asset_groups.find_one({"id": group_id, "is_deleted": {"$ne": True}})
+    if not group:
+        raise HTTPException(status_code=404, detail="Asset group not found")
+    
+    update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
+    update_dict["updated_at"] = get_ist_isoformat()
+    
+    await db.asset_groups.update_one({"id": group_id}, {"$set": update_dict})
+    return {"message": "Asset group updated", "id": group_id}
+
+
+@api_router.delete("/admin/asset-groups/{group_id}")
+async def delete_asset_group(group_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete an asset group (soft delete)"""
+    result = await db.asset_groups.update_one(
+        {"id": group_id},
+        {"$set": {"is_deleted": True, "updated_at": get_ist_isoformat()}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Asset group not found")
+    return {"message": "Asset group deleted"}
+
+
+@api_router.post("/admin/asset-groups/{group_id}/add-devices")
+async def add_devices_to_group(group_id: str, device_ids: List[str], admin: dict = Depends(get_current_admin)):
+    """Add devices to an asset group"""
+    group = await db.asset_groups.find_one({"id": group_id, "is_deleted": {"$ne": True}})
+    if not group:
+        raise HTTPException(status_code=404, detail="Asset group not found")
+    
+    current_ids = set(group.get("device_ids", []))
+    current_ids.update(device_ids)
+    
+    await db.asset_groups.update_one(
+        {"id": group_id},
+        {"$set": {"device_ids": list(current_ids), "updated_at": get_ist_isoformat()}}
+    )
+    return {"message": f"Added {len(device_ids)} devices to group"}
+
+
+@api_router.post("/admin/asset-groups/{group_id}/remove-devices")
+async def remove_devices_from_group(group_id: str, device_ids: List[str], admin: dict = Depends(get_current_admin)):
+    """Remove devices from an asset group"""
+    group = await db.asset_groups.find_one({"id": group_id, "is_deleted": {"$ne": True}})
+    if not group:
+        raise HTTPException(status_code=404, detail="Asset group not found")
+    
+    current_ids = set(group.get("device_ids", []))
+    current_ids.difference_update(device_ids)
+    
+    await db.asset_groups.update_one(
+        {"id": group_id},
+        {"$set": {"device_ids": list(current_ids), "updated_at": get_ist_isoformat()}}
+    )
+    return {"message": f"Removed devices from group"}
+
+
+# --- Accessories ---
+
+@api_router.get("/admin/accessories")
+async def list_accessories(
+    company_id: str = None,
+    accessory_type: str = None,
+    status: str = None,
+    assigned_employee_id: str = None,
+    limit: int = 200,
+    admin: dict = Depends(get_current_admin)
+):
+    """List all accessories with optional filters"""
+    query = {"is_deleted": {"$ne": True}}
+    if company_id:
+        query["company_id"] = company_id
+    if accessory_type:
+        query["accessory_type"] = accessory_type
+    if status:
+        query["status"] = status
+    if assigned_employee_id:
+        query["assigned_employee_id"] = assigned_employee_id
+    
+    accessories = await db.accessories.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    
+    # Enrich with company and employee names
+    for acc in accessories:
+        company = await db.companies.find_one({"id": acc.get("company_id")}, {"_id": 0, "name": 1})
+        acc["company_name"] = company.get("name") if company else "Unknown"
+        
+        if acc.get("assigned_employee_id"):
+            emp = await db.company_employees.find_one({"id": acc["assigned_employee_id"]}, {"_id": 0, "name": 1})
+            acc["assigned_employee_name"] = emp.get("name") if emp else None
+    
+    return accessories
+
+
+@api_router.post("/admin/accessories")
+async def create_accessory(acc_data: AccessoryCreate, admin: dict = Depends(get_current_admin)):
+    """Create a new accessory"""
+    accessory = Accessory(**acc_data.model_dump())
+    await db.accessories.insert_one(accessory.model_dump())
+    return accessory.model_dump()
+
+
+@api_router.get("/admin/accessories/{accessory_id}")
+async def get_accessory(accessory_id: str, admin: dict = Depends(get_current_admin)):
+    """Get accessory details"""
+    acc = await db.accessories.find_one({"id": accessory_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not acc:
+        raise HTTPException(status_code=404, detail="Accessory not found")
+    return acc
+
+
+@api_router.put("/admin/accessories/{accessory_id}")
+async def update_accessory(accessory_id: str, update_data: AccessoryUpdate, admin: dict = Depends(get_current_admin)):
+    """Update an accessory"""
+    acc = await db.accessories.find_one({"id": accessory_id, "is_deleted": {"$ne": True}})
+    if not acc:
+        raise HTTPException(status_code=404, detail="Accessory not found")
+    
+    update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
+    update_dict["updated_at"] = get_ist_isoformat()
+    
+    await db.accessories.update_one({"id": accessory_id}, {"$set": update_dict})
+    return {"message": "Accessory updated", "id": accessory_id}
+
+
+@api_router.delete("/admin/accessories/{accessory_id}")
+async def delete_accessory(accessory_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete an accessory (soft delete)"""
+    result = await db.accessories.update_one(
+        {"id": accessory_id},
+        {"$set": {"is_deleted": True, "updated_at": get_ist_isoformat()}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Accessory not found")
+    return {"message": "Accessory deleted"}
+
+
+# --- Renewal Alerts ---
+
+@api_router.get("/admin/renewal-alerts")
+async def get_renewal_alerts(
+    days: int = 90,
+    company_id: str = None,
+    admin: dict = Depends(get_current_admin)
+):
+    """Get all items expiring within specified days (warranties, AMC, licenses, subscriptions)"""
+    from datetime import datetime, timedelta
+    
+    today = datetime.now().date()
+    cutoff_date = (today + timedelta(days=days)).isoformat()
+    today_str = today.isoformat()
+    
+    alerts = {
+        "warranties": [],
+        "amc_contracts": [],
+        "licenses": [],
+        "subscriptions": [],
+        "summary": {
+            "critical": 0,  # < 30 days
+            "warning": 0,   # 30-60 days
+            "notice": 0     # 60-90 days
+        }
+    }
+    
+    # Base query
+    base_query = {"is_deleted": {"$ne": True}}
+    if company_id:
+        base_query["company_id"] = company_id
+    
+    # 1. Expiring Warranties (Devices)
+    warranty_query = {
+        **base_query,
+        "warranty_end_date": {"$gte": today_str, "$lte": cutoff_date}
+    }
+    devices = await db.devices.find(warranty_query, {"_id": 0}).to_list(500)
+    for d in devices:
+        end_date = datetime.fromisoformat(d["warranty_end_date"]).date()
+        days_left = (end_date - today).days
+        d["days_left"] = days_left
+        d["alert_type"] = "critical" if days_left <= 30 else ("warning" if days_left <= 60 else "notice")
+        d["item_type"] = "warranty"
+        alerts["warranties"].append(d)
+        alerts["summary"][d["alert_type"]] += 1
+    
+    # 2. Expiring AMC Contracts
+    amc_query = {
+        **base_query,
+        "end_date": {"$gte": today_str, "$lte": cutoff_date}
+    }
+    amcs = await db.amc_contracts.find(amc_query, {"_id": 0}).to_list(200)
+    for a in amcs:
+        end_date = datetime.fromisoformat(a["end_date"]).date()
+        days_left = (end_date - today).days
+        a["days_left"] = days_left
+        a["alert_type"] = "critical" if days_left <= 30 else ("warning" if days_left <= 60 else "notice")
+        a["item_type"] = "amc"
+        alerts["amc_contracts"].append(a)
+        alerts["summary"][a["alert_type"]] += 1
+    
+    # 3. Expiring Licenses
+    license_query = {
+        **base_query,
+        "expiry_date": {"$gte": today_str, "$lte": cutoff_date}
+    }
+    licenses = await db.licenses.find(license_query, {"_id": 0}).to_list(200)
+    for l in licenses:
+        end_date = datetime.fromisoformat(l["expiry_date"]).date()
+        days_left = (end_date - today).days
+        l["days_left"] = days_left
+        l["alert_type"] = "critical" if days_left <= 30 else ("warning" if days_left <= 60 else "notice")
+        l["item_type"] = "license"
+        alerts["licenses"].append(l)
+        alerts["summary"][l["alert_type"]] += 1
+    
+    # 4. Expiring Subscriptions
+    sub_query = {
+        **base_query,
+        "renewal_date": {"$gte": today_str, "$lte": cutoff_date}
+    }
+    subs = await db.email_subscriptions.find(sub_query, {"_id": 0}).to_list(100)
+    for s in subs:
+        end_date = datetime.fromisoformat(s["renewal_date"]).date()
+        days_left = (end_date - today).days
+        s["days_left"] = days_left
+        s["alert_type"] = "critical" if days_left <= 30 else ("warning" if days_left <= 60 else "notice")
+        s["item_type"] = "subscription"
+        alerts["subscriptions"].append(s)
+        alerts["summary"][s["alert_type"]] += 1
+    
+    # Sort each by days_left
+    alerts["warranties"].sort(key=lambda x: x["days_left"])
+    alerts["amc_contracts"].sort(key=lambda x: x["days_left"])
+    alerts["licenses"].sort(key=lambda x: x["days_left"])
+    alerts["subscriptions"].sort(key=lambda x: x["days_left"])
+    
+    alerts["total_alerts"] = (
+        len(alerts["warranties"]) + 
+        len(alerts["amc_contracts"]) + 
+        len(alerts["licenses"]) + 
+        len(alerts["subscriptions"])
+    )
+    
+    return alerts
+
+
 # ==================== COMPANY PORTAL ENDPOINTS ====================
 
 # --- Company Auth ---
