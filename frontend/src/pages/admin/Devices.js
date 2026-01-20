@@ -270,6 +270,51 @@ const Devices = () => {
     }
   };
 
+  // Asset Transfer functions
+  const openTransferModal = async (device) => {
+    setTransferDevice(device);
+    setTransferData({
+      to_employee_id: '',
+      transfer_date: new Date().toISOString().split('T')[0],
+      reason: '',
+      notes: ''
+    });
+    setTransferModalOpen(true);
+  };
+
+  const handleTransfer = async (e) => {
+    e.preventDefault();
+    if (!transferDevice) return;
+
+    setTransferLoading(true);
+    try {
+      const payload = {
+        asset_type: 'device',
+        asset_id: transferDevice.id,
+        to_employee_id: transferData.to_employee_id || null,  // null means unassigning
+        transfer_date: transferData.transfer_date,
+        reason: transferData.reason || 'Asset Transfer',
+        notes: transferData.notes
+      };
+
+      await axios.post(`${API}/admin/asset-transfers`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      toast.success(transferData.to_employee_id 
+        ? 'Device transferred successfully' 
+        : 'Device unassigned successfully'
+      );
+      setTransferModalOpen(false);
+      setTransferDevice(null);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to transfer device');
+    } finally {
+      setTransferLoading(false);
+    }
+  };
+
   const handleBulkImport = async (records) => {
     const response = await axios.post(`${API}/admin/bulk-import/devices`, 
       { records },
