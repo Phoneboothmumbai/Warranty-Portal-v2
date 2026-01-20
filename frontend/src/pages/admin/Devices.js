@@ -1825,6 +1825,141 @@ const Devices = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Asset Transfer Modal */}
+      <Dialog open={transferModalOpen} onOpenChange={setTransferModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowRightLeft className="h-5 w-5 text-blue-600" />
+              Transfer Device
+            </DialogTitle>
+          </DialogHeader>
+          {transferDevice && (
+            <form onSubmit={handleTransfer} className="mt-4 space-y-4">
+              {/* Device Info */}
+              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                <Laptop className="h-8 w-8 text-slate-400" />
+                <div>
+                  <p className="font-medium text-slate-900">
+                    {transferDevice.brand} {transferDevice.model}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    SN: {transferDevice.serial_number}
+                  </p>
+                  {transferDevice.assigned_employee_name && (
+                    <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      Currently: {transferDevice.assigned_employee_name}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Transfer To Employee */}
+              <div>
+                <label className="form-label">Transfer To *</label>
+                <SmartSelect
+                  value={transferData.to_employee_id}
+                  onValueChange={(value) => setTransferData({ ...transferData, to_employee_id: value })}
+                  placeholder="Select Employee (or leave empty to unassign)"
+                  searchPlaceholder="Search employees..."
+                  emptyText="No employees found"
+                  fetchOptions={async (q) => {
+                    const res = await axios.get(`${API}/admin/company-employees`, {
+                      params: { q, company_id: transferDevice.company_id, limit: 20 },
+                      headers: { Authorization: `Bearer ${token}` }
+                    });
+                    return res.data;
+                  }}
+                  displayKey="name"
+                  valueKey="id"
+                  allowClear
+                  data-testid="transfer-employee-select"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Leave empty to unassign the device from any employee
+                </p>
+              </div>
+
+              {/* Transfer Date */}
+              <div>
+                <label className="form-label">Transfer Date *</label>
+                <input
+                  type="date"
+                  value={transferData.transfer_date}
+                  onChange={(e) => setTransferData({ ...transferData, transfer_date: e.target.value })}
+                  className="form-input"
+                  required
+                  data-testid="transfer-date-input"
+                />
+              </div>
+
+              {/* Reason */}
+              <div>
+                <label className="form-label">Reason</label>
+                <select
+                  value={transferData.reason}
+                  onChange={(e) => setTransferData({ ...transferData, reason: e.target.value })}
+                  className="form-select"
+                  data-testid="transfer-reason-select"
+                >
+                  <option value="">Select Reason</option>
+                  <option value="New Assignment">New Assignment</option>
+                  <option value="Department Transfer">Department Transfer</option>
+                  <option value="Employee Resignation">Employee Resignation</option>
+                  <option value="Equipment Upgrade">Equipment Upgrade</option>
+                  <option value="Reallocation">Reallocation</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="form-label">Notes</label>
+                <textarea
+                  value={transferData.notes}
+                  onChange={(e) => setTransferData({ ...transferData, notes: e.target.value })}
+                  className="form-input"
+                  rows={2}
+                  placeholder="Additional notes about this transfer..."
+                  data-testid="transfer-notes-input"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setTransferModalOpen(false)}
+                  disabled={transferLoading}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="bg-[#0F62FE] hover:bg-[#0043CE] text-white"
+                  disabled={transferLoading}
+                  data-testid="transfer-submit-btn"
+                >
+                  {transferLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      Transferring...
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRightLeft className="h-4 w-4 mr-2" />
+                      {transferData.to_employee_id ? 'Transfer Device' : 'Unassign Device'}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
