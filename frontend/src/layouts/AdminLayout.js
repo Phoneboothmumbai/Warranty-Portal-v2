@@ -201,28 +201,65 @@ const AdminLayout = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {navItems.map((item, index) => (
-              item.type === 'divider' ? (
-                <div key={`divider-${index}`} className="pt-4 pb-2">
-                  <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    {item.label}
-                  </p>
-                </div>
-              ) : (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setSidebarOpen(false)}
-                  className={({ isActive }) => `
-                    sidebar-link ${isActive ? 'active' : ''}
-                  `}
-                  data-testid={`nav-${item.label.toLowerCase()}`}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </NavLink>
-              )
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+            {navGroups.map((group) => (
+              <div key={group.id}>
+                {/* Main items without group header */}
+                {group.id === 'main' ? (
+                  group.items.map((item) => (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setSidebarOpen(false)}
+                      className={({ isActive }) => `
+                        sidebar-link ${isActive ? 'active' : ''}
+                      `}
+                      data-testid={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                    </NavLink>
+                  ))
+                ) : (
+                  <>
+                    {/* Collapsible group header */}
+                    <button
+                      onClick={() => toggleGroup(group.id)}
+                      className="w-full flex items-center justify-between px-3 py-2 mt-2 text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <group.icon className="h-3.5 w-3.5" />
+                        <span className="uppercase tracking-wider">{group.label}</span>
+                      </div>
+                      {expandedGroups[group.id] ? (
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      ) : (
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                    
+                    {/* Group items */}
+                    {expandedGroups[group.id] && (
+                      <div className="ml-2 pl-2 border-l border-slate-100 space-y-0.5">
+                        {group.items.map((item) => (
+                          <NavLink
+                            key={item.path}
+                            to={item.path}
+                            onClick={() => setSidebarOpen(false)}
+                            className={({ isActive }) => `
+                              sidebar-link text-sm py-1.5 ${isActive ? 'active' : ''}
+                            `}
+                            data-testid={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}
+                          >
+                            <item.icon className="h-3.5 w-3.5" />
+                            {item.label}
+                          </NavLink>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             ))}
           </nav>
 
