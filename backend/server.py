@@ -5681,6 +5681,150 @@ async def remove_devices_from_group(group_id: str, device_ids: List[str], admin:
     return {"message": f"Removed devices from group"}
 
 
+# --- Asset Transfer ---
+
+class AssetTransfer(BaseModel):
+    """Record of asset transfer between employees"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    asset_type: str  # "device" or "accessory"
+    asset_id: str
+    from_employee_id: Optional[str] = None
+    from_employee_name: Optional[str] = None
+    to_employee_id: Optional[str] = None
+    to_employee_name: Optional[str] = None
+    transfer_date: str
+    reason: Optional[str] = None
+    notes: Optional[str] = None
+    transferred_by: str  # Admin user ID
+    transferred_by_name: str
+    created_at: str = Field(default_factory=get_ist_isoformat)
+
+
+class AssetTransferRequest(BaseModel):
+    asset_type: str  # "device" or "accessory"
+    asset_id: str
+    to_employee_id: Optional[str] = None  # None means unassign
+    transfer_date: str
+    reason: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@api_router.post("/admin/asset-transfers")
+async def transfer_asset(transfer_data: AssetTransferRequest, admin: dict = Depends(get_current_admin)):
+    """Transfer an asset (device or accessory) to another employee"""
+    
+    # Get current asset info
+    if transfer_data.asset_type == "device":
+        asset = await db.devices.find_one({"id": transfer_data.asset_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+        if not asset:
+            raise HTTPException(status_code=404, detail="Device not found")
+        from_employee_id = asset.get("assigned_employee_id")
+        collection = db.devices
+        update_field = "assigned_employee_id"
+    elif transfer_data.asset_type == "accessory":
+        asset = await db.accessories.find_one({"id": transfer_data.asset_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+        if not asset:
+            raise HTTPException(status_code=404, detail="Accessory not found")
+        from_employee_id = asset.get("assigned_employee_id")
+        collection = db.accessories
+        update_field = "assigned_employee_id"
+    else:
+        raise HTTPException(status_code=400, detail="Invalid asset_type. Must be 'device' or 'accessory'")
+    
+    # Get employee names
+    from_employee_name = None
+    if from_employee_id:
+        from_emp = await db.company_employees.find_one({"id": from_employee_id}, {"_id": 0, "name": 1})
+        from_employee_name = from_emp.get("name") if from_emp else None
+    
+    to_employee_name = None
+    if transfer_data.to_employee_id:
+        to_emp = await db.company_employees.find_one({"id": transfer_data.to_employee_id}, {"_id": 0, "name": 1})
+        if not to_emp:
+            raise HTTPException(status_code=404, detail="Target employee not found")
+        to_employee_name = to_emp.get("name")
+    
+    # Create transfer record
+    transfer = AssetTransfer(
+        asset_type=transfer_data.asset_type,
+        asset_id=transfer_data.asset_id,
+        from_employee_id=from_employee_id,
+        from_employee_name=from_employee_name,
+        to_employee_id=transfer_data.to_employee_id,
+        to_employee_name=to_employee_name,
+        transfer_date=transfer_data.transfer_date,
+        reason=transfer_data.reason,
+        notes=transfer_data.notes,
+        transferred_by=admin.get("id", "admin"),
+        transferred_by_name=admin.get("name", "Admin")
+    )
+    
+    await db.asset_transfers.insert_one(transfer.model_dump())
+    
+    # Update the asset
+    update_data = {
+        update_field: transfer_data.to_employee_id,
+        "updated_at": get_ist_isoformat()
+    }
+    
+    # Update status based on assignment
+    if transfer_data.asset_type == "accessory":
+        update_data["status"] = "assigned" if transfer_data.to_employee_id else "available"
+    
+    await collection.update_one({"id": transfer_data.asset_id}, {"$set": update_data})
+    
+    result = transfer.model_dump()
+    result["message"] = f"Asset transferred from {from_employee_name or 'Unassigned'} to {to_employee_name or 'Unassigned'}"
+    return result
+
+
+@api_router.get("/admin/asset-transfers")
+async def list_asset_transfers(
+    asset_type: str = None,
+    asset_id: str = None,
+    employee_id: str = None,
+    limit: int = 100,
+    admin: dict = Depends(get_current_admin)
+):
+    """Get asset transfer history"""
+    query = {}
+    if asset_type:
+        query["asset_type"] = asset_type
+    if asset_id:
+        query["asset_id"] = asset_id
+    if employee_id:
+        query["$or"] = [
+            {"from_employee_id": employee_id},
+            {"to_employee_id": employee_id}
+        ]
+    
+    transfers = await db.asset_transfers.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    
+    # Enrich with asset details
+    for t in transfers:
+        if t["asset_type"] == "device":
+            device = await db.devices.find_one({"id": t["asset_id"]}, {"_id": 0, "brand": 1, "model": 1, "serial_number": 1, "device_type": 1})
+            if device:
+                t["asset_name"] = f"{device.get('brand', '')} {device.get('model', device.get('device_type', ''))}"
+                t["asset_serial"] = device.get("serial_number")
+        elif t["asset_type"] == "accessory":
+            acc = await db.accessories.find_one({"id": t["asset_id"]}, {"_id": 0, "name": 1, "brand": 1})
+            if acc:
+                t["asset_name"] = acc.get("name")
+    
+    return transfers
+
+
+@api_router.get("/admin/assets/{asset_type}/{asset_id}/transfer-history")
+async def get_asset_transfer_history(asset_type: str, asset_id: str, admin: dict = Depends(get_current_admin)):
+    """Get transfer history for a specific asset"""
+    transfers = await db.asset_transfers.find(
+        {"asset_type": asset_type, "asset_id": asset_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return transfers
+
+
 # --- Accessories ---
 
 @api_router.get("/admin/accessories")
