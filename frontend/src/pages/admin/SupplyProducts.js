@@ -94,6 +94,9 @@ const SupplyProducts = () => {
         name: product.name,
         description: product.description || '',
         unit: product.unit || 'piece',
+        price: product.price || '',
+        image_url: product.image_url || '',
+        sku: product.sku || '',
         internal_notes: product.internal_notes || ''
       });
     } else {
@@ -103,10 +106,56 @@ const SupplyProducts = () => {
         name: '',
         description: '',
         unit: 'piece',
+        price: '',
+        image_url: '',
+        sku: '',
         internal_notes: ''
       });
     }
     setProductModalOpen(true);
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image size should be less than 2MB');
+      return;
+    }
+
+    setImageUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await axios.post(`${API}/upload/image`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      setProductForm({ ...productForm, image_url: response.data.url });
+      toast.success('Image uploaded');
+    } catch (error) {
+      // If upload endpoint doesn't exist, use base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProductForm({ ...productForm, image_url: reader.result });
+        toast.success('Image added');
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setImageUploading(false);
+    }
   };
 
   const handleProductSubmit = async (e) => {
