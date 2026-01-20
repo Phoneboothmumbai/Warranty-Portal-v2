@@ -34,6 +34,9 @@ import Employees from "./pages/admin/Employees";
 import EmployeeDetails from "./pages/admin/EmployeeDetails";
 import AdminDeviceDetails from "./pages/admin/AdminDeviceDetails";
 import Subscriptions from "./pages/admin/Subscriptions";
+import Accessories from "./pages/admin/Accessories";
+import AssetGroups from "./pages/admin/AssetGroups";
+import RenewalAlerts from "./pages/admin/RenewalAlerts";
 
 // Company Portal Pages
 import CompanyLayout from "./layouts/CompanyLayout";
