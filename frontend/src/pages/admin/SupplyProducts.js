@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { 
   Plus, Search, Edit2, Trash2, Package, MoreVertical, FolderOpen, 
-  CheckCircle, XCircle, Tag, Box
+  CheckCircle, XCircle, Tag, Box, Upload, Image, IndianRupee
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
@@ -19,12 +19,14 @@ const bulkImportColumns = [
   { key: 'category', label: 'Category', required: true, example: 'Stationery' },
   { key: 'description', label: 'Description', required: false, example: 'High quality printing paper' },
   { key: 'unit', label: 'Unit', required: false, example: 'ream' },
+  { key: 'price', label: 'Price', required: false, example: '250' },
+  { key: 'sku', label: 'SKU', required: false, example: 'A4-500-WHT' },
   { key: 'internal_notes', label: 'Internal Notes', required: false, example: 'Vendor: XYZ, Cost: Rs 250' },
 ];
 
 const productSampleData = [
-  { name: 'A4 Paper (500 sheets)', category: 'Stationery', description: 'High quality printing paper', unit: 'ream', internal_notes: 'Vendor: XYZ' },
-  { name: 'Black Toner HP 26A', category: 'Printer Consumables', description: 'Compatible with HP LaserJet Pro', unit: 'cartridge', internal_notes: 'High yield' },
+  { name: 'A4 Paper (500 sheets)', category: 'Stationery', description: 'High quality printing paper', unit: 'ream', price: '250', sku: 'A4-500', internal_notes: 'Vendor: XYZ' },
+  { name: 'Black Toner HP 26A', category: 'Printer Consumables', description: 'Compatible with HP LaserJet Pro', unit: 'cartridge', price: '3500', sku: 'HP-26A-BLK', internal_notes: 'High yield' },
 ];
 
 const SupplyProducts = () => {
