@@ -25,7 +25,7 @@ from reportlab.lib.units import inch
 import shutil
 import json
 import qrcode
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Import from modular structure
 from config import ROOT_DIR, UPLOAD_DIR, OSTICKET_URL, OSTICKET_API_KEY, SECRET_KEY, ALGORITHM, IST
