@@ -83,7 +83,34 @@ async def seed_default_masters():
         {"type": "brand", "name": "Cisco", "code": "CISCO", "sort_order": 12},
         {"type": "brand", "name": "TP-Link", "code": "TPLINK", "sort_order": 13},
         {"type": "brand", "name": "APC", "code": "APC", "sort_order": 14},
+        {"type": "brand", "name": "Logitech", "code": "LOGITECH", "sort_order": 15},
+        {"type": "brand", "name": "Microsoft", "code": "MICROSOFT", "sort_order": 16},
         {"type": "brand", "name": "Other", "code": "OTHER", "sort_order": 99},
+        
+        # Accessory Types
+        {"type": "accessory_type", "name": "Keyboard", "code": "KEYBOARD", "sort_order": 1},
+        {"type": "accessory_type", "name": "Mouse", "code": "MOUSE", "sort_order": 2},
+        {"type": "accessory_type", "name": "Headset", "code": "HEADSET", "sort_order": 3},
+        {"type": "accessory_type", "name": "Webcam", "code": "WEBCAM", "sort_order": 4},
+        {"type": "accessory_type", "name": "Monitor Stand", "code": "MONITOR_STAND", "sort_order": 5},
+        {"type": "accessory_type", "name": "Laptop Stand", "code": "LAPTOP_STAND", "sort_order": 6},
+        {"type": "accessory_type", "name": "Docking Station", "code": "DOCKING_STATION", "sort_order": 7},
+        {"type": "accessory_type", "name": "USB Hub", "code": "USB_HUB", "sort_order": 8},
+        {"type": "accessory_type", "name": "Power Adapter", "code": "POWER_ADAPTER", "sort_order": 9},
+        {"type": "accessory_type", "name": "Cable", "code": "CABLE", "sort_order": 10},
+        {"type": "accessory_type", "name": "External HDD", "code": "EXTERNAL_HDD", "sort_order": 11},
+        {"type": "accessory_type", "name": "Pen Drive", "code": "PEN_DRIVE", "sort_order": 12},
+        {"type": "accessory_type", "name": "Memory Card", "code": "MEMORY_CARD", "sort_order": 13},
+        {"type": "accessory_type", "name": "Bag/Case", "code": "BAG_CASE", "sort_order": 14},
+        {"type": "accessory_type", "name": "Other", "code": "OTHER", "sort_order": 99},
+        
+        # Asset Group Types
+        {"type": "asset_group_type", "name": "Workstation", "code": "WORKSTATION", "description": "Desktop setup with CPU, Monitor, KB, Mouse", "sort_order": 1},
+        {"type": "asset_group_type", "name": "CCTV System", "code": "CCTV_SYSTEM", "description": "NVR with cameras and storage", "sort_order": 2},
+        {"type": "asset_group_type", "name": "Server Rack", "code": "SERVER_RACK", "description": "Server with UPS, switches", "sort_order": 3},
+        {"type": "asset_group_type", "name": "Network Setup", "code": "NETWORK_SETUP", "description": "Router, switches, access points", "sort_order": 4},
+        {"type": "asset_group_type", "name": "Conference Room", "code": "CONFERENCE_ROOM", "description": "Display, camera, speaker system", "sort_order": 5},
+        {"type": "asset_group_type", "name": "Custom", "code": "CUSTOM", "description": "Custom grouping", "sort_order": 99},
         
         # Duration Units (for warranty/AMC/license calculations)
         {"type": "duration_unit", "name": "Days", "code": "DAYS", "description": "Calendar days", "sort_order": 1},
