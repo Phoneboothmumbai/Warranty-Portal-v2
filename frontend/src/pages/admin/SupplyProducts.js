@@ -45,8 +45,12 @@ const SupplyProducts = () => {
     name: '',
     description: '',
     unit: 'piece',
+    price: '',
+    image_url: '',
+    sku: '',
     internal_notes: ''
   });
+  const [imageUploading, setImageUploading] = useState(false);
 
   // Category modal
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
