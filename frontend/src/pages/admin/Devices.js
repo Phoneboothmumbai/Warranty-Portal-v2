@@ -523,7 +523,8 @@ const Devices = () => {
       status: device.status,
       notes: device.notes || '',
       configuration: device.configuration || '',
-      consumables: device.consumables || []
+      consumables: device.consumables || [],
+      credentials: device.credentials || null
     });
     await fetchCompanyUsers(device.company_id);
     setModalOpen(true);
