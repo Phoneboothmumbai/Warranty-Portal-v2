@@ -81,6 +81,9 @@ from models.subscription import (
     EmailSubscription, EmailSubscriptionCreate, EmailSubscriptionUpdate,
     SubscriptionTicket, SubscriptionTicketCreate
 )
+from models.internet_service import (
+    InternetService, InternetServiceCreate, InternetServiceUpdate
+)
 
 # Create the main app
 app = FastAPI(title="Warranty & Asset Tracking Portal")
