@@ -102,6 +102,8 @@ function App() {
                     <Route path="deployments" element={<Deployments />} />
                     <Route path="licenses" element={<Licenses />} />
                     <Route path="service-history" element={<ServiceHistory />} />
+                    <Route path="internet-services" element={<InternetServices />} />
+                    <Route path="credentials" element={<Credentials />} />
                     <Route path="supply-products" element={<SupplyProducts />} />
                     <Route path="supply-orders" element={<SupplyOrders />} />
                     <Route path="master-data" element={<MasterData />} />
