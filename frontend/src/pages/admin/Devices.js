@@ -1499,6 +1499,55 @@ const Devices = () => {
                 )}
               </div>
             )}
+
+            {/* Device Credentials Section - Show for network/security devices */}
+            {getCredentialConfig(formData.device_type) && (
+              <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg space-y-4">
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const config = getCredentialConfig(formData.device_type);
+                    const Icon = config?.icon || Key;
+                    return <Icon className="h-5 w-5 text-purple-600" />;
+                  })()}
+                  <h4 className="text-sm font-semibold text-purple-800 uppercase tracking-wider">
+                    {getCredentialConfig(formData.device_type)?.label || 'Device Credentials'}
+                  </h4>
+                </div>
+                <p className="text-xs text-purple-600">
+                  Store login credentials and access information for this device. This will appear in the Credentials Dashboard.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  {getCredentialConfig(formData.device_type)?.fields.map(field => (
+                    <div key={field.key} className={field.type === 'textarea' ? 'col-span-2' : ''}>
+                      <label className="text-xs font-medium text-purple-700">{field.label}</label>
+                      {field.type === 'textarea' ? (
+                        <textarea
+                          value={formData.credentials?.[field.key] || ''}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            credentials: { ...formData.credentials, [field.key]: e.target.value }
+                          })}
+                          className="form-input bg-white text-sm mt-1"
+                          rows={2}
+                          placeholder={field.placeholder}
+                        />
+                      ) : (
+                        <input
+                          type={field.type === 'password' ? 'text' : field.type}
+                          value={formData.credentials?.[field.key] || ''}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            credentials: { ...formData.credentials, [field.key]: e.target.value }
+                          })}
+                          className="form-input bg-white text-sm mt-1"
+                          placeholder={field.placeholder}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             
             <div className="flex justify-end gap-3 pt-4">
               <Button type="button" variant="outline" onClick={closeModal}>
