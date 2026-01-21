@@ -107,7 +107,9 @@ const Devices = () => {
     notes: '',
     configuration: '',  // NEW: Configuration for Laptops/Desktops/Tablets
     // Multiple consumables for printers
-    consumables: []
+    consumables: [],
+    // Device-specific credentials
+    credentials: null
   });
 
   useEffect(() => {
