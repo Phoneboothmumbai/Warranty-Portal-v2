@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Building2, Users, Laptop, Wrench, 
-  FileCheck, Settings, LogOut, Shield, Menu, X, ChevronRight, ChevronDown, Database, History, FileText, MapPin, Package, Key, ShoppingBag, ClipboardList, UserCircle, Mail, Keyboard, Layers, AlertTriangle, Briefcase, HardDrive, FileBarChart
+  FileCheck, Settings, LogOut, Shield, Menu, X, ChevronRight, ChevronDown, Database, History, FileText, MapPin, Package, Key, ShoppingBag, ClipboardList, UserCircle, Mail, Keyboard, Layers, AlertTriangle, Briefcase, HardDrive, FileBarChart, Globe, Lock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -16,6 +16,7 @@ const navGroups = [
     items: [
       { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { path: '/admin/renewal-alerts', label: 'Renewal Alerts', icon: AlertTriangle },
+      { path: '/admin/credentials', label: 'Credentials', icon: Lock },
     ]
   },
   {
@@ -49,6 +50,7 @@ const navGroups = [
       { path: '/admin/licenses', label: 'Licenses', icon: Key },
       { path: '/admin/amc-contracts', label: 'AMC Contracts', icon: FileText },
       { path: '/admin/subscriptions', label: 'Subscriptions', icon: Mail },
+      { path: '/admin/internet-services', label: 'Internet Services', icon: Globe },
       { path: '/admin/service-history', label: 'Service History', icon: History },
     ]
   },
