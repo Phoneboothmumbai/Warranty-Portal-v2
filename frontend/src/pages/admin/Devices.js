@@ -47,6 +47,143 @@ const emptyConsumable = {
   notes: ''
 };
 
+// Device type to credential fields mapping
+const deviceCredentialConfig = {
+  'cctv': {
+    label: 'CCTV / Camera Credentials',
+    icon: Camera,
+    fields: [
+      { key: 'ip_address', label: 'IP Address', type: 'text', placeholder: '192.168.1.100' },
+      { key: 'port', label: 'Port', type: 'text', placeholder: '8080' },
+      { key: 'login_url', label: 'Login URL', type: 'url', placeholder: 'http://192.168.1.100:8080' },
+      { key: 'username', label: 'Username', type: 'text', placeholder: 'admin' },
+      { key: 'password', label: 'Password', type: 'password', placeholder: 'Password' },
+      { key: 'notes', label: 'Access Notes', type: 'textarea', placeholder: 'How to access, VPN required, etc.' },
+    ]
+  },
+  'nvr': {
+    label: 'NVR / DVR Credentials',
+    icon: Camera,
+    fields: [
+      { key: 'ip_address', label: 'IP Address', type: 'text', placeholder: '192.168.1.50' },
+      { key: 'port', label: 'Port', type: 'text', placeholder: '8000' },
+      { key: 'login_url', label: 'Web Interface URL', type: 'url', placeholder: 'http://192.168.1.50' },
+      { key: 'username', label: 'Admin Username', type: 'text', placeholder: 'admin' },
+      { key: 'password', label: 'Admin Password', type: 'password', placeholder: 'Password' },
+      { key: 'app_url', label: 'Mobile App / Cloud URL', type: 'url', placeholder: 'https://app.example.com' },
+      { key: 'notes', label: 'Access Notes', type: 'textarea', placeholder: 'Number of cameras, storage info...' },
+    ]
+  },
+  'dvr': {
+    label: 'NVR / DVR Credentials',
+    icon: Camera,
+    fields: [
+      { key: 'ip_address', label: 'IP Address', type: 'text', placeholder: '192.168.1.50' },
+      { key: 'port', label: 'Port', type: 'text', placeholder: '8000' },
+      { key: 'login_url', label: 'Web Interface URL', type: 'url', placeholder: 'http://192.168.1.50' },
+      { key: 'username', label: 'Admin Username', type: 'text', placeholder: 'admin' },
+      { key: 'password', label: 'Admin Password', type: 'password', placeholder: 'Password' },
+      { key: 'app_url', label: 'Mobile App / Cloud URL', type: 'url', placeholder: 'https://app.example.com' },
+      { key: 'notes', label: 'Access Notes', type: 'textarea', placeholder: 'Number of cameras, storage info...' },
+    ]
+  },
+  'access point': {
+    label: 'Access Point / WiFi Credentials',
+    icon: Wifi,
+    fields: [
+      { key: 'ip_address', label: 'IP Address', type: 'text', placeholder: '192.168.1.1' },
+      { key: 'login_url', label: 'Admin Panel URL', type: 'url', placeholder: 'http://192.168.1.1' },
+      { key: 'username', label: 'Admin Username', type: 'text', placeholder: 'admin' },
+      { key: 'password', label: 'Admin Password', type: 'password', placeholder: 'Password' },
+      { key: 'wifi_ssid', label: 'WiFi Network Name (SSID)', type: 'text', placeholder: 'Office_WiFi' },
+      { key: 'wifi_password', label: 'WiFi Password', type: 'password', placeholder: 'WiFi Password' },
+      { key: 'app_url', label: 'Controller/App URL', type: 'url', placeholder: 'https://unifi.ui.com' },
+      { key: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Band, channel info...' },
+    ]
+  },
+  'router': {
+    label: 'Router Credentials',
+    icon: Globe,
+    fields: [
+      { key: 'ip_address', label: 'Router IP', type: 'text', placeholder: '192.168.1.1' },
+      { key: 'login_url', label: 'Admin Panel URL', type: 'url', placeholder: 'http://192.168.1.1' },
+      { key: 'username', label: 'Admin Username', type: 'text', placeholder: 'admin' },
+      { key: 'password', label: 'Admin Password', type: 'password', placeholder: 'Password' },
+      { key: 'wifi_ssid', label: 'WiFi SSID', type: 'text', placeholder: 'Network Name' },
+      { key: 'wifi_password', label: 'WiFi Password', type: 'password', placeholder: 'WiFi Password' },
+      { key: 'notes', label: 'Notes', type: 'textarea', placeholder: 'ISP info, port forwarding...' },
+    ]
+  },
+  'switch': {
+    label: 'Network Switch Credentials',
+    icon: Server,
+    fields: [
+      { key: 'ip_address', label: 'Management IP', type: 'text', placeholder: '192.168.1.2' },
+      { key: 'login_url', label: 'Web Interface URL', type: 'url', placeholder: 'http://192.168.1.2' },
+      { key: 'username', label: 'Username', type: 'text', placeholder: 'admin' },
+      { key: 'password', label: 'Password', type: 'password', placeholder: 'Password' },
+      { key: 'notes', label: 'Notes', type: 'textarea', placeholder: 'VLAN config, port assignments...' },
+    ]
+  },
+  'server': {
+    label: 'Server Credentials',
+    icon: Server,
+    fields: [
+      { key: 'ip_address', label: 'IP Address', type: 'text', placeholder: '192.168.1.10' },
+      { key: 'port', label: 'SSH/RDP Port', type: 'text', placeholder: '22 or 3389' },
+      { key: 'login_url', label: 'Admin Panel URL', type: 'url', placeholder: 'https://server.local:8443' },
+      { key: 'username', label: 'Admin Username', type: 'text', placeholder: 'administrator' },
+      { key: 'password', label: 'Admin Password', type: 'password', placeholder: 'Password' },
+      { key: 'notes', label: 'Notes', type: 'textarea', placeholder: 'OS, services running, VPN required...' },
+    ]
+  },
+  'firewall': {
+    label: 'Firewall Credentials',
+    icon: Shield,
+    fields: [
+      { key: 'ip_address', label: 'Management IP', type: 'text', placeholder: '192.168.1.1' },
+      { key: 'login_url', label: 'Admin Panel URL', type: 'url', placeholder: 'https://192.168.1.1' },
+      { key: 'username', label: 'Admin Username', type: 'text', placeholder: 'admin' },
+      { key: 'password', label: 'Admin Password', type: 'password', placeholder: 'Password' },
+      { key: 'notes', label: 'Notes', type: 'textarea', placeholder: 'VPN config, rules info...' },
+    ]
+  },
+  'access control': {
+    label: 'Access Control System Credentials',
+    icon: Lock,
+    fields: [
+      { key: 'ip_address', label: 'Controller IP', type: 'text', placeholder: '192.168.1.100' },
+      { key: 'login_url', label: 'Web Interface URL', type: 'url', placeholder: 'http://192.168.1.100' },
+      { key: 'username', label: 'Admin Username', type: 'text', placeholder: 'admin' },
+      { key: 'password', label: 'Admin Password', type: 'password', placeholder: 'Password' },
+      { key: 'app_url', label: 'Mobile App / Cloud URL', type: 'url', placeholder: 'https://app.example.com' },
+      { key: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Door names, zone info...' },
+    ]
+  },
+  'biometric': {
+    label: 'Biometric Device Credentials',
+    icon: Lock,
+    fields: [
+      { key: 'ip_address', label: 'Device IP', type: 'text', placeholder: '192.168.1.100' },
+      { key: 'port', label: 'Port', type: 'text', placeholder: '4370' },
+      { key: 'login_url', label: 'Web Interface URL', type: 'url', placeholder: 'http://192.168.1.100' },
+      { key: 'username', label: 'Admin Username', type: 'text', placeholder: 'admin' },
+      { key: 'password', label: 'Admin Password', type: 'password', placeholder: 'Password' },
+      { key: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Device ID, software info...' },
+    ]
+  },
+};
+
+// Helper to find credential config for a device type
+const getCredentialConfig = (deviceType) => {
+  if (!deviceType) return null;
+  const type = deviceType.toLowerCase();
+  for (const [key, config] of Object.entries(deviceCredentialConfig)) {
+    if (type.includes(key)) return config;
+  }
+  return null;
+};
+
 const Devices = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
