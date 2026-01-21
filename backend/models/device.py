@@ -51,6 +51,8 @@ class Device(BaseModel):
     consumable_notes: Optional[str] = None
     # NEW: Multiple consumables support
     consumables: List[dict] = Field(default_factory=list)
+    # NEW: Device-specific credentials and access details
+    credentials: Optional[dict] = None  # Stores type-specific access info
     is_deleted: bool = False
     created_at: str = Field(default_factory=get_ist_isoformat)
 
@@ -86,6 +88,8 @@ class DeviceCreate(BaseModel):
     consumable_notes: Optional[str] = None
     # NEW: Multiple consumables
     consumables: Optional[List[dict]] = None
+    # NEW: Device-specific credentials
+    credentials: Optional[dict] = None
 
 
 class DeviceUpdate(BaseModel):
@@ -115,6 +119,8 @@ class DeviceUpdate(BaseModel):
     consumable_notes: Optional[str] = None
     # NEW: Multiple consumables
     consumables: Optional[List[dict]] = None
+    # NEW: Device-specific credentials
+    credentials: Optional[dict] = None
 
 
 class AssignmentHistory(BaseModel):
