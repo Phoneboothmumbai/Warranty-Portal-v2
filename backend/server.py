@@ -7781,6 +7781,183 @@ async def delete_company_user(user_id: str, admin: dict = Depends(get_current_ad
     
     return {"message": "User deleted"}
 
+
+# ==================== INTERNET SERVICES / ISP ENDPOINTS ====================
+
+@api_router.get("/admin/internet-services")
+async def list_internet_services(
+    company_id: Optional[str] = None,
+    site_id: Optional[str] = None,
+    status: Optional[str] = None,
+    admin: dict = Depends(get_current_admin)
+):
+    """List all internet services/ISP connections"""
+    query = {"is_deleted": {"$ne": True}}
+    if company_id:
+        query["company_id"] = company_id
+    if site_id:
+        query["site_id"] = site_id
+    if status:
+        query["status"] = status
+    
+    services = await db.internet_services.find(query).sort("created_at", -1).to_list(1000)
+    
+    # Enrich with company and site names
+    for service in services:
+        company = await db.companies.find_one({"id": service.get("company_id")})
+        service["company_name"] = company.get("name") if company else "Unknown"
+        if service.get("site_id"):
+            site = await db.sites.find_one({"id": service["site_id"]})
+            service["site_name"] = site.get("name") if site else None
+        service.pop("_id", None)
+    
+    return services
+
+
+@api_router.post("/admin/internet-services")
+async def create_internet_service(data: InternetServiceCreate, admin: dict = Depends(get_current_admin)):
+    """Create a new internet service record"""
+    service = InternetService(**data.model_dump())
+    await db.internet_services.insert_one(service.model_dump())
+    
+    result = service.model_dump()
+    result.pop("_id", None)
+    return result
+
+
+@api_router.get("/admin/internet-services/{service_id}")
+async def get_internet_service(service_id: str, admin: dict = Depends(get_current_admin)):
+    """Get internet service details"""
+    service = await db.internet_services.find_one({"id": service_id, "is_deleted": {"$ne": True}})
+    if not service:
+        raise HTTPException(status_code=404, detail="Internet service not found")
+    
+    company = await db.companies.find_one({"id": service.get("company_id")})
+    service["company_name"] = company.get("name") if company else "Unknown"
+    if service.get("site_id"):
+        site = await db.sites.find_one({"id": service["site_id"]})
+        service["site_name"] = site.get("name") if site else None
+    
+    service.pop("_id", None)
+    return service
+
+
+@api_router.put("/admin/internet-services/{service_id}")
+async def update_internet_service(service_id: str, data: InternetServiceUpdate, admin: dict = Depends(get_current_admin)):
+    """Update internet service"""
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No data to update")
+    
+    result = await db.internet_services.update_one(
+        {"id": service_id, "is_deleted": {"$ne": True}},
+        {"$set": update_data}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Internet service not found")
+    
+    updated = await db.internet_services.find_one({"id": service_id})
+    updated.pop("_id", None)
+    return updated
+
+
+@api_router.delete("/admin/internet-services/{service_id}")
+async def delete_internet_service(service_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete internet service"""
+    result = await db.internet_services.update_one(
+        {"id": service_id},
+        {"$set": {"is_deleted": True}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Internet service not found")
+    return {"message": "Internet service deleted"}
+
+
+# ==================== CREDENTIALS DASHBOARD ENDPOINTS ====================
+
+@api_router.get("/admin/credentials")
+async def list_all_credentials(
+    company_id: Optional[str] = None,
+    credential_type: Optional[str] = None,
+    admin: dict = Depends(get_current_admin)
+):
+    """
+    Get all credentials across devices and internet services.
+    Returns a consolidated view for the credentials dashboard.
+    credential_type: device, internet, all
+    """
+    credentials = []
+    
+    # Device credentials
+    if credential_type in [None, "all", "device"]:
+        device_query = {"is_deleted": {"$ne": True}, "credentials": {"$ne": None}}
+        if company_id:
+            device_query["company_id"] = company_id
+        
+        devices = await db.devices.find(device_query).to_list(1000)
+        for device in devices:
+            if device.get("credentials"):
+                company = await db.companies.find_one({"id": device.get("company_id")})
+                credentials.append({
+                    "id": device["id"],
+                    "source_type": "device",
+                    "source_name": f"{device.get('brand', '')} {device.get('model', '')}".strip(),
+                    "device_type": device.get("device_type"),
+                    "serial_number": device.get("serial_number"),
+                    "company_id": device.get("company_id"),
+                    "company_name": company.get("name") if company else "Unknown",
+                    "location": device.get("location"),
+                    "credentials": device.get("credentials"),
+                    "created_at": device.get("created_at")
+                })
+    
+    # Internet service credentials
+    if credential_type in [None, "all", "internet"]:
+        isp_query = {"is_deleted": {"$ne": True}}
+        if company_id:
+            isp_query["company_id"] = company_id
+        
+        services = await db.internet_services.find(isp_query).to_list(1000)
+        for service in services:
+            company = await db.companies.find_one({"id": service.get("company_id")})
+            site_name = None
+            if service.get("site_id"):
+                site = await db.sites.find_one({"id": service["site_id"]})
+                site_name = site.get("name") if site else None
+            
+            # Extract credential-related fields
+            creds = {
+                "router_ip": service.get("router_ip"),
+                "router_username": service.get("router_username"),
+                "router_password": service.get("router_password"),
+                "wifi_ssid": service.get("wifi_ssid"),
+                "wifi_password": service.get("wifi_password"),
+                "pppoe_username": service.get("pppoe_username"),
+                "pppoe_password": service.get("pppoe_password"),
+                "static_ip": service.get("static_ip"),
+                "gateway": service.get("gateway"),
+            }
+            # Only include if has any credentials
+            if any(creds.values()):
+                credentials.append({
+                    "id": service["id"],
+                    "source_type": "internet",
+                    "source_name": service.get("provider_name", "ISP"),
+                    "device_type": service.get("connection_type"),
+                    "serial_number": service.get("account_number"),
+                    "company_id": service.get("company_id"),
+                    "company_name": company.get("name") if company else "Unknown",
+                    "site_name": site_name,
+                    "location": site_name,
+                    "credentials": creds,
+                    "plan_name": service.get("plan_name"),
+                    "support_phone": service.get("support_phone"),
+                    "created_at": service.get("created_at")
+                })
+    
+    return credentials
+
+
 # ==================== OFFICE SUPPLIES ADMIN ENDPOINTS ====================
 
 @api_router.get("/admin/supply-categories")
