@@ -182,9 +182,93 @@ async def get_ai_response(
         }
 
 
-def generate_ticket_summary(messages: list) -> dict:
+async def generate_ticket_summary_ai(messages: list) -> dict:
     """
-    Generate ticket subject and description from chat history.
+    Use AI to generate a concise ticket subject and description from chat history.
+    
+    Args:
+        messages: List of chat messages
+    
+    Returns:
+        dict with 'subject' and 'description'
+    """
+    if not messages:
+        return {"subject": "Support Request", "description": ""}
+    
+    if not EMERGENT_LLM_KEY:
+        # Fallback to simple summary
+        return generate_ticket_summary_simple(messages)
+    
+    try:
+        import uuid
+        import json
+        
+        # Build conversation text for AI
+        conversation = "\n".join([
+            f"{'User' if m['role'] == 'user' else 'AI'}: {m['content']}" 
+            for m in messages
+        ])
+        
+        summary_prompt = f"""Analyze this IT support conversation and generate a ticket summary.
+
+CONVERSATION:
+{conversation}
+
+Generate a JSON response with:
+1. "subject": A short, clear ticket subject (max 80 characters) describing the main issue
+2. "problem_summary": Brief description of what the user's problem is (2-3 sentences)
+3. "troubleshooting_done": What troubleshooting steps were already attempted (bullet points)
+4. "current_status": Current state of the issue
+5. "suggested_action": What the support team should focus on
+
+Return ONLY valid JSON, no other text."""
+
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=str(uuid.uuid4()),
+            system_message="You are a technical support analyst. Generate concise ticket summaries from support conversations. Return only valid JSON."
+        ).with_model("openai", "gpt-4o-mini").with_params(temperature=0.1)
+        
+        response = await chat.send_message(UserMessage(text=summary_prompt))
+        
+        # Clean response if it has markdown
+        response_text = response.strip()
+        if response_text.startswith("```"):
+            lines = response_text.split("\n")
+            response_text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+        
+        summary_data = json.loads(response_text)
+        
+        # Build formatted description
+        description = f"""## Problem Summary
+{summary_data.get('problem_summary', 'User reported an issue.')}
+
+## Troubleshooting Already Attempted
+{summary_data.get('troubleshooting_done', '- AI troubleshooting was attempted but did not resolve the issue.')}
+
+## Current Status
+{summary_data.get('current_status', 'Issue unresolved, requires technical support.')}
+
+## Suggested Next Steps
+{summary_data.get('suggested_action', 'Please investigate and assist the user.')}
+
+---
+*This ticket was auto-generated from an AI support chat session.*"""
+        
+        return {
+            "subject": summary_data.get("subject", "Support Request")[:100],
+            "description": description
+        }
+        
+    except Exception as e:
+        logger.error(f"AI summary generation error: {e}")
+        # Fallback to simple summary
+        return generate_ticket_summary_simple(messages)
+
+
+def generate_ticket_summary_simple(messages: list) -> dict:
+    """
+    Generate a simple ticket summary without AI (fallback).
     
     Args:
         messages: List of chat messages
@@ -203,15 +287,44 @@ def generate_ticket_summary(messages: list) -> dict:
     if len(first_user_msg) > 100:
         subject = subject.rsplit(' ', 1)[0] + "..."
     
-    # Build description from conversation
-    description_parts = ["**AI Troubleshooting Attempted:**\n"]
-    for msg in messages:
-        role = "User" if msg["role"] == "user" else "AI Assistant"
-        description_parts.append(f"**{role}:** {msg['content']}\n")
+    # Get user issues (all user messages)
+    user_issues = [m["content"] for m in messages if m["role"] == "user"]
     
-    description_parts.append("\n---\n*Issue could not be resolved via AI troubleshooting.*")
+    # Get AI suggestions (last AI message usually has the key info)
+    ai_messages = [m["content"] for m in messages if m["role"] == "assistant"]
+    last_ai_msg = ai_messages[-1] if ai_messages else ""
+    
+    # Build concise description
+    description = f"""## User's Issue
+{chr(10).join(['- ' + issue for issue in user_issues[:3]])}
+
+## AI Troubleshooting Summary
+{len(ai_messages)} AI responses were provided during the chat session.
+
+Last AI suggestion: {last_ai_msg[:300]}{'...' if len(last_ai_msg) > 300 else ''}
+
+## Status
+Issue could not be resolved via AI troubleshooting and requires technical support.
+
+---
+*This ticket was auto-generated from an AI support chat session.*"""
     
     return {
         "subject": subject or "Support Request",
-        "description": "\n".join(description_parts)
+        "description": description
     }
+
+
+def generate_ticket_summary(messages: list) -> dict:
+    """
+    Synchronous wrapper - Generate ticket subject and description from chat history.
+    For async AI summary, use generate_ticket_summary_ai instead.
+    
+    Args:
+        messages: List of chat messages
+    
+    Returns:
+        dict with 'subject' and 'description'
+    """
+    # Use simple summary for sync calls
+    return generate_ticket_summary_simple(messages)
