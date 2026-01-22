@@ -84,7 +84,7 @@ const Parts = () => {
   const handleAddPartType = (newPartName) => {
     if (newPartName && !partTypes.includes(newPartName)) {
       setPartTypes(prev => [...prev, newPartName]);
-      setFormData(prev => ({ ...prev, part_name: newPartName }));
+      setFormData(prev => ({ ...prev, part_type: newPartName, part_name: newPartName }));
       toast.success(`Added new part type: ${newPartName}`);
     }
   };
@@ -97,13 +97,18 @@ const Parts = () => {
     }
 
     try {
+      const payload = {
+        ...formData,
+        purchase_cost: formData.purchase_cost ? parseFloat(formData.purchase_cost) : null
+      };
+      
       if (editingPart) {
-        await axios.put(`${API}/admin/parts/${editingPart.id}`, formData, {
+        await axios.put(`${API}/admin/parts/${editingPart.id}`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Part updated');
       } else {
-        await axios.post(`${API}/admin/parts`, formData, {
+        await axios.post(`${API}/admin/parts`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
         toast.success('Part created');
