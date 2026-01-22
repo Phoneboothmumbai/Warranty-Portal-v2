@@ -56,6 +56,7 @@ import CompanySites from "./pages/company/CompanySites";
 import CompanyProfile from "./pages/company/CompanyProfile";
 import CompanyWarranty from "./pages/company/CompanyWarranty";
 import CompanyOfficeSupplies from "./pages/company/CompanyOfficeSupplies";
+import CompanyCredentials from "./pages/company/CompanyCredentials";
 
 // Engineer Portal Pages
 import EngineerLogin from "./pages/engineer/EngineerLogin";
