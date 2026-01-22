@@ -145,7 +145,7 @@ const AdminDeviceDetails = () => {
         <div className="flex gap-2">
           <Button 
             variant="outline" 
-            onClick={() => navigate(`/admin/devices?q=${device.serial_number}`)}
+            onClick={() => navigate('/admin/devices', { state: { editDeviceId: device.id } })}
           >
             <Edit2 className="h-4 w-4 mr-2" />
             Edit Device
