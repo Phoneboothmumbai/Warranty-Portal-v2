@@ -338,6 +338,7 @@ async def search_warranty(q: str):
         final_warranty_active = True  # AMC overrides even if device warranty expired
     
     return {
+        "search_type": "device",
         "device": {
             "id": device.get("id"),
             "device_type": device.get("device_type"),
