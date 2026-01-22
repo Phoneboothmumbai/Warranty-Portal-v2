@@ -39,6 +39,7 @@ import AssetGroups from "./pages/admin/AssetGroups";
 import RenewalAlerts from "./pages/admin/RenewalAlerts";
 import InternetServices from "./pages/admin/InternetServices";
 import Credentials from "./pages/admin/Credentials";
+import DeviceModelCatalog from "./pages/admin/DeviceModelCatalog";
 
 // Company Portal Pages
 import CompanyLayout from "./layouts/CompanyLayout";
