@@ -69,7 +69,6 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
   - Master data: 12 accessory types seeded (Keyboard, Mouse, Headset, etc.)
 
 ### P1 - High Priority
-- [ ] Complete **Accessories & Peripherals Module** - Backend model, CRUD APIs, and frontend UI
 - [ ] Add two location fields to devices: `site` and `office_location`
 - [ ] Enhanced Employee search page (search by name/email/phone, company filtering)
 - [ ] Complete Orders page enhancement (show product images, calculate totals)
