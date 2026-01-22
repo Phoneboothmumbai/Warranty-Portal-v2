@@ -138,10 +138,17 @@ const Parts = () => {
     setEditingPart(null);
     setFormData({
       device_id: filterDevice || '',
-      part_name: 'Keyboard',
+      part_type: 'HDD',
+      part_name: '',
+      brand: '',
+      model_number: '',
       serial_number: '',
+      capacity: '',
+      purchase_date: new Date().toISOString().split('T')[0],
       replaced_date: new Date().toISOString().split('T')[0],
-      warranty_months: 3,
+      warranty_months: 12,
+      vendor: '',
+      purchase_cost: '',
       notes: ''
     });
     setModalOpen(true);
@@ -150,6 +157,22 @@ const Parts = () => {
   const openEditModal = (part) => {
     setEditingPart(part);
     setFormData({
+      device_id: part.device_id,
+      part_type: part.part_type || part.part_name,
+      part_name: part.part_name,
+      brand: part.brand || '',
+      model_number: part.model_number || '',
+      serial_number: part.serial_number || '',
+      capacity: part.capacity || '',
+      purchase_date: part.purchase_date || '',
+      replaced_date: part.replaced_date,
+      warranty_months: part.warranty_months,
+      vendor: part.vendor || '',
+      purchase_cost: part.purchase_cost || '',
+      notes: part.notes || ''
+    });
+    setModalOpen(true);
+  };
       device_id: part.device_id,
       part_name: part.part_name,
       serial_number: part.serial_number || '',
