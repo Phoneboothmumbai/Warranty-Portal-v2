@@ -187,10 +187,15 @@ const CompanyDeviceDetails = () => {
               <p className="text-slate-500 mt-1">
                 {device.device_type || device.category} • {device.brand} {device.model}
               </p>
-              {device.site_name && (
+              {(device.site_name || device.location) && (
                 <div className="flex items-center gap-1.5 text-sm text-slate-500 mt-2">
                   <MapPin className="h-4 w-4" />
-                  {device.site_name}
+                  {device.site_name}{device.site_name && device.location ? ' - ' : ''}{device.location}
+                </div>
+              )}
+              {device.assigned_employee_name && (
+                <div className="flex items-center gap-1.5 text-sm text-blue-600 mt-1">
+                  Assigned to: {device.assigned_employee_name}
                 </div>
               )}
             </div>
