@@ -56,9 +56,17 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 
 ### P0 - Critical (Verified)
 - ✅ **Public Warranty Check for Parts** - Backend searches both devices and parts collections
+- ✅ **Warranty Calculation Fix** - Corrected warranty expiry calculation (install date + months - 1 day)
+  - Example: Jan 22, 2026 + 12 months = Jan 21, 2027
 
 ### P0 - Critical (In Progress)
 - [ ] **Renewal Alerts Dashboard** - Backend API + Frontend to track expiring warranties/AMCs/licenses/parts
+
+### P1 - Verified Complete
+- ✅ **Accessories & Peripherals Module** - Full CRUD implementation
+  - Backend: `/api/admin/accessories` with full CRUD
+  - Frontend: `/admin/accessories` page with search, filters, stats
+  - Master data: 12 accessory types seeded (Keyboard, Mouse, Headset, etc.)
 
 ### P1 - High Priority
 - [ ] Complete **Accessories & Peripherals Module** - Backend model, CRUD APIs, and frontend UI
