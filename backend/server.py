@@ -6562,6 +6562,9 @@ async def list_company_devices(
         # Note: Search filtering is now done at query level with synonym support
         # No need for additional filtering here
         
+        # Add category alias for frontend compatibility
+        device["category"] = device.get("device_type", "")
+        
         result.append(device)
     
     return result
