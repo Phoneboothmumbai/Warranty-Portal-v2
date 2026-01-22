@@ -6370,6 +6370,88 @@ async def get_company_device(device_id: str, user: dict = Depends(get_current_co
         "amc_info": amc_info
     }
 
+# --- Company Credentials ---
+
+@api_router.get("/company/credentials")
+async def get_company_credentials(user: dict = Depends(get_current_company_user)):
+    """
+    Get all credentials for the company's devices and internet services.
+    """
+    company_id = user["company_id"]
+    credentials = []
+    
+    # Device credentials
+    device_query = {
+        "company_id": company_id,
+        "is_deleted": {"$ne": True},
+        "credentials": {"$ne": None}
+    }
+    
+    devices = await db.devices.find(device_query, {"_id": 0}).to_list(1000)
+    for device in devices:
+        if device.get("credentials"):
+            # Get assigned employee name if any
+            emp_name = None
+            if device.get("assigned_employee_id"):
+                emp = await db.company_employees.find_one({"id": device["assigned_employee_id"]})
+                emp_name = emp.get("name") if emp else None
+            
+            credentials.append({
+                "id": device["id"],
+                "source_type": "device",
+                "source_name": f"{device.get('brand', '')} {device.get('model', '')}".strip(),
+                "device_type": device.get("device_type"),
+                "serial_number": device.get("serial_number"),
+                "asset_tag": device.get("asset_tag"),
+                "location": device.get("location"),
+                "assigned_to": emp_name,
+                "credentials": device.get("credentials"),
+                "created_at": device.get("created_at")
+            })
+    
+    # Internet service credentials
+    isp_query = {
+        "company_id": company_id,
+        "is_deleted": {"$ne": True}
+    }
+    
+    services = await db.internet_services.find(isp_query, {"_id": 0}).to_list(100)
+    for service in services:
+        site_name = None
+        if service.get("site_id"):
+            site = await db.sites.find_one({"id": service["site_id"]})
+            site_name = site.get("name") if site else None
+        
+        # Extract credential-related fields
+        creds = {
+            "router_ip": service.get("router_ip"),
+            "router_username": service.get("router_username"),
+            "router_password": service.get("router_password"),
+            "wifi_ssid": service.get("wifi_ssid"),
+            "wifi_password": service.get("wifi_password"),
+            "pppoe_username": service.get("pppoe_username"),
+            "pppoe_password": service.get("pppoe_password"),
+            "static_ip": service.get("static_ip"),
+            "gateway": service.get("gateway"),
+        }
+        # Only include if has any credentials
+        if any(creds.values()):
+            credentials.append({
+                "id": service["id"],
+                "source_type": "internet",
+                "source_name": service.get("provider_name", "ISP"),
+                "device_type": service.get("connection_type"),
+                "serial_number": service.get("account_number"),
+                "location": site_name,
+                "plan_name": service.get("plan_name"),
+                "speed": service.get("speed_download"),
+                "support_phone": service.get("support_phone"),
+                "credentials": creds,
+                "created_at": service.get("created_at")
+            })
+    
+    return credentials
+
 # --- Consumable Orders ---
 
 @api_router.post("/company/devices/{device_id}/order-consumable")
