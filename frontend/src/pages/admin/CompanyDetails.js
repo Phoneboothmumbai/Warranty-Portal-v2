@@ -1042,6 +1042,222 @@ const CompanyDetails = () => {
           </form>
         </DialogContent>
       </Dialog>
+      
+      {/* Device Details Modal */}
+      <Dialog open={showDeviceModal} onOpenChange={setShowDeviceModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>{selectedDevice?.brand} {selectedDevice?.model}</span>
+              {!editingDevice && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setEditingDevice(true)}
+                >
+                  <Edit2 className="h-4 w-4 mr-1" />
+                  Edit
+                </Button>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedDevice && (
+            <div className="space-y-4">
+              {editingDevice ? (
+                // Edit Form
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Device Type</label>
+                    <Input
+                      value={deviceForm.device_type}
+                      onChange={(e) => setDeviceForm({...deviceForm, device_type: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Brand</label>
+                    <Input
+                      value={deviceForm.brand}
+                      onChange={(e) => setDeviceForm({...deviceForm, brand: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Model</label>
+                    <Input
+                      value={deviceForm.model}
+                      onChange={(e) => setDeviceForm({...deviceForm, model: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Serial Number</label>
+                    <Input
+                      value={deviceForm.serial_number}
+                      onChange={(e) => setDeviceForm({...deviceForm, serial_number: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Asset Tag</label>
+                    <Input
+                      value={deviceForm.asset_tag}
+                      onChange={(e) => setDeviceForm({...deviceForm, asset_tag: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Purchase Date</label>
+                    <Input
+                      type="date"
+                      value={deviceForm.purchase_date}
+                      onChange={(e) => setDeviceForm({...deviceForm, purchase_date: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Warranty End Date</label>
+                    <Input
+                      type="date"
+                      value={deviceForm.warranty_end_date}
+                      onChange={(e) => setDeviceForm({...deviceForm, warranty_end_date: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Location</label>
+                    <Input
+                      value={deviceForm.location}
+                      onChange={(e) => setDeviceForm({...deviceForm, location: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Condition</label>
+                    <select
+                      value={deviceForm.condition}
+                      onChange={(e) => setDeviceForm({...deviceForm, condition: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-md text-sm"
+                    >
+                      <option value="new">New</option>
+                      <option value="good">Good</option>
+                      <option value="fair">Fair</option>
+                      <option value="poor">Poor</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Status</label>
+                    <select
+                      value={deviceForm.status}
+                      onChange={(e) => setDeviceForm({...deviceForm, status: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-md text-sm"
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="maintenance">Maintenance</option>
+                      <option value="retired">Retired</option>
+                    </select>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-sm font-medium text-gray-700">Notes</label>
+                    <textarea
+                      value={deviceForm.notes}
+                      onChange={(e) => setDeviceForm({...deviceForm, notes: e.target.value})}
+                      rows={3}
+                      className="w-full px-3 py-2 border rounded-md text-sm"
+                    />
+                  </div>
+                </div>
+              ) : (
+                // View Mode
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Device Type</p>
+                    <p className="font-medium">{selectedDevice.device_type}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Brand</p>
+                    <p className="font-medium">{selectedDevice.brand}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Model</p>
+                    <p className="font-medium">{selectedDevice.model}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Serial Number</p>
+                    <p className="font-medium font-mono">{selectedDevice.serial_number}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Asset Tag</p>
+                    <p className="font-medium">{selectedDevice.asset_tag || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Purchase Date</p>
+                    <p className="font-medium">{selectedDevice.purchase_date || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Warranty End</p>
+                    <p className="font-medium">{selectedDevice.warranty_end_date || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Location</p>
+                    <p className="font-medium">{selectedDevice.location || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Condition</p>
+                    <p className="font-medium capitalize">{selectedDevice.condition}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Status</p>
+                    <p className="font-medium capitalize">{selectedDevice.status}</p>
+                  </div>
+                  {selectedDevice.notes && (
+                    <div className="col-span-2 bg-gray-50 p-3 rounded-lg">
+                      <p className="text-xs text-gray-500">Notes</p>
+                      <p className="text-sm">{selectedDevice.notes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            {editingDevice ? (
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setEditingDevice(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={async () => {
+                    setSavingDevice(true);
+                    try {
+                      await axios.put(
+                        `${API}/admin/devices/${selectedDevice.id}`,
+                        deviceForm,
+                        { headers: { Authorization: `Bearer ${token}` } }
+                      );
+                      toast.success('Device updated successfully');
+                      setEditingDevice(false);
+                      setShowDeviceModal(false);
+                      // Refresh company data
+                      fetchCompanyOverview();
+                    } catch (error) {
+                      toast.error('Failed to update device');
+                    } finally {
+                      setSavingDevice(false);
+                    }
+                  }}
+                  disabled={savingDevice}
+                  className="bg-[#0F62FE] hover:bg-[#0043CE] text-white"
+                >
+                  {savingDevice ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" onClick={() => setShowDeviceModal(false)}>
+                Close
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
