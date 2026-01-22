@@ -104,7 +104,7 @@ const CompanyDevices = () => {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by serial number, model, or category..."
+                placeholder="Search (e.g., CCTV, security camera, laptop, notebook, HP...)"
                 className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 data-testid="device-search-input"
               />
