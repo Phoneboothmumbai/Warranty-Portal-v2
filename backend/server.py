@@ -7136,11 +7136,11 @@ async def ai_support_chat(data: AISupportMessage, user: dict = Depends(get_curre
 @api_router.post("/company/ai-support/generate-summary")
 async def generate_ai_summary(data: AISupportSummaryRequest, user: dict = Depends(get_current_company_user)):
     """
-    Generate ticket subject and description from AI chat history.
+    Generate ticket subject and description from AI chat history using AI summarization.
     """
-    from services.ai_support import generate_ticket_summary
+    from services.ai_support import generate_ticket_summary_ai
     
-    summary = generate_ticket_summary(data.messages)
+    summary = await generate_ticket_summary_ai(data.messages)
     return summary
 
 class AISupportHistoryRequest(BaseModel):
