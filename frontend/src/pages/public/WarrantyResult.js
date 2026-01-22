@@ -71,8 +71,12 @@ const WarrantyResult = () => {
     }
   };
 
-  const DeviceIcon = data?.device?.device_type ? 
-    (deviceIcons[data.device.device_type] || Laptop) : Laptop;
+  const DeviceIcon = data?.search_type === 'part' 
+    ? (deviceIcons[data?.part?.part_type] || HardDrive)
+    : (data?.device?.device_type ? (deviceIcons[data.device.device_type] || Laptop) : Laptop);
+
+  // Check if this is a part search result
+  const isPart = data?.search_type === 'part';
 
   if (loading) {
     return (
