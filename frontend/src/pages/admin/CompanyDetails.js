@@ -577,7 +577,7 @@ const CompanyDetails = () => {
                 <div className="relative max-w-md">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder="Search devices by serial, brand, model..."
+                    placeholder="Search devices (e.g., CCTV, security camera, laptop, notebook...)"
                     value={deviceSearchQuery}
                     onChange={(e) => setDeviceSearchQuery(e.target.value)}
                     className="pl-10"
@@ -586,17 +586,58 @@ const CompanyDetails = () => {
               </div>
               
               {(() => {
-                // Filter devices based on search query
+                // Device category synonyms for smart local filtering
+                const SYNONYMS = {
+                  'cctv': ['cctv', 'video surveillance', 'ip camera', 'security camera', 'surveillance', 'camera system'],
+                  'nvr': ['nvr', 'network video recorder', 'video recorder', 'dvr'],
+                  'laptop': ['laptop', 'notebook', 'portable computer', 'ultrabook', 'macbook'],
+                  'desktop': ['desktop', 'pc', 'personal computer', 'workstation', 'computer'],
+                  'printer': ['printer', 'laser printer', 'inkjet', 'multifunction', 'mfp', 'copier'],
+                  'router': ['router', 'wifi router', 'wireless router', 'gateway', 'access point'],
+                  'switch': ['switch', 'network switch', 'ethernet switch', 'hub'],
+                  'ups': ['ups', 'uninterruptible power', 'battery backup', 'power backup'],
+                  'server': ['server', 'rack server', 'file server', 'nas'],
+                };
+                
+                // Get all matching device types for a search term
+                const getMatchingTypes = (searchTerm) => {
+                  const term = searchTerm.toLowerCase();
+                  const matchingTypes = [];
+                  for (const [type, synonyms] of Object.entries(SYNONYMS)) {
+                    if (synonyms.some(syn => syn.includes(term) || term.includes(syn))) {
+                      matchingTypes.push(type);
+                    }
+                  }
+                  return matchingTypes;
+                };
+                
+                // Filter devices based on search query with synonym support
                 const filteredDevices = devices.filter(device => {
                   if (!deviceSearchQuery.trim()) return true;
                   const query = deviceSearchQuery.toLowerCase();
-                  return (
+                  
+                  // Direct field matches
+                  if (
                     device.serial_number?.toLowerCase().includes(query) ||
                     device.brand?.toLowerCase().includes(query) ||
                     device.model?.toLowerCase().includes(query) ||
                     device.asset_tag?.toLowerCase().includes(query) ||
                     device.device_type?.toLowerCase().includes(query)
-                  );
+                  ) {
+                    return true;
+                  }
+                  
+                  // Synonym-based matching
+                  const matchingTypes = getMatchingTypes(query);
+                  if (matchingTypes.length > 0) {
+                    const deviceTypeLower = device.device_type?.toLowerCase() || '';
+                    return matchingTypes.some(type => 
+                      deviceTypeLower.includes(type) || 
+                      SYNONYMS[type]?.some(syn => deviceTypeLower.includes(syn))
+                    );
+                  }
+                  
+                  return false;
                 });
                 
                 return filteredDevices.length > 0 ? (
