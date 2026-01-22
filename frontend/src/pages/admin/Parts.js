@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Plus, Search, Edit2, Trash2, Wrench, MoreVertical, Laptop, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Wrench, MoreVertical, Laptop, CheckCircle2, XCircle, HardDrive, Calendar, Building2, DollarSign } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-const defaultPartTypes = ['Keyboard', 'Battery', 'HDD', 'SSD', 'RAM', 'Screen', 'Motherboard', 'Power Supply', 'Camera Lens', 'Fan', 'Charger', 'Other'];
+const defaultPartTypes = ['HDD', 'SSD', 'RAM', 'Power Supply', 'Battery', 'Keyboard', 'Screen', 'Motherboard', 'Camera Lens', 'Fan', 'Charger', 'Network Card', 'Other'];
 
 const Parts = () => {
   const { token } = useAuth();
@@ -24,10 +24,17 @@ const Parts = () => {
   const [editingPart, setEditingPart] = useState(null);
   const [formData, setFormData] = useState({
     device_id: '',
-    part_name: 'Keyboard',
+    part_type: 'HDD',
+    part_name: '',
+    brand: '',
+    model_number: '',
     serial_number: '',
+    capacity: '',
+    purchase_date: '',
     replaced_date: '',
-    warranty_months: 3,
+    warranty_months: 12,
+    vendor: '',
+    purchase_cost: '',
     notes: ''
   });
 
