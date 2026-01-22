@@ -255,6 +255,27 @@ const CompanyDeviceDetails = () => {
                 <dd className="font-medium text-slate-900">{device.asset_tag}</dd>
               </div>
             )}
+            {device.location && (
+              <div className="flex justify-between py-2 border-b border-slate-100">
+                <dt className="text-slate-500">Location</dt>
+                <dd className="font-medium text-slate-900 flex items-center gap-1">
+                  <MapPin className="h-4 w-4 text-slate-400" />
+                  {device.location}
+                </dd>
+              </div>
+            )}
+            {device.assigned_employee_name && (
+              <div className="flex justify-between py-2 border-b border-slate-100">
+                <dt className="text-slate-500">Assigned To</dt>
+                <dd className="font-medium text-slate-900">{device.assigned_employee_name}</dd>
+              </div>
+            )}
+            {device.configuration && (
+              <div className="flex justify-between py-2 border-b border-slate-100">
+                <dt className="text-slate-500">Configuration</dt>
+                <dd className="font-medium text-slate-900 text-sm">{device.configuration}</dd>
+              </div>
+            )}
           </dl>
         </div>
 
