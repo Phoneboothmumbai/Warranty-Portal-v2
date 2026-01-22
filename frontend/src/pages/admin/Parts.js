@@ -267,7 +267,8 @@ const Parts = () => {
                 <tr>
                   <th>Part</th>
                   <th>Device</th>
-                  <th>Replaced</th>
+                  <th>Details</th>
+                  <th>Installed</th>
                   <th>Warranty</th>
                   <th>Status</th>
                   <th className="w-16"></th>
@@ -278,17 +279,12 @@ const Parts = () => {
                   <tr key={part.id} data-testid={`part-row-${part.id}`}>
                     <td>
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-                          <Wrench className="h-4 w-4 text-slate-600" />
+                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <HardDrive className="h-5 w-5 text-blue-600" />
                         </div>
                         <div>
                           <p className="font-medium text-slate-900">{part.part_name}</p>
-                          {part.serial_number && (
-                            <p className="text-xs text-slate-500">S/N: {part.serial_number}</p>
-                          )}
-                          {!part.serial_number && part.notes && (
-                            <p className="text-xs text-slate-500 truncate max-w-[200px]">{part.notes}</p>
-                          )}
+                          <p className="text-xs text-slate-500">{part.part_type || 'Part'}</p>
                         </div>
                       </div>
                     </td>
@@ -298,10 +294,18 @@ const Parts = () => {
                         <span className="text-sm">{getDeviceInfo(part.device_id)}</span>
                       </div>
                     </td>
+                    <td>
+                      <div className="text-sm">
+                        {part.brand && <p className="text-slate-900">{part.brand} {part.model_number || ''}</p>}
+                        {part.capacity && <p className="text-slate-500">{part.capacity}</p>}
+                        {part.serial_number && <p className="text-xs text-slate-400">SN: {part.serial_number}</p>}
+                        {!part.brand && !part.capacity && !part.serial_number && <span className="text-slate-400">-</span>}
+                      </div>
+                    </td>
                     <td className="text-sm">{formatDate(part.replaced_date)}</td>
                     <td>
                       <div>
-                        <p className="text-sm">{part.warranty_months} months</p>
+                        <p className="text-sm font-medium">{part.warranty_months} months</p>
                         <p className="text-xs text-slate-500">Until {formatDate(part.warranty_expiry_date)}</p>
                       </div>
                     </td>
