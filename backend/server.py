@@ -145,6 +145,7 @@ async def get_public_masters(
 async def search_warranty(q: str):
     """
     Search warranty by serial number or asset tag
+    Searches both Devices and Parts
     
     P0 FIX - AMC OVERRIDE RULE:
     IF device has ACTIVE AMC:
@@ -156,6 +157,59 @@ async def search_warranty(q: str):
         raise HTTPException(status_code=400, detail="Search query too short")
     
     q = q.strip()
+    
+    # First, search for a Part by serial number
+    part = await db.parts.find_one(
+        {"$and": [
+            {"is_deleted": {"$ne": True}},
+            {"serial_number": {"$regex": f"^{q}$", "$options": "i"}}
+        ]},
+        {"_id": 0}
+    )
+    
+    if part:
+        # Found a part - get the parent device info
+        device = await db.devices.find_one(
+            {"id": part["device_id"], "is_deleted": {"$ne": True}},
+            {"_id": 0}
+        )
+        
+        company_name = "Unknown"
+        if device:
+            company = await db.companies.find_one({"id": device["company_id"], "is_deleted": {"$ne": True}}, {"_id": 0, "name": 1})
+            company_name = company.get("name") if company else "Unknown"
+        
+        # Part warranty status
+        part_warranty_active = is_warranty_active(part.get("warranty_expiry_date", ""))
+        
+        return {
+            "search_type": "part",
+            "part": {
+                "id": part.get("id"),
+                "part_type": part.get("part_type"),
+                "part_name": part.get("part_name"),
+                "brand": part.get("brand"),
+                "model_number": part.get("model_number"),
+                "serial_number": part.get("serial_number"),
+                "capacity": part.get("capacity"),
+                "purchase_date": part.get("purchase_date"),
+                "replaced_date": part.get("replaced_date"),
+                "warranty_months": part.get("warranty_months"),
+                "warranty_expiry_date": part.get("warranty_expiry_date"),
+                "warranty_active": part_warranty_active,
+                "vendor": part.get("vendor")
+            },
+            "parent_device": {
+                "id": device.get("id") if device else None,
+                "device_type": device.get("device_type") if device else None,
+                "brand": device.get("brand") if device else None,
+                "model": device.get("model") if device else None,
+                "serial_number": device.get("serial_number") if device else None
+            } if device else None,
+            "company_name": company_name,
+            "coverage_source": "part_warranty",
+            "effective_coverage_end": part.get("warranty_expiry_date")
+        }
     
     # Search device by serial number or asset tag
     device = await db.devices.find_one(
@@ -170,7 +224,7 @@ async def search_warranty(q: str):
     )
     
     if not device:
-        raise HTTPException(status_code=404, detail="No records found for this Serial Number / Asset Tag")
+        raise HTTPException(status_code=404, detail="No records found for this Serial Number / Asset Tag. Please verify the Serial Number or Asset Tag and try again.")
     
     # Check if device is retired/scrapped
     if device.get("status") in ["retired", "scrapped"]:
