@@ -361,11 +361,15 @@ const Parts = () => {
 
       {/* Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingPart ? 'Edit Part' : 'Add Part'}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <HardDrive className="h-5 w-5 text-blue-600" />
+              {editingPart ? 'Edit Part' : 'Add Part'}
+            </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <form onSubmit={handleSubmit} className="space-y-5 mt-4">
+            {/* Device Selection */}
             <div>
               <label className="form-label">Device *</label>
               <SmartSelect
@@ -379,35 +383,103 @@ const Parts = () => {
                 data-testid="part-device-select"
               />
             </div>
-            <div>
-              <label className="form-label">Part Name *</label>
-              <SmartSelect
-                value={formData.part_name}
-                onValueChange={(val) => setFormData({ ...formData, part_name: val })}
-                options={partTypeOptions}
-                placeholder="Search or add part type..."
-                searchPlaceholder="Search part types..."
-                emptyText="No matching parts"
-                allowCreate={true}
-                createLabel="Add New Part Type"
-                onCreateNew={handleAddPartType}
-                data-testid="part-name-select"
-              />
-            </div>
-            <div>
-              <label className="form-label">Serial Number <span className="text-slate-400 text-xs">(Optional)</span></label>
-              <input
-                type="text"
-                value={formData.serial_number}
-                onChange={(e) => setFormData({ ...formData, serial_number: e.target.value })}
-                className="form-input"
-                placeholder="Enter part serial number..."
-                data-testid="part-serial-number-input"
-              />
-            </div>
+
+            {/* Part Type & Name */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="form-label">Replaced Date *</label>
+                <label className="form-label">Part Type *</label>
+                <SmartSelect
+                  value={formData.part_type}
+                  onValueChange={(val) => setFormData({ ...formData, part_type: val, part_name: formData.part_name || val })}
+                  options={partTypeOptions}
+                  placeholder="Select part type..."
+                  searchPlaceholder="Search part types..."
+                  emptyText="No matching parts"
+                  allowCreate={true}
+                  createLabel="Add New Part Type"
+                  onCreateNew={handleAddPartType}
+                  data-testid="part-type-select"
+                />
+              </div>
+              <div>
+                <label className="form-label">Part Name/Description *</label>
+                <input
+                  type="text"
+                  value={formData.part_name}
+                  onChange={(e) => setFormData({ ...formData, part_name: e.target.value })}
+                  className="form-input"
+                  placeholder="e.g., Seagate Skyhawk 4TB"
+                  data-testid="part-name-input"
+                />
+              </div>
+            </div>
+
+            {/* Brand & Model */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">Brand</label>
+                <input
+                  type="text"
+                  value={formData.brand}
+                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                  className="form-input"
+                  placeholder="e.g., Seagate, WD, Samsung"
+                  data-testid="part-brand-input"
+                />
+              </div>
+              <div>
+                <label className="form-label">Model Number</label>
+                <input
+                  type="text"
+                  value={formData.model_number}
+                  onChange={(e) => setFormData({ ...formData, model_number: e.target.value })}
+                  className="form-input"
+                  placeholder="e.g., ST4000VX013"
+                  data-testid="part-model-input"
+                />
+              </div>
+            </div>
+
+            {/* Serial & Capacity */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">Serial Number</label>
+                <input
+                  type="text"
+                  value={formData.serial_number}
+                  onChange={(e) => setFormData({ ...formData, serial_number: e.target.value })}
+                  className="form-input"
+                  placeholder="Enter serial number"
+                  data-testid="part-serial-number-input"
+                />
+              </div>
+              <div>
+                <label className="form-label">Capacity/Size</label>
+                <input
+                  type="text"
+                  value={formData.capacity}
+                  onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+                  className="form-input"
+                  placeholder="e.g., 4TB, 16GB, 512GB"
+                  data-testid="part-capacity-input"
+                />
+              </div>
+            </div>
+
+            {/* Dates */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">Purchase Date</label>
+                <input
+                  type="date"
+                  value={formData.purchase_date}
+                  onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
+                  className="form-input"
+                  data-testid="part-purchase-date-input"
+                />
+              </div>
+              <div>
+                <label className="form-label">Installation Date *</label>
                 <input
                   type="date"
                   value={formData.replaced_date}
@@ -416,18 +488,88 @@ const Parts = () => {
                   data-testid="part-replaced-date-input"
                 />
               </div>
+            </div>
+
+            {/* Warranty */}
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h4 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Warranty Information
+              </h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-blue-700">Warranty Period (Months) *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.warranty_months}
+                    onChange={(e) => setFormData({ ...formData, warranty_months: parseInt(e.target.value) || 1 })}
+                    className="form-input mt-1 bg-white"
+                    data-testid="part-warranty-months-input"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-blue-700">Warranty Expiry</label>
+                  <p className="form-input mt-1 bg-white text-slate-600">
+                    {formData.replaced_date && formData.warranty_months
+                      ? new Date(new Date(formData.replaced_date).setMonth(new Date(formData.replaced_date).getMonth() + formData.warranty_months)).toLocaleDateString()
+                      : 'Set dates above'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Vendor & Cost */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="form-label">Warranty (Months) *</label>
+                <label className="form-label">Vendor/Supplier</label>
+                <input
+                  type="text"
+                  value={formData.vendor}
+                  onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
+                  className="form-input"
+                  placeholder="Where purchased from"
+                  data-testid="part-vendor-input"
+                />
+              </div>
+              <div>
+                <label className="form-label">Purchase Cost (₹)</label>
                 <input
                   type="number"
-                  min="1"
-                  value={formData.warranty_months}
-                  onChange={(e) => setFormData({ ...formData, warranty_months: parseInt(e.target.value) || 1 })}
+                  value={formData.purchase_cost}
+                  onChange={(e) => setFormData({ ...formData, purchase_cost: e.target.value })}
                   className="form-input"
-                  data-testid="part-warranty-months-input"
+                  placeholder="0"
+                  min="0"
+                  data-testid="part-cost-input"
                 />
               </div>
             </div>
+
+            {/* Notes */}
+            <div>
+              <label className="form-label">Notes</label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="form-input"
+                rows={2}
+                placeholder="Additional details about this part..."
+                data-testid="part-notes-input"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button type="button" variant="outline" onClick={closeModal}>
+                Cancel
+              </Button>
+              <Button type="submit" className="bg-[#0F62FE] hover:bg-[#0043CE] text-white">
+                {editingPart ? 'Update Part' : 'Add Part'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
             <div>
               <label className="form-label">Notes</label>
               <textarea
