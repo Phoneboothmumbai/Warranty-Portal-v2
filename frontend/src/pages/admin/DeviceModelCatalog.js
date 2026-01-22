@@ -61,8 +61,8 @@ const DeviceModelCatalog = () => {
       const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (searchQuery) params.append('q', searchQuery);
-      if (filterType) params.append('device_type', filterType);
-      if (filterBrand) params.append('brand', filterBrand);
+      if (filterType && filterType !== 'all') params.append('device_type', filterType);
+      if (filterBrand && filterBrand !== 'all') params.append('brand', filterBrand);
       
       const response = await fetch(`${API_URL}/api/device-models?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
