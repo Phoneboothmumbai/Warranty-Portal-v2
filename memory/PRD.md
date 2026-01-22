@@ -135,6 +135,9 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - `/api/admin/internet-services` - ISP management
 - `/api/company/credentials` - Company-facing credentials page
 - `/api/admin/parts` - Enhanced parts with warranty tracking
+- `/api/device-models/lookup` - AI-powered device specification lookup
+- `/api/device-models` - Device model catalog CRUD
+- `/api/device-models/consumables/search` - Search compatible consumables
 
 ## Test Credentials
 - Admin: admin@demo.com / admin123
