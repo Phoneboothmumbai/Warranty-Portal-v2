@@ -4145,9 +4145,11 @@ async def universal_search(
     admin: dict = Depends(get_current_admin)
 ):
     """
-    Universal search across all entities.
+    Universal search across all entities with smart synonym support.
     Returns grouped results from companies, sites, users, assets, deployments, AMCs, and services.
     """
+    from utils.synonyms import expand_search_query, get_brand_variants
+    
     if not q or len(q.strip()) < 1:
         return {
             "companies": [],
@@ -4162,6 +4164,13 @@ async def universal_search(
     query = q.strip()
     # Create case-insensitive regex pattern for partial matching
     regex_pattern = {"$regex": query, "$options": "i"}
+    
+    # Get synonym-expanded search for device types
+    synonym_regex = expand_search_query(query)
+    
+    # Get brand variants
+    brand_variants = get_brand_variants(query)
+    brand_regex = {"$regex": "|".join(brand_variants), "$options": "i"}
     
     results = {
         "companies": [],
@@ -4240,16 +4249,17 @@ async def universal_search(
             "icon": "user"
         })
     
-    # Search Assets/Devices
+    # Search Assets/Devices with synonym support
     devices = await db.devices.find({
         "is_deleted": {"$ne": True},
         "$or": [
             {"serial_number": regex_pattern},
             {"asset_tag": regex_pattern},
-            {"brand": regex_pattern},
+            {"brand": brand_regex},  # Brand with aliases
             {"model": regex_pattern},
-            {"device_type": regex_pattern},
-            {"location": regex_pattern}
+            {"device_type": synonym_regex},  # Device type with synonyms
+            {"location": regex_pattern},
+            {"notes": synonym_regex}
         ]
     }, {"_id": 0}).limit(limit).to_list(limit)
     
