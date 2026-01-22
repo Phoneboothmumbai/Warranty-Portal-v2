@@ -97,6 +97,7 @@ function App() {
                     <Route path="accessories" element={<Accessories />} />
                     <Route path="asset-groups" element={<AssetGroups />} />
                     <Route path="renewal-alerts" element={<RenewalAlerts />} />
+                    <Route path="device-catalog" element={<DeviceModelCatalog />} />
                     <Route path="parts" element={<Parts />} />
                     <Route path="amc" element={<AMCManagement />} />
                     <Route path="amc-contracts" element={<AMCContracts />} />
