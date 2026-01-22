@@ -572,7 +572,34 @@ const CompanyDetails = () => {
           {/* Devices Tab */}
           {activeTab === 'devices' && (
             <div>
-              {devices.length > 0 ? (
+              {/* Device Search Bar */}
+              <div className="mb-4">
+                <div className="relative max-w-md">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search devices by serial, brand, model..."
+                    value={deviceSearchQuery}
+                    onChange={(e) => setDeviceSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              
+              {(() => {
+                // Filter devices based on search query
+                const filteredDevices = devices.filter(device => {
+                  if (!deviceSearchQuery.trim()) return true;
+                  const query = deviceSearchQuery.toLowerCase();
+                  return (
+                    device.serial_number?.toLowerCase().includes(query) ||
+                    device.brand?.toLowerCase().includes(query) ||
+                    device.model?.toLowerCase().includes(query) ||
+                    device.asset_tag?.toLowerCase().includes(query) ||
+                    device.device_type?.toLowerCase().includes(query)
+                  );
+                });
+                
+                return filteredDevices.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full table-modern">
                     <thead>
@@ -586,7 +613,7 @@ const CompanyDetails = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {devices.map((device) => (
+                      {filteredDevices.map((device) => (
                         <tr key={device.id}>
                           <td>
                             <div className="flex items-center gap-3">
@@ -624,9 +651,32 @@ const CompanyDetails = () => {
                             )}
                           </td>
                           <td>
-                            <Link to={`/admin/devices?id=${device.id}`} className="text-[#0F62FE] hover:underline text-sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedDevice(device);
+                                setDeviceForm({
+                                  device_type: device.device_type || '',
+                                  brand: device.brand || '',
+                                  model: device.model || '',
+                                  serial_number: device.serial_number || '',
+                                  asset_tag: device.asset_tag || '',
+                                  purchase_date: device.purchase_date || '',
+                                  warranty_end_date: device.warranty_end_date || '',
+                                  location: device.location || '',
+                                  condition: device.condition || 'good',
+                                  status: device.status || 'active',
+                                  notes: device.notes || ''
+                                });
+                                setEditingDevice(false);
+                                setShowDeviceModal(true);
+                              }}
+                              className="text-[#0F62FE] hover:text-[#0F62FE]"
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
                               View
-                            </Link>
+                            </Button>
                           </td>
                         </tr>
                       ))}
@@ -634,8 +684,9 @@ const CompanyDetails = () => {
                   </table>
                 </div>
               ) : (
-                <EmptyState icon={Laptop} message="No devices found for this company" />
-              )}
+                <EmptyState icon={Laptop} message={deviceSearchQuery ? "No devices match your search" : "No devices found for this company"} />
+              );
+              })()}
             </div>
           )}
 
