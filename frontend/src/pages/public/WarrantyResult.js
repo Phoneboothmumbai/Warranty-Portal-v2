@@ -4,7 +4,7 @@ import axios from 'axios';
 import { 
   Shield, ArrowLeft, Download, CheckCircle2, XCircle, 
   AlertCircle, Laptop, Printer, Monitor, Router, Camera,
-  HardDrive, Cpu, Building2, User, Calendar
+  HardDrive, Cpu, Building2, User, Calendar, Package, Wrench
 } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { Button } from '../../components/ui/button';
@@ -14,11 +14,16 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const deviceIcons = {
   'Laptop': Laptop,
   'CCTV': Camera,
+  'NVR': Camera,
+  'DVR': Camera,
   'Printer': Printer,
   'Monitor': Monitor,
   'Router': Router,
   'Server': HardDrive,
   'Desktop': Cpu,
+  'HDD': HardDrive,
+  'SSD': HardDrive,
+  'RAM': Cpu,
 };
 
 const WarrantyResult = () => {
