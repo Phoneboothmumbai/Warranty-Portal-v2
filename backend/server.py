@@ -1511,6 +1511,18 @@ async def bulk_import_devices(data: dict, admin: dict = Depends(get_current_admi
     company_by_code = {c.get("code", "").upper(): c["id"] for c in companies if c.get("code")}
     company_by_name = {c["name"].lower(): c["id"] for c in companies}
     
+    # Get employees for lookup
+    employees = await db.company_employees.find({"is_deleted": {"$ne": True}}, {"_id": 0}).to_list(10000)
+    employee_by_code = {}
+    employee_by_email = {}
+    for emp in employees:
+        if emp.get("employee_code"):
+            key = f"{emp['company_id']}_{emp['employee_code'].upper()}"
+            employee_by_code[key] = emp["id"]
+        if emp.get("email"):
+            key = f"{emp['company_id']}_{emp['email'].lower()}"
+            employee_by_email[key] = emp["id"]
+    
     success_count = 0
     errors = []
     
@@ -1538,6 +1550,15 @@ async def bulk_import_devices(data: dict, admin: dict = Depends(get_current_admi
                 errors.append({"row": idx + 2, "message": "Company not found"})
                 continue
             
+            # Find employee (device user)
+            assigned_employee_id = None
+            if record.get("employee_code"):
+                key = f"{company_id}_{record['employee_code'].upper()}"
+                assigned_employee_id = employee_by_code.get(key)
+            if not assigned_employee_id and record.get("employee_email"):
+                key = f"{company_id}_{record['employee_email'].lower()}"
+                assigned_employee_id = employee_by_email.get(key)
+            
             # Check for duplicate serial number
             existing = await db.devices.find_one({
                 "serial_number": record["serial_number"],
@@ -1549,6 +1570,7 @@ async def bulk_import_devices(data: dict, admin: dict = Depends(get_current_admi
             
             device = Device(
                 company_id=company_id,
+                assigned_employee_id=assigned_employee_id,
                 device_type=record.get("device_type", "Laptop"),
                 brand=record.get("brand"),
                 model=record.get("model"),
@@ -1561,6 +1583,7 @@ async def bulk_import_devices(data: dict, admin: dict = Depends(get_current_admi
                 location=record.get("location"),
                 condition=record.get("condition", "good"),
                 status=record.get("status", "active"),
+                configuration=record.get("configuration"),
                 notes=record.get("notes")
             )
             
