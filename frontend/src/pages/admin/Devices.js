@@ -190,6 +190,7 @@ const getCredentialConfig = (deviceType) => {
 const Devices = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [devices, setDevices] = useState([]);
   const [companies, setCompanies] = useState([]);
@@ -207,6 +208,7 @@ const Devices = () => {
   const [serviceHistoryLoading, setServiceHistoryLoading] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [editingDevice, setEditingDevice] = useState(null);
+  const [pendingEditDeviceId, setPendingEditDeviceId] = useState(location.state?.editDeviceId || null);
   
   // Checkbox selection for bulk QR
   const [selectedDeviceIds, setSelectedDeviceIds] = useState(new Set());
