@@ -6468,7 +6468,9 @@ async def list_company_devices(
     site_id: Optional[str] = None,
     warranty_status: Optional[str] = None
 ):
-    """List all devices for the company (read-only)"""
+    """List all devices for the company (read-only) with smart search"""
+    from utils.synonyms import expand_search_query, get_brand_variants
+    
     company_id = user["company_id"]
     query = {"company_id": company_id, "is_deleted": {"$ne": True}}
     
@@ -6476,6 +6478,21 @@ async def list_company_devices(
         query["device_type"] = device_type
     if site_id:
         query["site_id"] = site_id
+    
+    # Smart search with synonyms
+    if search and search.strip():
+        search_term = search.strip()
+        synonym_regex = expand_search_query(search_term)
+        brand_variants = get_brand_variants(search_term)
+        brand_regex = {"$regex": "|".join(brand_variants), "$options": "i"}
+        
+        query["$or"] = [
+            {"serial_number": {"$regex": search_term, "$options": "i"}},
+            {"asset_tag": {"$regex": search_term, "$options": "i"}},
+            {"brand": brand_regex},
+            {"model": {"$regex": search_term, "$options": "i"}},
+            {"device_type": synonym_regex}
+        ]
     
     devices = await db.devices.find(query, {"_id": 0}).to_list(1000)
     today = get_ist_now().date()
