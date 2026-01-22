@@ -19,6 +19,8 @@ const bulkImportColumns = [
   { key: 'serial_number', label: 'Serial Number', required: true, example: 'ABC123456' },
   { key: 'company_code', label: 'Company Code', required: true, example: 'ACME001' },
   { key: 'company_name', label: 'Company Name (alt)', required: false, example: 'Acme Corp' },
+  { key: 'employee_code', label: 'Employee Code', required: false, example: 'EMP001' },
+  { key: 'employee_email', label: 'Employee Email (alt)', required: false, example: 'john@acme.com' },
   { key: 'device_type', label: 'Device Type', required: false, example: 'Laptop' },
   { key: 'brand', label: 'Brand', required: true, example: 'Dell' },
   { key: 'model', label: 'Model', required: true, example: 'Latitude 5520' },
@@ -29,11 +31,12 @@ const bulkImportColumns = [
   { key: 'location', label: 'Location', required: false, example: 'Floor 2, Desk 15' },
   { key: 'condition', label: 'Condition', required: false, example: 'good' },
   { key: 'status', label: 'Status', required: false, example: 'active' },
+  { key: 'configuration', label: 'Configuration', required: false, example: 'i7, 16GB RAM, 512GB SSD' },
 ];
 
 const deviceSampleData = [
-  { serial_number: 'DEL-001-2024', company_code: 'ACME001', device_type: 'Laptop', brand: 'Dell', model: 'Latitude 5520', asset_tag: 'ACME-LAP-001', purchase_date: '2024-01-15', warranty_end_date: '2027-01-15', vendor: 'Dell India', location: 'Floor 2, Desk 15', condition: 'good', status: 'active' },
-  { serial_number: 'HP-002-2024', company_code: 'ACME001', device_type: 'Printer', brand: 'HP', model: 'LaserJet Pro M404', asset_tag: 'ACME-PRN-001', purchase_date: '2024-02-20', warranty_end_date: '2026-02-20', vendor: 'HP Store', location: 'Reception', condition: 'new', status: 'active' },
+  { serial_number: 'DEL-001-2024', company_code: 'ACME001', employee_code: 'EMP001', device_type: 'Laptop', brand: 'Dell', model: 'Latitude 5520', asset_tag: 'ACME-LAP-001', purchase_date: '2024-01-15', warranty_end_date: '2027-01-15', vendor: 'Dell India', location: 'Floor 2, Desk 15', condition: 'good', status: 'active', configuration: 'i7-12700H, 16GB, 512GB SSD' },
+  { serial_number: 'HP-002-2024', company_code: 'ACME001', employee_email: 'jane@acme.com', device_type: 'Printer', brand: 'HP', model: 'LaserJet Pro M404', asset_tag: 'ACME-PRN-001', purchase_date: '2024-02-20', warranty_end_date: '2026-02-20', vendor: 'HP Store', location: 'Reception', condition: 'new', status: 'active' },
 ];
 
 // Empty consumable item template
