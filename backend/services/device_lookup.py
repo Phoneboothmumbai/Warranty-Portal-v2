@@ -4,9 +4,14 @@ Uses OpenAI GPT via Emergent LLM Key to fetch device specs
 """
 import json
 import logging
+import uuid
+import os
 from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
+
+# Get Emergent LLM Key from environment
+EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-05eD47a6507C11251B')
 
 
 def get_device_type_prompt(device_type: str) -> str:
@@ -136,7 +141,7 @@ async def fetch_device_specs_ai(device_type: str, brand: str, model: str) -> Opt
     Returns structured data or None if lookup fails.
     """
     try:
-        from emergentintegrations.llm.chat import chat, Message, Model
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
         
         type_specific_prompt = get_device_type_prompt(device_type)
         
@@ -172,32 +177,36 @@ Model: {model}
 
 Return ONLY the JSON response, no other text."""
 
-        # Call OpenAI via Emergent
-        response = await chat(
-            messages=[
-                Message(role="system", content=system_prompt),
-                Message(role="user", content=user_prompt)
-            ],
-            model=Model.GPT_4O_MINI,
-            temperature=0.1  # Low temperature for factual accuracy
-        )
+        # Create LLM instance with Emergent key
+        session_id = str(uuid.uuid4())
+        llm = LlmChat(
+            api_key=EMERGENT_LLM_KEY, 
+            session_id=session_id, 
+            system_message=system_prompt
+        ).with_model(provider='openai', model='gpt-4o-mini').with_params(temperature=0.1)
+        
+        # Send message
+        user_msg = UserMessage(text=user_prompt)
+        response = await llm.send_message(user_msg)
         
         # Parse the response
-        response_text = response.message.strip()
+        response_text = response.strip() if response else ""
         
         # Clean up response if it has markdown code blocks
         if response_text.startswith("```"):
             lines = response_text.split("\n")
-            response_text = "\n".join(lines[1:-1])
+            # Remove first and last lines (```json and ```)
+            response_text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
         
         result = json.loads(response_text)
         return result
         
     except json.JSONDecodeError as e:
         logger.error(f"AI response JSON parse error: {e}")
+        logger.error(f"Raw response: {response_text[:500] if 'response_text' in locals() else 'N/A'}")
         return None
     except Exception as e:
-        logger.error(f"AI lookup error: {e}")
+        logger.error(f"AI lookup error: {type(e).__name__}: {e}")
         return None
 
 
@@ -221,7 +230,7 @@ async def get_or_create_device_model(
     Returns:
         Device model data or error message
     """
-    from models.device_model import DeviceModel, DeviceSpecifications, CompatibleConsumable
+    from models.device_model import DeviceModel, DeviceSpecifications
     from utils.helpers import get_ist_isoformat
     
     # Normalize inputs
@@ -248,7 +257,15 @@ async def get_or_create_device_model(
     # Fetch from AI
     ai_result = await fetch_device_specs_ai(device_type, brand_normalized, model_normalized)
     
-    if not ai_result or not ai_result.get("found", False):
+    if not ai_result:
+        return {
+            "found": False,
+            "device_model": None,
+            "source": "ai_generated",
+            "message": "AI lookup failed. Please try again or add device manually."
+        }
+    
+    if not ai_result.get("found", False):
         return {
             "found": False,
             "device_model": None,
