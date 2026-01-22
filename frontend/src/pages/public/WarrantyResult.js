@@ -439,7 +439,7 @@ const WarrantyResult = () => {
                         Download Warranty Report (PDF)
                       </Button>
                       <a
-                        href={`https://support.thegoodmen.in?source=warranty-portal&serial=${encodeURIComponent(data.device.serial_number)}&device_id=${encodeURIComponent(data.device.id || '')}&company=${encodeURIComponent(data.company_name || '')}`}
+                        href={`https://support.thegoodmen.in?source=warranty-portal&serial=${encodeURIComponent(isPart ? data.part.serial_number : data.device.serial_number)}&device_id=${encodeURIComponent(isPart ? data.parent_device?.id || '' : data.device.id || '')}&company=${encodeURIComponent(data.company_name || '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="w-full sm:w-auto"
@@ -457,6 +457,8 @@ const WarrantyResult = () => {
                       </a>
                     </div>
                   </div>
+                  </>
+                  )}
                 </div>
               </div>
 
