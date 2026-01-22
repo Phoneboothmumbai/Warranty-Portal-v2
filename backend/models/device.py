@@ -138,14 +138,24 @@ class AssignmentHistory(BaseModel):
 
 
 class Part(BaseModel):
+    """Part/Component installed in a device with separate warranty tracking"""
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     device_id: str
+    part_type: Optional[str] = None  # HDD, RAM, Power Supply, etc.
     part_name: str
+    brand: Optional[str] = None  # Seagate, WD, Kingston, etc.
+    model_number: Optional[str] = None  # Model number
     serial_number: Optional[str] = None
-    replaced_date: str
+    capacity: Optional[str] = None  # For HDD/RAM: 4TB, 16GB, etc.
+    # Dates
+    purchase_date: Optional[str] = None  # When purchased
+    replaced_date: str  # When installed/replaced in device
+    # Warranty
     warranty_months: int
     warranty_expiry_date: str
+    vendor: Optional[str] = None  # Where purchased
+    purchase_cost: Optional[float] = None
     notes: Optional[str] = None
     is_deleted: bool = False
     created_at: str = Field(default_factory=get_ist_isoformat)
@@ -153,18 +163,32 @@ class Part(BaseModel):
 
 class PartCreate(BaseModel):
     device_id: str
+    part_type: Optional[str] = None
     part_name: str
+    brand: Optional[str] = None
+    model_number: Optional[str] = None
     serial_number: Optional[str] = None
+    capacity: Optional[str] = None
+    purchase_date: Optional[str] = None
     replaced_date: str
     warranty_months: int
+    vendor: Optional[str] = None
+    purchase_cost: Optional[float] = None
     notes: Optional[str] = None
 
 
 class PartUpdate(BaseModel):
+    part_type: Optional[str] = None
     part_name: Optional[str] = None
+    brand: Optional[str] = None
+    model_number: Optional[str] = None
     serial_number: Optional[str] = None
+    capacity: Optional[str] = None
+    purchase_date: Optional[str] = None
     replaced_date: Optional[str] = None
     warranty_months: Optional[int] = None
+    vendor: Optional[str] = None
+    purchase_cost: Optional[float] = None
     notes: Optional[str] = None
 
 
