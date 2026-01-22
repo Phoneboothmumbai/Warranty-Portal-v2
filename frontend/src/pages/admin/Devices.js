@@ -273,6 +273,42 @@ const Devices = () => {
     }
   }, [devices, searchParams]);
 
+  // Handle edit device from navigation state (from Device Details page)
+  useEffect(() => {
+    if (pendingEditDeviceId && devices.length > 0) {
+      const device = devices.find(d => d.id === pendingEditDeviceId);
+      if (device) {
+        // Open edit modal for this device
+        setEditingDevice(device);
+        setFormData({
+          company_id: device.company_id || '',
+          assigned_user_id: device.assigned_user_id || '',
+          assigned_employee_id: device.assigned_employee_id || '',
+          device_type: device.device_type || '',
+          brand: device.brand || '',
+          model: device.model || '',
+          serial_number: device.serial_number || '',
+          asset_tag: device.asset_tag || '',
+          purchase_date: device.purchase_date || '',
+          purchase_cost: device.purchase_cost || '',
+          vendor: device.vendor || '',
+          warranty_end_date: device.warranty_end_date || '',
+          location: device.location || '',
+          condition: device.condition || 'good',
+          status: device.status || 'active',
+          notes: device.notes || '',
+          configuration: device.configuration || '',
+          consumables: device.consumables || [],
+          credentials: device.credentials || {}
+        });
+        setModalOpen(true);
+        setPendingEditDeviceId(null);
+        // Clear the location state
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+    }
+  }, [pendingEditDeviceId, devices, navigate, location.pathname]);
+
   const fetchMasterData = async () => {
     try {
       const [deviceTypesRes, brandsRes, conditionsRes, statusesRes] = await Promise.all([
