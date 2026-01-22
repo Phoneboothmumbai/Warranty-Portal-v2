@@ -50,6 +50,14 @@ const CompanyDetails = () => {
     password: '',
     role: 'company_viewer'
   });
+  
+  // Device search and modal state
+  const [deviceSearchQuery, setDeviceSearchQuery] = useState('');
+  const [selectedDevice, setSelectedDevice] = useState(null);
+  const [showDeviceModal, setShowDeviceModal] = useState(false);
+  const [editingDevice, setEditingDevice] = useState(false);
+  const [deviceForm, setDeviceForm] = useState({});
+  const [savingDevice, setSavingDevice] = useState(false);
 
   useEffect(() => {
     fetchCompanyOverview();
