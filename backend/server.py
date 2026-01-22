@@ -84,6 +84,11 @@ from models.subscription import (
 from models.internet_service import (
     InternetService, InternetServiceCreate, InternetServiceUpdate
 )
+from models.device_model import (
+    DeviceModel, DeviceModelCreate, DeviceModelUpdate,
+    AILookupRequest
+)
+from services.device_lookup import get_or_create_device_model
 
 # Create the main app
 app = FastAPI(title="Warranty & Asset Tracking Portal")
