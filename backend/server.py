@@ -6559,12 +6559,8 @@ async def list_company_devices(
             if warranty_status == "expiring_soon" and device.get("warranty_days_left", 0) > 30:
                 continue
         
-        # Apply search filter
-        if search:
-            search_lower = search.lower()
-            searchable = f"{device.get('serial_number', '')} {device.get('asset_tag', '')} {device.get('brand', '')} {device.get('model', '')}".lower()
-            if search_lower not in searchable:
-                continue
+        # Note: Search filtering is now done at query level with synonym support
+        # No need for additional filtering here
         
         result.append(device)
     
