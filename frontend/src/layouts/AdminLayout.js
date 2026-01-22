@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Building2, Users, Laptop, Wrench, 
-  FileCheck, Settings, LogOut, Shield, Menu, X, ChevronRight, ChevronDown, Database, History, FileText, MapPin, Package, Key, ShoppingBag, ClipboardList, UserCircle, Mail, Keyboard, Layers, AlertTriangle, Briefcase, HardDrive, FileBarChart, Globe, Lock
+  FileCheck, Settings, LogOut, Shield, Menu, X, ChevronRight, ChevronDown, Database, History, FileText, MapPin, Package, Key, ShoppingBag, ClipboardList, UserCircle, Mail, Keyboard, Layers, AlertTriangle, Briefcase, HardDrive, FileBarChart, Globe, Lock, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -40,6 +40,7 @@ const navGroups = [
       { path: '/admin/asset-groups', label: 'Asset Groups', icon: Layers },
       { path: '/admin/parts', label: 'Parts', icon: Wrench },
       { path: '/admin/deployments', label: 'Deployments', icon: Package },
+      { path: '/admin/device-catalog', label: 'Device Catalog', icon: Sparkles },
     ]
   },
   {
