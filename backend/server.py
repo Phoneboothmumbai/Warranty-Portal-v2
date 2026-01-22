@@ -551,6 +551,204 @@ async def generate_warranty_pdf(serial_number: str):
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
+# ==================== DEVICE MODEL CATALOG (AI-POWERED) ====================
+
+@api_router.get("/device-models")
+async def list_device_models(
+    device_type: Optional[str] = None,
+    brand: Optional[str] = None,
+    q: Optional[str] = None,
+    limit: int = Query(default=50, le=200),
+    admin: dict = Depends(get_current_admin)
+):
+    """List device models from catalog"""
+    query = {"is_deleted": {"$ne": True}}
+    
+    if device_type:
+        query["device_type"] = device_type
+    if brand:
+        query["brand"] = {"$regex": f"^{brand}$", "$options": "i"}
+    if q and q.strip():
+        search_regex = {"$regex": q.strip(), "$options": "i"}
+        query["$or"] = [
+            {"brand": search_regex},
+            {"model": search_regex},
+            {"category": search_regex}
+        ]
+    
+    models = await db.device_models.find(query, {"_id": 0}).limit(limit).to_list(limit)
+    return models
+
+
+@api_router.get("/device-models/{model_id}")
+async def get_device_model(model_id: str, admin: dict = Depends(get_current_admin)):
+    """Get a specific device model by ID"""
+    model = await db.device_models.find_one(
+        {"id": model_id, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    )
+    if not model:
+        raise HTTPException(status_code=404, detail="Device model not found")
+    return model
+
+
+@api_router.post("/device-models/lookup")
+async def lookup_device_model(
+    request: AILookupRequest,
+    force_refresh: bool = Query(default=False),
+    admin: dict = Depends(get_current_admin)
+):
+    """
+    AI-powered device model lookup.
+    Fetches specifications and compatible consumables for a device.
+    Results are cached for future use.
+    """
+    result = await get_or_create_device_model(
+        db=db,
+        device_type=request.device_type,
+        brand=request.brand,
+        model=request.model,
+        force_refresh=force_refresh
+    )
+    return result
+
+
+@api_router.post("/device-models")
+async def create_device_model(
+    model_data: DeviceModelCreate,
+    admin: dict = Depends(get_current_admin)
+):
+    """Manually create a device model entry"""
+    # Check for existing
+    existing = await db.device_models.find_one({
+        "brand": {"$regex": f"^{model_data.brand}$", "$options": "i"},
+        "model": {"$regex": f"^{model_data.model}$", "$options": "i"},
+        "device_type": model_data.device_type,
+        "is_deleted": {"$ne": True}
+    })
+    
+    if existing:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Device model {model_data.brand} {model_data.model} already exists"
+        )
+    
+    device_model = DeviceModel(
+        device_type=model_data.device_type,
+        brand=model_data.brand,
+        model=model_data.model,
+        model_variants=model_data.model_variants,
+        category=model_data.category,
+        compatible_consumables=model_data.compatible_consumables,
+        compatible_upgrades=model_data.compatible_upgrades,
+        image_url=model_data.image_url,
+        source="manual",
+        is_verified=True
+    )
+    
+    if model_data.specifications:
+        device_model.specifications = model_data.specifications
+    
+    await db.device_models.insert_one(device_model.model_dump())
+    
+    return await db.device_models.find_one({"id": device_model.id}, {"_id": 0})
+
+
+@api_router.put("/device-models/{model_id}")
+async def update_device_model(
+    model_id: str,
+    updates: DeviceModelUpdate,
+    admin: dict = Depends(get_current_admin)
+):
+    """Update a device model"""
+    existing = await db.device_models.find_one(
+        {"id": model_id, "is_deleted": {"$ne": True}}
+    )
+    if not existing:
+        raise HTTPException(status_code=404, detail="Device model not found")
+    
+    update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
+    if update_data:
+        update_data["updated_at"] = get_ist_isoformat()
+        await db.device_models.update_one({"id": model_id}, {"$set": update_data})
+    
+    return await db.device_models.find_one({"id": model_id}, {"_id": 0})
+
+
+@api_router.delete("/device-models/{model_id}")
+async def delete_device_model(model_id: str, admin: dict = Depends(get_current_admin)):
+    """Soft delete a device model"""
+    result = await db.device_models.update_one(
+        {"id": model_id},
+        {"$set": {"is_deleted": True}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Device model not found")
+    return {"message": "Device model deleted"}
+
+
+@api_router.post("/device-models/{model_id}/verify")
+async def verify_device_model(model_id: str, admin: dict = Depends(get_current_admin)):
+    """Mark a device model as admin-verified"""
+    result = await db.device_models.update_one(
+        {"id": model_id, "is_deleted": {"$ne": True}},
+        {"$set": {"is_verified": True, "updated_at": get_ist_isoformat()}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Device model not found")
+    return {"message": "Device model verified"}
+
+
+@api_router.get("/device-models/consumables/search")
+async def search_compatible_consumables(
+    device_type: Optional[str] = None,
+    brand: Optional[str] = None,
+    model: Optional[str] = None,
+    consumable_type: Optional[str] = None,
+    admin: dict = Depends(get_current_admin)
+):
+    """
+    Search for compatible consumables based on device info.
+    Used when creating service records to show relevant parts.
+    """
+    if not brand and not model:
+        raise HTTPException(status_code=400, detail="Brand or model is required")
+    
+    query = {"is_deleted": {"$ne": True}}
+    if device_type:
+        query["device_type"] = device_type
+    if brand:
+        query["brand"] = {"$regex": f"^{brand}$", "$options": "i"}
+    if model:
+        query["model"] = {"$regex": model, "$options": "i"}
+    
+    device_model = await db.device_models.find_one(query, {"_id": 0})
+    
+    if not device_model:
+        return {
+            "found": False,
+            "consumables": [],
+            "upgrades": [],
+            "message": "No device model found. Try AI lookup first."
+        }
+    
+    consumables = device_model.get("compatible_consumables", [])
+    upgrades = device_model.get("compatible_upgrades", [])
+    
+    # Filter by consumable type if specified
+    if consumable_type:
+        consumables = [c for c in consumables if c.get("consumable_type", "").lower() == consumable_type.lower()]
+        upgrades = [u for u in upgrades if u.get("consumable_type", "").lower() == consumable_type.lower()]
+    
+    return {
+        "found": True,
+        "device_model_id": device_model.get("id"),
+        "device_info": f"{device_model.get('brand')} {device_model.get('model')}",
+        "consumables": consumables,
+        "upgrades": upgrades
+    }
+
+
 # ==================== OSTICKET WEBHOOK ====================
 
 # Get webhook secret from environment (set this in osTicket as well)
