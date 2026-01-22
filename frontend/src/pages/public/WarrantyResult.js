@@ -142,71 +142,165 @@ const WarrantyResult = () => {
           ) : data ? (
             /* Success State - The Receipt */
             <div className="animate-slide-up">
-              {/* Device Card */}
+              {/* Part or Device Card */}
               <div className="receipt-card mb-6" data-testid="warranty-result-card">
                 {/* Header Strip */}
-                <div className="bg-slate-900 px-8 py-6 text-white">
+                <div className={`${isPart ? 'bg-blue-900' : 'bg-slate-900'} px-8 py-6 text-white`}>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 bg-white/10 rounded-xl flex items-center justify-center">
                         <DeviceIcon className="h-7 w-7 text-white" />
                       </div>
                       <div>
-                        <h1 className="text-xl font-semibold">{data.device.brand} {data.device.model}</h1>
-                        <p className="text-slate-400 text-sm mt-0.5">{data.device.device_type}</p>
+                        {isPart ? (
+                          <>
+                            <p className="text-blue-300 text-xs uppercase tracking-wide mb-1">Component / Part</p>
+                            <h1 className="text-xl font-semibold">{data.part.brand || ''} {data.part.part_name}</h1>
+                            <p className="text-blue-300 text-sm mt-0.5">{data.part.part_type} {data.part.capacity ? `• ${data.part.capacity}` : ''}</p>
+                          </>
+                        ) : (
+                          <>
+                            <h1 className="text-xl font-semibold">{data.device.brand} {data.device.model}</h1>
+                            <p className="text-slate-400 text-sm mt-0.5">{data.device.device_type}</p>
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className={`px-4 py-1.5 rounded-full text-sm font-medium ${
-                      data.device.warranty_active 
+                      (isPart ? data.part.warranty_active : data.device.warranty_active)
                         ? 'bg-emerald-500/20 text-emerald-300' 
                         : 'bg-slate-700 text-slate-400'
                     }`}>
-                      {data.device.warranty_active ? 'Under Warranty' : 'Warranty Expired'}
+                      {(isPart ? data.part.warranty_active : data.device.warranty_active) ? 'Under Warranty' : 'Warranty Expired'}
                     </div>
                   </div>
                 </div>
 
-                {/* Device Details */}
+                {/* Details */}
                 <div className="p-8">
-                  <div className="grid sm:grid-cols-2 gap-6 mb-8">
-                    <div className="space-y-4">
-                      <div className="data-pair">
-                        <span className="data-label">Serial Number</span>
-                        <span className="data-value font-mono" data-testid="serial-number">{data.device.serial_number}</span>
+                  {isPart ? (
+                    /* Part Details */
+                    <>
+                      <div className="grid sm:grid-cols-2 gap-6 mb-8">
+                        <div className="space-y-4">
+                          <div className="data-pair">
+                            <span className="data-label">Serial Number</span>
+                            <span className="data-value font-mono" data-testid="serial-number">{data.part.serial_number}</span>
+                          </div>
+                          {data.part.model_number && (
+                            <div className="data-pair">
+                              <span className="data-label">Model Number</span>
+                              <span className="data-value font-mono">{data.part.model_number}</span>
+                            </div>
+                          )}
+                          <div className="data-pair">
+                            <span className="data-label">Installation Date</span>
+                            <span className="data-value">{formatDate(data.part.replaced_date)}</span>
+                          </div>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="data-pair">
+                            <span className="data-label flex items-center gap-2">
+                              <Building2 className="h-3.5 w-3.5" />
+                              Company
+                            </span>
+                            <span className="data-value">{data.company_name}</span>
+                          </div>
+                          {data.part.vendor && (
+                            <div className="data-pair">
+                              <span className="data-label">Vendor</span>
+                              <span className="data-value">{data.part.vendor}</span>
+                            </div>
+                          )}
+                          <div className="data-pair">
+                            <span className="data-label flex items-center gap-2">
+                              <Calendar className="h-3.5 w-3.5" />
+                              Warranty Until
+                            </span>
+                            <span className="data-value font-semibold">{formatDate(data.part.warranty_expiry_date)}</span>
+                          </div>
+                        </div>
                       </div>
-                      {data.device.asset_tag && (
-                        <div className="data-pair">
-                          <span className="data-label">Asset Tag</span>
-                          <span className="data-value font-mono">{data.device.asset_tag}</span>
+
+                      {/* Parent Device Info */}
+                      {data.parent_device && (
+                        <div className="mt-6 p-4 bg-slate-50 rounded-lg">
+                          <p className="text-xs uppercase tracking-wide text-slate-500 mb-2">Installed In Device</p>
+                          <div className="flex items-center gap-3">
+                            <Laptop className="h-5 w-5 text-slate-400" />
+                            <div>
+                              <p className="font-medium text-slate-900">{data.parent_device.brand} {data.parent_device.model}</p>
+                              <p className="text-sm text-slate-500">SN: {data.parent_device.serial_number}</p>
+                            </div>
+                          </div>
                         </div>
                       )}
-                      <div className="data-pair">
-                        <span className="data-label">Purchase Date</span>
-                        <span className="data-value">{formatDate(data.device.purchase_date)}</span>
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="data-pair">
-                        <span className="data-label flex items-center gap-2">
-                          <Building2 className="h-3.5 w-3.5" />
-                          Company
-                        </span>
-                        <span className="data-value">{data.company_name}</span>
-                      </div>
-                      {data.assigned_user && (
-                        <div className="data-pair">
-                          <span className="data-label flex items-center gap-2">
-                            <User className="h-3.5 w-3.5" />
-                            Assigned To
-                          </span>
-                          <span className="data-value">{data.assigned_user}</span>
+
+                      {/* Warranty Status */}
+                      <div className="mt-8 pt-6 border-t border-slate-200">
+                        <div className="flex items-center gap-4">
+                          {data.part.warranty_active ? (
+                            <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+                          ) : (
+                            <XCircle className="h-8 w-8 text-slate-400" />
+                          )}
+                          <div>
+                            <p className="text-lg font-semibold text-slate-900">
+                              {data.part.warranty_active ? 'Part Under Warranty' : 'Part Warranty Expired'}
+                            </p>
+                            <p className="text-slate-500">
+                              {data.part.warranty_months} months warranty • 
+                              {data.part.warranty_active 
+                                ? ` Valid until ${formatDate(data.part.warranty_expiry_date)}`
+                                : ` Expired on ${formatDate(data.part.warranty_expiry_date)}`
+                              }
+                            </p>
+                          </div>
                         </div>
-                      )}
-                      <div className="data-pair">
-                        <span className="data-label flex items-center gap-2">
-                          <Calendar className="h-3.5 w-3.5" />
-                          Warranty Until
-                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    /* Device Details - Original Code */
+                    <>
+                      <div className="grid sm:grid-cols-2 gap-6 mb-8">
+                        <div className="space-y-4">
+                          <div className="data-pair">
+                            <span className="data-label">Serial Number</span>
+                            <span className="data-value font-mono" data-testid="serial-number">{data.device.serial_number}</span>
+                          </div>
+                          {data.device.asset_tag && (
+                            <div className="data-pair">
+                              <span className="data-label">Asset Tag</span>
+                              <span className="data-value font-mono">{data.device.asset_tag}</span>
+                            </div>
+                          )}
+                          <div className="data-pair">
+                            <span className="data-label">Purchase Date</span>
+                            <span className="data-value">{formatDate(data.device.purchase_date)}</span>
+                          </div>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="data-pair">
+                            <span className="data-label flex items-center gap-2">
+                              <Building2 className="h-3.5 w-3.5" />
+                              Company
+                            </span>
+                            <span className="data-value">{data.company_name}</span>
+                          </div>
+                          {data.assigned_user && (
+                            <div className="data-pair">
+                              <span className="data-label flex items-center gap-2">
+                                <User className="h-3.5 w-3.5" />
+                                Assigned To
+                              </span>
+                              <span className="data-value">{data.assigned_user}</span>
+                            </div>
+                          )}
+                          <div className="data-pair">
+                            <span className="data-label flex items-center gap-2">
+                              <Calendar className="h-3.5 w-3.5" />
+                              Warranty Until
+                            </span>
                         <span className="data-value">
                           {data.device.warranty_end_date ? formatDate(data.device.warranty_end_date) : 'Not specified'}
                         </span>
