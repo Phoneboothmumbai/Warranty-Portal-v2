@@ -45,6 +45,9 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - ✅ **Public Warranty Check for Parts** - Search parts by serial number on public page
 - ✅ **Bulk Import with Employee Assignment** - Assign devices to employees during upload
 - ✅ **Enhanced Products Module** - Images, prices, SKUs for office supplies
+- ✅ **Warranty Calculation Fix** - Corrected warranty expiry (install date + months - 1 day)
+- ✅ **Accessories & Peripherals Module** - Full CRUD with 12 accessory types seeded
+- ✅ **AI-Powered Device Model Catalog** - Automatically fetch device specs and compatible consumables
 
 ### Backend Refactoring (Jan 22, 2025)
 - ✅ Created `routes/` directory structure for modular endpoints
