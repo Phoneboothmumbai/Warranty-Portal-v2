@@ -850,7 +850,7 @@ const Devices = () => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by serial, brand, model..."
+            placeholder="Search (CCTV, camera, laptop, notebook, HP...)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="form-input pl-11"
