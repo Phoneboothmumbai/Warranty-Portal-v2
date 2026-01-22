@@ -570,27 +570,6 @@ const Parts = () => {
           </form>
         </DialogContent>
       </Dialog>
-            <div>
-              <label className="form-label">Notes</label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="form-input"
-                rows={2}
-                placeholder="Optional notes..."
-              />
-            </div>
-            <div className="flex justify-end gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={closeModal}>
-                Cancel
-              </Button>
-              <Button type="submit" className="bg-[#0F62FE] hover:bg-[#0043CE] text-white" data-testid="part-submit-btn">
-                {editingPart ? 'Update' : 'Create'}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
