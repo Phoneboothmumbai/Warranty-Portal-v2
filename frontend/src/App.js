@@ -121,6 +121,7 @@ function App() {
                     <Route path="dashboard" element={<CompanyDashboard />} />
                     <Route path="devices" element={<CompanyDevices />} />
                     <Route path="devices/:deviceId" element={<CompanyDeviceDetails />} />
+                    <Route path="credentials" element={<CompanyCredentials />} />
                     <Route path="warranty" element={<CompanyWarranty />} />
                     <Route path="amc" element={<CompanyAMC />} />
                     <Route path="tickets" element={<CompanyTickets />} />
