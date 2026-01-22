@@ -2562,21 +2562,31 @@ async def list_devices(
     page: int = Query(default=1, ge=1),
     admin: dict = Depends(get_current_admin)
 ):
-    """List devices with AMC status - P0 Fix"""
+    """List devices with AMC status and smart search with synonyms"""
+    from utils.synonyms import expand_search_query, get_brand_variants
+    
     query = {"is_deleted": {"$ne": True}}
     if company_id:
         query["company_id"] = company_id
     if status:
         query["status"] = status
     
-    # Add search filter
+    # Add search filter with synonym support
     if q and q.strip():
-        search_regex = {"$regex": q.strip(), "$options": "i"}
+        search_term = q.strip()
+        # Get expanded search with synonyms
+        synonym_regex = expand_search_query(search_term)
+        # Also get brand variants
+        brand_variants = get_brand_variants(search_term)
+        brand_regex = {"$regex": "|".join(brand_variants), "$options": "i"}
+        
         query["$or"] = [
-            {"serial_number": search_regex},
-            {"asset_tag": search_regex},
-            {"brand": search_regex},
-            {"model": search_regex}
+            {"serial_number": {"$regex": search_term, "$options": "i"}},
+            {"asset_tag": {"$regex": search_term, "$options": "i"}},
+            {"brand": brand_regex},
+            {"model": {"$regex": search_term, "$options": "i"}},
+            {"device_type": synonym_regex},  # Smart search with synonyms
+            {"notes": synonym_regex}
         ]
     
     skip = (page - 1) * limit
