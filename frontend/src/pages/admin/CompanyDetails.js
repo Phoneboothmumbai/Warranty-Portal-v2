@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { 
   Building2, ArrowLeft, Edit2, Save, X, MapPin, Users, Laptop, Package, 
   FileText, Shield, Wrench, Mail, Phone, Calendar, CheckCircle2, XCircle,
-  AlertCircle, Clock, ChevronRight, KeyRound, Plus, Eye, EyeOff, Trash2
+  AlertCircle, Clock, ChevronRight, KeyRound, Plus, Eye, EyeOff, Trash2, Search
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { Input } from '../../components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
