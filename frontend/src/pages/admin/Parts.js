@@ -173,15 +173,6 @@ const Parts = () => {
     });
     setModalOpen(true);
   };
-      device_id: part.device_id,
-      part_name: part.part_name,
-      serial_number: part.serial_number || '',
-      replaced_date: part.replaced_date,
-      warranty_months: part.warranty_months,
-      notes: part.notes || ''
-    });
-    setModalOpen(true);
-  };
 
   const closeModal = () => {
     setModalOpen(false);
