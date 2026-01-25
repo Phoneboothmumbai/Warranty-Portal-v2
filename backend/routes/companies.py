@@ -12,6 +12,7 @@ from models.device import Device
 from models.supplies import SupplyCategory, SupplyProduct
 from services.auth import get_current_admin, get_password_hash, log_audit
 from utils.helpers import get_ist_isoformat, is_warranty_active
+from utils.security import validate_password_strength
 
 router = APIRouter(tags=["Companies"])
 
@@ -234,8 +235,10 @@ async def create_company_portal_user(
     if not user_data.get("name") or not user_data.get("email") or not user_data.get("password"):
         raise HTTPException(status_code=400, detail="Name, email, and password are required")
     
-    if len(user_data.get("password", "")) < 6:
-        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    # Validate password strength
+    is_valid, error_msg = validate_password_strength(user_data.get("password", ""))
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
     
     new_user = {
         "id": str(uuid.uuid4()),
@@ -280,10 +283,15 @@ async def reset_portal_user_password(
     data: dict,
     admin: dict = Depends(get_current_admin)
 ):
-    """Reset a portal user's password"""
+    """Reset a portal user's password with strong validation"""
     new_password = data.get("password")
-    if not new_password or len(new_password) < 6:
-        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    if not new_password:
+        raise HTTPException(status_code=400, detail="Password is required")
+    
+    # Validate password strength
+    is_valid, error_msg = validate_password_strength(new_password)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
     
     result = await db.company_users.update_one(
         {"id": user_id, "company_id": company_id, "is_deleted": {"$ne": True}},
