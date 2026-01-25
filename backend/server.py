@@ -8189,7 +8189,12 @@ async def update_company_user(user_id: str, updates: CompanyUserUpdate, admin: d
 
 @api_router.post("/admin/company-users/{user_id}/reset-password")
 async def reset_company_user_password(user_id: str, new_password: str, admin: dict = Depends(get_current_admin)):
-    """Reset company user password (admin only)"""
+    """Reset company user password (admin only) with strong validation"""
+    # Validate password strength
+    is_valid, error_msg = validate_password_strength(new_password)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+    
     result = await db.company_users.update_one(
         {"id": user_id},
         {"$set": {"password_hash": get_password_hash(new_password)}}
