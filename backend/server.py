@@ -115,6 +115,24 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 async def root():
     return {"message": "Warranty & Asset Tracking Portal API"}
 
+@api_router.get("/security/info")
+async def get_security_info():
+    """Return public security settings for frontend display"""
+    return {
+        "password_requirements": {
+            "min_length": 8,
+            "require_uppercase": True,
+            "require_lowercase": True,
+            "require_digit": True,
+            "require_special": True
+        },
+        "session_timeout_minutes": 480,
+        "rate_limiting": {
+            "login_attempts_per_minute": 5,
+            "registration_attempts_per_minute": 3
+        }
+    }
+
 @api_router.get("/settings/public")
 async def get_public_settings():
     settings = await db.settings.find_one({"id": "settings"}, {"_id": 0})
