@@ -49,6 +49,13 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - ✅ **Accessories & Peripherals Module** - Full CRUD with 12 accessory types seeded
 - ✅ **AI-Powered Device Model Catalog** - Automatically fetch device specs and compatible consumables
 
+### Security Enhancements (Jan 25, 2025)
+- ✅ **Rate Limiting** - Brute-force protection (5 login attempts/minute per IP) using slowapi
+- ✅ **Strong Password Requirements** - 8+ chars, uppercase, lowercase, digit, special character required
+- ✅ **Password Validation** - Applied to all user creation, registration, and password reset endpoints
+- ✅ **Security Info API** - `/api/security/info` exposes password requirements and rate limiting config
+- ✅ **Full Part Details Display** - Admin Device Details page now shows comprehensive part info including brand, model, serial number, capacity, purchase/install dates, warranty status badges, vendor, cost, and notes
+
 ### Backend Refactoring (Jan 22, 2025)
 - ✅ Created `routes/` directory structure for modular endpoints
 - ✅ Extracted routes: public, auth, masters, webhooks, qr_service, companies
