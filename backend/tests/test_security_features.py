@@ -146,11 +146,12 @@ class TestPasswordStrengthValidation:
         company_id = companies[0]["id"]
         
         # Try to create user with weak password
+        unique_email = f"testweakpw{int(time.time())}@test.com"
         response = requests.post(
             f"{BASE_URL}/api/admin/companies/{company_id}/portal-users",
             json={
                 "name": "Test User",
-                "email": "testweakpw@test.com",
+                "email": unique_email,
                 "password": "short"  # Too short
             },
             headers={"Authorization": f"Bearer {admin_token}"}
@@ -170,11 +171,12 @@ class TestPasswordStrengthValidation:
         companies = companies_response.json()
         company_id = companies[0]["id"]
         
+        unique_email = f"testnoupper{int(time.time())}@test.com"
         response = requests.post(
             f"{BASE_URL}/api/admin/companies/{company_id}/portal-users",
             json={
                 "name": "Test User",
-                "email": "testnoupper@test.com",
+                "email": unique_email,
                 "password": "password123!"  # No uppercase
             },
             headers={"Authorization": f"Bearer {admin_token}"}
@@ -194,11 +196,12 @@ class TestPasswordStrengthValidation:
         companies = companies_response.json()
         company_id = companies[0]["id"]
         
+        unique_email = f"testnolower{int(time.time())}@test.com"
         response = requests.post(
             f"{BASE_URL}/api/admin/companies/{company_id}/portal-users",
             json={
                 "name": "Test User",
-                "email": "testnolower@test.com",
+                "email": unique_email,
                 "password": "PASSWORD123!"  # No lowercase
             },
             headers={"Authorization": f"Bearer {admin_token}"}
@@ -218,11 +221,12 @@ class TestPasswordStrengthValidation:
         companies = companies_response.json()
         company_id = companies[0]["id"]
         
+        unique_email = f"testnodigit{int(time.time())}@test.com"
         response = requests.post(
             f"{BASE_URL}/api/admin/companies/{company_id}/portal-users",
             json={
                 "name": "Test User",
-                "email": "testnodigit@test.com",
+                "email": unique_email,
                 "password": "Password!"  # No digit
             },
             headers={"Authorization": f"Bearer {admin_token}"}
@@ -242,11 +246,12 @@ class TestPasswordStrengthValidation:
         companies = companies_response.json()
         company_id = companies[0]["id"]
         
+        unique_email = f"testnospecial{int(time.time())}@test.com"
         response = requests.post(
             f"{BASE_URL}/api/admin/companies/{company_id}/portal-users",
             json={
                 "name": "Test User",
-                "email": "testnospecial@test.com",
+                "email": unique_email,
                 "password": "Password123"  # No special char
             },
             headers={"Authorization": f"Bearer {admin_token}"}
