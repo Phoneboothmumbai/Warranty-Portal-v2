@@ -159,6 +159,14 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - `/api/device-models/lookup` - AI-powered device specification lookup
 - `/api/device-models` - Device model catalog CRUD
 - `/api/device-models/consumables/search` - Search compatible consumables
+- `/api/admin/amc-packages` - AMC package management (CRUD)
+- `/api/admin/amc-company-pricing` - Company-specific AMC pricing
+- `/api/admin/amc-requests` - Admin AMC request management
+- `/api/admin/amc-requests/{id}/approve` - Approve and create contract
+- `/api/company/amc-packages` - Available packages for company
+- `/api/company/amc-requests` - Company AMC request CRUD
+- `/api/company/notifications` - In-app notifications
+- `/api/admin/notifications` - Admin notifications
 
 ## Test Credentials
 - Admin: admin@demo.com / admin123
