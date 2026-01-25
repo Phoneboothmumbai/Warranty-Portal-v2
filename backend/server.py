@@ -8800,6 +8800,10 @@ async def list_company_supply_orders(user: dict = Depends(get_current_company_us
 # Include the router
 app.include_router(api_router)
 
+# Include AMC Requests router
+from routes.amc_requests import router as amc_requests_router
+app.include_router(amc_requests_router, prefix="/api")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
