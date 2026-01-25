@@ -404,18 +404,113 @@ const AdminDeviceDetails = () => {
               {parts.length}
             </span>
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {parts.map((part) => (
-              <div key={part.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                <Package className="h-5 w-5 text-slate-400" />
-                <div>
-                  <p className="font-medium text-slate-900">{part.part_name}</p>
-                  <p className="text-xs text-slate-500">
-                    {part.part_number} • Qty: {part.quantity}
-                  </p>
+          <div className="space-y-4">
+            {parts.map((part) => {
+              const partWarranty = calculateWarrantyStatus(part.warranty_expiry_date);
+              return (
+                <div key={part.id} className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <Package className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-900">{part.part_name}</p>
+                        {part.part_type && (
+                          <span className="text-xs px-2 py-0.5 bg-slate-200 text-slate-600 rounded-full">
+                            {part.part_type}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
+                      partWarranty.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                      partWarranty.status === 'expiring' ? 'bg-amber-100 text-amber-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {partWarranty.status === 'active' && <CheckCircle2 className="h-3 w-3" />}
+                      {partWarranty.status === 'expiring' && <AlertTriangle className="h-3 w-3" />}
+                      {partWarranty.status === 'expired' && <XCircle className="h-3 w-3" />}
+                      {partWarranty.status === 'expired' ? 'Warranty Expired' : 
+                       partWarranty.status === 'expiring' ? `${partWarranty.days}d left` : 
+                       'Under Warranty'}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    {part.brand && (
+                      <div>
+                        <span className="text-slate-400 text-xs block">Brand</span>
+                        <span className="text-slate-700 font-medium">{part.brand}</span>
+                      </div>
+                    )}
+                    {part.model_number && (
+                      <div>
+                        <span className="text-slate-400 text-xs block">Model</span>
+                        <span className="text-slate-700 font-medium font-mono">{part.model_number}</span>
+                      </div>
+                    )}
+                    {part.serial_number && (
+                      <div>
+                        <span className="text-slate-400 text-xs block">Serial No.</span>
+                        <span className="text-slate-700 font-medium font-mono">{part.serial_number}</span>
+                      </div>
+                    )}
+                    {part.capacity && (
+                      <div>
+                        <span className="text-slate-400 text-xs block">Capacity</span>
+                        <span className="text-slate-700 font-medium">{part.capacity}</span>
+                      </div>
+                    )}
+                    {part.purchase_date && (
+                      <div>
+                        <span className="text-slate-400 text-xs block">Purchase Date</span>
+                        <span className="text-slate-700">{formatDate(part.purchase_date)}</span>
+                      </div>
+                    )}
+                    {part.replaced_date && (
+                      <div>
+                        <span className="text-slate-400 text-xs block">Installed On</span>
+                        <span className="text-slate-700">{formatDate(part.replaced_date)}</span>
+                      </div>
+                    )}
+                    {part.warranty_expiry_date && (
+                      <div>
+                        <span className="text-slate-400 text-xs block">Warranty Until</span>
+                        <span className={`font-medium ${warrantyStatusColors[partWarranty.status]}`}>
+                          {formatDate(part.warranty_expiry_date)}
+                        </span>
+                      </div>
+                    )}
+                    {part.warranty_months && (
+                      <div>
+                        <span className="text-slate-400 text-xs block">Warranty Period</span>
+                        <span className="text-slate-700">{part.warranty_months} months</span>
+                      </div>
+                    )}
+                    {part.vendor && (
+                      <div>
+                        <span className="text-slate-400 text-xs block">Vendor</span>
+                        <span className="text-slate-700">{part.vendor}</span>
+                      </div>
+                    )}
+                    {part.purchase_cost && (
+                      <div>
+                        <span className="text-slate-400 text-xs block">Cost</span>
+                        <span className="text-slate-700 font-medium">₹{part.purchase_cost.toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {part.notes && (
+                    <div className="mt-3 pt-3 border-t border-slate-200">
+                      <span className="text-slate-400 text-xs block mb-1">Notes</span>
+                      <p className="text-sm text-slate-600">{part.notes}</p>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
