@@ -2077,8 +2077,10 @@ async def create_company_portal_user(
     if not user_data.get("name") or not user_data.get("email") or not user_data.get("password"):
         raise HTTPException(status_code=400, detail="Name, email, and password are required")
     
-    if len(user_data.get("password", "")) < 6:
-        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    # Validate password strength
+    is_valid, error_msg = validate_password_strength(user_data.get("password", ""))
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
     
     # Create user
     new_user = {
