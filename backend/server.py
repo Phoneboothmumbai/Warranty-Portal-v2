@@ -1429,7 +1429,9 @@ async def create_quick_service_request(identifier: str, request: QuickServiceReq
 # ==================== AUTH ENDPOINTS ====================
 
 @api_router.post("/auth/login", response_model=Token)
-async def admin_login(login: AdminLogin):
+@limiter.limit(RATE_LIMITS["login"])
+async def admin_login(request: Request, login: AdminLogin):
+    """Admin login with rate limiting (5 attempts/minute per IP)"""
     admin = await db.admins.find_one({"email": login.email}, {"_id": 0})
     if not admin or not verify_password(login.password, admin.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="Invalid credentials")
