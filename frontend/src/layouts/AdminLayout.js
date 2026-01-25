@@ -50,6 +50,7 @@ const navGroups = [
     items: [
       { path: '/admin/licenses', label: 'Licenses', icon: Key },
       { path: '/admin/amc-contracts', label: 'AMC Contracts', icon: FileText },
+      { path: '/admin/amc-requests', label: 'AMC Requests', icon: FileText },
       { path: '/admin/subscriptions', label: 'Subscriptions', icon: Mail },
       { path: '/admin/internet-services', label: 'Internet Services', icon: Globe },
       { path: '/admin/service-history', label: 'Service History', icon: History },
