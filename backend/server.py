@@ -89,10 +89,18 @@ from models.device_model import (
     AILookupRequest
 )
 from services.device_lookup import get_or_create_device_model
+from utils.security import limiter, RATE_LIMITS, validate_password_strength, sanitize_input
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from fastapi import Request
 
 # Create the main app
 app = FastAPI(title="Warranty & Asset Tracking Portal")
 api_router = APIRouter(prefix="/api")
+
+# Add rate limiter to app
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
