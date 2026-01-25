@@ -35,7 +35,7 @@ const durationOptions = [
 ];
 
 const NewAMCRequest = () => {
-  const { token } = useAuth();
+  const { token } = useCompanyAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
