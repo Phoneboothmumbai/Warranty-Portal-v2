@@ -6338,8 +6338,9 @@ async def get_renewal_alerts(
 # --- Company Auth ---
 
 @api_router.post("/company/auth/login")
-async def company_login(login: CompanyLogin):
-    """Company user login"""
+@limiter.limit(RATE_LIMITS["login"])
+async def company_login(request: Request, login: CompanyLogin):
+    """Company user login with rate limiting (5 attempts/minute per IP)"""
     user = await db.company_users.find_one({
         "email": login.email.lower(),
         "is_active": True,
@@ -6375,8 +6376,9 @@ async def company_login(login: CompanyLogin):
     }
 
 @api_router.post("/company/auth/register")
-async def company_user_register(data: CompanyUserRegister):
-    """Self-registration for company users"""
+@limiter.limit(RATE_LIMITS["register"])
+async def company_user_register(request: Request, data: CompanyUserRegister):
+    """Self-registration for company users with rate limiting and password validation"""
     # Find company by code
     company = await db.companies.find_one({
         "code": data.company_code.upper(),
@@ -6385,6 +6387,11 @@ async def company_user_register(data: CompanyUserRegister):
     
     if not company:
         raise HTTPException(status_code=404, detail="Invalid company code")
+    
+    # Validate password strength
+    is_valid, error_msg = validate_password_strength(data.password)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
     
     # Check if email already exists
     existing = await db.company_users.find_one({"email": data.email.lower()}, {"_id": 0})
