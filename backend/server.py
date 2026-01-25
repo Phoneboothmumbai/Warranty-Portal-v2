@@ -2105,10 +2105,15 @@ async def reset_portal_user_password(
     data: dict,
     admin: dict = Depends(get_current_admin)
 ):
-    """Reset a portal user's password"""
+    """Reset a portal user's password with strong validation"""
     new_password = data.get("password")
-    if not new_password or len(new_password) < 6:
-        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    if not new_password:
+        raise HTTPException(status_code=400, detail="Password is required")
+    
+    # Validate password strength
+    is_valid, error_msg = validate_password_strength(new_password)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
     
     result = await db.company_users.update_one(
         {"id": user_id, "company_id": company_id, "is_deleted": {"$ne": True}},
