@@ -5,7 +5,7 @@ import {
   ArrowLeft, Package, Calendar, FileText, CheckCircle2,
   Laptop, Monitor, Printer, Server, Tablet, Shield
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useCompanyAuth } from '../../context/CompanyAuthContext';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
