@@ -1449,10 +1449,16 @@ async def get_current_admin_info(admin: dict = Depends(get_current_admin)):
     }
 
 @api_router.post("/auth/setup")
-async def setup_first_admin(admin_data: AdminCreate):
+@limiter.limit(RATE_LIMITS["register"])
+async def setup_first_admin(request: Request, admin_data: AdminCreate):
     existing = await db.admins.find_one({}, {"_id": 0})
     if existing:
         raise HTTPException(status_code=400, detail="Admin already exists. Use login.")
+    
+    # Validate password strength
+    is_valid, error_msg = validate_password_strength(admin_data.password)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
     
     admin = AdminUser(
         email=admin_data.email,
