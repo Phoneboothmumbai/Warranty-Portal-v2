@@ -134,6 +134,7 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - Database: MongoDB
 - AI: OpenAI GPT-4o-mini via emergentintegrations
 - File Processing: pandas, openpyxl
+- Security: slowapi (rate limiting), bcrypt (password hashing), JWT (authentication)
 
 ## Key API Endpoints
 - `/api/security/info` - Security settings (password requirements, rate limits)
