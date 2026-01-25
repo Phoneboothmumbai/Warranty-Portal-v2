@@ -156,6 +156,7 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 
 ## Test Reports
 - `/app/test_reports/iteration_11.json` - Sidebar & Asset Transfer tests (14/14 passed)
+- `/app/test_reports/iteration_12.json` - Security Enhancements & Part Details tests (21/21 passed)
 
 ## File Structure
 ```
