@@ -105,6 +105,8 @@ function App() {
                     <Route path="parts" element={<Parts />} />
                     <Route path="amc" element={<AMCManagement />} />
                     <Route path="amc-contracts" element={<AMCContracts />} />
+                    <Route path="amc-requests" element={<AdminAMCRequests />} />
+                    <Route path="amc-requests/:requestId" element={<AdminAMCRequestDetail />} />
                     <Route path="sites" element={<Sites />} />
                     <Route path="deployments" element={<Deployments />} />
                     <Route path="licenses" element={<Licenses />} />
@@ -130,6 +132,9 @@ function App() {
                     <Route path="credentials" element={<CompanyCredentials />} />
                     <Route path="warranty" element={<CompanyWarranty />} />
                     <Route path="amc" element={<CompanyAMC />} />
+                    <Route path="amc-requests" element={<CompanyAMCRequests />} />
+                    <Route path="amc-requests/new" element={<NewAMCRequest />} />
+                    <Route path="amc-requests/:requestId" element={<CompanyAMCRequests />} />
                     <Route path="tickets" element={<CompanyTickets />} />
                     <Route path="tickets/:ticketId" element={<CompanyTicketDetails />} />
                     <Route path="deployments" element={<CompanyDeployments />} />
