@@ -12,6 +12,7 @@ const navItems = [
   { to: '/company/credentials', icon: Key, label: 'Credentials' },
   { to: '/company/warranty', icon: Shield, label: 'Warranty & Coverage' },
   { to: '/company/amc', icon: FileText, label: 'AMC / Contracts' },
+  { to: '/company/amc-requests', icon: FileText, label: 'Request AMC' },
   { to: '/company/tickets', icon: Ticket, label: 'Service Requests' },
   { to: '/company/office-supplies', icon: ShoppingBag, label: 'Office Supplies' },
   { to: '/company/deployments', icon: Package, label: 'Deployments' },
