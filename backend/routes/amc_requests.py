@@ -39,7 +39,16 @@ async def create_amc_package(
     admin: dict = Depends(get_current_admin)
 ):
     """Create a new AMC package"""
-    new_package = AMCPackage(**package.model_dump())
+    package_data = package.model_dump()
+    # Set defaults for optional fields
+    if package_data.get("coverage_includes") is None:
+        package_data["coverage_includes"] = {}
+    if package_data.get("exclusions") is None:
+        package_data["exclusions"] = {}
+    if package_data.get("entitlements") is None:
+        package_data["entitlements"] = {}
+    
+    new_package = AMCPackage(**package_data)
     await db.amc_packages.insert_one(new_package.model_dump())
     return new_package.model_dump()
 
