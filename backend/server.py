@@ -8057,6 +8057,11 @@ async def update_company_profile(
     
     # Handle password change
     if updates.get("current_password") and updates.get("new_password"):
+        # Validate new password strength
+        is_valid, error_msg = validate_password_strength(updates["new_password"])
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=error_msg)
+        
         # Verify current password
         stored_user = await db.company_users.find_one({"id": user["id"]})
         if not stored_user or not verify_password(
