@@ -56,6 +56,18 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - ✅ **Security Info API** - `/api/security/info` exposes password requirements and rate limiting config
 - ✅ **Full Part Details Display** - Admin Device Details page now shows comprehensive part info including brand, model, serial number, capacity, purchase/install dates, warranty status badges, vendor, cost, and notes
 
+### AMC Self-Service Request System (Jan 25, 2025)
+- ✅ **Company Portal: Request AMC** - Users can submit AMC requests with package/device selection
+- ✅ **AMC Packages** - Admin can create predefined packages (Basic, Standard, Premium) with pricing
+- ✅ **Company-Specific Pricing** - Set custom pricing per company for each package
+- ✅ **Device Selection** - Users can select specific devices, all devices, or by category
+- ✅ **Duration Options** - 1, 2, or 3 year contracts with multi-year discounts
+- ✅ **Admin Review Panel** - View requests, set pricing, add notes
+- ✅ **Status Workflow** - Pending Review → Under Review → Approved/Rejected/Changes Requested
+- ✅ **Approval Creates Contract** - Automatic AMC contract creation upon approval
+- ✅ **In-App Notifications** - Users notified when request status changes
+- ✅ **Payment Tracking** - Admin can mark payment as received
+
 ### Backend Refactoring (Jan 22, 2025)
 - ✅ Created `routes/` directory structure for modular endpoints
 - ✅ Extracted routes: public, auth, masters, webhooks, qr_service, companies
