@@ -5,7 +5,7 @@ import {
   FileText, Plus, Clock, CheckCircle2, XCircle, AlertTriangle,
   Calendar, Package, ChevronRight, Filter, Search, RefreshCw
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useCompanyAuth } from '../../context/CompanyAuthContext';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { toast } from 'sonner';
@@ -28,7 +28,7 @@ const amcTypeLabels = {
 };
 
 const CompanyAMCRequests = () => {
-  const { token } = useAuth();
+  const { token } = useCompanyAuth();
   const navigate = useNavigate();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
