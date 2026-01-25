@@ -40,6 +40,8 @@ import RenewalAlerts from "./pages/admin/RenewalAlerts";
 import InternetServices from "./pages/admin/InternetServices";
 import Credentials from "./pages/admin/Credentials";
 import DeviceModelCatalog from "./pages/admin/DeviceModelCatalog";
+import AdminAMCRequests from "./pages/admin/AdminAMCRequests";
+import AdminAMCRequestDetail from "./pages/admin/AdminAMCRequestDetail";
 
 // Company Portal Pages
 import CompanyLayout from "./layouts/CompanyLayout";
@@ -58,6 +60,8 @@ import CompanyProfile from "./pages/company/CompanyProfile";
 import CompanyWarranty from "./pages/company/CompanyWarranty";
 import CompanyOfficeSupplies from "./pages/company/CompanyOfficeSupplies";
 import CompanyCredentials from "./pages/company/CompanyCredentials";
+import CompanyAMCRequests from "./pages/company/CompanyAMCRequests";
+import NewAMCRequest from "./pages/company/NewAMCRequest";
 
 // Engineer Portal Pages
 import EngineerLogin from "./pages/engineer/EngineerLogin";
