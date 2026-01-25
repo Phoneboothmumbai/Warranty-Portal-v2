@@ -5029,8 +5029,9 @@ from services.auth import get_current_engineer
 # --- Engineer Auth ---
 
 @api_router.post("/engineer/auth/login")
-async def engineer_login(login: EngineerLogin):
-    """Engineer login"""
+@limiter.limit(RATE_LIMITS["login"])
+async def engineer_login(request: Request, login: EngineerLogin):
+    """Engineer login with rate limiting (5 attempts/minute per IP)"""
     engineer = await db.engineers.find_one(
         {"email": login.email, "is_active": True, "is_deleted": {"$ne": True}},
         {"_id": 0}
