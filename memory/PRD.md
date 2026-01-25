@@ -136,6 +136,7 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - File Processing: pandas, openpyxl
 
 ## Key API Endpoints
+- `/api/security/info` - Security settings (password requirements, rate limits)
 - `/api/warranty/search?q={serial}` - Search devices AND parts by serial number
 - `/api/admin/asset-transfers` - Asset transfer between employees
 - `/api/admin/credentials` - Central credentials dashboard
