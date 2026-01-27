@@ -54,8 +54,8 @@ const AdminDeviceDetails = () => {
 
       // Fetch service history for this device
       try {
-        const serviceRes = await axios.get(`${API}/admin/service-records`, {
-          params: { device_id: deviceId, limit: 20 },
+        const serviceRes = await axios.get(`${API}/admin/services`, {
+          params: { device_id: deviceId },
           headers: { Authorization: `Bearer ${token}` }
         });
         setServiceHistory(serviceRes.data || []);
