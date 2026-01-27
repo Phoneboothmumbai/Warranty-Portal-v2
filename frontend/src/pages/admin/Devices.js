@@ -1985,7 +1985,20 @@ const Devices = () => {
                   {serviceHistoryData.map((record, index) => (
                     <div 
                       key={record.id || index} 
-                      className="p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
+                      className="p-4 border border-slate-200 rounded-lg hover:border-blue-300 hover:bg-blue-50/50 transition-colors cursor-pointer group"
+                      onClick={() => {
+                        setServiceHistoryModalOpen(false);
+                        if (record.type === 'service_record') {
+                          navigate(`/admin/service-history?service_id=${record.id}`);
+                        } else if (record.type === 'service_ticket') {
+                          navigate(`/admin/service-history?ticket_id=${record.id}`);
+                        } else if (record.type === 'ai_support') {
+                          navigate(`/admin/service-history?ai_chat_id=${record.id}`);
+                        } else {
+                          navigate(`/admin/service-history?device_id=${serviceHistoryDevice?.id}`);
+                        }
+                      }}
+                      data-testid={`service-history-item-${record.id}`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -2019,6 +2032,17 @@ const Devices = () => {
                                 {record.status.replace('_', ' ')}
                               </span>
                             )}
+                            {record.type === 'service_record' && record.status && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${
+                                record.status === 'completed'
+                                  ? 'bg-emerald-100 text-emerald-700'
+                                  : record.status === 'in_progress'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {record.status.replace('_', ' ')}
+                              </span>
+                            )}
                           </div>
                           <p className="text-sm text-slate-700">{record.description}</p>
                           {record.ticket_number && (
@@ -2037,7 +2061,7 @@ const Devices = () => {
                             </p>
                           )}
                         </div>
-                        <div className="text-right ml-4">
+                        <div className="text-right ml-4 flex flex-col items-end gap-2">
                           <p className="text-sm font-medium text-slate-600">
                             {record.date ? new Date(record.date).toLocaleDateString('en-IN', {
                               day: '2-digit',
@@ -2045,6 +2069,7 @@ const Devices = () => {
                               year: 'numeric'
                             }) : 'N/A'}
                           </p>
+                          <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-blue-500 transition-colors" />
                         </div>
                       </div>
                     </div>
