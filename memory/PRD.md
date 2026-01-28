@@ -92,6 +92,24 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - ✅ **Company Ticket Detail** (`/company/support-tickets/:id`) - Customer-friendly thread view
 - ✅ **Sidebar Navigation** - Added "Support Tickets" to admin and company sidebars
 
+### Enterprise Ticketing System - Phase 2 (Jan 28, 2025)
+- ✅ **Admin Ticketing Settings** (`/admin/ticketing-settings`) - Manage Departments, SLA Policies, Categories
+- ✅ **Departments Tab** - Create/edit/delete departments with default SLA, priority, auto-assignment settings
+- ✅ **SLA Policies Tab** - Configure response/resolution times, business hours, priority multipliers
+- ✅ **Categories Tab** - Define ticket categories with auto-routing to departments
+- ✅ **Public Support Portal** (`/support`) - Anonymous ticket submission for non-company users
+- ✅ **Submit Request Form** - Name, email, phone, subject, description, department, category, priority
+- ✅ **Check Ticket Status** - Lookup by ticket number + email verification
+- ✅ **Public Ticket Reply** - Customers can add replies to their tickets
+- ✅ **Ticket Number Generation** - Unique TKT-YYYYMMDD-XXXXXX format
+
+#### Phase 2 API Endpoints:
+- `GET /api/ticketing/public/departments` - Public departments (no auth)
+- `GET /api/ticketing/public/categories` - Public categories (no auth)
+- `POST /api/ticketing/public/tickets` - Create public ticket (no auth)
+- `GET /api/ticketing/public/tickets/{ticket_number}?email=` - Check ticket status
+- `POST /api/ticketing/public/tickets/{ticket_number}/reply?content=&email=` - Add reply
+
 #### Ticketing API Endpoints:
 - `GET /api/ticketing/enums` - All dropdown values
 - `GET/POST /api/ticketing/admin/departments` - Department management
