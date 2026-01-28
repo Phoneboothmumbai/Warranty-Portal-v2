@@ -3025,8 +3025,37 @@ async def create_service(service_data: ServiceHistoryCreate, admin: dict = Depen
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     
+    service_dict = service_data.model_dump()
+    
+    # ==================== OEM VALIDATION RULES ====================
+    if service_dict.get("service_category") == "oem_warranty_service":
+        # Validate OEM details are provided
+        oem_details = service_dict.get("oem_details")
+        if not oem_details:
+            raise HTTPException(status_code=400, detail="OEM Service Details are required for OEM Warranty Service")
+        
+        # Validate required OEM fields
+        if not oem_details.get("oem_name"):
+            raise HTTPException(status_code=400, detail="OEM Name is required")
+        if not oem_details.get("oem_case_number"):
+            raise HTTPException(status_code=400, detail="OEM Case/SR Number is required")
+        if not oem_details.get("oem_warranty_type"):
+            raise HTTPException(status_code=400, detail="OEM Warranty Type is required")
+        if not oem_details.get("case_raised_date"):
+            raise HTTPException(status_code=400, detail="Case Raised Date is required")
+        if not oem_details.get("case_raised_via"):
+            raise HTTPException(status_code=400, detail="Case Raised Via is required")
+        
+        # Auto-set fields for OEM cases
+        service_dict["service_responsibility"] = "oem"
+        service_dict["service_role"] = "coordinator_facilitator"
+        service_dict["billing_impact"] = "warranty_covered"
+        service_dict["counts_toward_amc"] = False  # LOCKED - cannot consume AMC
+        service_dict["consumes_amc_quota"] = False
+        service_dict["amc_covered"] = False
+    
     service = ServiceHistory(
-        **service_data.model_dump(),
+        **service_dict,
         company_id=device.get("company_id"),
         created_by=admin.get("id"),
         created_by_name=admin.get("name")
@@ -3048,9 +3077,60 @@ async def update_service(service_id: str, updates: ServiceHistoryUpdate, admin: 
     if not existing:
         raise HTTPException(status_code=404, detail="Service record not found")
     
+    # ==================== CLOSURE VALIDATION ====================
+    # Check if record is already closed (read-only)
+    if existing.get("is_closed"):
+        raise HTTPException(status_code=400, detail="Closed service records cannot be modified")
+    
     update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=400, detail="No updates provided")
+    
+    # ==================== OEM VALIDATION RULES ====================
+    service_category = update_data.get("service_category") or existing.get("service_category")
+    
+    if service_category == "oem_warranty_service":
+        oem_details = update_data.get("oem_details") or existing.get("oem_details")
+        
+        # Validate OEM details
+        if not oem_details:
+            raise HTTPException(status_code=400, detail="OEM Service Details are required for OEM Warranty Service")
+        if not oem_details.get("oem_case_number"):
+            raise HTTPException(status_code=400, detail="OEM Case/SR Number is required")
+        
+        # Enforce locked fields for OEM cases
+        update_data["service_responsibility"] = "oem"
+        update_data["service_role"] = "coordinator_facilitator"
+        update_data["billing_impact"] = "warranty_covered"
+        update_data["counts_toward_amc"] = False
+        update_data["consumes_amc_quota"] = False
+        update_data["amc_covered"] = False
+        
+        # Check OEM closure status
+        if oem_details.get("oem_case_status") == "closed_by_oem":
+            # Require attachment for closure
+            attachments = existing.get("attachments", [])
+            if len(attachments) == 0:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="OEM service records require at least one attachment (proof) before closure"
+                )
+    
+    # ==================== HANDLE CLOSURE ====================
+    if update_data.get("status") == "closed" or (
+        service_category == "oem_warranty_service" and 
+        update_data.get("oem_details", {}).get("oem_case_status") == "closed_by_oem"
+    ):
+        # Require service outcome for closure
+        service_outcome = update_data.get("service_outcome") or existing.get("service_outcome")
+        if not service_outcome or not service_outcome.get("resolution_summary"):
+            raise HTTPException(status_code=400, detail="Resolution summary is required for closure")
+        
+        update_data["is_closed"] = True
+        update_data["closed_at"] = get_ist_isoformat()
+        update_data["status"] = "closed"
+    
+    update_data["updated_at"] = get_ist_isoformat()
     
     changes = {k: {"old": existing.get(k), "new": v} for k, v in update_data.items() if existing.get(k) != v}
     
