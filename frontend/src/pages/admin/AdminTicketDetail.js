@@ -214,7 +214,7 @@ export default function AdminTicketDetail() {
   const formatEventData = (eventType, eventData) => {
     switch (eventType) {
       case 'ticket_created':
-        return 'Ticket created';
+        return eventData?.help_topic ? `Ticket created via "${eventData.help_topic}"` : 'Ticket created';
       case 'status_changed':
         return `Status changed from "${STATUS_CONFIG[eventData?.old]?.label || eventData?.old}" to "${STATUS_CONFIG[eventData?.new]?.label || eventData?.new}"`;
       case 'priority_changed':
@@ -225,6 +225,10 @@ export default function AdminTicketDetail() {
         return `Reassigned to ${eventData?.assignee_name || 'staff member'}`;
       case 'department_changed':
         return `Department changed`;
+      case 'participant_added':
+        return `${eventData?.name || 'Participant'} (${eventData?.email}) added as CC`;
+      case 'participant_removed':
+        return `${eventData?.name || 'Participant'} removed from CC`;
       default:
         return eventType?.replace(/_/g, ' ');
     }
