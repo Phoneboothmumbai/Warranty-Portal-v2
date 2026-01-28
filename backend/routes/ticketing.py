@@ -249,6 +249,507 @@ async def delete_category(category_id: str, admin: dict = Depends(get_current_ad
     return {"message": "Category deleted"}
 
 
+# ==================== HELP TOPICS (Replaces Categories) ====================
+
+@router.get("/admin/help-topics")
+async def list_help_topics(include_inactive: bool = False, admin: dict = Depends(get_current_admin)):
+    """List all help topics"""
+    query = {"is_deleted": {"$ne": True}}
+    if not include_inactive:
+        query["is_active"] = True
+    topics = await _db.ticketing_help_topics.find(query, {"_id": 0}).sort("sort_order", 1).to_list(100)
+    return topics
+
+
+@router.post("/admin/help-topics")
+async def create_help_topic(data: HelpTopicCreate, admin: dict = Depends(get_current_admin)):
+    """Create a new help topic"""
+    topic = HelpTopic(**data.model_dump(), created_by=admin.get("id"))
+    await _db.ticketing_help_topics.insert_one(topic.model_dump())
+    await _log_audit("help_topic", topic.id, "create", data.model_dump(), admin)
+    return topic.model_dump()
+
+
+@router.get("/admin/help-topics/{topic_id}")
+async def get_help_topic(topic_id: str, admin: dict = Depends(get_current_admin)):
+    """Get help topic by ID"""
+    topic = await _db.ticketing_help_topics.find_one({"id": topic_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not topic:
+        raise HTTPException(status_code=404, detail="Help topic not found")
+    return topic
+
+
+@router.put("/admin/help-topics/{topic_id}")
+async def update_help_topic(topic_id: str, updates: HelpTopicUpdate, admin: dict = Depends(get_current_admin)):
+    """Update a help topic"""
+    topic = await _db.ticketing_help_topics.find_one({"id": topic_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not topic:
+        raise HTTPException(status_code=404, detail="Help topic not found")
+    
+    update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
+    update_data["updated_at"] = get_ist_isoformat()
+    
+    await _db.ticketing_help_topics.update_one({"id": topic_id}, {"$set": update_data})
+    await _log_audit("help_topic", topic_id, "update", update_data, admin)
+    return await _db.ticketing_help_topics.find_one({"id": topic_id}, {"_id": 0})
+
+
+@router.delete("/admin/help-topics/{topic_id}")
+async def delete_help_topic(topic_id: str, admin: dict = Depends(get_current_admin)):
+    """Soft delete a help topic"""
+    topic = await _db.ticketing_help_topics.find_one({"id": topic_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not topic:
+        raise HTTPException(status_code=404, detail="Help topic not found")
+    
+    await _db.ticketing_help_topics.update_one({"id": topic_id}, {"$set": {"is_deleted": True, "updated_at": get_ist_isoformat()}})
+    await _log_audit("help_topic", topic_id, "delete", {}, admin)
+    return {"message": "Help topic deleted"}
+
+
+@router.get("/portal/help-topics")
+async def list_help_topics_public(user: dict = Depends(get_current_company_user)):
+    """List public help topics for ticket creation"""
+    return await _db.ticketing_help_topics.find(
+        {"is_deleted": {"$ne": True}, "is_active": True, "is_public": True},
+        {"_id": 0, "id": 1, "name": 1, "description": 1, "icon": 1, "custom_form_id": 1}
+    ).sort("sort_order", 1).to_list(50)
+
+
+@router.get("/public/help-topics")
+async def list_help_topics_for_public():
+    """List public help topics for anonymous ticket creation"""
+    return await _db.ticketing_help_topics.find(
+        {"is_deleted": {"$ne": True}, "is_active": True, "is_public": True, "company_id": None},
+        {"_id": 0, "id": 1, "name": 1, "description": 1, "icon": 1, "custom_form_id": 1}
+    ).sort("sort_order", 1).to_list(50)
+
+
+# ==================== CUSTOM FORMS ====================
+
+@router.get("/admin/custom-forms")
+async def list_custom_forms(admin: dict = Depends(get_current_admin)):
+    """List all custom forms"""
+    forms = await _db.ticketing_custom_forms.find({"is_deleted": {"$ne": True}}, {"_id": 0}).sort("name", 1).to_list(100)
+    return forms
+
+
+@router.post("/admin/custom-forms")
+async def create_custom_form(data: CustomFormCreate, admin: dict = Depends(get_current_admin)):
+    """Create a new custom form"""
+    # Process fields to add IDs if missing
+    fields = []
+    for i, field_data in enumerate(data.fields):
+        field = CustomFormField(
+            id=field_data.get("id", str(uuid.uuid4())),
+            name=field_data.get("name", f"field_{i}"),
+            label=field_data.get("label", f"Field {i}"),
+            field_type=field_data.get("field_type", "text"),
+            options=field_data.get("options", []),
+            required=field_data.get("required", False),
+            placeholder=field_data.get("placeholder"),
+            help_text=field_data.get("help_text"),
+            default_value=field_data.get("default_value"),
+            width=field_data.get("width", "full"),
+            visible_to_customer=field_data.get("visible_to_customer", True),
+            editable_by_customer=field_data.get("editable_by_customer", True),
+            sort_order=field_data.get("sort_order", i)
+        )
+        fields.append(field.model_dump())
+    
+    form = CustomForm(
+        name=data.name,
+        description=data.description,
+        fields=fields,
+        created_by=admin.get("id")
+    )
+    await _db.ticketing_custom_forms.insert_one(form.model_dump())
+    await _log_audit("custom_form", form.id, "create", {"name": data.name}, admin)
+    return form.model_dump()
+
+
+@router.get("/admin/custom-forms/{form_id}")
+async def get_custom_form(form_id: str, admin: dict = Depends(get_current_admin)):
+    """Get custom form by ID"""
+    form = await _db.ticketing_custom_forms.find_one({"id": form_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not form:
+        raise HTTPException(status_code=404, detail="Custom form not found")
+    return form
+
+
+@router.put("/admin/custom-forms/{form_id}")
+async def update_custom_form(form_id: str, updates: CustomFormUpdate, admin: dict = Depends(get_current_admin)):
+    """Update a custom form - increments version if fields change"""
+    form = await _db.ticketing_custom_forms.find_one({"id": form_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not form:
+        raise HTTPException(status_code=404, detail="Custom form not found")
+    
+    update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
+    
+    # If fields are being updated, increment version
+    if "fields" in update_data:
+        update_data["version"] = form.get("version", 1) + 1
+        # Process fields
+        fields = []
+        for i, field_data in enumerate(update_data["fields"]):
+            field = CustomFormField(
+                id=field_data.get("id", str(uuid.uuid4())),
+                name=field_data.get("name", f"field_{i}"),
+                label=field_data.get("label", f"Field {i}"),
+                field_type=field_data.get("field_type", "text"),
+                options=field_data.get("options", []),
+                required=field_data.get("required", False),
+                placeholder=field_data.get("placeholder"),
+                help_text=field_data.get("help_text"),
+                default_value=field_data.get("default_value"),
+                width=field_data.get("width", "full"),
+                visible_to_customer=field_data.get("visible_to_customer", True),
+                editable_by_customer=field_data.get("editable_by_customer", True),
+                sort_order=field_data.get("sort_order", i)
+            )
+            fields.append(field.model_dump())
+        update_data["fields"] = fields
+    
+    update_data["updated_at"] = get_ist_isoformat()
+    
+    await _db.ticketing_custom_forms.update_one({"id": form_id}, {"$set": update_data})
+    await _log_audit("custom_form", form_id, "update", update_data, admin)
+    return await _db.ticketing_custom_forms.find_one({"id": form_id}, {"_id": 0})
+
+
+@router.delete("/admin/custom-forms/{form_id}")
+async def delete_custom_form(form_id: str, admin: dict = Depends(get_current_admin)):
+    """Soft delete a custom form"""
+    form = await _db.ticketing_custom_forms.find_one({"id": form_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not form:
+        raise HTTPException(status_code=404, detail="Custom form not found")
+    
+    # Check if any help topics use this form
+    topics_using = await _db.ticketing_help_topics.count_documents({"custom_form_id": form_id, "is_deleted": {"$ne": True}})
+    if topics_using > 0:
+        raise HTTPException(status_code=400, detail=f"Cannot delete form - {topics_using} help topics are using it")
+    
+    await _db.ticketing_custom_forms.update_one({"id": form_id}, {"$set": {"is_deleted": True, "updated_at": get_ist_isoformat()}})
+    return {"message": "Custom form deleted"}
+
+
+@router.get("/portal/custom-forms/{form_id}")
+async def get_custom_form_public(form_id: str, user: dict = Depends(get_current_company_user)):
+    """Get custom form for ticket creation (customer view)"""
+    form = await _db.ticketing_custom_forms.find_one({"id": form_id, "is_deleted": {"$ne": True}, "is_active": True}, {"_id": 0})
+    if not form:
+        raise HTTPException(status_code=404, detail="Custom form not found")
+    
+    # Filter fields to only show customer-visible fields
+    form["fields"] = [f for f in form.get("fields", []) if f.get("visible_to_customer", True)]
+    return form
+
+
+@router.get("/public/custom-forms/{form_id}")
+async def get_custom_form_for_public(form_id: str):
+    """Get custom form for anonymous ticket creation"""
+    form = await _db.ticketing_custom_forms.find_one({"id": form_id, "is_deleted": {"$ne": True}, "is_active": True}, {"_id": 0})
+    if not form:
+        raise HTTPException(status_code=404, detail="Custom form not found")
+    
+    # Filter fields to only show customer-visible fields
+    form["fields"] = [f for f in form.get("fields", []) if f.get("visible_to_customer", True)]
+    return form
+
+
+# ==================== CANNED RESPONSES ====================
+
+@router.get("/admin/canned-responses")
+async def list_canned_responses(
+    department_id: Optional[str] = None,
+    category: Optional[str] = None,
+    search: Optional[str] = None,
+    admin: dict = Depends(get_current_admin)
+):
+    """List canned responses - includes personal + shared"""
+    query = {"is_deleted": {"$ne": True}, "is_active": True}
+    
+    # Show personal responses only to creator, shared responses to everyone
+    query["$or"] = [
+        {"is_personal": False},
+        {"is_personal": True, "created_by": admin.get("id")}
+    ]
+    
+    if department_id:
+        query["$and"] = query.get("$and", [])
+        query["$and"].append({"$or": [{"department_id": department_id}, {"department_id": None}]})
+    if category:
+        query["category"] = category
+    if search:
+        query["$and"] = query.get("$and", [])
+        query["$and"].append({"$or": [
+            {"title": {"$regex": search, "$options": "i"}},
+            {"content": {"$regex": search, "$options": "i"}}
+        ]})
+    
+    responses = await _db.ticketing_canned_responses.find(query, {"_id": 0}).sort([("usage_count", -1), ("title", 1)]).to_list(100)
+    return responses
+
+
+@router.post("/admin/canned-responses")
+async def create_canned_response(data: CannedResponseCreate, admin: dict = Depends(get_current_admin)):
+    """Create a canned response"""
+    response = CannedResponse(**data.model_dump(), created_by=admin.get("id"))
+    await _db.ticketing_canned_responses.insert_one(response.model_dump())
+    await _log_audit("canned_response", response.id, "create", {"title": data.title}, admin)
+    return response.model_dump()
+
+
+@router.get("/admin/canned-responses/{response_id}")
+async def get_canned_response(response_id: str, admin: dict = Depends(get_current_admin)):
+    """Get canned response by ID"""
+    response = await _db.ticketing_canned_responses.find_one({"id": response_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not response:
+        raise HTTPException(status_code=404, detail="Canned response not found")
+    
+    # Check permission for personal responses
+    if response.get("is_personal") and response.get("created_by") != admin.get("id"):
+        raise HTTPException(status_code=403, detail="Cannot access this personal response")
+    
+    return response
+
+
+@router.put("/admin/canned-responses/{response_id}")
+async def update_canned_response(response_id: str, updates: CannedResponseUpdate, admin: dict = Depends(get_current_admin)):
+    """Update a canned response"""
+    response = await _db.ticketing_canned_responses.find_one({"id": response_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not response:
+        raise HTTPException(status_code=404, detail="Canned response not found")
+    
+    # Check permission
+    if response.get("is_personal") and response.get("created_by") != admin.get("id"):
+        raise HTTPException(status_code=403, detail="Cannot edit this personal response")
+    
+    update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
+    update_data["updated_at"] = get_ist_isoformat()
+    
+    await _db.ticketing_canned_responses.update_one({"id": response_id}, {"$set": update_data})
+    return await _db.ticketing_canned_responses.find_one({"id": response_id}, {"_id": 0})
+
+
+@router.delete("/admin/canned-responses/{response_id}")
+async def delete_canned_response(response_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete a canned response"""
+    response = await _db.ticketing_canned_responses.find_one({"id": response_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not response:
+        raise HTTPException(status_code=404, detail="Canned response not found")
+    
+    # Check permission
+    if response.get("is_personal") and response.get("created_by") != admin.get("id"):
+        raise HTTPException(status_code=403, detail="Cannot delete this personal response")
+    
+    await _db.ticketing_canned_responses.update_one({"id": response_id}, {"$set": {"is_deleted": True}})
+    return {"message": "Canned response deleted"}
+
+
+@router.post("/admin/canned-responses/{response_id}/use")
+async def use_canned_response(response_id: str, ticket_id: str, admin: dict = Depends(get_current_admin)):
+    """Apply a canned response to a ticket - returns processed content with variables replaced"""
+    response = await _db.ticketing_canned_responses.find_one({"id": response_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not response:
+        raise HTTPException(status_code=404, detail="Canned response not found")
+    
+    ticket = await _db.tickets.find_one({"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    # Get related data for variable replacement
+    department = None
+    if ticket.get("department_id"):
+        department = await _db.ticketing_departments.find_one({"id": ticket["department_id"]}, {"_id": 0})
+    
+    # Replace variables in content
+    content = response.get("content", "")
+    variables = {
+        "{{customer_name}}": ticket.get("requester_name", "Customer"),
+        "{{ticket_id}}": ticket.get("id", ""),
+        "{{ticket_number}}": ticket.get("ticket_number", ""),
+        "{{subject}}": ticket.get("subject", ""),
+        "{{department_name}}": department.get("name", "Support") if department else "Support",
+        "{{assigned_to}}": ticket.get("assigned_to_name", "Our team"),
+        "{{sla_due}}": ticket.get("sla_status", {}).get("resolution_due_at", "N/A") if ticket.get("sla_status") else "N/A"
+    }
+    
+    for var, value in variables.items():
+        content = content.replace(var, str(value))
+    
+    # Update usage stats
+    await _db.ticketing_canned_responses.update_one(
+        {"id": response_id},
+        {"$inc": {"usage_count": 1}, "$set": {"last_used_at": get_ist_isoformat()}}
+    )
+    
+    return {"content": content, "original_content": response.get("content")}
+
+
+# ==================== TICKET PARTICIPANTS (CC/Collaboration) ====================
+
+@router.get("/admin/tickets/{ticket_id}/participants")
+async def list_ticket_participants(ticket_id: str, admin: dict = Depends(get_current_admin)):
+    """List all participants on a ticket"""
+    ticket = await _db.tickets.find_one({"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    participants = await _db.ticket_participants.find(
+        {"ticket_id": ticket_id, "is_active": True},
+        {"_id": 0}
+    ).sort("added_at", 1).to_list(50)
+    
+    return participants
+
+
+@router.post("/admin/tickets/{ticket_id}/participants")
+async def add_ticket_participant(ticket_id: str, data: AddParticipantRequest, admin: dict = Depends(get_current_admin)):
+    """Add a participant (CC) to a ticket"""
+    ticket = await _db.tickets.find_one({"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    # Check if participant already exists
+    existing = await _db.ticket_participants.find_one({
+        "ticket_id": ticket_id,
+        "email": {"$regex": f"^{re.escape(data.email)}$", "$options": "i"},
+        "is_active": True
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Participant already added to this ticket")
+    
+    # Check if this is an internal user
+    internal_user = await _db.company_users.find_one(
+        {"email": {"$regex": f"^{re.escape(data.email)}$", "$options": "i"}, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    )
+    
+    participant = TicketParticipant(
+        ticket_id=ticket_id,
+        user_id=internal_user.get("id") if internal_user else None,
+        name=data.name,
+        email=data.email,
+        phone=data.phone,
+        participant_type=data.participant_type,
+        is_external=internal_user is None,
+        can_reply=data.can_reply,
+        added_by=admin.get("id"),
+        added_by_name=admin.get("name", "Admin")
+    )
+    
+    await _db.ticket_participants.insert_one(participant.model_dump())
+    
+    # Update ticket participant count
+    await _db.tickets.update_one(
+        {"id": ticket_id},
+        {
+            "$push": {"participant_ids": participant.id},
+            "$inc": {"participant_count": 1},
+            "$set": {"updated_at": get_ist_isoformat()}
+        }
+    )
+    
+    # Log event
+    await create_thread_entry(
+        ticket_id, "system_event", admin.get("id"), admin.get("name"), "admin",
+        event_type="participant_added",
+        event_data={"name": data.name, "email": data.email, "type": data.participant_type}
+    )
+    
+    return participant.model_dump()
+
+
+@router.delete("/admin/tickets/{ticket_id}/participants/{participant_id}")
+async def remove_ticket_participant(ticket_id: str, participant_id: str, admin: dict = Depends(get_current_admin)):
+    """Remove a participant from a ticket"""
+    participant = await _db.ticket_participants.find_one(
+        {"id": participant_id, "ticket_id": ticket_id, "is_active": True},
+        {"_id": 0}
+    )
+    if not participant:
+        raise HTTPException(status_code=404, detail="Participant not found")
+    
+    await _db.ticket_participants.update_one(
+        {"id": participant_id},
+        {"$set": {"is_active": False, "removed_at": get_ist_isoformat()}}
+    )
+    
+    # Update ticket
+    await _db.tickets.update_one(
+        {"id": ticket_id},
+        {
+            "$pull": {"participant_ids": participant_id},
+            "$inc": {"participant_count": -1},
+            "$set": {"updated_at": get_ist_isoformat()}
+        }
+    )
+    
+    # Log event
+    await create_thread_entry(
+        ticket_id, "system_event", admin.get("id"), admin.get("name"), "admin",
+        event_type="participant_removed",
+        event_data={"name": participant.get("name"), "email": participant.get("email")}
+    )
+    
+    return {"message": "Participant removed"}
+
+
+@router.post("/portal/tickets/{ticket_id}/participants")
+async def add_ticket_participant_customer(ticket_id: str, data: AddParticipantRequest, user: dict = Depends(get_current_company_user)):
+    """Add a participant (CC) to own ticket - customer portal"""
+    ticket = await _db.tickets.find_one({
+        "id": ticket_id,
+        "requester_id": user.get("id"),
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    # Check if participant already exists
+    existing = await _db.ticket_participants.find_one({
+        "ticket_id": ticket_id,
+        "email": {"$regex": f"^{re.escape(data.email)}$", "$options": "i"},
+        "is_active": True
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Participant already added")
+    
+    participant = TicketParticipant(
+        ticket_id=ticket_id,
+        name=data.name,
+        email=data.email,
+        phone=data.phone,
+        participant_type="cc",
+        is_external=True,  # Customers can only add external participants
+        can_reply=True,
+        can_view_internal_notes=False,
+        added_by=user.get("id"),
+        added_by_name=user.get("name", "Customer")
+    )
+    
+    await _db.ticket_participants.insert_one(participant.model_dump())
+    
+    # Update ticket
+    await _db.tickets.update_one(
+        {"id": ticket_id},
+        {
+            "$push": {"participant_ids": participant.id},
+            "$inc": {"participant_count": 1},
+            "$set": {"updated_at": get_ist_isoformat()}
+        }
+    )
+    
+    # Log event
+    await create_thread_entry(
+        ticket_id, "system_event", user.get("id"), user.get("name"), "customer",
+        event_type="participant_added",
+        event_data={"name": data.name, "email": data.email}
+    )
+    
+    return participant.model_dump()
+
+
 # ==================== TICKETS - ADMIN ====================
 
 @router.get("/admin/tickets")
