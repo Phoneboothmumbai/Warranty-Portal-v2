@@ -9200,6 +9200,11 @@ app.include_router(api_router)
 from routes.amc_requests import router as amc_requests_router
 app.include_router(amc_requests_router, prefix="/api")
 
+# Include Ticketing System router
+from routes.ticketing import router as ticketing_router, init_ticketing_router
+init_ticketing_router(db, get_current_admin, get_current_company_user, log_audit)
+app.include_router(ticketing_router, prefix="/api")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
