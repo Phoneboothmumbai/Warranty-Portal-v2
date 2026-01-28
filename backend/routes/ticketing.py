@@ -538,7 +538,7 @@ async def create_thread_entry(ticket_id, entry_type, author_id, author_name, aut
     )
     entry_dict = entry.model_dump()
     await _db.ticket_thread.insert_one(entry_dict)
-    return entry_dict
+    return await _db.ticket_thread.find_one({"id": entry.id}, {"_id": 0})
 
 
 def calculate_sla_due_times(sla_policy, priority):
