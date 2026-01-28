@@ -58,6 +58,21 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 
 ### AMC Self-Service Request System (Jan 25, 2025)
 - ✅ **Company Portal: Request AMC** - Users can submit AMC requests with package/device selection
+
+### Technician Panel for OEM Service Records (Jan 28, 2025)
+- ✅ **Enhanced Service History Page** - Complete rewrite with modern UI, stats cards, filters
+- ✅ **Service Classification System** - Categories: Internal, OEM Warranty, Third-Party, Inspection
+- ✅ **OEM Warranty Service Tracking** - Full workflow for tracking OEM warranty cases
+- ✅ **Auto-locked OEM Fields** - OEM services auto-lock Responsibility=OEM, Role=Coordinator, Billing=Warranty Covered
+- ✅ **AMC Protection** - OEM services don't count toward AMC quota
+- ✅ **OEM Details Section** - OEM Name, Case Number, Warranty Type, Priority, Status, Engineer, Visit Date
+- ✅ **Service Outcome Tracking** - Resolution summary, parts replaced, cost incurred for closures
+- ✅ **Attachment Management** - Upload/view attachments with OEM proof requirement warning
+- ✅ **Backend Validation** - Comprehensive validation for OEM service requirements
+
+### Production Deployment Support (Jan 28, 2025)
+- ✅ **deploy.sh Script** - One-command deployment for production server
+- ✅ **Admin Finder Script** - find_admin.py to locate admin accounts in database
 - ✅ **AMC Packages** - Admin can create predefined packages (Basic, Standard, Premium) with pricing
 - ✅ **Company-Specific Pricing** - Set custom pricing per company for each package
 - ✅ **Device Selection** - Users can select specific devices, all devices, or by category
