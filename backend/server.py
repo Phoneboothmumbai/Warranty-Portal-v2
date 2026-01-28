@@ -3096,6 +3096,18 @@ async def list_services(
     services = await db.service_history.find(query, {"_id": 0}).sort("service_date", -1).to_list(limit)
     return services
 
+
+# ==================== STAGE TEMPLATE ENDPOINT ====================
+@api_router.get("/admin/services/stage-templates")
+async def get_stage_templates():
+    """Get default stage templates for service records"""
+    from models.service import DEFAULT_SERVICE_STAGES, OEM_SERVICE_STAGES
+    return {
+        "internal": DEFAULT_SERVICE_STAGES,
+        "oem": OEM_SERVICE_STAGES
+    }
+
+
 @api_router.post("/admin/services")
 async def create_service(service_data: ServiceHistoryCreate, admin: dict = Depends(get_current_admin)):
     device = await db.devices.find_one({"id": service_data.device_id, "is_deleted": {"$ne": True}}, {"_id": 0})
