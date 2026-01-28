@@ -757,18 +757,12 @@ const ServiceHistory = () => {
               <h3 className="font-medium text-slate-900">Service Details</h3>
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1">Device *</label>
-                <select
+                <SearchableDeviceSelect
+                  devices={devices}
                   value={formData.device_id}
-                  onChange={(e) => setFormData({ ...formData, device_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  onChange={(deviceId) => setFormData({ ...formData, device_id: deviceId })}
                   disabled={!!editingService}
-                  required
-                >
-                  <option value="">Select Device</option>
-                  {devices.map(d => (
-                    <option key={d.id} value={d.id}>{d.brand} {d.model} - {d.serial_number}</option>
-                  ))}
-                </select>
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
