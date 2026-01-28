@@ -105,7 +105,8 @@ export default function TicketingSettings() {
         axios.get(`${API}/ticketing/admin/help-topics?include_inactive=true`, { headers }),
         axios.get(`${API}/ticketing/admin/custom-forms`, { headers }),
         axios.get(`${API}/ticketing/admin/canned-responses`, { headers }),
-        axios.get(`${API}/admin/users`, { headers })
+        axios.get(`${API}/admin/users`, { headers }),
+        axios.get(`${API}/ticketing/admin/email/status`, { headers }).catch(() => ({ data: null }))
       ]);
       setDepartments(deptRes.data || []);
       setSLAPolicies(slaRes.data || []);
@@ -113,6 +114,7 @@ export default function TicketingSettings() {
       setCustomForms(formsRes.data || []);
       setCannedResponses(cannedRes.data || []);
       setAdmins(adminsRes.data?.users || adminsRes.data || []);
+      setEmailStatus(emailRes.data);
     } catch (error) {
       toast.error('Failed to load settings');
     } finally {
@@ -121,6 +123,50 @@ export default function TicketingSettings() {
   }, [token]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // ==================== EMAIL HANDLERS ====================
+  const handleTestEmailConnection = async () => {
+    setEmailTesting(true);
+    try {
+      const response = await axios.post(`${API}/ticketing/admin/email/test`, {}, { headers });
+      if (response.data.smtp && response.data.imap) {
+        toast.success('Email connection successful! SMTP and IMAP are working.');
+      } else {
+        const errors = response.data.errors || [];
+        toast.error(`Connection issues: ${errors.join(', ') || 'Unknown error'}`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to test connection');
+    } finally {
+      setEmailTesting(false);
+    }
+  };
+
+  const handleSyncEmails = async () => {
+    setEmailSyncing(true);
+    try {
+      const response = await axios.post(`${API}/ticketing/admin/email/sync`, {}, { headers });
+      const stats = response.data.stats || {};
+      toast.success(`Email sync complete: ${stats.processed || 0} processed, ${stats.created || 0} new tickets, ${stats.replied || 0} replies`);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to sync emails');
+    } finally {
+      setEmailSyncing(false);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!testEmailAddress) {
+      toast.error('Enter an email address');
+      return;
+    }
+    try {
+      await axios.post(`${API}/ticketing/admin/email/send-test?to_email=${encodeURIComponent(testEmailAddress)}`, {}, { headers });
+      toast.success(`Test email sent to ${testEmailAddress}`);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to send test email');
+    }
+  };
 
   // ==================== DEPARTMENT HANDLERS ====================
   const handleSaveDepartment = async () => {
