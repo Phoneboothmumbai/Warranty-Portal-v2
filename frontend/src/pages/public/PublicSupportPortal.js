@@ -297,22 +297,105 @@ export default function PublicSupportPortal() {
                 )}
               </div>
 
-              {/* Category and Priority */}
+              {/* Help Topic Selection */}
+              {helpTopics.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Help Topic <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={form.help_topic_id}
+                    onChange={(e) => handleTopicSelect(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    data-testid="select-help-topic"
+                    required
+                  >
+                    <option value="">Select a help topic</option>
+                    {helpTopics.map(topic => (
+                      <option key={topic.id} value={topic.id}>{topic.topic}</option>
+                    ))}
+                  </select>
+                  {selectedTopic && (
+                    <p className="text-sm text-slate-500 mt-1">{selectedTopic.description}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Custom Form Fields */}
+              {customForm && customForm.fields && (
+                <div className="space-y-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <h3 className="text-sm font-medium text-slate-700">Additional Information</h3>
+                  {customForm.fields.map((field, index) => (
+                    <div key={index}>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        {field.label} {field.required && <span className="text-red-500">*</span>}
+                      </label>
+                      {field.type === 'text' && (
+                        <input
+                          type="text"
+                          value={form.form_data[field.name] || ''}
+                          onChange={(e) => updateFormData(field.name, e.target.value)}
+                          className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder={field.placeholder}
+                          required={field.required}
+                        />
+                      )}
+                      {field.type === 'textarea' && (
+                        <textarea
+                          value={form.form_data[field.name] || ''}
+                          onChange={(e) => updateFormData(field.name, e.target.value)}
+                          rows={3}
+                          className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                          placeholder={field.placeholder}
+                          required={field.required}
+                        />
+                      )}
+                      {field.type === 'select' && (
+                        <select
+                          value={form.form_data[field.name] || ''}
+                          onChange={(e) => updateFormData(field.name, e.target.value)}
+                          className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required={field.required}
+                        >
+                          <option value="">Select an option</option>
+                          {field.options?.map((option, optIndex) => (
+                            <option key={optIndex} value={option}>{option}</option>
+                          ))}
+                        </select>
+                      )}
+                      {field.type === 'checkbox' && (
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={form.form_data[field.name] || false}
+                            onChange={(e) => updateFormData(field.name, e.target.checked)}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            required={field.required}
+                          />
+                          <span className="text-sm text-slate-600">{field.placeholder}</span>
+                        </label>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Priority */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {categories.length > 0 && (
+                {departments.length > 0 && (
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Category
+                      Department
                     </label>
                     <select
-                      value={form.category}
-                      onChange={(e) => setForm({ ...form, category: e.target.value })}
+                      value={form.department_id}
+                      onChange={(e) => setForm({ ...form, department_id: e.target.value })}
                       className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      data-testid="select-category"
+                      data-testid="select-department"
                     >
-                      <option value="">Select a category</option>
-                      {categories.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
+                      <option value="">Select a department</option>
+                      {departments.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
                       ))}
                     </select>
                   </div>
