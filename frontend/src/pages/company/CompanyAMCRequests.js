@@ -153,7 +153,7 @@ const CompanyAMCRequests = () => {
         <div className="bg-white rounded-xl border border-slate-100 p-12 text-center">
           <FileText className="h-12 w-12 text-slate-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-slate-900 mb-2">No AMC Requests</h3>
-          <p className="text-slate-500 mb-4">You haven't submitted any AMC requests yet.</p>
+          <p className="text-slate-500 mb-4">You haven&apos;t submitted any AMC requests yet.</p>
           <Button onClick={() => navigate('/company/amc-requests/new')}>
             <Plus className="h-4 w-4 mr-2" />
             Request AMC

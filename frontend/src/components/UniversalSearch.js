@@ -258,7 +258,7 @@ const UniversalSearch = () => {
               {!loading && query && !hasResults && (
                 <div className="p-8 text-center text-slate-500">
                   <Search className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                  <p>No results found for "{query}"</p>
+                  <p>No results found for &quot;{query}&quot;</p>
                   <p className="text-sm text-slate-400 mt-1">Try a different keyword</p>
                 </div>
               )}

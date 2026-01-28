@@ -414,7 +414,7 @@ const EmployeeDetails = () => {
               ) : (
                 <div className="text-center py-12 text-slate-500">
                   <Wrench className="h-12 w-12 mx-auto text-slate-300 mb-3" />
-                  <p>No service history for this employee's devices</p>
+                  <p>No service history for this employee&apos;s devices</p>
                 </div>
               )}
             </div>

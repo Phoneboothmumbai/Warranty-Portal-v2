@@ -165,7 +165,7 @@ const PublicDevicePage = () => {
                 </div>
                 <h2 className="text-2xl font-semibold text-slate-900 mb-3">Device Not Found</h2>
                 <p className="text-slate-500 mb-8 max-w-md mx-auto">
-                  We couldn't find a device with the identifier "{identifier}". 
+                  We couldn&apos;t find a device with the identifier &quot;{identifier}&quot;. 
                   Please check the QR code or serial number.
                 </p>
                 <Link to="/">
