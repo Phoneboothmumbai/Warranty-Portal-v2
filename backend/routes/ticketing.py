@@ -1378,6 +1378,129 @@ async def get_public_ticket_status(ticket_number: str, email: str = Query(..., d
     }
 
 
+
+
+
+# ==================== EMAIL INTEGRATION ====================
+
+class EmailConfigUpdate(BaseModel):
+    """Update email configuration"""
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = None
+    imap_host: Optional[str] = None
+    imap_port: Optional[int] = None
+    email_user: Optional[str] = None
+    email_password: Optional[str] = None
+    email_from_name: Optional[str] = None
+    email_reply_to: Optional[str] = None
+
+
+@router.get("/admin/email/status")
+async def get_email_status(admin: dict = Depends(get_current_admin)):
+    """Get email integration status"""
+    import os
+    
+    email_user = os.environ.get("EMAIL_USER", "")
+    is_configured = bool(email_user and os.environ.get("EMAIL_PASSWORD"))
+    
+    return {
+        "is_configured": is_configured,
+        "email_user": email_user if is_configured else None,
+        "smtp_host": os.environ.get("SMTP_HOST", "smtp.gmail.com"),
+        "smtp_port": int(os.environ.get("SMTP_PORT", "587")),
+        "imap_host": os.environ.get("IMAP_HOST", "imap.gmail.com"),
+        "imap_port": int(os.environ.get("IMAP_PORT", "993")),
+        "email_from_name": os.environ.get("EMAIL_FROM_NAME", "Support Team")
+    }
+
+
+@router.post("/admin/email/test")
+async def test_email_connection(admin: dict = Depends(get_current_admin)):
+    """Test email SMTP and IMAP connections"""
+    from services.email_service import get_email_service
+    
+    email_service = get_email_service()
+    if not email_service or not email_service.is_configured():
+        raise HTTPException(status_code=400, detail="Email not configured. Set EMAIL_USER and EMAIL_PASSWORD environment variables.")
+    
+    results = {"smtp": False, "imap": False, "errors": []}
+    
+    # Test SMTP
+    try:
+        smtp_conn = email_service._create_smtp_connection()
+        if smtp_conn:
+            smtp_conn.quit()
+            results["smtp"] = True
+        else:
+            results["errors"].append("SMTP connection failed")
+    except Exception as e:
+        results["errors"].append(f"SMTP error: {str(e)}")
+    
+    # Test IMAP
+    try:
+        imap_conn = email_service._create_imap_connection()
+        if imap_conn:
+            imap_conn.logout()
+            results["imap"] = True
+        else:
+            results["errors"].append("IMAP connection failed")
+    except Exception as e:
+        results["errors"].append(f"IMAP error: {str(e)}")
+    
+    return results
+
+
+@router.post("/admin/email/sync")
+async def sync_emails_manual(background_tasks: BackgroundTasks, admin: dict = Depends(get_current_admin)):
+    """Manually trigger email sync to fetch and process new emails"""
+    from services.email_service import get_email_service
+    
+    email_service = get_email_service()
+    if not email_service or not email_service.is_configured():
+        raise HTTPException(status_code=400, detail="Email not configured")
+    
+    # Run sync in background
+    async def do_sync():
+        return await email_service.sync_emails()
+    
+    # For manual sync, run synchronously to return results
+    stats = await email_service.sync_emails()
+    
+    return {
+        "message": "Email sync completed",
+        "stats": stats
+    }
+
+
+@router.post("/admin/email/send-test")
+async def send_test_email(to_email: str = Query(...), admin: dict = Depends(get_current_admin)):
+    """Send a test email to verify SMTP configuration"""
+    from services.email_service import get_email_service
+    
+    email_service = get_email_service()
+    if not email_service or not email_service.is_configured():
+        raise HTTPException(status_code=400, detail="Email not configured")
+    
+    success = await email_service.send_email(
+        to_email,
+        "Test Email from Support Portal",
+        """
+        <p>Hello,</p>
+        <p>This is a test email to verify that the email integration is working correctly.</p>
+        <p>If you received this email, the SMTP configuration is working.</p>
+        <div class="ticket-info">
+            <p><strong>Test Status:</strong> Success</p>
+            <p><strong>Sent At:</strong> """ + get_ist_isoformat() + """</p>
+        </div>
+        <p>Best regards,<br>Support Portal</p>
+        """
+    )
+    
+    if success:
+        return {"message": f"Test email sent to {to_email}"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to send test email")
+
 @router.post("/public/tickets/{ticket_number}/reply")
 async def reply_to_public_ticket(ticket_number: str, content: str = Query(...), email: str = Query(...)):
     """Add a reply to a public ticket"""
