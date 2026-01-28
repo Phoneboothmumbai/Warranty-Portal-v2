@@ -25,28 +25,17 @@ router = APIRouter(prefix="/ticketing", tags=["Ticketing"])
 
 # ==================== DEPENDENCY INJECTION ====================
 _db: AsyncIOMotorDatabase = None
-_get_current_admin = None
-_get_current_company_user = None
 _log_audit = None
+
+# These will be imported directly from services.auth
+from services.auth import get_current_admin, get_current_company_user
 
 
 def init_ticketing_router(database, admin_dependency, company_user_dependency, audit_function):
     """Initialize the ticketing router with dependencies"""
-    global _db, _get_current_admin, _get_current_company_user, _log_audit
+    global _db, _log_audit
     _db = database
-    _get_current_admin = admin_dependency
-    _get_current_company_user = company_user_dependency
     _log_audit = audit_function
-
-
-# Wrapper dependency functions that call the injected dependencies
-async def get_admin():
-    """Get current admin user - wrapper for injected dependency"""
-    return await _get_current_admin()
-
-async def get_company_user():
-    """Get current company user - wrapper for injected dependency"""
-    return await _get_current_company_user()
 
 
 # ==================== ENUMS ENDPOINT ====================
