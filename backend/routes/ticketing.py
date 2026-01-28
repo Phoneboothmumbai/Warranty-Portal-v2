@@ -107,7 +107,8 @@ async def list_departments(
     if not include_inactive:
         query["is_active"] = True
     
-    departments = await _db.ticketing_departments.find(query, {"_id": 0}).sort("sort_order", 1).to_list(100)
+    departments = db = get_db()
+    await db.ticketing_departments.find(query, {"_id": 0}).sort("sort_order", 1).to_list(100)
     return departments
 
 
@@ -122,7 +123,8 @@ async def create_department(
         **data.model_dump(),
         created_by=admin.get("id")
     )
-    await _db.ticketing_departments.insert_one(dept.model_dump())
+    db = get_db()
+    await db.ticketing_departments.insert_one(dept.model_dump())
     await _log_audit("ticketing_department", dept.id, "create", data.model_dump(), admin)
     return dept.model_dump()
 
@@ -133,7 +135,8 @@ async def get_department(
     admin: dict = Depends(get_admin_dependency)
 ):
     """Get department by ID"""
-    dept = await _db.ticketing_departments.find_one(
+    dept = db = get_db()
+    await db.ticketing_departments.find_one(
         {"id": dept_id, "is_deleted": {"$ne": True}}, {"_id": 0}
     )
     if not dept:
@@ -148,7 +151,8 @@ async def update_department(
     admin: dict = Depends(get_admin_dependency)
 ):
     """Update a department"""
-    dept = await _db.ticketing_departments.find_one(
+    dept = db = get_db()
+    await db.ticketing_departments.find_one(
         {"id": dept_id, "is_deleted": {"$ne": True}}, {"_id": 0}
     )
     if not dept:
@@ -157,10 +161,12 @@ async def update_department(
     update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
     update_data["updated_at"] = get_ist_isoformat()
     
-    await _db.ticketing_departments.update_one({"id": dept_id}, {"$set": update_data})
+    db = get_db()
+    await db.ticketing_departments.update_one({"id": dept_id}, {"$set": update_data})
     await _log_audit("ticketing_department", dept_id, "update", update_data, admin)
     
-    return await _db.ticketing_departments.find_one({"id": dept_id}, {"_id": 0})
+    return db = get_db()
+    await db.ticketing_departments.find_one({"id": dept_id}, {"_id": 0})
 
 
 @router.delete("/admin/departments/{dept_id}")
@@ -169,14 +175,16 @@ async def delete_department(
     admin: dict = Depends(get_admin_dependency)
 ):
     """Soft delete a department"""
-    dept = await _db.ticketing_departments.find_one(
+    dept = db = get_db()
+    await db.ticketing_departments.find_one(
         {"id": dept_id, "is_deleted": {"$ne": True}}, {"_id": 0}
     )
     if not dept:
         raise HTTPException(status_code=404, detail="Department not found")
     
     # Check if any open tickets in this department
-    open_tickets = await _db.tickets.count_documents({
+    open_tickets = db = get_db()
+    await db.tickets.count_documents({
         "department_id": dept_id,
         "status": {"$nin": ["resolved", "closed"]},
         "is_deleted": {"$ne": True}
@@ -187,7 +195,8 @@ async def delete_department(
             detail=f"Cannot delete department with {open_tickets} open tickets"
         )
     
-    await _db.ticketing_departments.update_one(
+    db = get_db()
+    await db.ticketing_departments.update_one(
         {"id": dept_id},
         {"$set": {"is_deleted": True, "updated_at": get_ist_isoformat()}}
     )
@@ -207,7 +216,8 @@ async def list_sla_policies(
     if not include_inactive:
         query["is_active"] = True
     
-    policies = await _db.ticketing_sla_policies.find(query, {"_id": 0}).to_list(100)
+    policies = db = get_db()
+    await db.ticketing_sla_policies.find(query, {"_id": 0}).to_list(100)
     return policies
 
 
@@ -224,12 +234,14 @@ async def create_sla_policy(
     
     # If this is set as default, unset other defaults
     if data.is_default:
-        await _db.ticketing_sla_policies.update_many(
+        db = get_db()
+    await db.ticketing_sla_policies.update_many(
             {"is_default": True},
             {"$set": {"is_default": False}}
         )
     
-    await _db.ticketing_sla_policies.insert_one(policy.model_dump())
+    db = get_db()
+    await db.ticketing_sla_policies.insert_one(policy.model_dump())
     await _log_audit("ticketing_sla_policy", policy.id, "create", data.model_dump(), admin)
     return policy.model_dump()
 
@@ -240,7 +252,8 @@ async def get_sla_policy(
     admin: dict = Depends(get_admin_dependency)
 ):
     """Get SLA policy by ID"""
-    policy = await _db.ticketing_sla_policies.find_one(
+    policy = db = get_db()
+    await db.ticketing_sla_policies.find_one(
         {"id": policy_id, "is_deleted": {"$ne": True}}, {"_id": 0}
     )
     if not policy:
@@ -255,7 +268,8 @@ async def update_sla_policy(
     admin: dict = Depends(get_admin_dependency)
 ):
     """Update an SLA policy"""
-    policy = await _db.ticketing_sla_policies.find_one(
+    policy = db = get_db()
+    await db.ticketing_sla_policies.find_one(
         {"id": policy_id, "is_deleted": {"$ne": True}}, {"_id": 0}
     )
     if not policy:
@@ -265,17 +279,20 @@ async def update_sla_policy(
     
     # Handle default flag
     if update_data.get("is_default"):
-        await _db.ticketing_sla_policies.update_many(
+        db = get_db()
+    await db.ticketing_sla_policies.update_many(
             {"is_default": True, "id": {"$ne": policy_id}},
             {"$set": {"is_default": False}}
         )
     
     update_data["updated_at"] = get_ist_isoformat()
     
-    await _db.ticketing_sla_policies.update_one({"id": policy_id}, {"$set": update_data})
+    db = get_db()
+    await db.ticketing_sla_policies.update_one({"id": policy_id}, {"$set": update_data})
     await _log_audit("ticketing_sla_policy", policy_id, "update", update_data, admin)
     
-    return await _db.ticketing_sla_policies.find_one({"id": policy_id}, {"_id": 0})
+    return db = get_db()
+    await db.ticketing_sla_policies.find_one({"id": policy_id}, {"_id": 0})
 
 
 @router.delete("/admin/sla-policies/{policy_id}")
@@ -284,13 +301,15 @@ async def delete_sla_policy(
     admin: dict = Depends(get_admin_dependency)
 ):
     """Soft delete an SLA policy"""
-    policy = await _db.ticketing_sla_policies.find_one(
+    policy = db = get_db()
+    await db.ticketing_sla_policies.find_one(
         {"id": policy_id, "is_deleted": {"$ne": True}}, {"_id": 0}
     )
     if not policy:
         raise HTTPException(status_code=404, detail="SLA Policy not found")
     
-    await _db.ticketing_sla_policies.update_one(
+    db = get_db()
+    await db.ticketing_sla_policies.update_one(
         {"id": policy_id},
         {"$set": {"is_deleted": True, "updated_at": get_ist_isoformat()}}
     )
@@ -305,7 +324,8 @@ async def list_categories(
     admin: dict = Depends(get_admin_dependency)
 ):
     """List all ticket categories"""
-    categories = await _db.ticketing_categories.find(
+    categories = db = get_db()
+    await db.ticketing_categories.find(
         {"is_deleted": {"$ne": True}}, {"_id": 0}
     ).sort("sort_order", 1).to_list(100)
     return categories
@@ -325,7 +345,8 @@ async def create_category(
         auto_priority=data.get("auto_priority"),
         sort_order=data.get("sort_order", 0)
     )
-    await _db.ticketing_categories.insert_one(category.model_dump())
+    db = get_db()
+    await db.ticketing_categories.insert_one(category.model_dump())
     await _log_audit("ticketing_category", category.id, "create", data, admin)
     return category.model_dump()
 
@@ -337,7 +358,8 @@ async def update_category(
     admin: dict = Depends(get_admin_dependency)
 ):
     """Update a ticket category"""
-    category = await _db.ticketing_categories.find_one(
+    category = db = get_db()
+    await db.ticketing_categories.find_one(
         {"id": category_id, "is_deleted": {"$ne": True}}, {"_id": 0}
     )
     if not category:
@@ -346,8 +368,10 @@ async def update_category(
     update_data = {k: v for k, v in data.items() if v is not None}
     update_data["updated_at"] = get_ist_isoformat()
     
-    await _db.ticketing_categories.update_one({"id": category_id}, {"$set": update_data})
-    return await _db.ticketing_categories.find_one({"id": category_id}, {"_id": 0})
+    db = get_db()
+    await db.ticketing_categories.update_one({"id": category_id}, {"$set": update_data})
+    return db = get_db()
+    await db.ticketing_categories.find_one({"id": category_id}, {"_id": 0})
 
 
 @router.delete("/admin/categories/{category_id}")
@@ -356,7 +380,8 @@ async def delete_category(
     admin: dict = Depends(get_admin_dependency)
 ):
     """Soft delete a category"""
-    await _db.ticketing_categories.update_one(
+    db = get_db()
+    await db.ticketing_categories.update_one(
         {"id": category_id},
         {"$set": {"is_deleted": True}}
     )
@@ -401,8 +426,10 @@ async def list_tickets_admin(
             {"requester_email": {"$regex": search, "$options": "i"}}
         ]
     
-    total = await _db.tickets.count_documents(query)
-    tickets = await _db.tickets.find(query, {"_id": 0}).sort(
+    total = db = get_db()
+    await db.tickets.count_documents(query)
+    tickets = db = get_db()
+    await db.tickets.find(query, {"_id": 0}).sort(
         [("priority_order", -1), ("created_at", -1)]
     ).skip(skip).limit(limit).to_list(limit)
     
@@ -422,7 +449,8 @@ async def create_ticket_admin(
 ):
     """Create a ticket on behalf of a customer (admin)"""
     # Get requester info
-    requester = await _db.company_users.find_one(
+    requester = db = get_db()
+    await db.company_users.find_one(
         {"id": requester_id, "is_deleted": {"$ne": True}}, {"_id": 0}
     )
     if not requester:
@@ -431,17 +459,20 @@ async def create_ticket_admin(
     # Get department defaults
     sla_policy = None
     if data.department_id:
-        dept = await _db.ticketing_departments.find_one(
+        dept = db = get_db()
+    await db.ticketing_departments.find_one(
             {"id": data.department_id, "is_deleted": {"$ne": True}}, {"_id": 0}
         )
         if dept and dept.get("default_sla_id"):
-            sla_policy = await _db.ticketing_sla_policies.find_one(
+            sla_policy = db = get_db()
+    await db.ticketing_sla_policies.find_one(
                 {"id": dept["default_sla_id"]}, {"_id": 0}
             )
     
     # If no department SLA, use default
     if not sla_policy:
-        sla_policy = await _db.ticketing_sla_policies.find_one(
+        sla_policy = db = get_db()
+    await db.ticketing_sla_policies.find_one(
             {"is_default": True, "is_deleted": {"$ne": True}}, {"_id": 0}
         )
     
@@ -468,7 +499,8 @@ async def create_ticket_admin(
     ticket_dict = ticket.model_dump()
     ticket_dict["priority_order"] = priority_order.get(data.priority, 2)
     
-    await _db.tickets.insert_one(ticket_dict)
+    db = get_db()
+    await db.tickets.insert_one(ticket_dict)
     
     # Create system event in thread
     await create_thread_entry(
@@ -491,21 +523,24 @@ async def get_ticket_admin(
     admin: dict = Depends(get_admin_dependency)
 ):
     """Get ticket details with thread"""
-    ticket = await _db.tickets.find_one(
+    ticket = db = get_db()
+    await db.tickets.find_one(
         {"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0}
     )
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     
     # Get thread entries
-    thread = await _db.ticket_thread.find(
+    thread = db = get_db()
+    await db.ticket_thread.find(
         {"ticket_id": ticket_id, "is_hidden": {"$ne": True}}, {"_id": 0}
     ).sort("created_at", 1).to_list(500)
     
     # Get department info
     department = None
     if ticket.get("department_id"):
-        department = await _db.ticketing_departments.find_one(
+        department = db = get_db()
+    await db.ticketing_departments.find_one(
             {"id": ticket["department_id"]}, {"_id": 0, "name": 1, "id": 1}
         )
     
@@ -523,7 +558,8 @@ async def update_ticket_admin(
     admin: dict = Depends(get_admin_dependency)
 ):
     """Update ticket (admin)"""
-    ticket = await _db.tickets.find_one(
+    ticket = db = get_db()
+    await db.tickets.find_one(
         {"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0}
     )
     if not ticket:
@@ -611,7 +647,8 @@ async def update_ticket_admin(
         # Get assignee name
         assignee_name = None
         if new_assignee:
-            assignee = await _db.admin_users.find_one({"id": new_assignee}, {"name": 1})
+            assignee = db = get_db()
+    await db.admin_users.find_one({"id": new_assignee}, {"name": 1})
             assignee_name = assignee.get("name") if assignee else None
         
         update_data["assigned_to_name"] = assignee_name
@@ -649,10 +686,12 @@ async def update_ticket_admin(
     
     update_data["updated_at"] = get_ist_isoformat()
     
-    await _db.tickets.update_one({"id": ticket_id}, {"$set": update_data})
+    db = get_db()
+    await db.tickets.update_one({"id": ticket_id}, {"$set": update_data})
     await _log_audit("ticket", ticket_id, "update", {"changes": changes}, admin)
     
-    return await _db.tickets.find_one({"id": ticket_id}, {"_id": 0})
+    return db = get_db()
+    await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
 
 
 @router.post("/admin/tickets/{ticket_id}/reply")
@@ -662,7 +701,8 @@ async def reply_to_ticket_admin(
     admin: dict = Depends(get_admin_dependency)
 ):
     """Add a reply or internal note to a ticket (admin)"""
-    ticket = await _db.tickets.find_one(
+    ticket = db = get_db()
+    await db.tickets.find_one(
         {"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0}
     )
     if not ticket:
@@ -697,7 +737,8 @@ async def reply_to_ticket_admin(
             sla_status["response_met"] = not sla_status.get("response_breached", False)
             update_data["sla_status"] = sla_status
     
-    await _db.tickets.update_one({"id": ticket_id}, {"$set": update_data})
+    db = get_db()
+    await db.tickets.update_one({"id": ticket_id}, {"$set": update_data})
     
     return entry
 
@@ -709,14 +750,16 @@ async def assign_ticket(
     admin: dict = Depends(get_admin_dependency)
 ):
     """Assign or reassign a ticket"""
-    ticket = await _db.tickets.find_one(
+    ticket = db = get_db()
+    await db.tickets.find_one(
         {"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0}
     )
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     
     # Get assignee
-    assignee = await _db.admin_users.find_one(
+    assignee = db = get_db()
+    await db.admin_users.find_one(
         {"id": assignee_id, "is_deleted": {"$ne": True}}, {"_id": 0}
     )
     if not assignee:
@@ -725,7 +768,8 @@ async def assign_ticket(
     old_assignee = ticket.get("assigned_to")
     event_type = "assigned" if not old_assignee else "reassigned"
     
-    await _db.tickets.update_one(
+    db = get_db()
+    await db.tickets.update_one(
         {"id": ticket_id},
         {"$set": {
             "assigned_to": assignee_id,
@@ -769,7 +813,8 @@ async def list_tickets_customer(
     if status:
         query["status"] = status
     
-    tickets = await _db.tickets.find(
+    tickets = db = get_db()
+    await db.tickets.find(
         query,
         {"_id": 0, "internal_note_count": 0}  # Hide internal note count from customer
     ).sort("created_at", -1).limit(limit).to_list(limit)
@@ -786,18 +831,21 @@ async def create_ticket_customer(
     # Get department defaults if specified
     sla_policy = None
     if data.department_id:
-        dept = await _db.ticketing_departments.find_one(
+        dept = db = get_db()
+    await db.ticketing_departments.find_one(
             {"id": data.department_id, "is_deleted": {"$ne": True}, "is_public": True}, 
             {"_id": 0}
         )
         if dept and dept.get("default_sla_id"):
-            sla_policy = await _db.ticketing_sla_policies.find_one(
+            sla_policy = db = get_db()
+    await db.ticketing_sla_policies.find_one(
                 {"id": dept["default_sla_id"]}, {"_id": 0}
             )
     
     # If no department SLA, use default
     if not sla_policy:
-        sla_policy = await _db.ticketing_sla_policies.find_one(
+        sla_policy = db = get_db()
+    await db.ticketing_sla_policies.find_one(
             {"is_default": True, "is_deleted": {"$ne": True}}, {"_id": 0}
         )
     
@@ -824,7 +872,8 @@ async def create_ticket_customer(
     ticket_dict = ticket.model_dump()
     ticket_dict["priority_order"] = priority_order.get(data.priority, 2)
     
-    await _db.tickets.insert_one(ticket_dict)
+    db = get_db()
+    await db.tickets.insert_one(ticket_dict)
     
     # Create system event
     await create_thread_entry(
@@ -846,7 +895,8 @@ async def get_ticket_customer(
     user: dict = Depends(get_company_user_dependency)
 ):
     """Get ticket details (customer view - no internal notes)"""
-    ticket = await _db.tickets.find_one(
+    ticket = db = get_db()
+    await db.tickets.find_one(
         {
             "id": ticket_id,
             "company_id": user.get("company_id"),
@@ -859,7 +909,8 @@ async def get_ticket_customer(
         raise HTTPException(status_code=404, detail="Ticket not found")
     
     # Get thread entries (exclude internal notes)
-    thread = await _db.ticket_thread.find(
+    thread = db = get_db()
+    await db.ticket_thread.find(
         {
             "ticket_id": ticket_id,
             "is_internal": {"$ne": True},
@@ -881,7 +932,8 @@ async def reply_to_ticket_customer(
     user: dict = Depends(get_company_user_dependency)
 ):
     """Add a reply to a ticket (customer)"""
-    ticket = await _db.tickets.find_one(
+    ticket = db = get_db()
+    await db.tickets.find_one(
         {
             "id": ticket_id,
             "company_id": user.get("company_id"),
@@ -927,7 +979,8 @@ async def reply_to_ticket_customer(
         sla_status["paused_at"] = None
         update_data["sla_status"] = sla_status
     
-    await _db.tickets.update_one({"id": ticket_id}, {"$set": update_data})
+    db = get_db()
+    await db.tickets.update_one({"id": ticket_id}, {"$set": update_data})
     
     return entry
 
@@ -942,7 +995,8 @@ async def get_ticketing_dashboard(
     # Count by status
     status_counts = {}
     for status in TICKET_STATUSES:
-        count = await _db.tickets.count_documents({
+        count = db = get_db()
+    await db.tickets.count_documents({
             "status": status,
             "is_deleted": {"$ne": True}
         })
@@ -951,7 +1005,8 @@ async def get_ticketing_dashboard(
     # Count by priority
     priority_counts = {}
     for priority in TICKET_PRIORITIES:
-        count = await _db.tickets.count_documents({
+        count = db = get_db()
+    await db.tickets.count_documents({
             "priority": priority,
             "status": {"$nin": ["resolved", "closed"]},
             "is_deleted": {"$ne": True}
@@ -959,14 +1014,16 @@ async def get_ticketing_dashboard(
         priority_counts[priority] = count
     
     # Unassigned count
-    unassigned = await _db.tickets.count_documents({
+    unassigned = db = get_db()
+    await db.tickets.count_documents({
         "assigned_to": None,
         "status": {"$nin": ["resolved", "closed"]},
         "is_deleted": {"$ne": True}
     })
     
     # SLA breached count
-    sla_breached = await _db.tickets.count_documents({
+    sla_breached = db = get_db()
+    await db.tickets.count_documents({
         "$or": [
             {"sla_status.response_breached": True},
             {"sla_status.resolution_breached": True}
@@ -976,7 +1033,8 @@ async def get_ticketing_dashboard(
     })
     
     # Total open
-    total_open = await _db.tickets.count_documents({
+    total_open = db = get_db()
+    await db.tickets.count_documents({
         "status": {"$nin": ["resolved", "closed"]},
         "is_deleted": {"$ne": True}
     })
@@ -1020,7 +1078,8 @@ async def create_thread_entry(
         event_data=event_data
     )
     entry_dict = entry.model_dump()
-    await _db.ticket_thread.insert_one(entry_dict)
+    db = get_db()
+    await db.ticket_thread.insert_one(entry_dict)
     return entry_dict
 
 
@@ -1065,7 +1124,8 @@ async def list_departments_public(
     user: dict = Depends(get_company_user_dependency)
 ):
     """List public departments for ticket creation"""
-    departments = await _db.ticketing_departments.find(
+    departments = db = get_db()
+    await db.ticketing_departments.find(
         {
             "is_deleted": {"$ne": True},
             "is_active": True,
