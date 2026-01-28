@@ -114,6 +114,7 @@ function App() {
                     <Route path="amc-requests/:requestId" element={<AdminAMCRequestDetail />} />
                     <Route path="tickets" element={<AdminTickets />} />
                     <Route path="tickets/:ticketId" element={<AdminTicketDetail />} />
+                    <Route path="ticketing-settings" element={<TicketingSettings />} />
                     <Route path="sites" element={<Sites />} />
                     <Route path="deployments" element={<Deployments />} />
                     <Route path="licenses" element={<Licenses />} />
