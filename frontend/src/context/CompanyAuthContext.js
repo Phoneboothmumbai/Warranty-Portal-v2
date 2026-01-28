@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const CompanyAuthContext = createContext(null);
 
@@ -7,16 +7,7 @@ export const CompanyAuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('company_token'));
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (token) {
-      // Verify token and get user info
-      fetchUser();
-    } else {
-      setLoading(false);
-    }
-  }, [token]);
-
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async () => {
     try {
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/company/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }

@@ -1,21 +1,17 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const EngineerAuthContext = createContext();
 
 export const useEngineerAuth = () => useContext(EngineerAuthContext);
 
 export const EngineerAuthProvider = ({ children }) => {
-  const [engineer, setEngineer] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('engineer_token'));
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
+  const [engineer, setEngineer] = useState(() => {
     const storedEngineer = localStorage.getItem('engineer_data');
-    if (storedEngineer && token) {
-      setEngineer(JSON.parse(storedEngineer));
-    }
-    setLoading(false);
-  }, [token]);
+    const storedToken = localStorage.getItem('engineer_token');
+    return storedEngineer && storedToken ? JSON.parse(storedEngineer) : null;
+  });
+  const [token, setToken] = useState(localStorage.getItem('engineer_token'));
+  const [loading, setLoading] = useState(false);
 
   const login = (engineerData, accessToken) => {
     localStorage.setItem('engineer_token', accessToken);
