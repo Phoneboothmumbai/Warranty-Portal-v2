@@ -99,6 +99,22 @@ export default function PublicSupportPortal() {
       toast.error('Please fill in all required fields');
       return;
     }
+
+    // Validate help topic if available
+    if (helpTopics.length > 0 && !form.help_topic_id) {
+      toast.error('Please select a help topic');
+      return;
+    }
+
+    // Validate custom form required fields
+    if (customForm && customForm.fields) {
+      for (const field of customForm.fields) {
+        if (field.required && !form.form_data[field.name]) {
+          toast.error(`Please fill in the required field: ${field.label}`);
+          return;
+        }
+      }
+    }
     
     setLoading(true);
     try {
