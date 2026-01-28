@@ -111,6 +111,8 @@ function App() {
                     <Route path="amc-contracts" element={<AMCContracts />} />
                     <Route path="amc-requests" element={<AdminAMCRequests />} />
                     <Route path="amc-requests/:requestId" element={<AdminAMCRequestDetail />} />
+                    <Route path="tickets" element={<AdminTickets />} />
+                    <Route path="tickets/:ticketId" element={<AdminTicketDetail />} />
                     <Route path="sites" element={<Sites />} />
                     <Route path="deployments" element={<Deployments />} />
                     <Route path="licenses" element={<Licenses />} />
