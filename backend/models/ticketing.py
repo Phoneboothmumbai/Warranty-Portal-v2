@@ -332,13 +332,16 @@ class TicketCreate(BaseModel):
     subject: str
     description: str
     department_id: Optional[str] = None
+    help_topic_id: Optional[str] = None  # NEW: Help Topic selection
     priority: str = "medium"
     source: str = "portal"
-    category: Optional[str] = None
+    category: Optional[str] = None  # DEPRECATED
     tags: List[str] = []
     custom_fields: Dict[str, Any] = {}
+    form_data: Optional[dict] = None  # NEW: Custom form data
     device_id: Optional[str] = None
     attachments: List[dict] = []
+    participants: List[dict] = []  # NEW: Initial CC list [{"name": "", "email": ""}]
 
 
 class TicketUpdate(BaseModel):
@@ -346,6 +349,7 @@ class TicketUpdate(BaseModel):
     subject: Optional[str] = None
     description: Optional[str] = None
     department_id: Optional[str] = None
+    help_topic_id: Optional[str] = None
     status: Optional[str] = None
     priority: Optional[str] = None
     assigned_to: Optional[str] = None
