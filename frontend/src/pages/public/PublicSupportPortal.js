@@ -26,7 +26,9 @@ export default function PublicSupportPortal() {
   const [activeTab, setActiveTab] = useState('create');  // create, check
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [helpTopics, setHelpTopics] = useState([]);
+  const [selectedTopic, setSelectedTopic] = useState(null);
+  const [customForm, setCustomForm] = useState(null);
   
   // Create ticket form
   const [form, setForm] = useState({
@@ -35,9 +37,10 @@ export default function PublicSupportPortal() {
     phone: '',
     subject: '',
     description: '',
+    help_topic_id: '',
     department_id: '',
-    category: '',
-    priority: 'medium'
+    priority: 'medium',
+    form_data: {}
   });
   
   // Check ticket form
@@ -54,15 +57,40 @@ export default function PublicSupportPortal() {
 
   const fetchPublicData = async () => {
     try {
-      const [deptsRes, catsRes] = await Promise.all([
-        axios.get(`${API}/ticketing/public/departments`),
-        axios.get(`${API}/ticketing/public/categories`)
+      const [topicsRes, deptsRes] = await Promise.all([
+        axios.get(`${API}/ticketing/public/help-topics`),
+        axios.get(`${API}/ticketing/public/departments`)
       ]);
+      setHelpTopics(topicsRes.data || []);
       setDepartments(deptsRes.data || []);
-      setCategories(catsRes.data || []);
     } catch (error) {
-      console.log('No public departments/categories available');
+      console.log('No public help topics available');
     }
+  };
+
+  const handleTopicSelect = async (topicId) => {
+    const topic = helpTopics.find(t => t.id === topicId);
+    setSelectedTopic(topic);
+    setForm(prev => ({ ...prev, help_topic_id: topicId, form_data: {} }));
+    
+    // Fetch custom form if linked
+    if (topic?.custom_form_id) {
+      try {
+        const response = await axios.get(`${API}/ticketing/public/custom-forms/${topic.custom_form_id}`);
+        setCustomForm(response.data);
+      } catch (error) {
+        setCustomForm(null);
+      }
+    } else {
+      setCustomForm(null);
+    }
+  };
+
+  const updateFormData = (fieldName, value) => {
+    setForm(prev => ({
+      ...prev,
+      form_data: { ...prev.form_data, [fieldName]: value }
+    }));
   };
 
   const handleSubmit = async (e) => {
