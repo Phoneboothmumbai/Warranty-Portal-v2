@@ -88,7 +88,8 @@ class TestServiceCRUD:
         services_response = requests.get(f"{BASE_URL}/api/admin/services", headers=self.headers)
         if services_response.status_code == 200:
             for service in services_response.json():
-                if service.get("notes", "").startswith("TEST_"):
+                notes = service.get("notes") or ""
+                if notes.startswith("TEST_"):
                     requests.delete(f"{BASE_URL}/api/admin/services/{service['id']}", headers=self.headers)
     
     def test_create_internal_service_minimal_fields(self):
