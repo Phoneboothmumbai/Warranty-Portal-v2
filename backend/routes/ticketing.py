@@ -848,6 +848,8 @@ async def create_ticket_admin(
     ticket_data = data.model_dump()
     ticket_data.pop("participants", None)  # Handle separately
     ticket_data.pop("form_data", None)  # Already processed
+    ticket_data.pop("department_id", None)  # Override with auto-routed value
+    ticket_data.pop("priority", None)  # Override with auto-routed value
     
     ticket = Ticket(
         **ticket_data,
