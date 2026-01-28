@@ -471,7 +471,7 @@ async def create_ticket_customer(data: TicketCreate, user: dict = Depends(get_cu
     
     await _db.tickets.insert_one(ticket_dict)
     await create_thread_entry(ticket.id, "system_event", user.get("id"), user.get("name"), "customer", event_type="ticket_created", event_data={})
-    return ticket_dict
+    return await _db.tickets.find_one({"id": ticket.id}, {"_id": 0})
 
 
 @router.get("/portal/tickets/{ticket_id}")
