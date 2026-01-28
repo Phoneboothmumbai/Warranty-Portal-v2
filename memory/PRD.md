@@ -73,15 +73,32 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 ### Production Deployment Support (Jan 28, 2025)
 - ✅ **deploy.sh Script** - One-command deployment for production server
 - ✅ **Admin Finder Script** - find_admin.py to locate admin accounts in database
-- ✅ **AMC Packages** - Admin can create predefined packages (Basic, Standard, Premium) with pricing
-- ✅ **Company-Specific Pricing** - Set custom pricing per company for each package
-- ✅ **Device Selection** - Users can select specific devices, all devices, or by category
-- ✅ **Duration Options** - 1, 2, or 3 year contracts with multi-year discounts
-- ✅ **Admin Review Panel** - View requests, set pricing, add notes
-- ✅ **Status Workflow** - Pending Review → Under Review → Approved/Rejected/Changes Requested
-- ✅ **Approval Creates Contract** - Automatic AMC contract creation upon approval
-- ✅ **In-App Notifications** - Users notified when request status changes
-- ✅ **Payment Tracking** - Admin can mark payment as received
+
+### Enterprise Ticketing System - Phase 1 (Jan 28, 2025)
+- ✅ **Core Ticket Model** - Complete ticket structure with unique IDs, sources, statuses, priorities
+- ✅ **Department System** - Customizable departments with default SLAs and auto-assignment
+- ✅ **SLA Engine** - Response & Resolution SLA tracking with priority multipliers, pause conditions
+- ✅ **Immutable Audit Trail** - Ticket thread with customer messages, technician replies, internal notes, system events
+- ✅ **Ticket CRUD** - Full create/read/update for admin and customer portals
+- ✅ **Assignment System** - Assign/reassign tickets with audit logging
+- ✅ **Dashboard Stats** - Open tickets by status, priority, unassigned count, SLA breach count
+- ✅ **Categories** - Customizable ticket categories with auto-routing
+- ✅ **Multi-tenant** - Company-scoped tickets, customers only see their own
+
+#### Ticketing API Endpoints:
+- `GET /api/ticketing/enums` - All dropdown values
+- `GET/POST /api/ticketing/admin/departments` - Department management
+- `GET/POST /api/ticketing/admin/sla-policies` - SLA policy management
+- `GET/POST /api/ticketing/admin/categories` - Category management
+- `GET/POST /api/ticketing/admin/tickets` - Admin ticket management
+- `PUT /api/ticketing/admin/tickets/{id}` - Update ticket status/priority/assignment
+- `POST /api/ticketing/admin/tickets/{id}/reply` - Add reply or internal note
+- `POST /api/ticketing/admin/tickets/{id}/assign` - Assign ticket
+- `GET /api/ticketing/admin/dashboard` - Dashboard statistics
+- `GET/POST /api/ticketing/portal/tickets` - Customer ticket management
+- `GET /api/ticketing/portal/departments` - Public departments for ticket creation
+
+### AMC Self-Service Enhancements (Jan 25, 2025)
 
 ### Backend Refactoring (Jan 22, 2025)
 - ✅ Created `routes/` directory structure for modular endpoints
