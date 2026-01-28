@@ -3011,12 +3011,89 @@ async def get_device_timeline(device_id: str, admin: dict = Depends(get_current_
 
 # ==================== SERVICE HISTORY ENDPOINTS ====================
 
+@api_router.get("/admin/services/options")
+async def get_service_options():
+    """Get all service record enum options for dropdowns"""
+    from models.service import (
+        SERVICE_CATEGORIES, SERVICE_RESPONSIBILITIES, SERVICE_ROLES,
+        OEM_NAMES, OEM_WARRANTY_TYPES, OEM_CASE_RAISED_VIA, 
+        OEM_PRIORITY, OEM_CASE_STATUSES, BILLING_IMPACT
+    )
+    return {
+        "service_categories": [
+            {"value": "internal_service", "label": "Internal Service (Provided by Us)"},
+            {"value": "oem_warranty_service", "label": "OEM Warranty Service (Facilitated)"},
+            {"value": "paid_third_party_service", "label": "Paid Third-Party Service"},
+            {"value": "inspection_diagnosis", "label": "Inspection / Diagnosis Only"}
+        ],
+        "service_responsibilities": [
+            {"value": "our_team", "label": "Our Team"},
+            {"value": "oem", "label": "OEM"},
+            {"value": "partner_vendor", "label": "Partner / Vendor"}
+        ],
+        "service_roles": [
+            {"value": "provider", "label": "Provider"},
+            {"value": "coordinator_facilitator", "label": "Coordinator / Facilitator"},
+            {"value": "observer", "label": "Observer"}
+        ],
+        "oem_names": OEM_NAMES,
+        "oem_warranty_types": OEM_WARRANTY_TYPES,
+        "oem_case_raised_via": [
+            {"value": "phone", "label": "Phone"},
+            {"value": "oem_portal", "label": "OEM Portal"},
+            {"value": "email", "label": "Email"},
+            {"value": "chat", "label": "Chat"}
+        ],
+        "oem_priority": [
+            {"value": "NBD", "label": "Next Business Day"},
+            {"value": "Standard", "label": "Standard"},
+            {"value": "Deferred", "label": "Deferred"},
+            {"value": "Critical", "label": "Critical/Urgent"}
+        ],
+        "oem_case_statuses": [
+            {"value": "reported_to_oem", "label": "Reported to OEM"},
+            {"value": "oem_accepted", "label": "OEM Accepted"},
+            {"value": "engineer_assigned", "label": "Engineer Assigned"},
+            {"value": "parts_dispatched", "label": "Parts Dispatched"},
+            {"value": "visit_scheduled", "label": "Visit Scheduled"},
+            {"value": "resolved_by_oem", "label": "Resolved by OEM"},
+            {"value": "closed_by_oem", "label": "Closed by OEM"}
+        ],
+        "billing_impact": [
+            {"value": "not_billable", "label": "Not Billable"},
+            {"value": "warranty_covered", "label": "Warranty Covered"},
+            {"value": "chargeable", "label": "Chargeable"}
+        ],
+        "service_statuses": [
+            {"value": "open", "label": "Open"},
+            {"value": "in_progress", "label": "In Progress"},
+            {"value": "on_hold", "label": "On Hold"},
+            {"value": "completed", "label": "Completed"},
+            {"value": "closed", "label": "Closed"}
+        ]
+    }
+
 @api_router.get("/admin/services")
-async def list_services(device_id: Optional[str] = None, admin: dict = Depends(get_current_admin)):
+async def list_services(
+    device_id: Optional[str] = None, 
+    company_id: Optional[str] = None,
+    service_category: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = 100,
+    admin: dict = Depends(get_current_admin)
+):
+    """List service records with filters"""
     query = {}
     if device_id:
         query["device_id"] = device_id
-    services = await db.service_history.find(query, {"_id": 0}).sort("service_date", -1).to_list(1000)
+    if company_id:
+        query["company_id"] = company_id
+    if service_category:
+        query["service_category"] = service_category
+    if status:
+        query["status"] = status
+    
+    services = await db.service_history.find(query, {"_id": 0}).sort("service_date", -1).to_list(limit)
     return services
 
 @api_router.post("/admin/services")
