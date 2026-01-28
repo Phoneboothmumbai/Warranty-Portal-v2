@@ -46,6 +46,7 @@ export default function TicketingSettings() {
   const [customForms, setCustomForms] = useState([]);
   const [cannedResponses, setCannedResponses] = useState([]);
   const [admins, setAdmins] = useState([]);
+  const [emailStatus, setEmailStatus] = useState(null);
   
   // Modals
   const [showDeptModal, setShowDeptModal] = useState(false);
@@ -54,6 +55,11 @@ export default function TicketingSettings() {
   const [showFormModal, setShowFormModal] = useState(false);
   const [showCannedModal, setShowCannedModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  
+  // Email
+  const [emailTesting, setEmailTesting] = useState(false);
+  const [emailSyncing, setEmailSyncing] = useState(false);
+  const [testEmailAddress, setTestEmailAddress] = useState('');
   
   // Department form
   const [deptForm, setDeptForm] = useState({
