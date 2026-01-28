@@ -64,6 +64,8 @@ import CompanyOfficeSupplies from "./pages/company/CompanyOfficeSupplies";
 import CompanyCredentials from "./pages/company/CompanyCredentials";
 import CompanyAMCRequests from "./pages/company/CompanyAMCRequests";
 import NewAMCRequest from "./pages/company/NewAMCRequest";
+import CompanySupportTickets from "./pages/company/CompanySupportTickets";
+import CompanySupportTicketDetail from "./pages/company/CompanySupportTicketDetail";
 
 // Engineer Portal Pages
 import EngineerLogin from "./pages/engineer/EngineerLogin";
