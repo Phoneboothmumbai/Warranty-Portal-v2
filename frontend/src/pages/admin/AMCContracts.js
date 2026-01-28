@@ -13,6 +13,44 @@ import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Transfer list for asset selection - moved outside component
+const TransferList = ({ available, selected, onSelect, onDeselect }) => (
+  <div className="grid grid-cols-2 gap-4">
+    <div className="border rounded-lg p-3">
+      <p className="text-xs font-medium text-slate-500 mb-2">Available Assets ({available.length})</p>
+      <div className="space-y-1 max-h-48 overflow-y-auto">
+        {available.map(asset => (
+          <div 
+            key={asset.id}
+            onClick={() => onSelect(asset.id)}
+            className="flex items-center justify-between p-2 bg-slate-50 rounded cursor-pointer hover:bg-slate-100"
+          >
+            <span className="text-sm truncate">{asset.brand} {asset.model}</span>
+            <ChevronRight className="h-4 w-4 text-slate-400" />
+          </div>
+        ))}
+        {available.length === 0 && <p className="text-xs text-slate-400">No assets available</p>}
+      </div>
+    </div>
+    <div className="border rounded-lg p-3 border-emerald-200 bg-emerald-50/50">
+      <p className="text-xs font-medium text-emerald-600 mb-2">Covered Assets ({selected.length})</p>
+      <div className="space-y-1 max-h-48 overflow-y-auto">
+        {selected.map(asset => (
+          <div 
+            key={asset.id}
+            onClick={() => onDeselect(asset.id)}
+            className="flex items-center justify-between p-2 bg-white rounded cursor-pointer hover:bg-red-50"
+          >
+            <ChevronLeft className="h-4 w-4 text-slate-400" />
+            <span className="text-sm truncate">{asset.brand} {asset.model}</span>
+          </div>
+        ))}
+        {selected.length === 0 && <p className="text-xs text-slate-400">No assets selected</p>}
+      </div>
+    </div>
+  </div>
+);
+
 // AMC Types with descriptions
 const AMC_TYPES = [
   { value: 'comprehensive', label: 'Comprehensive', desc: 'Full coverage including parts & labor' },
