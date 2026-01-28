@@ -418,7 +418,7 @@ export default function TicketingSettings() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Ticketing Configuration</h1>
-          <p className="text-slate-500 text-sm mt-1">Manage help topics, forms, departments, SLAs, and canned responses</p>
+          <p className="text-slate-500 text-sm mt-1">Manage help topics, forms, departments, SLAs, canned responses, and email</p>
         </div>
         <Button variant="outline" onClick={fetchData} data-testid="refresh-btn">
           <RefreshCw className="h-4 w-4 mr-2" /> Refresh
@@ -427,18 +427,19 @@ export default function TicketingSettings() {
 
       {/* Tabs */}
       <div className="border-b border-slate-200">
-        <div className="flex gap-1 -mb-px">
+        <div className="flex gap-1 -mb-px overflow-x-auto">
           {[
             { id: 'help-topics', label: 'Help Topics', icon: HelpCircle, count: helpTopics.length },
             { id: 'custom-forms', label: 'Custom Forms', icon: FormInput, count: customForms.length },
             { id: 'canned-responses', label: 'Canned Responses', icon: MessageSquare, count: cannedResponses.length },
             { id: 'departments', label: 'Departments', icon: Building2, count: departments.length },
             { id: 'sla-policies', label: 'SLA Policies', icon: Timer, count: slaPolicies.length },
+            { id: 'email', label: 'Email', icon: Tag, count: null },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
