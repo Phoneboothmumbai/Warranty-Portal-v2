@@ -899,17 +899,26 @@ async def create_ticket_admin(
 
 @router.get("/admin/tickets/{ticket_id}")
 async def get_ticket_admin(ticket_id: str, admin: dict = Depends(get_current_admin)):
-    """Get ticket details with thread"""
+    """Get ticket details with thread, participants, and help topic"""
     ticket = await _db.tickets.find_one({"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     
     thread = await _db.ticket_thread.find({"ticket_id": ticket_id, "is_hidden": {"$ne": True}}, {"_id": 0}).sort("created_at", 1).to_list(500)
+    
     department = None
     if ticket.get("department_id"):
         department = await _db.ticketing_departments.find_one({"id": ticket["department_id"]}, {"_id": 0, "name": 1, "id": 1})
     
-    return {**ticket, "thread": thread, "department": department}
+    help_topic = None
+    if ticket.get("help_topic_id"):
+        help_topic = await _db.ticketing_help_topics.find_one({"id": ticket["help_topic_id"]}, {"_id": 0, "name": 1, "id": 1, "icon": 1})
+    
+    participants = await _db.ticket_participants.find(
+        {"ticket_id": ticket_id, "is_active": True}, {"_id": 0}
+    ).to_list(50)
+    
+    return {**ticket, "thread": thread, "department": department, "help_topic": help_topic, "participants": participants}
 
 
 @router.put("/admin/tickets/{ticket_id}")
