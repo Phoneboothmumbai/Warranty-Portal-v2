@@ -755,8 +755,8 @@ async def add_ticket_participant_customer(ticket_id: str, data: AddParticipantRe
 @router.get("/admin/tickets")
 async def list_tickets_admin(
     status: Optional[str] = None, priority: Optional[str] = None, department_id: Optional[str] = None,
-    assigned_to: Optional[str] = None, company_id: Optional[str] = None, unassigned: bool = False,
-    search: Optional[str] = None, limit: int = Query(50, le=200), skip: int = 0,
+    help_topic_id: Optional[str] = None, assigned_to: Optional[str] = None, company_id: Optional[str] = None,
+    unassigned: bool = False, search: Optional[str] = None, limit: int = Query(50, le=200), skip: int = 0,
     admin: dict = Depends(get_current_admin)
 ):
     """List tickets with filters (admin view)"""
@@ -764,6 +764,7 @@ async def list_tickets_admin(
     if status: query["status"] = status
     if priority: query["priority"] = priority
     if department_id: query["department_id"] = department_id
+    if help_topic_id: query["help_topic_id"] = help_topic_id
     if assigned_to: query["assigned_to"] = assigned_to
     if company_id: query["company_id"] = company_id
     if unassigned: query["assigned_to"] = None
