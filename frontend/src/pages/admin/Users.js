@@ -365,18 +365,12 @@ const Users = () => {
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
             <div>
               <label className="form-label">Company *</label>
-              <select
+              <SearchableCompanySelect
+                companies={companies}
                 value={formData.company_id}
-                onChange={(e) => setFormData({ ...formData, company_id: e.target.value })}
-                className="form-select"
-                data-testid="user-company-select"
+                onChange={(val) => setFormData({ ...formData, company_id: val })}
                 disabled={editingUser}
-              >
-                <option value="">Select Company</option>
-                {companies.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              />
             </div>
             <div>
               <label className="form-label">Full Name *</label>
