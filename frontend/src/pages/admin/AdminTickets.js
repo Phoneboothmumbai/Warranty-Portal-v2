@@ -688,11 +688,12 @@ export default function AdminTickets() {
                   options={companyUsers}
                   value={createData.requester_id}
                   onChange={(val) => setCreateData({ ...createData, requester_id: val })}
-                  placeholder={selectedCompanyId ? "Search & select requester..." : "Select company first"}
+                  placeholder={loadingCompanyUsers ? "Loading users..." : selectedCompanyId ? "Search & select requester..." : "Select company first"}
                   displayKey="name"
                   valueKey="id"
-                  disabled={!selectedCompanyId}
+                  disabled={!selectedCompanyId || loadingCompanyUsers}
                   icon={User}
+                  loading={loadingCompanyUsers}
                 />
                 {!createData.requester_id && <input type="hidden" name="requester_required" required />}
               </div>
