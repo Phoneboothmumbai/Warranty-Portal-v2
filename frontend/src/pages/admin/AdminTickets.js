@@ -262,6 +262,8 @@ export default function AdminTickets() {
       );
       toast.success(`Ticket ${res.data.ticket_number} created${ccParticipants.length > 0 ? ` with ${ccParticipants.length} CC` : ''}`);
       setShowCreate(false);
+      setSelectedCompanyId('');
+      setCompanyUsers([]);
       setCreateData({ subject: '', description: '', department_id: '', priority: 'medium', category: '', tags: '', requester_id: '' });
       setCcParticipants([]);
       fetchData();
