@@ -653,6 +653,56 @@ export default function AdminTicketDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Add Participant Modal */}
+      <Dialog open={showAddParticipant} onOpenChange={setShowAddParticipant}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Participant (CC)</DialogTitle>
+            <DialogDescription>
+              Added participants will receive all ticket notifications and can reply to this ticket.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-slate-700 block mb-1">Name *</label>
+              <input
+                type="text"
+                value={participantForm.name}
+                onChange={(e) => setParticipantForm({ ...participantForm, name: e.target.value })}
+                placeholder="John Doe"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                data-testid="participant-name-input"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700 block mb-1">Email *</label>
+              <input
+                type="email"
+                value={participantForm.email}
+                onChange={(e) => setParticipantForm({ ...participantForm, email: e.target.value })}
+                placeholder="john@example.com"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                data-testid="participant-email-input"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700 block mb-1">Phone</label>
+              <input
+                type="tel"
+                value={participantForm.phone}
+                onChange={(e) => setParticipantForm({ ...participantForm, phone: e.target.value })}
+                placeholder="+1 234 567 8900"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setShowAddParticipant(false)}>Cancel</Button>
+              <Button onClick={handleAddParticipant} data-testid="add-participant-submit">Add Participant</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
