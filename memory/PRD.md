@@ -129,6 +129,42 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
   - Duplicate prevention
   - All participants receive notifications (pending email integration)
 
+### Enterprise Ticketing System - Phase 4: Email Integration (Jan 28, 2025)
+- ✅ **Public Support Portal Updated** - Now uses Help Topics dropdown instead of legacy Categories
+  - Dynamic custom form fields load when Help Topic selected
+  - Help Topic auto-routing (priority, department, SLA) applied to public tickets
+  - Form data saved with versioned snapshot
+- ✅ **Email Service** (`/app/backend/services/email_service.py`)
+  - SMTP support for Google Workspace (smtp.gmail.com:587 with TLS)
+  - IMAP support for inbox monitoring (imap.gmail.com:993 with SSL)
+  - HTML email templates with branded design
+  - Variable replacement in email content
+- ✅ **Email Notifications**
+  - Ticket created notification
+  - Reply added notification
+  - Status changed notification
+  - Ticket closed notification
+  - Sends to all participants (requester + CC)
+- ✅ **IMAP Email Sync**
+  - Fetch unread emails from inbox
+  - Parse email subject for ticket number (`[TKT-XXXXXXXX-XXXXXX]`)
+  - Create new ticket from new emails
+  - Add replies to existing tickets from email responses
+  - Clean reply content (remove quoted text, signatures)
+  - Sender validation against requester/participants
+- ✅ **Admin Email Settings Tab**
+  - Connection status display
+  - Test Connection button (SMTP + IMAP)
+  - Sync Now button for manual email sync
+  - Send Test Email functionality
+  - Configuration instructions for Google Workspace
+
+#### Phase 4 API Endpoints:
+- `GET /api/ticketing/admin/email/status` - Email configuration status
+- `POST /api/ticketing/admin/email/test` - Test SMTP and IMAP connections
+- `POST /api/ticketing/admin/email/sync` - Manually trigger email sync
+- `POST /api/ticketing/admin/email/send-test` - Send test email
+
 #### Phase 3 API Endpoints:
 - `GET/POST/PUT/DELETE /api/ticketing/admin/help-topics` - Help Topic CRUD
 - `GET /api/ticketing/public/help-topics` - Public Help Topics for ticket creation
