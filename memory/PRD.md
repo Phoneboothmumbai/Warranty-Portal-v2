@@ -142,9 +142,18 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - ✅ **Technician Panel for OEM Service Records** - Complete service history page with OEM tracking
   - Backend: 18 test cases passing (100%)
   - Frontend: Full UI with conditional OEM fields, auto-locking, filters
+- ✅ **Enterprise Ticketing System Phase 2** - Admin settings + Public portal
+  - Backend: 28 test cases passing (100%)
+  - Admin Settings: Departments, SLA Policies, Categories management
+  - Public Portal: Anonymous ticket submission and status check
 
 ### P0 - Critical (In Progress)
 - [ ] **Renewal Alerts Dashboard** - Backend API + Frontend to track expiring warranties/AMCs/licenses/parts
+
+### P1 - Next Up (Ticketing Phase 3)
+- [ ] **SLA Breach Checking** - Automated background task to check SLA deadlines
+- [ ] **Auto-Escalation** - Escalate tickets on SLA breach
+- [ ] **Email Integration** - Create tickets from incoming emails
 
 ### P1 - Verified Complete
 - ✅ **Accessories & Peripherals Module** - Full CRUD implementation
