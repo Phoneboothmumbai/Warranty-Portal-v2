@@ -167,7 +167,8 @@ export default function AdminTickets() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [ticketsRes, dashboardRes, deptsRes, adminsRes, companiesRes, enumsRes] = await Promise.all([
+      // Fetch data with individual error handling so one failure doesn't break everything
+      const results = await Promise.allSettled([
         axios.get(`${API}/ticketing/admin/tickets`, {
           params: { ...filters, search: filters.search || undefined },
           headers: { Authorization: `Bearer ${token}` }
@@ -179,14 +180,38 @@ export default function AdminTickets() {
         axios.get(`${API}/ticketing/enums`)
       ]);
       
-      setTickets(ticketsRes.data.tickets || []);
-      setDashboard(dashboardRes.data);
-      setDepartments(deptsRes.data || []);
-      setAdmins(adminsRes.data || []);
-      setCompanies(companiesRes.data || []);
-      setEnums(enumsRes.data);
+      // Extract data from settled promises
+      const [ticketsRes, dashboardRes, deptsRes, adminsRes, companiesRes, enumsRes] = results;
+      
+      if (ticketsRes.status === 'fulfilled') {
+        setTickets(ticketsRes.value.data.tickets || []);
+      }
+      if (dashboardRes.status === 'fulfilled') {
+        setDashboard(dashboardRes.value.data);
+      }
+      if (deptsRes.status === 'fulfilled') {
+        setDepartments(deptsRes.value.data || []);
+      }
+      if (adminsRes.status === 'fulfilled') {
+        setAdmins(adminsRes.value.data || []);
+      }
+      if (companiesRes.status === 'fulfilled') {
+        setCompanies(companiesRes.value.data || []);
+        console.log('Companies loaded:', companiesRes.value.data?.length || 0);
+      } else {
+        console.error('Failed to load companies:', companiesRes.reason);
+      }
+      if (enumsRes.status === 'fulfilled') {
+        setEnums(enumsRes.value.data);
+      }
+      
+      // Show error if tickets failed to load
+      if (ticketsRes.status === 'rejected') {
+        toast.error('Failed to load tickets');
+      }
     } catch (error) {
-      toast.error('Failed to load tickets');
+      console.error('Fetch error:', error);
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
