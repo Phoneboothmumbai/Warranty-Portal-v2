@@ -159,16 +159,18 @@ export default function AdminTickets() {
         department_id: createData.department_id || undefined,
         priority: createData.priority,
         category: createData.category || undefined,
-        tags: createData.tags ? createData.tags.split(',').map(t => t.trim()) : []
+        tags: createData.tags ? createData.tags.split(',').map(t => t.trim()) : [],
+        participants: ccParticipants.length > 0 ? ccParticipants : undefined
       };
       const res = await axios.post(
         `${API}/ticketing/admin/tickets?requester_id=${createData.requester_id}`,
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success(`Ticket ${res.data.ticket_number} created`);
+      toast.success(`Ticket ${res.data.ticket_number} created${ccParticipants.length > 0 ? ` with ${ccParticipants.length} CC` : ''}`);
       setShowCreate(false);
       setCreateData({ subject: '', description: '', department_id: '', priority: 'medium', category: '', tags: '', requester_id: '' });
+      setCcParticipants([]);
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to create ticket');
