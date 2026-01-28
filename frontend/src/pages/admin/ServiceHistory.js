@@ -107,6 +107,187 @@ const SearchableDeviceSelect = ({ devices, value, onChange, disabled }) => {
   );
 };
 
+// Stage Timeline Component
+const STAGE_STATUS_CONFIG = {
+  pending: { label: 'Pending', color: 'bg-slate-100 text-slate-500', icon: Clock, dotColor: 'bg-slate-300' },
+  in_progress: { label: 'In Progress', color: 'bg-blue-100 text-blue-700', icon: Clock, dotColor: 'bg-blue-500' },
+  completed: { label: 'Completed', color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle2, dotColor: 'bg-emerald-500' },
+  skipped: { label: 'Skipped', color: 'bg-slate-100 text-slate-400', icon: X, dotColor: 'bg-slate-300' }
+};
+
+const StageTimeline = ({ service, onStageUpdate, disabled }) => {
+  const [expandedStage, setExpandedStage] = useState(null);
+  const [stageNotes, setStageNotes] = useState('');
+  const [updating, setUpdating] = useState(false);
+  
+  const stages = service.stages || [];
+  const sortedStages = [...stages].sort((a, b) => (a.order || 0) - (b.order || 0));
+  
+  const handleStatusChange = async (stageKey, newStatus) => {
+    if (disabled || updating) return;
+    setUpdating(true);
+    try {
+      await onStageUpdate(service.id, stageKey, { 
+        status: newStatus,
+        notes: stageNotes || undefined
+      });
+      setStageNotes('');
+      setExpandedStage(null);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleString('en-GB', { 
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+  };
+
+  return (
+    <div className="bg-slate-50 rounded-lg p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="font-medium text-slate-900 flex items-center gap-2">
+          <Clock className="h-4 w-4" />
+          Service Timeline
+        </h4>
+        <span className="text-xs text-slate-500">
+          {sortedStages.filter(s => s.status === 'completed').length} / {sortedStages.length} completed
+        </span>
+      </div>
+      
+      <div className="relative">
+        {/* Timeline line */}
+        <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-slate-200"></div>
+        
+        <div className="space-y-1">
+          {sortedStages.map((stage, index) => {
+            const config = STAGE_STATUS_CONFIG[stage.status] || STAGE_STATUS_CONFIG.pending;
+            const StatusIcon = config.icon;
+            const isExpanded = expandedStage === stage.stage_key;
+            const isLast = index === sortedStages.length - 1;
+            
+            return (
+              <div key={stage.id || stage.stage_key} className="relative">
+                {/* Timeline dot */}
+                <div className={`absolute left-2.5 w-3 h-3 rounded-full ${config.dotColor} ring-2 ring-white z-10`}></div>
+                
+                <div className={`ml-8 ${!isLast ? 'pb-3' : ''}`}>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedStage(isExpanded ? null : stage.stage_key)}
+                    className={`w-full text-left p-2 rounded-lg transition-colors ${
+                      isExpanded ? 'bg-white shadow-sm' : 'hover:bg-white/50'
+                    }`}
+                    disabled={disabled}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-slate-900">{stage.stage_label}</span>
+                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${config.color}`}>
+                          {config.label}
+                        </span>
+                        {stage.is_custom && (
+                          <span className="px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-700">Custom</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {stage.completed_at && (
+                          <span className="text-xs text-slate-500">{formatDateTime(stage.completed_at)}</span>
+                        )}
+                        <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      </div>
+                    </div>
+                  </button>
+                  
+                  {/* Expanded Stage Details */}
+                  {isExpanded && (
+                    <div className="mt-2 p-3 bg-white rounded-lg border border-slate-200 space-y-3">
+                      {/* Stage info */}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {stage.started_at && (
+                          <div>
+                            <span className="text-slate-500">Started:</span>
+                            <span className="ml-1 text-slate-700">{formatDateTime(stage.started_at)}</span>
+                          </div>
+                        )}
+                        {stage.completed_at && (
+                          <div>
+                            <span className="text-slate-500">Completed:</span>
+                            <span className="ml-1 text-slate-700">{formatDateTime(stage.completed_at)}</span>
+                          </div>
+                        )}
+                        {stage.updated_by_name && (
+                          <div>
+                            <span className="text-slate-500">Updated by:</span>
+                            <span className="ml-1 text-slate-700">{stage.updated_by_name}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Notes */}
+                      {stage.notes && (
+                        <div className="text-xs">
+                          <span className="text-slate-500">Notes:</span>
+                          <p className="mt-1 text-slate-700 bg-slate-50 p-2 rounded">{stage.notes}</p>
+                        </div>
+                      )}
+                      
+                      {/* Actions */}
+                      {!disabled && stage.status !== 'completed' && (
+                        <div className="pt-2 border-t border-slate-100 space-y-2">
+                          <textarea
+                            placeholder="Add notes for this stage..."
+                            value={stageNotes}
+                            onChange={(e) => setStageNotes(e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded resize-none"
+                            rows={2}
+                          />
+                          <div className="flex gap-2">
+                            {stage.status === 'pending' && (
+                              <button
+                                onClick={() => handleStatusChange(stage.stage_key, 'in_progress')}
+                                disabled={updating}
+                                className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+                              >
+                                Start
+                              </button>
+                            )}
+                            {(stage.status === 'pending' || stage.status === 'in_progress') && (
+                              <>
+                                <button
+                                  onClick={() => handleStatusChange(stage.stage_key, 'completed')}
+                                  disabled={updating}
+                                  className="px-2 py-1 text-xs bg-emerald-500 text-white rounded hover:bg-emerald-600 disabled:opacity-50"
+                                >
+                                  Complete
+                                </button>
+                                <button
+                                  onClick={() => handleStatusChange(stage.stage_key, 'skipped')}
+                                  disabled={updating}
+                                  className="px-2 py-1 text-xs bg-slate-200 text-slate-600 rounded hover:bg-slate-300 disabled:opacity-50"
+                                >
+                                  Skip
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // Service Category Labels & Colors
