@@ -525,6 +525,25 @@ const ServiceHistory = () => {
     }
   };
 
+  // Stage update handler
+  const handleStageUpdate = async (serviceId, stageKey, updateData) => {
+    try {
+      const response = await axios.put(
+        `${API}/admin/services/${serviceId}/stages/${stageKey}`,
+        updateData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Update the selected service with new data
+      setSelectedService(response.data);
+      // Also update in the list
+      setServices(prev => prev.map(s => s.id === serviceId ? response.data : s));
+      toast.success('Stage updated');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update stage');
+      throw error;
+    }
+  };
+
   const openCreateModal = (deviceId = '') => {
     setEditingService(null);
     setFormData({
