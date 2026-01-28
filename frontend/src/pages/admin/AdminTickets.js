@@ -227,21 +227,22 @@ export default function AdminTickets() {
     fetchData();
   }, [fetchData]);
 
-  const fetchCompanyUsers = async (companyId) => {
+  // Fetch employees for the selected company (as requesters)
+  const fetchCompanyEmployees = async (companyId) => {
     if (!companyId) {
       setCompanyUsers([]);
       return;
     }
     setLoadingCompanyUsers(true);
     try {
-      const res = await axios.get(`${API}/admin/company-users?company_id=${companyId}`, {
+      const res = await axios.get(`${API}/admin/company-employees?company_id=${companyId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCompanyUsers(res.data || []);
-      console.log('Company users loaded:', res.data?.length || 0);
+      console.log('Company employees loaded:', res.data?.length || 0);
     } catch (error) {
-      console.error('Failed to load company users:', error);
-      toast.error('Failed to load company users');
+      console.error('Failed to load company employees:', error);
+      toast.error('Failed to load employees');
       setCompanyUsers([]);
     } finally {
       setLoadingCompanyUsers(false);
