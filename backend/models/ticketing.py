@@ -262,6 +262,7 @@ class Ticket(BaseModel):
     # Source & Classification
     source: str = "portal"  # email, portal, phone, whatsapp, api, manual
     department_id: Optional[str] = None
+    help_topic_id: Optional[str] = None  # NEW: Links to HelpTopic
     
     # Subject & Description
     subject: str
@@ -277,22 +278,28 @@ class Ticket(BaseModel):
     requester_email: str
     requester_phone: Optional[str] = None
     
+    # Participants (CC/Collaboration) - stored as list of participant IDs
+    participant_ids: List[str] = Field(default_factory=list)
+    participant_count: int = 0  # Denormalized for performance
+    
     # Assignment
     assigned_to: Optional[str] = None  # Primary assignee (staff user ID)
     assigned_to_name: Optional[str] = None
     assigned_at: Optional[str] = None
-    watchers: List[str] = Field(default_factory=list)  # Secondary watchers
+    watchers: List[str] = Field(default_factory=list)  # Staff watchers (internal)
     
     # SLA
     sla_status: Optional[dict] = None  # TicketSLAStatus as dict
     
-    # Tags & Categories
+    # Tags & Categories (legacy)
     tags: List[str] = Field(default_factory=list)
-    category: Optional[str] = None
+    category: Optional[str] = None  # DEPRECATED: Use help_topic_id
     
-    # Custom Fields (dynamic)
+    # Custom Form Data - versioned snapshot
+    form_data: Optional[dict] = None  # TicketFormData as dict
+    
+    # Custom Fields (dynamic) - for backward compatibility
     custom_fields: Dict[str, Any] = Field(default_factory=dict)
-    # Examples: asset_id, serial_number, service_tag, location, warranty_status, vendor_name
     
     # Linked entities
     device_id: Optional[str] = None
