@@ -103,6 +103,42 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - ✅ **Public Ticket Reply** - Customers can add replies to their tickets
 - ✅ **Ticket Number Generation** - Unique TKT-YYYYMMDD-XXXXXX format
 
+### Enterprise Ticketing System - Phase 3: osTicket-Inspired Features (Jan 28, 2025)
+- ✅ **Help Topics** (replaces Categories) - Issue types that drive smart routing and form selection
+  - Auto-routing: Department, Priority, SLA, Assignee
+  - Custom Form linking per Help Topic
+  - Icon support for visual identification
+  - 10 Help Topics created
+- ✅ **Custom Forms** (Dynamic Forms per Help Topic)
+  - Form builder with 10 field types: text, textarea, number, email, phone, select, multiselect, checkbox, date, file
+  - Version tracking for immutable ticket data
+  - Customer-visible and staff-only field options
+  - 6 Custom Forms created (Hardware Issue Form, AppleCare+ Request Form, etc.)
+- ✅ **Canned Responses** (Predefined Replies)
+  - Variable replacement: {{customer_name}}, {{ticket_number}}, {{subject}}, {{department_name}}, {{assigned_to}}, {{sla_due}}
+  - Personal vs Shared responses
+  - Department-scoped responses
+  - Usage tracking
+  - Dropdown integration in ticket detail reply form
+  - 8 Canned Responses created
+- ✅ **Ticket Participants (CC/Collaboration)**
+  - Add/remove participants to tickets
+  - Both customers and technicians can add participants
+  - External participants (email-only)
+  - Participant types: cc, collaborator, watcher
+  - Duplicate prevention
+  - All participants receive notifications (pending email integration)
+
+#### Phase 3 API Endpoints:
+- `GET/POST/PUT/DELETE /api/ticketing/admin/help-topics` - Help Topic CRUD
+- `GET /api/ticketing/public/help-topics` - Public Help Topics for ticket creation
+- `GET/POST/PUT/DELETE /api/ticketing/admin/custom-forms` - Custom Form CRUD
+- `GET /api/ticketing/public/custom-forms/{id}` - Get form for public ticket creation
+- `GET/POST/PUT/DELETE /api/ticketing/admin/canned-responses` - Canned Response CRUD
+- `POST /api/ticketing/admin/canned-responses/{id}/use` - Apply canned response with variable replacement
+- `GET/POST/DELETE /api/ticketing/admin/tickets/{id}/participants` - Ticket Participants management
+- `POST /api/ticketing/portal/tickets/{id}/participants` - Customer add participants
+
 #### Phase 2 API Endpoints:
 - `GET /api/ticketing/public/departments` - Public departments (no auth)
 - `GET /api/ticketing/public/categories` - Public categories (no auth)
