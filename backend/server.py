@@ -3110,6 +3110,8 @@ async def get_stage_templates():
 
 @api_router.post("/admin/services")
 async def create_service(service_data: ServiceHistoryCreate, admin: dict = Depends(get_current_admin)):
+    from models.service import DEFAULT_SERVICE_STAGES, OEM_SERVICE_STAGES, ServiceStage
+    
     device = await db.devices.find_one({"id": service_data.device_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
@@ -3117,7 +3119,9 @@ async def create_service(service_data: ServiceHistoryCreate, admin: dict = Depen
     service_dict = service_data.model_dump()
     
     # ==================== OEM VALIDATION RULES ====================
-    if service_dict.get("service_category") == "oem_warranty_service":
+    is_oem_service = service_dict.get("service_category") == "oem_warranty_service"
+    
+    if is_oem_service:
         # Validate OEM details are provided
         oem_details = service_dict.get("oem_details")
         if not oem_details:
@@ -3142,6 +3146,48 @@ async def create_service(service_data: ServiceHistoryCreate, admin: dict = Depen
         service_dict["counts_toward_amc"] = False  # LOCKED - cannot consume AMC
         service_dict["consumes_amc_quota"] = False
         service_dict["amc_covered"] = False
+    
+    # ==================== INITIALIZE STAGES ====================
+    if service_dict.get("initialize_stages", True):
+        stage_templates = OEM_SERVICE_STAGES if is_oem_service else DEFAULT_SERVICE_STAGES
+        stages = []
+        for template in stage_templates:
+            stage = {
+                "id": str(uuid.uuid4()),
+                "stage_key": template["key"],
+                "stage_label": template["label"],
+                "order": template["order"],
+                "status": "pending",
+                "timestamp": None,
+                "started_at": None,
+                "completed_at": None,
+                "notes": None,
+                "updated_by": None,
+                "updated_by_name": None,
+                "attachments": [],
+                "metadata": None
+            }
+            # Auto-complete "Request Raised" stage
+            if template["key"] == "request_raised":
+                stage["status"] = "completed"
+                stage["timestamp"] = get_ist_isoformat()
+                stage["completed_at"] = get_ist_isoformat()
+                stage["updated_by"] = admin.get("id")
+                stage["updated_by_name"] = admin.get("name")
+            stages.append(stage)
+        
+        service_dict["stages"] = stages
+        service_dict["current_stage"] = "request_raised"
+        service_dict["stage_history"] = [{
+            "stage_key": "request_raised",
+            "action": "completed",
+            "timestamp": get_ist_isoformat(),
+            "updated_by": admin.get("id"),
+            "updated_by_name": admin.get("name")
+        }]
+    
+    # Remove the flag before saving
+    service_dict.pop("initialize_stages", None)
     
     service = ServiceHistory(
         **service_dict,
