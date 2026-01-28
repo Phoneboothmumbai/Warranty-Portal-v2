@@ -26,10 +26,10 @@ router = APIRouter(prefix="/ticketing", tags=["Ticketing"])
 # ==================== DEPENDENCY INJECTION ====================
 # These will be set when the router is included in the main app
 
-db: AsyncIOMotorDatabase = None
-get_current_admin = None
-get_current_company_user = None
-log_audit = None
+_db: AsyncIOMotorDatabase = None
+_get_current_admin = None
+_get_current_company_user = None
+_log_audit = None
 
 
 def init_ticketing_router(
@@ -39,11 +39,21 @@ def init_ticketing_router(
     audit_function
 ):
     """Initialize the ticketing router with dependencies"""
-    global db, get_current_admin, get_current_company_user, log_audit
-    db = database
-    get_current_admin = admin_dependency
-    get_current_company_user = company_user_dependency
-    log_audit = audit_function
+    global _db, _get_current_admin, _get_current_company_user, _log_audit
+    _db = database
+    _get_current_admin = admin_dependency
+    _get_current_company_user = company_user_dependency
+    _log_audit = audit_function
+
+
+def get_db():
+    return _db
+
+def get_admin_dependency():
+    return _get_current_admin
+
+def get_company_user_dependency():
+    return _get_current_company_user
 
 
 # ==================== ENUMS ENDPOINT ====================
@@ -89,9 +99,10 @@ async def get_ticketing_enums():
 @router.get("/admin/departments")
 async def list_departments(
     include_inactive: bool = False,
-    admin: dict = Depends(lambda: get_current_admin)
+    admin: dict = Depends(get_admin_dependency)
 ):
     """List all departments (admin only)"""
+    db = get_db()
     query = {"is_deleted": {"$ne": True}}
     if not include_inactive:
         query["is_active"] = True
@@ -103,15 +114,16 @@ async def list_departments(
 @router.post("/admin/departments")
 async def create_department(
     data: DepartmentCreate,
-    admin: dict = Depends(lambda: get_current_admin)
+    admin: dict = Depends(get_admin_dependency)
 ):
     """Create a new department"""
+    db = get_db()
     dept = Department(
         **data.model_dump(),
         created_by=admin.get("id")
     )
     await db.ticketing_departments.insert_one(dept.model_dump())
-    await log_audit("ticketing_department", dept.id, "create", data.model_dump(), admin)
+    await _log_audit("ticketing_department", dept.id, "create", data.model_dump(), admin)
     return dept.model_dump()
 
 
