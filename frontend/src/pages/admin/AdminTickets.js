@@ -75,7 +75,12 @@ const SearchableSelect = ({ options, value, onChange, placeholder, displayKey = 
             </div>
           </div>
           <div className="overflow-y-auto max-h-48">
-            {filteredOptions.length === 0 ? (
+            {loading ? (
+              <div className="px-3 py-4 text-sm text-slate-500 text-center flex items-center justify-center gap-2">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Loading...
+              </div>
+            ) : filteredOptions.length === 0 ? (
               <div className="px-3 py-4 text-sm text-slate-500 text-center">
                 {options.length === 0 ? 'No options available' : 'No matches found'}
               </div>
