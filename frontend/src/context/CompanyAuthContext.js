@@ -23,7 +23,15 @@ export const CompanyAuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (token) {
+      fetchUser();
+    } else {
+      setLoading(false);
+    }
+  }, [token, fetchUser]);
 
   const login = async (email, password) => {
     const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/company/auth/login`, {
