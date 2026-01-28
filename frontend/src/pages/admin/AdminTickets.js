@@ -66,6 +66,11 @@ export default function AdminTickets() {
     requester_id: ''
   });
   const [creating, setCreating] = useState(false);
+  
+  // CC Participants for new ticket
+  const [ccParticipants, setCcParticipants] = useState([]);
+  const [newCcEmail, setNewCcEmail] = useState('');
+  const [newCcName, setNewCcName] = useState('');
 
   const fetchData = useCallback(async () => {
     try {
