@@ -786,34 +786,113 @@ async def create_ticket_admin(
     data: TicketCreate, requester_id: str = Query(..., description="Company user ID of requester"),
     admin: dict = Depends(get_current_admin)
 ):
-    """Create a ticket on behalf of a customer (admin)"""
+    """Create a ticket on behalf of a customer (admin) with Help Topic auto-routing"""
     requester = await _db.company_users.find_one({"id": requester_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not requester:
         raise HTTPException(status_code=404, detail="Requester not found")
     
+    # Help Topic auto-routing
+    help_topic = None
+    department_id = data.department_id
+    priority = data.priority
+    sla_id = None
+    auto_assign_to = None
+    
+    if data.help_topic_id:
+        help_topic = await _db.ticketing_help_topics.find_one({"id": data.help_topic_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+        if help_topic:
+            # Apply auto-routing from help topic
+            if not department_id and help_topic.get("auto_department_id"):
+                department_id = help_topic["auto_department_id"]
+            if help_topic.get("auto_priority"):
+                priority = help_topic["auto_priority"]
+            if help_topic.get("auto_sla_id"):
+                sla_id = help_topic["auto_sla_id"]
+            if help_topic.get("auto_assign_to"):
+                auto_assign_to = help_topic["auto_assign_to"]
+    
+    # Get SLA policy
     sla_policy = None
-    if data.department_id:
-        dept = await _db.ticketing_departments.find_one({"id": data.department_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if sla_id:
+        sla_policy = await _db.ticketing_sla_policies.find_one({"id": sla_id}, {"_id": 0})
+    elif department_id:
+        dept = await _db.ticketing_departments.find_one({"id": department_id, "is_deleted": {"$ne": True}}, {"_id": 0})
         if dept and dept.get("default_sla_id"):
             sla_policy = await _db.ticketing_sla_policies.find_one({"id": dept["default_sla_id"]}, {"_id": 0})
     if not sla_policy:
         sla_policy = await _db.ticketing_sla_policies.find_one({"is_default": True, "is_deleted": {"$ne": True}}, {"_id": 0})
     
-    sla_status = calculate_sla_due_times(sla_policy, data.priority) if sla_policy else None
+    sla_status = calculate_sla_due_times(sla_policy, priority) if sla_policy else None
+    
+    # Process custom form data if provided
+    form_data_snapshot = None
+    if data.form_data and data.help_topic_id:
+        form = await _db.ticketing_custom_forms.find_one({"id": help_topic.get("custom_form_id") if help_topic else None}, {"_id": 0})
+        if form:
+            form_data_snapshot = {
+                "form_id": form.get("id"),
+                "form_name": form.get("name"),
+                "form_version": form.get("version", 1),
+                "fields": form.get("fields", []),
+                "values": data.form_data,
+                "submitted_at": get_ist_isoformat()
+            }
+    
+    # Get assignee name if auto-assigned
+    assigned_to_name = None
+    if auto_assign_to:
+        assignee = await _db.admin_users.find_one({"id": auto_assign_to}, {"name": 1})
+        assigned_to_name = assignee.get("name") if assignee else None
+    
+    ticket_data = data.model_dump()
+    ticket_data.pop("participants", None)  # Handle separately
+    ticket_data.pop("form_data", None)  # Already processed
     
     ticket = Ticket(
-        **data.model_dump(), company_id=requester.get("company_id"), requester_id=requester_id,
-        requester_name=requester.get("name", "Unknown"), requester_email=requester.get("email", ""),
-        requester_phone=requester.get("phone"), sla_status=sla_status,
-        created_by=admin.get("id"), created_by_type="staff"
+        **ticket_data,
+        company_id=requester.get("company_id"),
+        requester_id=requester_id,
+        requester_name=requester.get("name", "Unknown"),
+        requester_email=requester.get("email", ""),
+        requester_phone=requester.get("phone"),
+        department_id=department_id,
+        priority=priority,
+        assigned_to=auto_assign_to,
+        assigned_to_name=assigned_to_name,
+        assigned_at=get_ist_isoformat() if auto_assign_to else None,
+        sla_status=sla_status,
+        form_data=form_data_snapshot,
+        created_by=admin.get("id"),
+        created_by_type="staff"
     )
     
     priority_order = {"critical": 4, "high": 3, "medium": 2, "low": 1}
     ticket_dict = ticket.model_dump()
-    ticket_dict["priority_order"] = priority_order.get(data.priority, 2)
+    ticket_dict["priority_order"] = priority_order.get(priority, 2)
     
     await _db.tickets.insert_one(ticket_dict)
-    await create_thread_entry(ticket.id, "system_event", admin.get("id"), admin.get("name"), "admin", event_type="ticket_created", event_data={"created_by_staff": True})
+    
+    # Add initial participants if provided
+    if data.participants:
+        for p in data.participants:
+            participant = TicketParticipant(
+                ticket_id=ticket.id,
+                name=p.get("name", ""),
+                email=p.get("email", ""),
+                phone=p.get("phone"),
+                participant_type="cc",
+                is_external=True,
+                can_reply=True,
+                added_by=admin.get("id"),
+                added_by_name=admin.get("name", "Admin")
+            )
+            await _db.ticket_participants.insert_one(participant.model_dump())
+            await _db.tickets.update_one(
+                {"id": ticket.id},
+                {"$push": {"participant_ids": participant.id}, "$inc": {"participant_count": 1}}
+            )
+    
+    await create_thread_entry(ticket.id, "system_event", admin.get("id"), admin.get("name"), "admin", event_type="ticket_created", event_data={"created_by_staff": True, "help_topic": help_topic.get("name") if help_topic else None})
     await _log_audit("ticket", ticket.id, "create", data.model_dump(), admin)
     return await _db.tickets.find_one({"id": ticket.id}, {"_id": 0})
 
