@@ -3,10 +3,12 @@ Enterprise Ticketing System API Routes
 Phase 1: Core Foundation
 """
 import uuid
+import re
 from datetime import datetime, timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from pydantic import BaseModel
 
 from models.ticketing import (
     Department, DepartmentCreate, DepartmentUpdate,
