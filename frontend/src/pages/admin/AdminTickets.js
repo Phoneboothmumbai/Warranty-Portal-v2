@@ -674,7 +674,7 @@ export default function AdminTickets() {
                   onChange={(val) => {
                     setSelectedCompanyId(val);
                     setCreateData({ ...createData, requester_id: '' });
-                    fetchCompanyUsers(val);
+                    fetchCompanyEmployees(val);
                   }}
                   placeholder="Search & select company..."
                   displayKey="name"
@@ -684,12 +684,12 @@ export default function AdminTickets() {
                 {!selectedCompanyId && <input type="hidden" name="company_required" required />}
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1">Requester *</label>
+                <label className="text-sm font-medium text-slate-700 block mb-1">Requester (Employee) *</label>
                 <SearchableSelect
                   options={companyUsers}
                   value={createData.requester_id}
                   onChange={(val) => setCreateData({ ...createData, requester_id: val })}
-                  placeholder={loadingCompanyUsers ? "Loading users..." : selectedCompanyId ? "Search & select requester..." : "Select company first"}
+                  placeholder={loadingCompanyUsers ? "Loading employees..." : selectedCompanyId ? "Search & select employee..." : "Select company first"}
                   displayKey="name"
                   valueKey="id"
                   disabled={!selectedCompanyId || loadingCompanyUsers}
