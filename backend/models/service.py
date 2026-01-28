@@ -176,37 +176,67 @@ class ServiceAttachment(BaseModel):
 
 
 class ServiceHistory(BaseModel):
+    """Enhanced Service History with OEM support and classification"""
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     device_id: str
     company_id: str
     site_id: Optional[str] = None
     deployment_id: Optional[str] = None
+    
+    # Basic service info
     service_date: str
-    service_type: str
+    service_type: str  # Preventive Maintenance, Repair, Remote Support, etc.
     problem_reported: Optional[str] = None
     action_taken: str
+    status: str = "open"  # open, in_progress, on_hold, completed, closed
+    
+    # ==================== NEW: Service Classification ====================
+    service_category: str = "internal_service"  # internal_service, oem_warranty_service, paid_third_party_service, inspection_diagnosis
+    service_responsibility: str = "our_team"    # our_team, oem, partner_vendor
+    service_role: str = "provider"              # provider, coordinator_facilitator, observer
+    
+    # ==================== NEW: OEM Service Details ====================
+    oem_details: Optional[dict] = None  # OEMServiceDetails when service_category = oem_warranty_service
+    
+    # ==================== NEW: Billing & AMC Protection ====================
+    billing_impact: str = "not_billable"  # not_billable, warranty_covered, chargeable
+    counts_toward_amc: bool = True        # Auto-locked to False for OEM cases
+    
+    # ==================== NEW: Service Outcome ====================
+    service_outcome: Optional[dict] = None  # ServiceOutcome on closure
+    
+    # Parts and costs
     parts_used: Optional[List[dict]] = None
     parts_involved: Optional[List[dict]] = None
     labor_cost: Optional[float] = None
     parts_cost: Optional[float] = None
     total_cost: Optional[float] = None
+    
+    # Warranty/AMC tracking (legacy - kept for compatibility)
     warranty_impact: str = "not_applicable"
     extends_device_warranty: bool = False
     new_warranty_end_date: Optional[str] = None
     consumes_amc_quota: bool = False
     amc_quota_type: Optional[str] = None
-    technician_name: Optional[str] = None
-    ticket_id: Optional[str] = None
-    notes: Optional[str] = None
-    attachments: List[ServiceAttachment] = []
     amc_contract_id: Optional[str] = None
     amc_covered: bool = False
     billing_type: str = "covered"
     chargeable_reason: Optional[str] = None
+    
+    # Assignment and tracking
+    technician_name: Optional[str] = None
+    ticket_id: Optional[str] = None
+    notes: Optional[str] = None
+    attachments: List[ServiceAttachment] = []
+    
+    # Audit trail
     created_by: str
     created_by_name: str
     created_at: str = Field(default_factory=get_ist_isoformat)
+    updated_at: str = Field(default_factory=get_ist_isoformat)
+    closed_at: Optional[str] = None
+    is_closed: bool = False
 
 
 class ServiceHistoryCreate(BaseModel):
