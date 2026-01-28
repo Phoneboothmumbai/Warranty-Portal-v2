@@ -15,7 +15,7 @@ import { useNavigate } from 'react-router-dom';
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // Searchable Select Component
-const SearchableSelect = ({ options, value, onChange, placeholder, displayKey = 'name', valueKey = 'id', disabled = false, icon: Icon }) => {
+const SearchableSelect = ({ options, value, onChange, placeholder, displayKey = 'name', valueKey = 'id', disabled = false, icon: Icon, loading = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const containerRef = useRef(null);
