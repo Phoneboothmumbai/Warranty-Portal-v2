@@ -148,6 +148,7 @@ export default function AdminTickets() {
   
   // Create ticket modal
   const [showCreate, setShowCreate] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [createData, setCreateData] = useState({
     subject: '',
     description: '',
