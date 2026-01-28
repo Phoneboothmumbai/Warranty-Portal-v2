@@ -3,31 +3,56 @@ import axios from 'axios';
 import { 
   Plus, Search, Edit2, Trash2, Building2, Clock, 
   CheckCircle2, AlertTriangle, MoreVertical, RefreshCw,
-  Timer, Calendar, Users, Shield
+  Timer, Calendar, Users, Shield, Tag, FileText, MessageSquare,
+  ChevronRight, ChevronDown, GripVertical, Eye, EyeOff, Zap,
+  HelpCircle, FormInput, Layers
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Icon mapping for help topics
+const iconOptions = [
+  { value: 'monitor', label: 'Monitor', icon: '🖥️' },
+  { value: 'code', label: 'Code', icon: '💻' },
+  { value: 'wifi', label: 'WiFi', icon: '📶' },
+  { value: 'apple', label: 'Apple', icon: '🍎' },
+  { value: 'package', label: 'Package', icon: '📦' },
+  { value: 'key', label: 'Key', icon: '🔑' },
+  { value: 'shield', label: 'Shield', icon: '🛡️' },
+  { value: 'printer', label: 'Printer', icon: '🖨️' },
+  { value: 'phone', label: 'Phone', icon: '📱' },
+  { value: 'cloud', label: 'Cloud', icon: '☁️' },
+];
+
+const getTopicIcon = (iconName) => {
+  const icon = iconOptions.find(i => i.value === iconName);
+  return icon?.icon || '📋';
+};
+
 export default function TicketingSettings() {
   const { token } = useAuth();
-  const [activeTab, setActiveTab] = useState('departments');
+  const [activeTab, setActiveTab] = useState('help-topics');
   const [loading, setLoading] = useState(true);
   
   // Data
   const [departments, setDepartments] = useState([]);
   const [slaPolicies, setSLAPolicies] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [helpTopics, setHelpTopics] = useState([]);
+  const [customForms, setCustomForms] = useState([]);
+  const [cannedResponses, setCannedResponses] = useState([]);
   const [admins, setAdmins] = useState([]);
   
   // Modals
   const [showDeptModal, setShowDeptModal] = useState(false);
   const [showSLAModal, setShowSLAModal] = useState(false);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showHelpTopicModal, setShowHelpTopicModal] = useState(false);
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [showCannedModal, setShowCannedModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   
   // Department form
@@ -44,23 +69,44 @@ export default function TicketingSettings() {
     business_days: [1, 2, 3, 4, 5], is_default: false
   });
   
-  // Category form
-  const [categoryForm, setCategoryForm] = useState({
-    name: '', description: '', auto_department_id: '', auto_priority: '', sort_order: 0
+  // Help Topic form
+  const [topicForm, setTopicForm] = useState({
+    name: '', description: '', icon: '', auto_department_id: '',
+    auto_priority: '', auto_sla_id: '', auto_assign_to: '',
+    custom_form_id: '', is_public: true, sort_order: 0
   });
+  
+  // Custom Form state
+  const [formBuilderData, setFormBuilderData] = useState({
+    name: '', description: '', fields: []
+  });
+  const [editingField, setEditingField] = useState(null);
+  
+  // Canned Response form
+  const [cannedForm, setCannedForm] = useState({
+    title: '', content: '', department_id: '', category: '',
+    tags: [], is_personal: false
+  });
+  
+  const headers = { Authorization: `Bearer ${token}` };
 
   const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
-      const [deptsRes, slasRes, catsRes, adminsRes] = await Promise.all([
-        axios.get(`${API}/ticketing/admin/departments?include_inactive=true`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API}/ticketing/admin/sla-policies?include_inactive=true`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API}/ticketing/admin/categories`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API}/admin/users`, { headers: { Authorization: `Bearer ${token}` } })
+      const [deptRes, slaRes, topicsRes, formsRes, cannedRes, adminsRes] = await Promise.all([
+        axios.get(`${API}/ticketing/admin/departments`, { headers }),
+        axios.get(`${API}/ticketing/admin/sla-policies`, { headers }),
+        axios.get(`${API}/ticketing/admin/help-topics?include_inactive=true`, { headers }),
+        axios.get(`${API}/ticketing/admin/custom-forms`, { headers }),
+        axios.get(`${API}/ticketing/admin/canned-responses`, { headers }),
+        axios.get(`${API}/admin/users`, { headers })
       ]);
-      setDepartments(deptsRes.data || []);
-      setSLAPolicies(slasRes.data || []);
-      setCategories(catsRes.data || []);
-      setAdmins(adminsRes.data || []);
+      setDepartments(deptRes.data || []);
+      setSLAPolicies(slaRes.data || []);
+      setHelpTopics(topicsRes.data || []);
+      setCustomForms(formsRes.data || []);
+      setCannedResponses(cannedRes.data || []);
+      setAdmins(adminsRes.data?.users || adminsRes.data || []);
     } catch (error) {
       toast.error('Failed to load settings');
     } finally {
@@ -68,299 +114,396 @@ export default function TicketingSettings() {
     }
   }, [token]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Department handlers
-  const openDeptModal = (dept = null) => {
-    if (dept) {
-      setEditingItem(dept);
-      setDeptForm({
-        name: dept.name || '',
-        description: dept.description || '',
-        email: dept.email || '',
-        default_priority: dept.default_priority || 'medium',
-        default_sla_id: dept.default_sla_id || '',
-        auto_assign_to: dept.auto_assign_to || '',
-        is_public: dept.is_public !== false,
-        sort_order: dept.sort_order || 0
-      });
-    } else {
-      setEditingItem(null);
-      setDeptForm({
-        name: '', description: '', email: '', default_priority: 'medium',
-        default_sla_id: '', auto_assign_to: '', is_public: true, sort_order: 0
-      });
-    }
-    setShowDeptModal(true);
-  };
-
-  const saveDepartment = async () => {
+  // ==================== DEPARTMENT HANDLERS ====================
+  const handleSaveDepartment = async () => {
     try {
       if (editingItem) {
-        await axios.put(`${API}/ticketing/admin/departments/${editingItem.id}`, deptForm, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.put(`${API}/ticketing/admin/departments/${editingItem.id}`, deptForm, { headers });
         toast.success('Department updated');
       } else {
-        await axios.post(`${API}/ticketing/admin/departments`, deptForm, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.post(`${API}/ticketing/admin/departments`, deptForm, { headers });
         toast.success('Department created');
       }
       setShowDeptModal(false);
+      setEditingItem(null);
+      resetDeptForm();
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to save department');
     }
   };
 
-  const deleteDepartment = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this department?')) return;
-    try {
-      await axios.delete(`${API}/ticketing/admin/departments/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      toast.success('Department deleted');
-      fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to delete department');
-    }
+  const resetDeptForm = () => setDeptForm({
+    name: '', description: '', email: '', default_priority: 'medium',
+    default_sla_id: '', auto_assign_to: '', is_public: true, sort_order: 0
+  });
+
+  const editDepartment = (dept) => {
+    setEditingItem(dept);
+    setDeptForm(dept);
+    setShowDeptModal(true);
   };
 
-  // SLA handlers
-  const openSLAModal = (sla = null) => {
-    if (sla) {
-      setEditingItem(sla);
-      setSLAForm({
-        name: sla.name || '',
-        description: sla.description || '',
-        response_time_hours: sla.response_time_hours || 4,
-        resolution_time_hours: sla.resolution_time_hours || 24,
-        response_time_business_hours: sla.response_time_business_hours !== false,
-        resolution_time_business_hours: sla.resolution_time_business_hours !== false,
-        business_hours_start: sla.business_hours_start || '09:00',
-        business_hours_end: sla.business_hours_end || '18:00',
-        business_days: sla.business_days || [1, 2, 3, 4, 5],
-        is_default: sla.is_default || false
-      });
-    } else {
-      setEditingItem(null);
-      setSLAForm({
-        name: '', description: '', response_time_hours: 4, resolution_time_hours: 24,
-        response_time_business_hours: true, resolution_time_business_hours: true,
-        business_hours_start: '09:00', business_hours_end: '18:00',
-        business_days: [1, 2, 3, 4, 5], is_default: false
-      });
-    }
-    setShowSLAModal(true);
-  };
-
-  const saveSLA = async () => {
+  // ==================== SLA HANDLERS ====================
+  const handleSaveSLA = async () => {
     try {
       if (editingItem) {
-        await axios.put(`${API}/ticketing/admin/sla-policies/${editingItem.id}`, slaForm, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('SLA Policy updated');
+        await axios.put(`${API}/ticketing/admin/sla-policies/${editingItem.id}`, slaForm, { headers });
+        toast.success('SLA policy updated');
       } else {
-        await axios.post(`${API}/ticketing/admin/sla-policies`, slaForm, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('SLA Policy created');
+        await axios.post(`${API}/ticketing/admin/sla-policies`, slaForm, { headers });
+        toast.success('SLA policy created');
       }
       setShowSLAModal(false);
+      setEditingItem(null);
+      resetSLAForm();
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to save SLA policy');
     }
   };
 
-  const deleteSLA = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this SLA policy?')) return;
-    try {
-      await axios.delete(`${API}/ticketing/admin/sla-policies/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      toast.success('SLA Policy deleted');
-      fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to delete SLA policy');
-    }
+  const resetSLAForm = () => setSLAForm({
+    name: '', description: '', response_time_hours: 4, resolution_time_hours: 24,
+    response_time_business_hours: true, resolution_time_business_hours: true,
+    business_hours_start: '09:00', business_hours_end: '18:00',
+    business_days: [1, 2, 3, 4, 5], is_default: false
+  });
+
+  const editSLA = (sla) => {
+    setEditingItem(sla);
+    setSLAForm(sla);
+    setShowSLAModal(true);
   };
 
-  // Category handlers
-  const openCategoryModal = (cat = null) => {
-    if (cat) {
-      setEditingItem(cat);
-      setCategoryForm({
-        name: cat.name || '',
-        description: cat.description || '',
-        auto_department_id: cat.auto_department_id || '',
-        auto_priority: cat.auto_priority || '',
-        sort_order: cat.sort_order || 0
-      });
-    } else {
-      setEditingItem(null);
-      setCategoryForm({ name: '', description: '', auto_department_id: '', auto_priority: '', sort_order: 0 });
-    }
-    setShowCategoryModal(true);
-  };
-
-  const saveCategory = async () => {
+  // ==================== HELP TOPIC HANDLERS ====================
+  const handleSaveHelpTopic = async () => {
     try {
       if (editingItem) {
-        await axios.put(`${API}/ticketing/admin/categories/${editingItem.id}`, categoryForm, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Category updated');
+        await axios.put(`${API}/ticketing/admin/help-topics/${editingItem.id}`, topicForm, { headers });
+        toast.success('Help topic updated');
       } else {
-        await axios.post(`${API}/ticketing/admin/categories`, categoryForm, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Category created');
+        await axios.post(`${API}/ticketing/admin/help-topics`, topicForm, { headers });
+        toast.success('Help topic created');
       }
-      setShowCategoryModal(false);
+      setShowHelpTopicModal(false);
+      setEditingItem(null);
+      resetTopicForm();
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to save category');
+      toast.error(error.response?.data?.detail || 'Failed to save help topic');
     }
   };
 
-  const deleteCategory = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this category?')) return;
+  const resetTopicForm = () => setTopicForm({
+    name: '', description: '', icon: '', auto_department_id: '',
+    auto_priority: '', auto_sla_id: '', auto_assign_to: '',
+    custom_form_id: '', is_public: true, sort_order: 0
+  });
+
+  const editHelpTopic = (topic) => {
+    setEditingItem(topic);
+    setTopicForm({
+      name: topic.name || '',
+      description: topic.description || '',
+      icon: topic.icon || '',
+      auto_department_id: topic.auto_department_id || '',
+      auto_priority: topic.auto_priority || '',
+      auto_sla_id: topic.auto_sla_id || '',
+      auto_assign_to: topic.auto_assign_to || '',
+      custom_form_id: topic.custom_form_id || '',
+      is_public: topic.is_public !== false,
+      sort_order: topic.sort_order || 0
+    });
+    setShowHelpTopicModal(true);
+  };
+
+  const deleteHelpTopic = async (id) => {
+    if (!window.confirm('Delete this help topic?')) return;
     try {
-      await axios.delete(`${API}/ticketing/admin/categories/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      toast.success('Category deleted');
+      await axios.delete(`${API}/ticketing/admin/help-topics/${id}`, { headers });
+      toast.success('Help topic deleted');
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to delete category');
+      toast.error(error.response?.data?.detail || 'Failed to delete');
     }
   };
 
-  const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  // ==================== CUSTOM FORM HANDLERS ====================
+  const handleSaveCustomForm = async () => {
+    try {
+      if (editingItem) {
+        await axios.put(`${API}/ticketing/admin/custom-forms/${editingItem.id}`, formBuilderData, { headers });
+        toast.success('Form updated');
+      } else {
+        await axios.post(`${API}/ticketing/admin/custom-forms`, formBuilderData, { headers });
+        toast.success('Form created');
+      }
+      setShowFormModal(false);
+      setEditingItem(null);
+      resetFormBuilder();
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save form');
+    }
+  };
 
+  const resetFormBuilder = () => setFormBuilderData({ name: '', description: '', fields: [] });
+
+  const editCustomForm = (form) => {
+    setEditingItem(form);
+    setFormBuilderData({
+      name: form.name || '',
+      description: form.description || '',
+      fields: form.fields || []
+    });
+    setShowFormModal(true);
+  };
+
+  const deleteCustomForm = async (id) => {
+    if (!window.confirm('Delete this form?')) return;
+    try {
+      await axios.delete(`${API}/ticketing/admin/custom-forms/${id}`, { headers });
+      toast.success('Form deleted');
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Cannot delete - form is in use');
+    }
+  };
+
+  const addFormField = () => {
+    const newField = {
+      id: `field_${Date.now()}`,
+      name: `field_${formBuilderData.fields.length + 1}`,
+      label: `Field ${formBuilderData.fields.length + 1}`,
+      field_type: 'text',
+      required: false,
+      options: [],
+      placeholder: '',
+      help_text: '',
+      width: 'full',
+      sort_order: formBuilderData.fields.length
+    };
+    setFormBuilderData(prev => ({ ...prev, fields: [...prev.fields, newField] }));
+    setEditingField(newField.id);
+  };
+
+  const updateFormField = (fieldId, updates) => {
+    setFormBuilderData(prev => ({
+      ...prev,
+      fields: prev.fields.map(f => f.id === fieldId ? { ...f, ...updates } : f)
+    }));
+  };
+
+  const removeFormField = (fieldId) => {
+    setFormBuilderData(prev => ({
+      ...prev,
+      fields: prev.fields.filter(f => f.id !== fieldId)
+    }));
+  };
+
+  // ==================== CANNED RESPONSE HANDLERS ====================
+  const handleSaveCanned = async () => {
+    try {
+      if (editingItem) {
+        await axios.put(`${API}/ticketing/admin/canned-responses/${editingItem.id}`, cannedForm, { headers });
+        toast.success('Canned response updated');
+      } else {
+        await axios.post(`${API}/ticketing/admin/canned-responses`, cannedForm, { headers });
+        toast.success('Canned response created');
+      }
+      setShowCannedModal(false);
+      setEditingItem(null);
+      resetCannedForm();
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save canned response');
+    }
+  };
+
+  const resetCannedForm = () => setCannedForm({
+    title: '', content: '', department_id: '', category: '', tags: [], is_personal: false
+  });
+
+  const editCanned = (canned) => {
+    setEditingItem(canned);
+    setCannedForm({
+      title: canned.title || '',
+      content: canned.content || '',
+      department_id: canned.department_id || '',
+      category: canned.category || '',
+      tags: canned.tags || [],
+      is_personal: canned.is_personal || false
+    });
+    setShowCannedModal(true);
+  };
+
+  const deleteCanned = async (id) => {
+    if (!window.confirm('Delete this canned response?')) return;
+    try {
+      await axios.delete(`${API}/ticketing/admin/canned-responses/${id}`, { headers });
+      toast.success('Canned response deleted');
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete');
+    }
+  };
+
+  // ==================== RENDER ====================
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <RefreshCw className="h-8 w-8 animate-spin text-slate-400" />
+      <div className="flex items-center justify-center h-96">
+        <div className="h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div data-testid="ticketing-settings-page" className="space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Ticketing Configuration</h1>
-        <p className="text-slate-500 text-sm">Manage departments, SLA policies, and categories</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Ticketing Configuration</h1>
+          <p className="text-slate-500 text-sm mt-1">Manage help topics, forms, departments, SLAs, and canned responses</p>
+        </div>
+        <Button variant="outline" onClick={fetchData} data-testid="refresh-btn">
+          <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+        </Button>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-slate-200 pb-2">
-        {[
-          { key: 'departments', label: 'Departments', icon: Building2, count: departments.length },
-          { key: 'sla', label: 'SLA Policies', icon: Timer, count: slaPolicies.length },
-          { key: 'categories', label: 'Categories', icon: Shield, count: categories.length }
-        ].map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
-              activeTab === tab.key
-                ? 'bg-white border border-b-white border-slate-200 -mb-[1px] text-slate-900'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <tab.icon className="h-4 w-4" />
-            {tab.label}
-            <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">{tab.count}</span>
-          </button>
-        ))}
+      <div className="border-b border-slate-200">
+        <div className="flex gap-1 -mb-px">
+          {[
+            { id: 'help-topics', label: 'Help Topics', icon: HelpCircle, count: helpTopics.length },
+            { id: 'custom-forms', label: 'Custom Forms', icon: FormInput, count: customForms.length },
+            { id: 'canned-responses', label: 'Canned Responses', icon: MessageSquare, count: cannedResponses.length },
+            { id: 'departments', label: 'Departments', icon: Building2, count: departments.length },
+            { id: 'sla-policies', label: 'SLA Policies', icon: Timer, count: slaPolicies.length },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              }`}
+              data-testid={`tab-${tab.id}`}
+            >
+              <tab.icon className="h-4 w-4" />
+              {tab.label}
+              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                activeTab === tab.id ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'
+              }`}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Departments Tab */}
-      {activeTab === 'departments' && (
+      {/* Help Topics Tab */}
+      {activeTab === 'help-topics' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <p className="text-sm text-slate-600">Organize tickets by department for better routing and management</p>
-            <Button onClick={() => openDeptModal()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Department
+            <p className="text-sm text-slate-500">
+              Help Topics define issue types and drive smart routing, SLA, and form selection.
+            </p>
+            <Button onClick={() => { resetTopicForm(); setEditingItem(null); setShowHelpTopicModal(true); }} data-testid="add-help-topic-btn">
+              <Plus className="h-4 w-4 mr-2" /> Add Help Topic
             </Button>
           </div>
-
+          
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Name</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Default SLA</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Default Priority</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Auto Assign</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Public</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-500 uppercase">Actions</th>
+                  <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Topic</th>
+                  <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Auto-Routing</th>
+                  <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Custom Form</th>
+                  <th className="text-center text-xs font-medium text-slate-500 uppercase px-4 py-3">Public</th>
+                  <th className="text-right text-xs font-medium text-slate-500 uppercase px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {departments.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
-                      No departments configured. Create one to get started.
-                    </td>
-                  </tr>
-                ) : (
-                  departments.map(dept => (
-                    <tr key={dept.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3">
+                {helpTopics.map(topic => (
+                  <tr key={topic.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{getTopicIcon(topic.icon)}</span>
                         <div>
-                          <p className="font-medium text-slate-900">{dept.name}</p>
-                          {dept.description && <p className="text-xs text-slate-500">{dept.description}</p>}
+                          <p className="font-medium text-slate-900">{topic.name}</p>
+                          <p className="text-xs text-slate-500">{topic.description}</p>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-600">
-                        {slaPolicies.find(s => s.id === dept.default_sla_id)?.name || '-'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded text-xs font-medium capitalize ${
-                          dept.default_priority === 'critical' ? 'bg-red-100 text-red-700' :
-                          dept.default_priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                          dept.default_priority === 'medium' ? 'bg-blue-100 text-blue-700' :
-                          'bg-slate-100 text-slate-600'
-                        }`}>
-                          {dept.default_priority}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-600">
-                        {admins.find(a => a.id === dept.auto_assign_to)?.name || '-'}
-                      </td>
-                      <td className="px-4 py-3">
-                        {dept.is_public ? (
-                          <span className="text-emerald-600">✓</span>
-                        ) : (
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-xs space-y-1">
+                        {topic.auto_department_id && (
+                          <p className="text-slate-600">
+                            <span className="text-slate-400">Dept:</span> {departments.find(d => d.id === topic.auto_department_id)?.name || '-'}
+                          </p>
+                        )}
+                        {topic.auto_priority && (
+                          <p className="text-slate-600">
+                            <span className="text-slate-400">Priority:</span> {topic.auto_priority}
+                          </p>
+                        )}
+                        {topic.auto_sla_id && (
+                          <p className="text-slate-600">
+                            <span className="text-slate-400">SLA:</span> {slaPolicies.find(s => s.id === topic.auto_sla_id)?.name || '-'}
+                          </p>
+                        )}
+                        {!topic.auto_department_id && !topic.auto_priority && !topic.auto_sla_id && (
                           <span className="text-slate-400">-</span>
                         )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm"><MoreVertical className="h-4 w-4" /></Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openDeptModal(dept)}>
-                              <Edit2 className="h-4 w-4 mr-2" /> Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => deleteDepartment(dept.id)} className="text-red-600">
-                              <Trash2 className="h-4 w-4 mr-2" /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {topic.custom_form_id ? (
+                        <span className="inline-flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                          <FormInput className="h-3 w-3" />
+                          {customForms.find(f => f.id === topic.custom_form_id)?.name || 'Form'}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-xs">None</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {topic.is_public ? (
+                        <Eye className="h-4 w-4 text-emerald-500 mx-auto" />
+                      ) : (
+                        <EyeOff className="h-4 w-4 text-slate-300 mx-auto" />
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => editHelpTopic(topic)}>
+                            <Edit2 className="h-4 w-4 mr-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => deleteHelpTopic(topic.id)} className="text-red-600">
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))}
+                {helpTopics.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
+                      No help topics yet. Create one to get started.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -368,128 +511,157 @@ export default function TicketingSettings() {
         </div>
       )}
 
-      {/* SLA Policies Tab */}
-      {activeTab === 'sla' && (
+      {/* Custom Forms Tab */}
+      {activeTab === 'custom-forms' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <p className="text-sm text-slate-600">Define service level agreements for response and resolution times</p>
-            <Button onClick={() => openSLAModal()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add SLA Policy
+            <p className="text-sm text-slate-500">
+              Custom forms collect specific information based on the selected Help Topic.
+            </p>
+            <Button onClick={() => { resetFormBuilder(); setEditingItem(null); setShowFormModal(true); }} data-testid="add-form-btn">
+              <Plus className="h-4 w-4 mr-2" /> Add Custom Form
             </Button>
           </div>
-
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {slaPolicies.length === 0 ? (
-              <div className="col-span-full bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-500">
-                No SLA policies configured. Create one to get started.
-              </div>
-            ) : (
-              slaPolicies.map(sla => (
-                <div key={sla.id} className={`bg-white rounded-xl border p-4 ${sla.is_default ? 'border-blue-300 ring-1 ring-blue-100' : 'border-slate-200'}`}>
-                  <div className="flex items-start justify-between mb-3">
+            {customForms.map(form => (
+              <div key={form.id} className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <FormInput className="h-5 w-5 text-purple-600" />
+                    </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-slate-900">{sla.name}</h3>
-                        {sla.is_default && (
-                          <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">Default</span>
-                        )}
-                      </div>
-                      {sla.description && <p className="text-xs text-slate-500 mt-1">{sla.description}</p>}
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm"><MoreVertical className="h-4 w-4" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openSLAModal(sla)}>
-                          <Edit2 className="h-4 w-4 mr-2" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => deleteSLA(sla.id)} className="text-red-600">
-                          <Trash2 className="h-4 w-4 mr-2" /> Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Response Time</span>
-                      <span className="font-medium text-slate-900">{sla.response_time_hours}h</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Resolution Time</span>
-                      <span className="font-medium text-slate-900">{sla.resolution_time_hours}h</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Business Hours</span>
-                      <span className="text-slate-700">{sla.business_hours_start} - {sla.business_hours_end}</span>
+                      <h3 className="font-medium text-slate-900">{form.name}</h3>
+                      <p className="text-xs text-slate-500">{form.fields?.length || 0} fields</p>
                     </div>
                   </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => editCustomForm(form)}>
+                        <Edit2 className="h-4 w-4 mr-2" /> Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => deleteCustomForm(form.id)} className="text-red-600">
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-              ))
+                {form.description && (
+                  <p className="text-sm text-slate-500 mt-3">{form.description}</p>
+                )}
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {form.fields?.slice(0, 4).map(field => (
+                    <span key={field.id} className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">
+                      {field.label}
+                    </span>
+                  ))}
+                  {form.fields?.length > 4 && (
+                    <span className="text-xs bg-slate-100 text-slate-400 px-2 py-1 rounded">
+                      +{form.fields.length - 4} more
+                    </span>
+                  )}
+                </div>
+                <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                  <span>v{form.version || 1}</span>
+                  <span>{helpTopics.filter(t => t.custom_form_id === form.id).length} topics using</span>
+                </div>
+              </div>
+            ))}
+            {customForms.length === 0 && (
+              <div className="col-span-full text-center py-8 text-slate-400">
+                No custom forms yet. Create one to collect specific ticket information.
+              </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Categories Tab */}
-      {activeTab === 'categories' && (
+      {/* Canned Responses Tab */}
+      {activeTab === 'canned-responses' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <p className="text-sm text-slate-600">Categorize tickets for better organization and auto-routing</p>
-            <Button onClick={() => openCategoryModal()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Category
+            <p className="text-sm text-slate-500">
+              Predefined replies to speed up responses. Variables: {`{{customer_name}}, {{ticket_number}}, {{department_name}}`}
+            </p>
+            <Button onClick={() => { resetCannedForm(); setEditingItem(null); setShowCannedModal(true); }} data-testid="add-canned-btn">
+              <Plus className="h-4 w-4 mr-2" /> Add Canned Response
             </Button>
           </div>
-
+          
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Name</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Auto Department</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Auto Priority</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-500 uppercase">Actions</th>
+                  <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Title</th>
+                  <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Category</th>
+                  <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Department</th>
+                  <th className="text-center text-xs font-medium text-slate-500 uppercase px-4 py-3">Usage</th>
+                  <th className="text-right text-xs font-medium text-slate-500 uppercase px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {categories.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-12 text-center text-slate-500">
-                      No categories configured. Create one to get started.
+                {cannedResponses.map(canned => (
+                  <tr key={canned.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <div>
+                        <p className="font-medium text-slate-900">{canned.title}</p>
+                        <p className="text-xs text-slate-500 truncate max-w-xs">
+                          {canned.content?.substring(0, 60)}...
+                        </p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {canned.category ? (
+                        <span className="inline-flex items-center text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                          {canned.category}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {canned.department_id ? (
+                        <span className="text-sm text-slate-600">
+                          {departments.find(d => d.id === canned.department_id)?.name || '-'}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">All departments</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="text-sm font-medium text-slate-600">{canned.usage_count || 0}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => editCanned(canned)}>
+                            <Edit2 className="h-4 w-4 mr-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => deleteCanned(canned.id)} className="text-red-600">
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
-                ) : (
-                  categories.map(cat => (
-                    <tr key={cat.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-slate-900">{cat.name}</p>
-                        {cat.description && <p className="text-xs text-slate-500">{cat.description}</p>}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-600">
-                        {departments.find(d => d.id === cat.auto_department_id)?.name || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-600 capitalize">
-                        {cat.auto_priority || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm"><MoreVertical className="h-4 w-4" /></Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openCategoryModal(cat)}>
-                              <Edit2 className="h-4 w-4 mr-2" /> Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => deleteCategory(cat.id)} className="text-red-600">
-                              <Trash2 className="h-4 w-4 mr-2" /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))
+                ))}
+                {cannedResponses.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
+                      No canned responses yet. Create templates to speed up replies.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -497,50 +669,556 @@ export default function TicketingSettings() {
         </div>
       )}
 
-      {/* Department Modal */}
-      <Dialog open={showDeptModal} onOpenChange={setShowDeptModal}>
-        <DialogContent className="max-w-lg">
+      {/* Departments Tab */}
+      {activeTab === 'departments' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-slate-500">Organize tickets by department for better routing.</p>
+            <Button onClick={() => { resetDeptForm(); setEditingItem(null); setShowDeptModal(true); }} data-testid="add-dept-btn">
+              <Plus className="h-4 w-4 mr-2" /> Add Department
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {departments.map(dept => (
+              <div key={dept.id} className="bg-white rounded-xl border border-slate-200 p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Building2 className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-slate-900">{dept.name}</h3>
+                      <p className="text-xs text-slate-500">{dept.description}</p>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => editDepartment(dept)}>
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="mt-4 space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Default SLA</span>
+                    <span className="text-slate-700">{slaPolicies.find(s => s.id === dept.default_sla_id)?.name || 'None'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Default Priority</span>
+                    <span className="text-slate-700 capitalize">{dept.default_priority || 'Medium'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Public</span>
+                    <span>{dept.is_public ? <Eye className="h-4 w-4 text-emerald-500" /> : <EyeOff className="h-4 w-4 text-slate-300" />}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* SLA Policies Tab */}
+      {activeTab === 'sla-policies' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-slate-500">Define response and resolution time commitments.</p>
+            <Button onClick={() => { resetSLAForm(); setEditingItem(null); setShowSLAModal(true); }} data-testid="add-sla-btn">
+              <Plus className="h-4 w-4 mr-2" /> Add SLA Policy
+            </Button>
+          </div>
+          
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Policy Name</th>
+                  <th className="text-center text-xs font-medium text-slate-500 uppercase px-4 py-3">Response Time</th>
+                  <th className="text-center text-xs font-medium text-slate-500 uppercase px-4 py-3">Resolution Time</th>
+                  <th className="text-center text-xs font-medium text-slate-500 uppercase px-4 py-3">Business Hours</th>
+                  <th className="text-right text-xs font-medium text-slate-500 uppercase px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {slaPolicies.map(sla => (
+                  <tr key={sla.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-slate-900">{sla.name}</p>
+                        {sla.is_default && (
+                          <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Default</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="text-sm text-slate-600">{sla.response_time_hours}h</span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="text-sm text-slate-600">{sla.resolution_time_hours}h</span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="text-xs text-slate-500">
+                        {sla.business_hours_start} - {sla.business_hours_end}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Button variant="ghost" size="sm" onClick={() => editSLA(sla)}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== MODALS ==================== */}
+
+      {/* Help Topic Modal */}
+      <Dialog open={showHelpTopicModal} onOpenChange={setShowHelpTopicModal}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingItem ? 'Edit Department' : 'Add Department'}</DialogTitle>
+            <DialogTitle>{editingItem ? 'Edit Help Topic' : 'Create Help Topic'}</DialogTitle>
+            <DialogDescription>
+              Help Topics define issue types and control smart routing.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={topicForm.name}
+                  onChange={(e) => setTopicForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  placeholder="e.g., Hardware Issue"
+                  data-testid="topic-name-input"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                <input
+                  type="text"
+                  value={topicForm.description}
+                  onChange={(e) => setTopicForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  placeholder="Brief description"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Icon</label>
+                <select
+                  value={topicForm.icon}
+                  onChange={(e) => setTopicForm(prev => ({ ...prev, icon: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                >
+                  <option value="">Select icon</option>
+                  {iconOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.icon} {opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Custom Form</label>
+                <select
+                  value={topicForm.custom_form_id}
+                  onChange={(e) => setTopicForm(prev => ({ ...prev, custom_form_id: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                >
+                  <option value="">No custom form</option>
+                  {customForms.map(f => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200 pt-4">
+              <h4 className="text-sm font-medium text-slate-900 mb-3 flex items-center gap-2">
+                <Zap className="h-4 w-4 text-amber-500" /> Auto-Routing Settings
+              </h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Auto-assign Department</label>
+                  <select
+                    value={topicForm.auto_department_id}
+                    onChange={(e) => setTopicForm(prev => ({ ...prev, auto_department_id: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  >
+                    <option value="">None</option>
+                    {departments.map(d => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Auto-assign Priority</label>
+                  <select
+                    value={topicForm.auto_priority}
+                    onChange={(e) => setTopicForm(prev => ({ ...prev, auto_priority: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  >
+                    <option value="">None</option>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Auto-assign SLA</label>
+                  <select
+                    value={topicForm.auto_sla_id}
+                    onChange={(e) => setTopicForm(prev => ({ ...prev, auto_sla_id: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  >
+                    <option value="">None (use default)</option>
+                    {slaPolicies.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Auto-assign To</label>
+                  <select
+                    value={topicForm.auto_assign_to}
+                    onChange={(e) => setTopicForm(prev => ({ ...prev, auto_assign_to: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  >
+                    <option value="">None</option>
+                    {admins.map(a => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <input
+                type="checkbox"
+                id="topic-public"
+                checked={topicForm.is_public}
+                onChange={(e) => setTopicForm(prev => ({ ...prev, is_public: e.target.checked }))}
+                className="rounded border-slate-300"
+              />
+              <label htmlFor="topic-public" className="text-sm text-slate-700">
+                Visible in customer portal
+              </label>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setShowHelpTopicModal(false)}>Cancel</Button>
+            <Button onClick={handleSaveHelpTopic} data-testid="save-topic-btn">
+              {editingItem ? 'Update' : 'Create'} Help Topic
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Custom Form Builder Modal */}
+      <Dialog open={showFormModal} onOpenChange={setShowFormModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{editingItem ? 'Edit Custom Form' : 'Create Custom Form'}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Form Name *</label>
+                <input
+                  type="text"
+                  value={formBuilderData.name}
+                  onChange={(e) => setFormBuilderData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  placeholder="e.g., Hardware Issue Form"
+                  data-testid="form-name-input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                <input
+                  type="text"
+                  value={formBuilderData.description}
+                  onChange={(e) => setFormBuilderData(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  placeholder="Brief description"
+                />
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium text-slate-900">Form Fields</h4>
+                <Button size="sm" onClick={addFormField} data-testid="add-field-btn">
+                  <Plus className="h-4 w-4 mr-1" /> Add Field
+                </Button>
+              </div>
+              
+              <div className="space-y-3">
+                {formBuilderData.fields.map((field, idx) => (
+                  <div
+                    key={field.id}
+                    className={`border rounded-lg p-4 ${editingField === field.id ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white'}`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <GripVertical className="h-4 w-4 text-slate-400" />
+                        <span className="text-sm font-medium text-slate-700">{field.label}</span>
+                        <span className="text-xs text-slate-400">({field.field_type})</span>
+                        {field.required && <span className="text-xs text-red-500">*</span>}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingField(editingField === field.id ? null : field.id)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFormField(field.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {editingField === field.id && (
+                      <div className="grid grid-cols-3 gap-3 pt-3 border-t border-slate-100">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Field Name</label>
+                          <input
+                            type="text"
+                            value={field.name}
+                            onChange={(e) => updateFormField(field.id, { name: e.target.value })}
+                            className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Label</label>
+                          <input
+                            type="text"
+                            value={field.label}
+                            onChange={(e) => updateFormField(field.id, { label: e.target.value })}
+                            className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Type</label>
+                          <select
+                            value={field.field_type}
+                            onChange={(e) => updateFormField(field.id, { field_type: e.target.value })}
+                            className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm"
+                          >
+                            <option value="text">Text</option>
+                            <option value="textarea">Textarea</option>
+                            <option value="number">Number</option>
+                            <option value="email">Email</option>
+                            <option value="phone">Phone</option>
+                            <option value="select">Dropdown</option>
+                            <option value="multiselect">Multi-select</option>
+                            <option value="checkbox">Checkbox</option>
+                            <option value="date">Date</option>
+                            <option value="file">File Upload</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Placeholder</label>
+                          <input
+                            type="text"
+                            value={field.placeholder || ''}
+                            onChange={(e) => updateFormField(field.id, { placeholder: e.target.value })}
+                            className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Help Text</label>
+                          <input
+                            type="text"
+                            value={field.help_text || ''}
+                            onChange={(e) => updateFormField(field.id, { help_text: e.target.value })}
+                            className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm"
+                          />
+                        </div>
+                        <div className="flex items-center gap-4 pt-5">
+                          <label className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={field.required}
+                              onChange={(e) => updateFormField(field.id, { required: e.target.checked })}
+                              className="rounded border-slate-300"
+                            />
+                            Required
+                          </label>
+                        </div>
+                        {(field.field_type === 'select' || field.field_type === 'multiselect') && (
+                          <div className="col-span-3">
+                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                              Options (one per line: value|label)
+                            </label>
+                            <textarea
+                              value={(field.options || []).map(o => `${o.value}|${o.label}`).join('\n')}
+                              onChange={(e) => {
+                                const options = e.target.value.split('\n').filter(l => l.trim()).map(line => {
+                                  const [value, label] = line.split('|');
+                                  return { value: value?.trim() || '', label: label?.trim() || value?.trim() || '' };
+                                });
+                                updateFormField(field.id, { options });
+                              }}
+                              className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm"
+                              rows={3}
+                              placeholder="laptop|Laptop&#10;desktop|Desktop"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {formBuilderData.fields.length === 0 && (
+                  <div className="text-center py-8 text-slate-400 border border-dashed border-slate-200 rounded-lg">
+                    No fields yet. Click "Add Field" to start building your form.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setShowFormModal(false)}>Cancel</Button>
+            <Button onClick={handleSaveCustomForm} data-testid="save-form-btn">
+              {editingItem ? 'Update' : 'Create'} Form
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Canned Response Modal */}
+      <Dialog open={showCannedModal} onOpenChange={setShowCannedModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingItem ? 'Edit Canned Response' : 'Create Canned Response'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1">Name *</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Title *</label>
               <input
                 type="text"
-                value={deptForm.name}
-                onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
+                value={cannedForm.title}
+                onChange={(e) => setCannedForm(prev => ({ ...prev, title: e.target.value }))}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
-                placeholder="e.g., IT Support"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1">Description</label>
-              <input
-                type="text"
-                value={deptForm.description}
-                onChange={(e) => setDeptForm({ ...deptForm, description: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
-                placeholder="Brief description"
+                placeholder="e.g., Acknowledgement - Hardware"
+                data-testid="canned-title-input"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1">Default SLA</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                <input
+                  type="text"
+                  value={cannedForm.category}
+                  onChange={(e) => setCannedForm(prev => ({ ...prev, category: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  placeholder="e.g., Acknowledgement"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Department</label>
+                <select
+                  value={cannedForm.department_id}
+                  onChange={(e) => setCannedForm(prev => ({ ...prev, department_id: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                >
+                  <option value="">All departments</option>
+                  {departments.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Content *</label>
+              <textarea
+                value={cannedForm.content}
+                onChange={(e) => setCannedForm(prev => ({ ...prev, content: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                rows={8}
+                placeholder="Dear {{customer_name}},&#10;&#10;Thank you for your ticket ({{ticket_number}})..."
+                data-testid="canned-content-input"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Variables: {`{{customer_name}}, {{ticket_number}}, {{subject}}, {{department_name}}, {{assigned_to}}, {{sla_due}}`}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="canned-personal"
+                checked={cannedForm.is_personal}
+                onChange={(e) => setCannedForm(prev => ({ ...prev, is_personal: e.target.checked }))}
+                className="rounded border-slate-300"
+              />
+              <label htmlFor="canned-personal" className="text-sm text-slate-700">
+                Personal (only visible to me)
+              </label>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setShowCannedModal(false)}>Cancel</Button>
+            <Button onClick={handleSaveCanned} data-testid="save-canned-btn">
+              {editingItem ? 'Update' : 'Create'} Response
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Department Modal */}
+      <Dialog open={showDeptModal} onOpenChange={setShowDeptModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingItem ? 'Edit Department' : 'Create Department'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
+              <input
+                type="text"
+                value={deptForm.name}
+                onChange={(e) => setDeptForm(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+              <input
+                type="text"
+                value={deptForm.description}
+                onChange={(e) => setDeptForm(prev => ({ ...prev, description: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Default SLA</label>
                 <select
                   value={deptForm.default_sla_id}
-                  onChange={(e) => setDeptForm({ ...deptForm, default_sla_id: e.target.value })}
+                  onChange={(e) => setDeptForm(prev => ({ ...prev, default_sla_id: e.target.value }))}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 >
                   <option value="">None</option>
-                  {slaPolicies.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  {slaPolicies.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
                 </select>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1">Default Priority</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Default Priority</label>
                 <select
                   value={deptForm.default_priority}
-                  onChange={(e) => setDeptForm({ ...deptForm, default_priority: e.target.value })}
+                  onChange={(e) => setDeptForm(prev => ({ ...prev, default_priority: e.target.value }))}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 >
                   <option value="low">Low</option>
@@ -550,201 +1228,98 @@ export default function TicketingSettings() {
                 </select>
               </div>
             </div>
-            <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1">Auto Assign To</label>
-              <select
-                value={deptForm.auto_assign_to}
-                onChange={(e) => setDeptForm({ ...deptForm, auto_assign_to: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
-              >
-                <option value="">No auto-assignment</option>
-                {admins.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
-            </div>
-            <label className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <input
                 type="checkbox"
+                id="dept-public"
                 checked={deptForm.is_public}
-                onChange={(e) => setDeptForm({ ...deptForm, is_public: e.target.checked })}
-                className="rounded"
+                onChange={(e) => setDeptForm(prev => ({ ...prev, is_public: e.target.checked }))}
+                className="rounded border-slate-300"
               />
-              <span className="text-sm text-slate-700">Visible to customers in portal</span>
-            </label>
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => setShowDeptModal(false)}>Cancel</Button>
-              <Button onClick={saveDepartment}>{editingItem ? 'Update' : 'Create'}</Button>
+              <label htmlFor="dept-public" className="text-sm text-slate-700">Visible in customer portal</label>
             </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setShowDeptModal(false)}>Cancel</Button>
+            <Button onClick={handleSaveDepartment}>
+              {editingItem ? 'Update' : 'Create'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* SLA Modal */}
       <Dialog open={showSLAModal} onOpenChange={setShowSLAModal}>
-        <DialogContent className="max-w-lg">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingItem ? 'Edit SLA Policy' : 'Add SLA Policy'}</DialogTitle>
+            <DialogTitle>{editingItem ? 'Edit SLA Policy' : 'Create SLA Policy'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1">Name *</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
               <input
                 type="text"
                 value={slaForm.name}
-                onChange={(e) => setSLAForm({ ...slaForm, name: e.target.value })}
+                onChange={(e) => setSLAForm(prev => ({ ...prev, name: e.target.value }))}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
-                placeholder="e.g., Standard SLA"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1">Description</label>
-              <input
-                type="text"
-                value={slaForm.description}
-                onChange={(e) => setSLAForm({ ...slaForm, description: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
-                placeholder="Brief description"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1">Response Time (hours)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Response Time (hours)</label>
                 <input
                   type="number"
-                  min="1"
                   value={slaForm.response_time_hours}
-                  onChange={(e) => setSLAForm({ ...slaForm, response_time_hours: parseInt(e.target.value) })}
+                  onChange={(e) => setSLAForm(prev => ({ ...prev, response_time_hours: parseInt(e.target.value) }))}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1">Resolution Time (hours)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Resolution Time (hours)</label>
                 <input
                   type="number"
-                  min="1"
                   value={slaForm.resolution_time_hours}
-                  onChange={(e) => setSLAForm({ ...slaForm, resolution_time_hours: parseInt(e.target.value) })}
+                  onChange={(e) => setSLAForm(prev => ({ ...prev, resolution_time_hours: parseInt(e.target.value) }))}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1">Business Hours Start</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Business Hours Start</label>
                 <input
                   type="time"
                   value={slaForm.business_hours_start}
-                  onChange={(e) => setSLAForm({ ...slaForm, business_hours_start: e.target.value })}
+                  onChange={(e) => setSLAForm(prev => ({ ...prev, business_hours_start: e.target.value }))}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1">Business Hours End</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Business Hours End</label>
                 <input
                   type="time"
                   value={slaForm.business_hours_end}
-                  onChange={(e) => setSLAForm({ ...slaForm, business_hours_end: e.target.value })}
+                  onChange={(e) => setSLAForm(prev => ({ ...prev, business_hours_end: e.target.value }))}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 />
               </div>
             </div>
-            <div>
-              <label className="text-sm font-medium text-slate-700 block mb-2">Business Days</label>
-              <div className="flex gap-2">
-                {DAYS.map((day, i) => (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => {
-                      const days = slaForm.business_days.includes(i)
-                        ? slaForm.business_days.filter(d => d !== i)
-                        : [...slaForm.business_days, i];
-                      setSLAForm({ ...slaForm, business_days: days });
-                    }}
-                    className={`px-3 py-1 rounded text-sm ${
-                      slaForm.business_days.includes(i)
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-slate-100 text-slate-500'
-                    }`}
-                  >
-                    {day}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <label className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <input
                 type="checkbox"
+                id="sla-default"
                 checked={slaForm.is_default}
-                onChange={(e) => setSLAForm({ ...slaForm, is_default: e.target.checked })}
-                className="rounded"
+                onChange={(e) => setSLAForm(prev => ({ ...prev, is_default: e.target.checked }))}
+                className="rounded border-slate-300"
               />
-              <span className="text-sm text-slate-700">Set as default SLA policy</span>
-            </label>
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => setShowSLAModal(false)}>Cancel</Button>
-              <Button onClick={saveSLA}>{editingItem ? 'Update' : 'Create'}</Button>
+              <label htmlFor="sla-default" className="text-sm text-slate-700">Set as default policy</label>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Category Modal */}
-      <Dialog open={showCategoryModal} onOpenChange={setShowCategoryModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingItem ? 'Edit Category' : 'Add Category'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1">Name *</label>
-              <input
-                type="text"
-                value={categoryForm.name}
-                onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
-                placeholder="e.g., Hardware Issue"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1">Description</label>
-              <input
-                type="text"
-                value={categoryForm.description}
-                onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1">Auto-route to Department</label>
-                <select
-                  value={categoryForm.auto_department_id}
-                  onChange={(e) => setCategoryForm({ ...categoryForm, auto_department_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
-                >
-                  <option value="">No auto-routing</option>
-                  {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1">Auto Priority</label>
-                <select
-                  value={categoryForm.auto_priority}
-                  onChange={(e) => setCategoryForm({ ...categoryForm, auto_priority: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
-                >
-                  <option value="">No auto-priority</option>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="critical">Critical</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => setShowCategoryModal(false)}>Cancel</Button>
-              <Button onClick={saveCategory}>{editingItem ? 'Update' : 'Create'}</Button>
-            </div>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setShowSLAModal(false)}>Cancel</Button>
+            <Button onClick={handleSaveSLA}>
+              {editingItem ? 'Update' : 'Create'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
