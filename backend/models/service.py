@@ -103,6 +103,60 @@ class ServiceOutcome(BaseModel):
     closure_date: str
 
 
+# ==================== SERVICE STAGE TRACKING ====================
+
+# Default stage templates (configurable)
+DEFAULT_SERVICE_STAGES = [
+    {"key": "request_raised", "label": "Request Raised", "order": 1},
+    {"key": "reviewed", "label": "Reviewed", "order": 2},
+    {"key": "parts_approved", "label": "Parts Approved", "order": 3},
+    {"key": "engineer_scheduled", "label": "Engineer Visit Scheduled", "order": 4},
+    {"key": "diagnosis_completed", "label": "Engineer Diagnosed Issue", "order": 5},
+    {"key": "parts_ordered", "label": "Replacement Parts Ordered", "order": 6},
+    {"key": "parts_received", "label": "Parts Received", "order": 7},
+    {"key": "repair_completed", "label": "Repair Completed", "order": 8},
+    {"key": "request_closed", "label": "Request Closed", "order": 9},
+]
+
+# OEM-specific stages
+OEM_SERVICE_STAGES = [
+    {"key": "request_raised", "label": "Request Raised", "order": 1},
+    {"key": "case_logged_with_oem", "label": "Case Logged with OEM", "order": 2},
+    {"key": "oem_acknowledged", "label": "OEM Acknowledged", "order": 3},
+    {"key": "oem_engineer_assigned", "label": "OEM Engineer Assigned", "order": 4},
+    {"key": "parts_dispatched_by_oem", "label": "Parts Dispatched by OEM", "order": 5},
+    {"key": "oem_visit_scheduled", "label": "OEM Visit Scheduled", "order": 6},
+    {"key": "oem_repair_completed", "label": "OEM Repair Completed", "order": 7},
+    {"key": "verified_by_us", "label": "Verified by Us", "order": 8},
+    {"key": "request_closed", "label": "Request Closed", "order": 9},
+]
+
+
+class ServiceStage(BaseModel):
+    """Individual stage in service timeline"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    stage_key: str                          # e.g., "request_raised", "parts_ordered"
+    stage_label: str                        # e.g., "Request Raised", "Parts Ordered"
+    status: str = "pending"                 # pending, in_progress, completed, skipped
+    timestamp: Optional[str] = None         # When this stage was completed
+    started_at: Optional[str] = None        # When this stage started
+    completed_at: Optional[str] = None      # When this stage was completed
+    notes: Optional[str] = None             # Stage-specific notes
+    updated_by: Optional[str] = None        # Who updated this stage
+    updated_by_name: Optional[str] = None   # Name of person who updated
+    attachments: List[str] = []             # File references for this stage
+    metadata: Optional[dict] = None         # Extra data (engineer name, part details, etc.)
+
+
+class ServiceStageUpdate(BaseModel):
+    """Update a specific stage"""
+    stage_key: str
+    status: str  # pending, in_progress, completed, skipped
+    notes: Optional[str] = None
+    metadata: Optional[dict] = None
+    attachments: List[str] = []
+
+
 class ServiceTicket(BaseModel):
     """Service tickets created by company users"""
     model_config = ConfigDict(extra="ignore")
