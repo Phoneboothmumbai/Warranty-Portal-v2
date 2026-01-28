@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { 
   Plus, Search, Edit2, Trash2, Wrench, MoreVertical, 
   Calendar, FileText, Paperclip, Download, X, Clock,
-  ChevronDown, Filter, Laptop
+  ChevronDown, Filter, Laptop, Building2, AlertTriangle,
+  CheckCircle2, ExternalLink, Shield, Upload
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
@@ -13,47 +14,107 @@ import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Service Category Labels & Colors
+const SERVICE_CATEGORY_CONFIG = {
+  internal_service: { label: 'Internal Service', color: 'bg-blue-100 text-blue-700', icon: Wrench },
+  oem_warranty_service: { label: 'OEM Warranty', color: 'bg-purple-100 text-purple-700', icon: Shield },
+  paid_third_party_service: { label: 'Third-Party', color: 'bg-amber-100 text-amber-700', icon: Building2 },
+  inspection_diagnosis: { label: 'Inspection', color: 'bg-slate-100 text-slate-700', icon: Search }
+};
+
+const STATUS_CONFIG = {
+  open: { label: 'Open', color: 'bg-blue-100 text-blue-700' },
+  in_progress: { label: 'In Progress', color: 'bg-amber-100 text-amber-700' },
+  on_hold: { label: 'On Hold', color: 'bg-orange-100 text-orange-700' },
+  completed: { label: 'Completed', color: 'bg-emerald-100 text-emerald-700' },
+  closed: { label: 'Closed', color: 'bg-slate-100 text-slate-700' }
+};
+
+const OEM_STATUS_CONFIG = {
+  reported_to_oem: { label: 'Reported to OEM', color: 'bg-blue-100 text-blue-700' },
+  oem_accepted: { label: 'OEM Accepted', color: 'bg-cyan-100 text-cyan-700' },
+  engineer_assigned: { label: 'Engineer Assigned', color: 'bg-indigo-100 text-indigo-700' },
+  parts_dispatched: { label: 'Parts Dispatched', color: 'bg-violet-100 text-violet-700' },
+  visit_scheduled: { label: 'Visit Scheduled', color: 'bg-purple-100 text-purple-700' },
+  resolved_by_oem: { label: 'Resolved by OEM', color: 'bg-emerald-100 text-emerald-700' },
+  closed_by_oem: { label: 'Closed by OEM', color: 'bg-slate-100 text-slate-700' }
+};
+
 const ServiceHistory = () => {
   const { token } = useAuth();
   const [services, setServices] = useState([]);
   const [devices, setDevices] = useState([]);
-  const [amcContracts, setAmcContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDevice, setFilterDevice] = useState('');
-  const [filterType, setFilterType] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [editingService, setEditingService] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [deviceAmcCoverage, setDeviceAmcCoverage] = useState(null);
   
-  // Master data
+  // Service options from backend
+  const [serviceOptions, setServiceOptions] = useState(null);
   const [serviceTypes, setServiceTypes] = useState([]);
   
+  // Form data
   const [formData, setFormData] = useState({
     device_id: '',
     service_date: new Date().toISOString().split('T')[0],
     service_type: '',
     problem_reported: '',
     action_taken: '',
-    warranty_impact: 'not_applicable',
+    status: 'open',
     technician_name: '',
-    ticket_id: '',
     notes: '',
-    // AMC fields
-    amc_contract_id: '',
-    billing_type: 'covered',
-    chargeable_reason: ''
+    // NEW: Service Classification
+    service_category: 'internal_service',
+    service_responsibility: 'our_team',
+    service_role: 'provider',
+    // NEW: Billing
+    billing_impact: 'not_billable',
+    // NEW: OEM Details
+    oem_details: null
   });
 
-  useEffect(() => {
-    fetchData();
-    fetchMasterData();
-  }, [filterDevice, filterType]);
+  // OEM Form Data (nested)
+  const [oemFormData, setOemFormData] = useState({
+    oem_name: '',
+    oem_service_tag: '',
+    oem_warranty_type: '',
+    oem_case_number: '',
+    case_raised_date: new Date().toISOString().split('T')[0],
+    case_raised_via: 'oem_portal',
+    oem_priority: 'Standard',
+    oem_case_status: 'reported_to_oem',
+    oem_engineer_name: '',
+    oem_engineer_phone: '',
+    oem_visit_date: '',
+    oem_remarks: ''
+  });
 
-  const fetchMasterData = async () => {
+  // Service Outcome (for closure)
+  const [outcomeData, setOutcomeData] = useState({
+    resolution_summary: '',
+    part_replaced: '',
+    cost_incurred: 0,
+    closed_by: ''
+  });
+
+  const fetchServiceOptions = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/services/options`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setServiceOptions(response.data);
+    } catch (error) {
+      console.error('Failed to fetch service options');
+    }
+  }, [token]);
+
+  const fetchMasterData = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/masters/public`, { 
         params: { master_type: 'service_type' } 
@@ -62,87 +123,75 @@ const ServiceHistory = () => {
     } catch (error) {
       console.error('Failed to fetch service types');
     }
-  };
+  }, []);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const params = {};
       if (filterDevice) params.device_id = filterDevice;
+      if (filterCategory) params.service_category = filterCategory;
+      if (filterStatus) params.status = filterStatus;
       
-      const [servicesRes, devicesRes, amcRes] = await Promise.all([
+      const [servicesRes, devicesRes] = await Promise.all([
         axios.get(`${API}/admin/services`, {
           params,
           headers: { Authorization: `Bearer ${token}` }
         }),
         axios.get(`${API}/admin/devices`, {
           headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get(`${API}/admin/amc-contracts`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }).catch(() => ({ data: [] }))
+        })
       ]);
-      
-      let filteredServices = servicesRes.data;
-      if (filterType) {
-        filteredServices = filteredServices.filter(s => s.service_type === filterType);
-      }
-      
-      setServices(filteredServices);
+      setServices(servicesRes.data);
       setDevices(devicesRes.data);
-      setAmcContracts(amcRes.data);
     } catch (error) {
-      toast.error('Failed to fetch data');
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, filterDevice, filterCategory, filterStatus]);
 
-  // Check AMC coverage when device changes
-  const checkAmcCoverage = async (deviceId) => {
-    if (!deviceId) {
-      setDeviceAmcCoverage(null);
-      return;
-    }
-    try {
-      const response = await axios.get(`${API}/admin/amc-contracts/check-coverage/${deviceId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setDeviceAmcCoverage(response.data);
-      
-      // Auto-set AMC contract if device is covered
-      if (response.data.is_covered && response.data.active_contracts.length > 0) {
-        setFormData(prev => ({
-          ...prev,
-          amc_contract_id: response.data.active_contracts[0].contract_id,
-          billing_type: 'covered'
-        }));
-      } else {
-        setFormData(prev => ({
-          ...prev,
-          amc_contract_id: '',
-          billing_type: 'chargeable',
-          chargeable_reason: 'No active AMC'
-        }));
-      }
-    } catch (error) {
-      setDeviceAmcCoverage(null);
-    }
-  };
+  useEffect(() => {
+    fetchData();
+    fetchMasterData();
+    fetchServiceOptions();
+  }, [fetchData, fetchMasterData, fetchServiceOptions]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.device_id || !formData.service_type || !formData.action_taken) {
-      toast.error('Please fill in required fields');
+    
+    if (!formData.device_id || !formData.action_taken) {
+      toast.error('Please fill required fields');
       return;
     }
-
-    const submitData = { ...formData };
-    ['problem_reported', 'technician_name', 'ticket_id', 'notes'].forEach(field => {
-      if (!submitData[field]) delete submitData[field];
-    });
-
+    
+    // Prepare submission data
+    let submitData = { ...formData };
+    
+    // If OEM category, include OEM details
+    if (formData.service_category === 'oem_warranty_service') {
+      if (!oemFormData.oem_name || !oemFormData.oem_case_number || !oemFormData.oem_warranty_type) {
+        toast.error('OEM Name, Case Number, and Warranty Type are required for OEM services');
+        return;
+      }
+      submitData.oem_details = oemFormData;
+    }
+    
     try {
       if (editingService) {
+        // Include outcome if closing
+        if (submitData.status === 'closed' || 
+            (submitData.service_category === 'oem_warranty_service' && 
+             oemFormData.oem_case_status === 'closed_by_oem')) {
+          if (!outcomeData.resolution_summary) {
+            toast.error('Resolution summary is required for closure');
+            return;
+          }
+          submitData.service_outcome = {
+            ...outcomeData,
+            closure_date: new Date().toISOString().split('T')[0]
+          };
+        }
+        
         await axios.put(`${API}/admin/services/${editingService.id}`, submitData, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -153,22 +202,33 @@ const ServiceHistory = () => {
         });
         toast.success('Service record created');
       }
-      fetchData();
       closeModal();
+      fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Operation failed');
+      toast.error(error.response?.data?.detail || 'Failed to save');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this service record?')) return;
+    try {
+      await axios.delete(`${API}/admin/services/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Service record deleted');
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to delete');
     }
   };
 
   const handleFileUpload = async (serviceId, file) => {
-    if (!file) return;
-    
     setUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', file);
     
     try {
-      await axios.post(`${API}/admin/services/${serviceId}/attachments`, formData, {
+      await axios.post(`${API}/admin/services/${serviceId}/attachments`, formDataUpload, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -176,61 +236,51 @@ const ServiceHistory = () => {
       });
       toast.success('Attachment uploaded');
       fetchData();
-      // Refresh selected service if detail modal is open
-      if (selectedService && selectedService.id === serviceId) {
-        const response = await axios.get(`${API}/admin/services/${serviceId}`, {
+      if (selectedService?.id === serviceId) {
+        const res = await axios.get(`${API}/admin/services/${serviceId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setSelectedService(response.data);
+        setSelectedService(res.data);
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Upload failed');
+      toast.error('Failed to upload');
     } finally {
       setUploading(false);
     }
   };
 
-  const handleDeleteAttachment = async (serviceId, attachmentId) => {
-    if (!window.confirm('Delete this attachment?')) return;
-    
-    try {
-      await axios.delete(`${API}/admin/services/${serviceId}/attachments/${attachmentId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      toast.success('Attachment deleted');
-      fetchData();
-      // Refresh selected service
-      if (selectedService && selectedService.id === serviceId) {
-        const response = await axios.get(`${API}/admin/services/${serviceId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setSelectedService(response.data);
-      }
-    } catch (error) {
-      toast.error('Failed to delete attachment');
-    }
-  };
-
   const openCreateModal = (deviceId = '') => {
     setEditingService(null);
-    setDeviceAmcCoverage(null);
     setFormData({
       device_id: deviceId || filterDevice || '',
       service_date: new Date().toISOString().split('T')[0],
       service_type: serviceTypes[0]?.name || 'Repair',
       problem_reported: '',
       action_taken: '',
-      warranty_impact: 'not_applicable',
+      status: 'open',
       technician_name: '',
-      ticket_id: '',
       notes: '',
-      amc_contract_id: '',
-      billing_type: 'covered',
-      chargeable_reason: ''
+      service_category: 'internal_service',
+      service_responsibility: 'our_team',
+      service_role: 'provider',
+      billing_impact: 'not_billable',
+      oem_details: null
     });
-    if (deviceId || filterDevice) {
-      checkAmcCoverage(deviceId || filterDevice);
-    }
+    setOemFormData({
+      oem_name: '',
+      oem_service_tag: '',
+      oem_warranty_type: '',
+      oem_case_number: '',
+      case_raised_date: new Date().toISOString().split('T')[0],
+      case_raised_via: 'oem_portal',
+      oem_priority: 'Standard',
+      oem_case_status: 'reported_to_oem',
+      oem_engineer_name: '',
+      oem_engineer_phone: '',
+      oem_visit_date: '',
+      oem_remarks: ''
+    });
+    setOutcomeData({ resolution_summary: '', part_replaced: '', cost_incurred: 0, closed_by: '' });
     setModalOpen(true);
   };
 
@@ -242,21 +292,34 @@ const ServiceHistory = () => {
       service_type: service.service_type,
       problem_reported: service.problem_reported || '',
       action_taken: service.action_taken,
-      warranty_impact: service.warranty_impact || 'not_applicable',
+      status: service.status || 'open',
       technician_name: service.technician_name || '',
-      ticket_id: service.ticket_id || '',
       notes: service.notes || '',
-      amc_contract_id: service.amc_contract_id || '',
-      billing_type: service.billing_type || 'covered',
-      chargeable_reason: service.chargeable_reason || ''
+      service_category: service.service_category || 'internal_service',
+      service_responsibility: service.service_responsibility || 'our_team',
+      service_role: service.service_role || 'provider',
+      billing_impact: service.billing_impact || 'not_billable',
+      oem_details: service.oem_details
     });
-    checkAmcCoverage(service.device_id);
+    if (service.oem_details) {
+      setOemFormData(service.oem_details);
+    }
+    if (service.service_outcome) {
+      setOutcomeData(service.service_outcome);
+    }
     setModalOpen(true);
   };
 
-  const openDetailModal = (service) => {
-    setSelectedService(service);
-    setDetailModalOpen(true);
+  const openDetailModal = async (service) => {
+    try {
+      const res = await axios.get(`${API}/admin/services/${service.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSelectedService(res.data);
+      setDetailModalOpen(true);
+    } catch (error) {
+      toast.error('Failed to load service details');
+    }
   };
 
   const closeModal = () => {
@@ -264,21 +327,11 @@ const ServiceHistory = () => {
     setEditingService(null);
   };
 
-  const getDevice = (deviceId) => {
-    return devices.find(d => d.id === deviceId);
-  };
+  const getDevice = (deviceId) => devices.find(d => d.id === deviceId);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
-
-  const formatDateTime = (dateStr) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleString('en-GB', { 
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit'
-    });
   };
 
   const filteredServices = services.filter(s => {
@@ -287,26 +340,24 @@ const ServiceHistory = () => {
     return (
       s.action_taken?.toLowerCase().includes(searchLower) ||
       s.problem_reported?.toLowerCase().includes(searchLower) ||
-      s.ticket_id?.toLowerCase().includes(searchLower) ||
+      s.oem_details?.oem_case_number?.toLowerCase().includes(searchLower) ||
       device?.serial_number?.toLowerCase().includes(searchLower) ||
       device?.brand?.toLowerCase().includes(searchLower)
     );
   });
 
-  const serviceTypeColors = {
-    'Repair': 'bg-amber-50 text-amber-600',
-    'Part Replacement': 'bg-blue-50 text-blue-600',
-    'Inspection': 'bg-purple-50 text-purple-600',
-    'AMC Visit': 'bg-emerald-50 text-emerald-600',
-    'Preventive Maintenance': 'bg-cyan-50 text-cyan-600',
-    'Software Update': 'bg-indigo-50 text-indigo-600',
-    'Warranty Claim': 'bg-rose-50 text-rose-600',
+  // Stats
+  const stats = {
+    total: services.length,
+    internal: services.filter(s => s.service_category === 'internal_service').length,
+    oem: services.filter(s => s.service_category === 'oem_warranty_service').length,
+    open: services.filter(s => !s.is_closed).length
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-[#0F62FE] border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -316,145 +367,174 @@ const ServiceHistory = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Service History</h1>
-          <p className="text-slate-500 mt-1">Track repairs, maintenance, and service records</p>
+          <h1 className="text-2xl font-semibold text-slate-900">Service Records</h1>
+          <p className="text-slate-500 mt-1">Track repairs, maintenance, and OEM warranty services</p>
         </div>
-        <Button 
-          onClick={() => openCreateModal()}
-          className="bg-[#0F62FE] hover:bg-[#0043CE] text-white"
-          data-testid="add-service-btn"
-        >
+        <Button onClick={() => openCreateModal()} data-testid="add-service-btn">
           <Plus className="h-4 w-4 mr-2" />
           Add Service Record
         </Button>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl border border-slate-100 p-4">
+          <p className="text-sm text-slate-500">Total Records</p>
+          <p className="text-2xl font-semibold text-slate-900">{stats.total}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-100 p-4">
+          <p className="text-sm text-slate-500">Internal Services</p>
+          <p className="text-2xl font-semibold text-blue-600">{stats.internal}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-100 p-4">
+          <p className="text-sm text-slate-500">OEM Warranty</p>
+          <p className="text-2xl font-semibold text-purple-600">{stats.oem}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-100 p-4">
+          <p className="text-sm text-slate-500">Open Cases</p>
+          <p className="text-2xl font-semibold text-amber-600">{stats.open}</p>
+        </div>
+      </div>
+
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by action, problem, ticket..."
+            placeholder="Search by action, problem, OEM case..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="form-input pl-11"
+            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm"
           />
         </div>
         <select
-          value={filterDevice}
-          onChange={(e) => setFilterDevice(e.target.value)}
-          className="form-select w-full sm:w-56"
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
         >
-          <option value="">All Devices</option>
-          {devices.map(d => (
-            <option key={d.id} value={d.id}>{d.brand} {d.model} - {d.serial_number}</option>
-          ))}
+          <option value="">All Categories</option>
+          <option value="internal_service">Internal Service</option>
+          <option value="oem_warranty_service">OEM Warranty</option>
+          <option value="paid_third_party_service">Third-Party</option>
+          <option value="inspection_diagnosis">Inspection</option>
         </select>
         <select
-          value={filterType}
-          onChange={(e) => setFilterType(e.target.value)}
-          className="form-select w-full sm:w-44"
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
         >
-          <option value="">All Types</option>
-          {serviceTypes.map(t => (
-            <option key={t.id} value={t.name}>{t.name}</option>
+          <option value="">All Status</option>
+          <option value="open">Open</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="closed">Closed</option>
+        </select>
+        <select
+          value={filterDevice}
+          onChange={(e) => setFilterDevice(e.target.value)}
+          className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white max-w-xs"
+        >
+          <option value="">All Devices</option>
+          {devices.slice(0, 50).map(d => (
+            <option key={d.id} value={d.id}>{d.brand} {d.model} - {d.serial_number}</option>
           ))}
         </select>
       </div>
 
-      {/* Timeline View */}
-      <div className="bg-white rounded-xl border border-slate-100 divide-y divide-slate-100">
+      {/* Service Records List */}
+      <div className="space-y-3">
         {filteredServices.length > 0 ? (
-          filteredServices.map((service) => {
+          filteredServices.map(service => {
             const device = getDevice(service.device_id);
+            const categoryConfig = SERVICE_CATEGORY_CONFIG[service.service_category] || SERVICE_CATEGORY_CONFIG.internal_service;
+            const statusConfig = service.service_category === 'oem_warranty_service' && service.oem_details?.oem_case_status
+              ? OEM_STATUS_CONFIG[service.oem_details.oem_case_status] || STATUS_CONFIG[service.status]
+              : STATUS_CONFIG[service.status] || STATUS_CONFIG.open;
+            const CategoryIcon = categoryConfig.icon;
+            
             return (
               <div 
-                key={service.id} 
-                className="p-4 hover:bg-slate-50 transition-colors cursor-pointer"
+                key={service.id}
+                className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${
+                  service.is_closed ? 'border-slate-100 opacity-75' : 'border-slate-200'
+                }`}
                 onClick={() => openDetailModal(service)}
-                data-testid={`service-row-${service.id}`}
               >
-                <div className="flex items-start gap-4">
-                  {/* Timeline Icon */}
-                  <div className="flex flex-col items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      serviceTypeColors[service.service_type] || 'bg-slate-100 text-slate-600'
-                    }`}>
-                      <Wrench className="h-4 w-4" />
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${categoryConfig.color}`}>
+                      <CategoryIcon className="h-5 w-5" />
                     </div>
-                    <div className="w-0.5 h-full bg-slate-200 mt-2 hidden sm:block"></div>
-                  </div>
-                  
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            serviceTypeColors[service.service_type] || 'bg-slate-100 text-slate-600'
-                          }`}>
-                            {service.service_type}
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${categoryConfig.color}`}>
+                          {categoryConfig.label}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
+                          {statusConfig.label}
+                        </span>
+                        {service.is_closed && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
+                            <CheckCircle2 className="h-3 w-3 inline mr-1" />
+                            Closed
                           </span>
-                          {service.ticket_id && (
-                            <span className="text-xs font-mono text-slate-500">#{service.ticket_id}</span>
-                          )}
-                        </div>
-                        <h3 className="font-medium text-slate-900 mt-2">{service.action_taken}</h3>
-                        {service.problem_reported && (
-                          <p className="text-sm text-slate-500 mt-1">Problem: {service.problem_reported}</p>
                         )}
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-medium text-slate-900">{formatDate(service.service_date)}</p>
-                        {service.technician_name && (
-                          <p className="text-xs text-slate-500 mt-1">by {service.technician_name}</p>
-                        )}
-                      </div>
+                      <p className="font-medium text-slate-900">{service.service_type}</p>
+                      <p className="text-sm text-slate-500 line-clamp-1">{service.action_taken}</p>
+                      {device && (
+                        <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                          <Laptop className="h-3 w-3" />
+                          {device.brand} {device.model} • {device.serial_number}
+                        </p>
+                      )}
+                      {service.oem_details && (
+                        <p className="text-xs text-purple-600 mt-1 flex items-center gap-1">
+                          <Shield className="h-3 w-3" />
+                          {service.oem_details.oem_name} • Case: {service.oem_details.oem_case_number}
+                        </p>
+                      )}
                     </div>
-                    
-                    {/* Device Info */}
-                    {device && (
-                      <div className="flex items-center gap-2 mt-3 text-sm text-slate-500">
-                        <Laptop className="h-3.5 w-3.5" />
-                        <span>{device.brand} {device.model}</span>
-                        <span className="font-mono text-xs">({device.serial_number})</span>
-                      </div>
-                    )}
-                    
-                    {/* Attachments indicator */}
-                    {service.attachments?.length > 0 && (
-                      <div className="flex items-center gap-1 mt-2 text-xs text-slate-500">
-                        <Paperclip className="h-3 w-3" />
-                        <span>{service.attachments.length} attachment(s)</span>
-                      </div>
-                    )}
                   </div>
-                  
-                  {/* Actions */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openDetailModal(service); }}>
-                        <FileText className="h-4 w-4 mr-2" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditModal(service); }}>
-                        <Edit2 className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex items-center gap-2">
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-slate-600">{formatDate(service.service_date)}</p>
+                      {service.technician_name && (
+                        <p className="text-xs text-slate-400">Tech: {service.technician_name}</p>
+                      )}
+                      {service.attachments?.length > 0 && (
+                        <p className="text-xs text-slate-400 flex items-center justify-end gap-1 mt-1">
+                          <Paperclip className="h-3 w-3" />
+                          {service.attachments.length} files
+                        </p>
+                      )}
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditModal(service); }}>
+                          <Edit2 className="h-4 w-4 mr-2" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={(e) => { e.stopPropagation(); handleDelete(service.id); }}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </div>
             );
           })
         ) : (
-          <div className="text-center py-16">
+          <div className="text-center py-16 bg-white rounded-xl border border-slate-100">
             <Wrench className="h-12 w-12 mx-auto text-slate-300 mb-4" />
             <p className="text-slate-500 mb-4">No service records found</p>
             <Button onClick={() => openCreateModal()} variant="outline">
@@ -467,125 +547,429 @@ const ServiceHistory = () => {
 
       {/* Create/Edit Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingService ? 'Edit Service Record' : 'Add Service Record'}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-            <div>
-              <label className="form-label">Device *</label>
-              <select
-                value={formData.device_id}
-                onChange={(e) => setFormData({ ...formData, device_id: e.target.value })}
-                className="form-select"
-                disabled={!!editingService}
-              >
-                <option value="">Select Device</option>
-                {devices.map(d => (
-                  <option key={d.id} value={d.id}>{d.brand} {d.model} - {d.serial_number}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="form-label">Service Date *</label>
-                <input
-                  type="date"
-                  value={formData.service_date}
-                  onChange={(e) => setFormData({ ...formData, service_date: e.target.value })}
-                  className="form-input"
-                />
+          <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+            {/* Service Classification */}
+            <div className="bg-slate-50 rounded-lg p-4 space-y-4">
+              <h3 className="font-medium text-slate-900">Service Classification</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Service Category *</label>
+                  <select
+                    value={formData.service_category}
+                    onChange={(e) => {
+                      const category = e.target.value;
+                      setFormData({ 
+                        ...formData, 
+                        service_category: category,
+                        // Auto-set for OEM
+                        service_responsibility: category === 'oem_warranty_service' ? 'oem' : formData.service_responsibility,
+                        service_role: category === 'oem_warranty_service' ? 'coordinator_facilitator' : formData.service_role,
+                        billing_impact: category === 'oem_warranty_service' ? 'warranty_covered' : formData.billing_impact
+                      });
+                    }}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    disabled={editingService?.is_closed}
+                  >
+                    {serviceOptions?.service_categories?.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    )) || (
+                      <>
+                        <option value="internal_service">Internal Service (Provided by Us)</option>
+                        <option value="oem_warranty_service">OEM Warranty Service (Facilitated)</option>
+                        <option value="paid_third_party_service">Paid Third-Party Service</option>
+                        <option value="inspection_diagnosis">Inspection / Diagnosis Only</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Status</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    disabled={editingService?.is_closed}
+                  >
+                    {serviceOptions?.service_statuses?.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    )) || (
+                      <>
+                        <option value="open">Open</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="on_hold">On Hold</option>
+                        <option value="completed">Completed</option>
+                        <option value="closed">Closed</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Service Responsibility</label>
+                  <select
+                    value={formData.service_responsibility}
+                    onChange={(e) => setFormData({ ...formData, service_responsibility: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    disabled={formData.service_category === 'oem_warranty_service' || editingService?.is_closed}
+                  >
+                    <option value="our_team">Our Team</option>
+                    <option value="oem">OEM</option>
+                    <option value="partner_vendor">Partner / Vendor</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Service Role</label>
+                  <select
+                    value={formData.service_role}
+                    onChange={(e) => setFormData({ ...formData, service_role: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    disabled={formData.service_category === 'oem_warranty_service' || editingService?.is_closed}
+                  >
+                    <option value="provider">Provider</option>
+                    <option value="coordinator_facilitator">Coordinator / Facilitator</option>
+                    <option value="observer">Observer</option>
+                  </select>
+                </div>
               </div>
               <div>
-                <label className="form-label">Service Type *</label>
+                <label className="text-sm font-medium text-slate-700 block mb-1">Billing Impact</label>
                 <select
-                  value={formData.service_type}
-                  onChange={(e) => setFormData({ ...formData, service_type: e.target.value })}
-                  className="form-select"
+                  value={formData.billing_impact}
+                  onChange={(e) => setFormData({ ...formData, billing_impact: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  disabled={formData.service_category === 'oem_warranty_service' || editingService?.is_closed}
                 >
-                  <option value="">Select Type</option>
-                  {serviceTypes.map(t => (
-                    <option key={t.id} value={t.name}>{t.name}</option>
+                  <option value="not_billable">Not Billable</option>
+                  <option value="warranty_covered">Warranty Covered</option>
+                  <option value="chargeable">Chargeable</option>
+                </select>
+              </div>
+              {formData.service_category === 'oem_warranty_service' && (
+                <div className="bg-purple-50 rounded-lg p-3 text-sm text-purple-700 flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>OEM Warranty Service: Responsibility, Role, and Billing are auto-locked. This record will NOT count toward AMC quota.</span>
+                </div>
+              )}
+            </div>
+
+            {/* Basic Service Info */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-slate-900">Service Details</h3>
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1">Device *</label>
+                <select
+                  value={formData.device_id}
+                  onChange={(e) => setFormData({ ...formData, device_id: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  disabled={!!editingService}
+                  required
+                >
+                  <option value="">Select Device</option>
+                  {devices.map(d => (
+                    <option key={d.id} value={d.id}>{d.brand} {d.model} - {d.serial_number}</option>
                   ))}
                 </select>
               </div>
-            </div>
-            
-            <div>
-              <label className="form-label">Problem Reported</label>
-              <textarea
-                value={formData.problem_reported}
-                onChange={(e) => setFormData({ ...formData, problem_reported: e.target.value })}
-                className="form-input"
-                rows={2}
-                placeholder="Describe the issue reported..."
-              />
-            </div>
-            
-            <div>
-              <label className="form-label">Action Taken *</label>
-              <textarea
-                value={formData.action_taken}
-                onChange={(e) => setFormData({ ...formData, action_taken: e.target.value })}
-                className="form-input"
-                rows={2}
-                placeholder="Describe what was done..."
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Service Date *</label>
+                  <input
+                    type="date"
+                    value={formData.service_date}
+                    onChange={(e) => setFormData({ ...formData, service_date: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Service Type *</label>
+                  <select
+                    value={formData.service_type}
+                    onChange={(e) => setFormData({ ...formData, service_type: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    required
+                  >
+                    <option value="">Select Type</option>
+                    {serviceTypes.map(t => (
+                      <option key={t.id} value={t.name}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               <div>
-                <label className="form-label">Technician Name</label>
-                <input
-                  type="text"
-                  value={formData.technician_name}
-                  onChange={(e) => setFormData({ ...formData, technician_name: e.target.value })}
-                  className="form-input"
-                  placeholder="Who performed the service?"
+                <label className="text-sm font-medium text-slate-700 block mb-1">Problem Reported</label>
+                <textarea
+                  value={formData.problem_reported}
+                  onChange={(e) => setFormData({ ...formData, problem_reported: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  rows={2}
+                  placeholder="Describe the issue reported..."
                 />
               </div>
               <div>
-                <label className="form-label">Ticket ID</label>
-                <input
-                  type="text"
-                  value={formData.ticket_id}
-                  onChange={(e) => setFormData({ ...formData, ticket_id: e.target.value })}
-                  className="form-input"
-                  placeholder="Reference ticket number"
+                <label className="text-sm font-medium text-slate-700 block mb-1">Action Taken *</label>
+                <textarea
+                  value={formData.action_taken}
+                  onChange={(e) => setFormData({ ...formData, action_taken: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  rows={2}
+                  placeholder="Describe what was done..."
+                  required
                 />
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Technician Name</label>
+                  <input
+                    type="text"
+                    value={formData.technician_name}
+                    onChange={(e) => setFormData({ ...formData, technician_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    placeholder="Who performed the service?"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Notes</label>
+                  <input
+                    type="text"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    placeholder="Additional notes..."
+                  />
+                </div>
+              </div>
             </div>
-            
-            <div>
-              <label className="form-label">Warranty Impact</label>
-              <select
-                value={formData.warranty_impact}
-                onChange={(e) => setFormData({ ...formData, warranty_impact: e.target.value })}
-                className="form-select"
-              >
-                <option value="not_applicable">Not Applicable</option>
-                <option value="started">New Warranty Started</option>
-                <option value="extended">Warranty Extended</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="form-label">Notes</label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="form-input"
-                rows={2}
-                placeholder="Additional notes..."
-              />
-            </div>
-            
-            <div className="flex justify-end gap-3 pt-4">
+
+            {/* OEM Service Details - Conditional */}
+            {formData.service_category === 'oem_warranty_service' && (
+              <div className="bg-purple-50 rounded-lg p-4 space-y-4">
+                <h3 className="font-medium text-purple-900 flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  OEM Service Details (Required)
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 block mb-1">OEM Name *</label>
+                    <select
+                      value={oemFormData.oem_name}
+                      onChange={(e) => setOemFormData({ ...oemFormData, oem_name: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                      required
+                    >
+                      <option value="">Select OEM</option>
+                      {(serviceOptions?.oem_names || ['Dell', 'HP', 'Lenovo', 'Asus', 'Acer', 'Apple', 'Microsoft', 'Samsung', 'Other']).map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 block mb-1">OEM Warranty Type *</label>
+                    <select
+                      value={oemFormData.oem_warranty_type}
+                      onChange={(e) => setOemFormData({ ...oemFormData, oem_warranty_type: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                      required
+                    >
+                      <option value="">Select Type</option>
+                      {(serviceOptions?.oem_warranty_types || ['ADP', 'NBD', 'Standard', 'ProSupport', 'Premium', 'Extended', 'Other']).map(type => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 block mb-1">OEM Case/SR Number *</label>
+                    <input
+                      type="text"
+                      value={oemFormData.oem_case_number}
+                      onChange={(e) => setOemFormData({ ...oemFormData, oem_case_number: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                      placeholder="e.g., SR123456789"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 block mb-1">OEM Service Tag</label>
+                    <input
+                      type="text"
+                      value={oemFormData.oem_service_tag}
+                      onChange={(e) => setOemFormData({ ...oemFormData, oem_service_tag: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                      placeholder="Device service tag"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 block mb-1">Case Raised Date *</label>
+                    <input
+                      type="date"
+                      value={oemFormData.case_raised_date}
+                      onChange={(e) => setOemFormData({ ...oemFormData, case_raised_date: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 block mb-1">Raised Via *</label>
+                    <select
+                      value={oemFormData.case_raised_via}
+                      onChange={(e) => setOemFormData({ ...oemFormData, case_raised_via: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                      required
+                    >
+                      {(serviceOptions?.oem_case_raised_via || [
+                        {value: 'phone', label: 'Phone'},
+                        {value: 'oem_portal', label: 'OEM Portal'},
+                        {value: 'email', label: 'Email'},
+                        {value: 'chat', label: 'Chat'}
+                      ]).map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 block mb-1">OEM Priority</label>
+                    <select
+                      value={oemFormData.oem_priority}
+                      onChange={(e) => setOemFormData({ ...oemFormData, oem_priority: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    >
+                      {(serviceOptions?.oem_priority || [
+                        {value: 'NBD', label: 'Next Business Day'},
+                        {value: 'Standard', label: 'Standard'},
+                        {value: 'Deferred', label: 'Deferred'},
+                        {value: 'Critical', label: 'Critical/Urgent'}
+                      ]).map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">OEM Case Status</label>
+                  <select
+                    value={oemFormData.oem_case_status}
+                    onChange={(e) => setOemFormData({ ...oemFormData, oem_case_status: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  >
+                    {(serviceOptions?.oem_case_statuses || [
+                      {value: 'reported_to_oem', label: 'Reported to OEM'},
+                      {value: 'oem_accepted', label: 'OEM Accepted'},
+                      {value: 'engineer_assigned', label: 'Engineer Assigned'},
+                      {value: 'parts_dispatched', label: 'Parts Dispatched'},
+                      {value: 'visit_scheduled', label: 'Visit Scheduled'},
+                      {value: 'resolved_by_oem', label: 'Resolved by OEM'},
+                      {value: 'closed_by_oem', label: 'Closed by OEM'}
+                    ]).map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 block mb-1">OEM Engineer Name</label>
+                    <input
+                      type="text"
+                      value={oemFormData.oem_engineer_name}
+                      onChange={(e) => setOemFormData({ ...oemFormData, oem_engineer_name: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                      placeholder="Engineer assigned by OEM"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 block mb-1">OEM Visit Date</label>
+                    <input
+                      type="date"
+                      value={oemFormData.oem_visit_date}
+                      onChange={(e) => setOemFormData({ ...oemFormData, oem_visit_date: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">OEM Remarks</label>
+                  <textarea
+                    value={oemFormData.oem_remarks}
+                    onChange={(e) => setOemFormData({ ...oemFormData, oem_remarks: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    rows={2}
+                    placeholder="Additional remarks about OEM service..."
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Service Outcome - For Closure */}
+            {(formData.status === 'closed' || (formData.service_category === 'oem_warranty_service' && oemFormData.oem_case_status === 'closed_by_oem')) && (
+              <div className="bg-emerald-50 rounded-lg p-4 space-y-4">
+                <h3 className="font-medium text-emerald-900 flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5" />
+                  Service Outcome (Required for Closure)
+                </h3>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Resolution Summary *</label>
+                  <textarea
+                    value={outcomeData.resolution_summary}
+                    onChange={(e) => setOutcomeData({ ...outcomeData, resolution_summary: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    rows={2}
+                    placeholder="Describe how the issue was resolved..."
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 block mb-1">Part Replaced</label>
+                    <input
+                      type="text"
+                      value={outcomeData.part_replaced}
+                      onChange={(e) => setOutcomeData({ ...outcomeData, part_replaced: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                      placeholder="e.g., Motherboard, Display"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 block mb-1">Cost Incurred (₹)</label>
+                    <input
+                      type="number"
+                      value={outcomeData.cost_incurred}
+                      onChange={(e) => setOutcomeData({ ...outcomeData, cost_incurred: parseFloat(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Closed By *</label>
+                  <select
+                    value={outcomeData.closed_by}
+                    onChange={(e) => setOutcomeData({ ...outcomeData, closed_by: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    required
+                  >
+                    <option value="">Select</option>
+                    <option value="OEM">OEM</option>
+                    <option value="Our Team">Our Team</option>
+                    <option value="Customer">Customer</option>
+                    <option value="Auto-Resolved">Auto-Resolved</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4 border-t">
               <Button type="button" variant="outline" onClick={closeModal}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-[#0F62FE] hover:bg-[#0043CE] text-white">
+              <Button type="submit" disabled={editingService?.is_closed}>
                 {editingService ? 'Update' : 'Create'}
               </Button>
             </div>
@@ -601,158 +985,227 @@ const ServiceHistory = () => {
           </DialogHeader>
           {selectedService && (
             <div className="space-y-6 mt-4">
-              {/* Header */}
-              <div className="flex items-start gap-4">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                  serviceTypeColors[selectedService.service_type] || 'bg-slate-100 text-slate-600'
-                }`}>
-                  <Wrench className="h-5 w-5" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      serviceTypeColors[selectedService.service_type] || 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {selectedService.service_type}
-                    </span>
-                    {selectedService.ticket_id && (
-                      <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded">
-                        #{selectedService.ticket_id}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-slate-500 mt-1">
-                    {formatDate(selectedService.service_date)}
-                    {selectedService.technician_name && ` • by ${selectedService.technician_name}`}
-                  </p>
-                </div>
+              {/* Classification Badge */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${SERVICE_CATEGORY_CONFIG[selectedService.service_category]?.color || 'bg-slate-100'}`}>
+                  {SERVICE_CATEGORY_CONFIG[selectedService.service_category]?.label || 'Internal Service'}
+                </span>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_CONFIG[selectedService.status]?.color || 'bg-slate-100'}`}>
+                  {STATUS_CONFIG[selectedService.status]?.label || selectedService.status}
+                </span>
+                {selectedService.is_closed && (
+                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-700">
+                    <CheckCircle2 className="h-3 w-3 inline mr-1" />
+                    Closed
+                  </span>
+                )}
               </div>
-              
+
               {/* Device Info */}
               {(() => {
                 const device = getDevice(selectedService.device_id);
-                return device ? (
+                return device && (
                   <div className="bg-slate-50 rounded-lg p-4">
-                    <div className="flex items-center gap-3">
-                      <Laptop className="h-5 w-5 text-slate-600" />
+                    <h4 className="text-sm font-medium text-slate-500 mb-2">Device</h4>
+                    <p className="font-medium text-slate-900">{device.brand} {device.model}</p>
+                    <p className="text-sm text-slate-500">{device.serial_number}</p>
+                  </div>
+                );
+              })()}
+
+              {/* Service Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium text-slate-500">Service Date</h4>
+                  <p className="text-slate-900">{formatDate(selectedService.service_date)}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-slate-500">Service Type</h4>
+                  <p className="text-slate-900">{selectedService.service_type}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-slate-500">Responsibility</h4>
+                  <p className="text-slate-900 capitalize">{selectedService.service_responsibility?.replace('_', ' ')}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-slate-500">Role</h4>
+                  <p className="text-slate-900 capitalize">{selectedService.service_role?.replace('_', ' ')}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-slate-500">Billing Impact</h4>
+                  <p className="text-slate-900 capitalize">{selectedService.billing_impact?.replace('_', ' ')}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-slate-500">Counts Toward AMC</h4>
+                  <p className="text-slate-900">{selectedService.counts_toward_amc ? 'Yes' : 'No'}</p>
+                </div>
+              </div>
+
+              {/* Problem & Action */}
+              {selectedService.problem_reported && (
+                <div>
+                  <h4 className="text-sm font-medium text-slate-500 mb-1">Problem Reported</h4>
+                  <p className="text-slate-900 bg-slate-50 p-3 rounded-lg">{selectedService.problem_reported}</p>
+                </div>
+              )}
+              <div>
+                <h4 className="text-sm font-medium text-slate-500 mb-1">Action Taken</h4>
+                <p className="text-slate-900 bg-slate-50 p-3 rounded-lg">{selectedService.action_taken}</p>
+              </div>
+
+              {/* OEM Details */}
+              {selectedService.oem_details && (
+                <div className="bg-purple-50 rounded-lg p-4 space-y-3">
+                  <h4 className="font-medium text-purple-900 flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    OEM Service Details
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-slate-500">OEM:</span>
+                      <span className="ml-2 text-slate-900 font-medium">{selectedService.oem_details.oem_name}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Warranty Type:</span>
+                      <span className="ml-2 text-slate-900 font-medium">{selectedService.oem_details.oem_warranty_type}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Case Number:</span>
+                      <span className="ml-2 text-slate-900 font-medium">{selectedService.oem_details.oem_case_number}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Case Status:</span>
+                      <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${OEM_STATUS_CONFIG[selectedService.oem_details.oem_case_status]?.color || 'bg-slate-100'}`}>
+                        {OEM_STATUS_CONFIG[selectedService.oem_details.oem_case_status]?.label || selectedService.oem_details.oem_case_status}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Raised Date:</span>
+                      <span className="ml-2 text-slate-900">{formatDate(selectedService.oem_details.case_raised_date)}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Raised Via:</span>
+                      <span className="ml-2 text-slate-900 capitalize">{selectedService.oem_details.case_raised_via?.replace('_', ' ')}</span>
+                    </div>
+                    {selectedService.oem_details.oem_engineer_name && (
                       <div>
-                        <p className="font-medium text-slate-900">{device.brand} {device.model}</p>
-                        <p className="text-sm text-slate-500 font-mono">{device.serial_number}</p>
+                        <span className="text-slate-500">OEM Engineer:</span>
+                        <span className="ml-2 text-slate-900">{selectedService.oem_details.oem_engineer_name}</span>
                       </div>
+                    )}
+                    {selectedService.oem_details.oem_visit_date && (
+                      <div>
+                        <span className="text-slate-500">Visit Date:</span>
+                        <span className="ml-2 text-slate-900">{formatDate(selectedService.oem_details.oem_visit_date)}</span>
+                      </div>
+                    )}
+                  </div>
+                  {selectedService.oem_details.oem_remarks && (
+                    <div>
+                      <span className="text-slate-500 text-sm">Remarks:</span>
+                      <p className="text-slate-900 text-sm mt-1">{selectedService.oem_details.oem_remarks}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Service Outcome */}
+              {selectedService.service_outcome && (
+                <div className="bg-emerald-50 rounded-lg p-4 space-y-3">
+                  <h4 className="font-medium text-emerald-900 flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Service Outcome
+                  </h4>
+                  <div>
+                    <span className="text-slate-500 text-sm">Resolution:</span>
+                    <p className="text-slate-900 text-sm mt-1">{selectedService.service_outcome.resolution_summary}</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 text-sm">
+                    {selectedService.service_outcome.part_replaced && (
+                      <div>
+                        <span className="text-slate-500">Part Replaced:</span>
+                        <span className="ml-2 text-slate-900">{selectedService.service_outcome.part_replaced}</span>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-slate-500">Cost:</span>
+                      <span className="ml-2 text-slate-900">₹{selectedService.service_outcome.cost_incurred?.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Closed By:</span>
+                      <span className="ml-2 text-slate-900">{selectedService.service_outcome.closed_by}</span>
                     </div>
                   </div>
-                ) : null;
-              })()}
-              
-              {/* Details */}
-              <div className="space-y-4">
-                {selectedService.problem_reported && (
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">Problem Reported</p>
-                    <p className="mt-1">{selectedService.problem_reported}</p>
-                  </div>
-                )}
-                
-                <div>
-                  <p className="text-sm font-medium text-slate-500">Action Taken</p>
-                  <p className="mt-1">{selectedService.action_taken}</p>
                 </div>
-                
-                {selectedService.warranty_impact !== 'not_applicable' && (
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">Warranty Impact</p>
-                    <span className="inline-block mt-1 text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-600 capitalize">
-                      {selectedService.warranty_impact?.replace('_', ' ')}
-                    </span>
-                  </div>
-                )}
-                
-                {selectedService.notes && (
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">Notes</p>
-                    <p className="mt-1 text-sm text-slate-600">{selectedService.notes}</p>
-                  </div>
-                )}
-              </div>
-              
+              )}
+
               {/* Attachments */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-medium text-slate-500">Attachments</p>
-                  <label className="cursor-pointer">
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={(e) => handleFileUpload(selectedService.id, e.target.files?.[0])}
-                      disabled={uploading}
-                    />
-                    <Button variant="outline" size="sm" disabled={uploading} asChild>
-                      <span>
-                        <Paperclip className="h-3 w-3 mr-1" />
-                        {uploading ? 'Uploading...' : 'Add'}
-                      </span>
-                    </Button>
-                  </label>
+                  <h4 className="font-medium text-slate-900 flex items-center gap-2">
+                    <Paperclip className="h-4 w-4" />
+                    Attachments ({selectedService.attachments?.length || 0})
+                  </h4>
+                  {!selectedService.is_closed && (
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        className="hidden"
+                        onChange={(e) => e.target.files?.[0] && handleFileUpload(selectedService.id, e.target.files[0])}
+                        disabled={uploading}
+                      />
+                      <Button variant="outline" size="sm" asChild disabled={uploading}>
+                        <span>
+                          <Upload className="h-4 w-4 mr-1" />
+                          {uploading ? 'Uploading...' : 'Upload'}
+                        </span>
+                      </Button>
+                    </label>
+                  )}
                 </div>
-                
                 {selectedService.attachments?.length > 0 ? (
                   <div className="space-y-2">
-                    {selectedService.attachments.map((att) => (
-                      <div 
-                        key={att.id} 
-                        className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <FileText className="h-4 w-4 text-slate-500 shrink-0" />
-                          <span className="text-sm truncate">{att.original_name}</span>
-                          <span className="text-xs text-slate-400">
-                            ({(att.file_size / 1024).toFixed(1)} KB)
-                          </span>
+                    {selectedService.attachments.map((att, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-slate-400" />
+                          <span className="text-sm text-slate-700">{att.filename}</span>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <a
-                            href={`${process.env.REACT_APP_BACKEND_URL}/uploads/${att.filename}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1 hover:bg-slate-200 rounded"
-                          >
-                            <Download className="h-4 w-4 text-slate-500" />
-                          </a>
-                          <button
-                            onClick={() => handleDeleteAttachment(selectedService.id, att.id)}
-                            className="p-1 hover:bg-red-100 rounded"
-                          >
-                            <X className="h-4 w-4 text-red-500" />
-                          </button>
-                        </div>
+                        <a 
+                          href={att.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          <Download className="h-4 w-4" />
+                        </a>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-400">No attachments</p>
+                  <p className="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded-lg">
+                    No attachments
+                  </p>
+                )}
+                {selectedService.service_category === 'oem_warranty_service' && !selectedService.is_closed && selectedService.attachments?.length === 0 && (
+                  <div className="mt-2 p-3 bg-amber-50 rounded-lg text-sm text-amber-700 flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <span>OEM service records require at least one attachment (proof) before closure for audit and dispute protection.</span>
+                  </div>
                 )}
               </div>
-              
-              {/* Footer */}
-              <div className="flex items-center justify-between pt-4 border-t text-xs text-slate-400">
-                <p>Created by {selectedService.created_by_name} on {formatDateTime(selectedService.created_at)}</p>
-              </div>
-              
-              <div className="flex justify-end gap-3">
+
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button variant="outline" onClick={() => setDetailModalOpen(false)}>
                   Close
                 </Button>
-                <Button 
-                  onClick={() => {
-                    setDetailModalOpen(false);
-                    openEditModal(selectedService);
-                  }}
-                  className="bg-[#0F62FE] hover:bg-[#0043CE] text-white"
-                >
-                  <Edit2 className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
+                {!selectedService.is_closed && (
+                  <Button onClick={() => { setDetailModalOpen(false); openEditModal(selectedService); }}>
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
               </div>
             </div>
           )}
