@@ -1,6 +1,6 @@
 """
 Enterprise Ticketing System API Routes
-Phase 1: Core Foundation
+Phase 2: Advanced Features - Help Topics, Custom Forms, Collaboration, Canned Responses
 """
 import uuid
 import re
@@ -17,6 +17,11 @@ from models.ticketing import (
     TicketThreadEntry, TicketReplyCreate,
     TicketCategory, CustomFieldDefinition,
     TicketingStaffProfile, TicketSLAStatus,
+    HelpTopic, HelpTopicCreate, HelpTopicUpdate,
+    CustomForm, CustomFormCreate, CustomFormUpdate, CustomFormField,
+    TicketParticipant, AddParticipantRequest,
+    CannedResponse, CannedResponseCreate, CannedResponseUpdate,
+    TicketFormData,
     TICKET_STATUSES, TICKET_PRIORITIES, TICKET_SOURCES,
     THREAD_ENTRY_TYPES, SYSTEM_EVENT_TYPES, STAFF_ROLES
 )
