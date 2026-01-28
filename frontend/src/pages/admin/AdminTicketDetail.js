@@ -154,6 +154,55 @@ export default function AdminTicketDetail() {
     }
   };
 
+  const handleUseCanned = async (cannedId) => {
+    try {
+      const response = await axios.post(
+        `${API}/ticketing/admin/canned-responses/${cannedId}/use?ticket_id=${ticketId}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setReplyContent(response.data.content);
+      setShowCannedDropdown(false);
+      toast.success('Canned response inserted');
+    } catch (error) {
+      toast.error('Failed to load canned response');
+    }
+  };
+
+  const handleAddParticipant = async () => {
+    if (!participantForm.name || !participantForm.email) {
+      toast.error('Name and email are required');
+      return;
+    }
+    try {
+      await axios.post(
+        `${API}/ticketing/admin/tickets/${ticketId}/participants`,
+        participantForm,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Participant added');
+      setParticipantForm({ name: '', email: '', phone: '' });
+      setShowAddParticipant(false);
+      fetchTicket();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to add participant');
+    }
+  };
+
+  const handleRemoveParticipant = async (participantId) => {
+    if (!window.confirm('Remove this participant?')) return;
+    try {
+      await axios.delete(
+        `${API}/ticketing/admin/tickets/${ticketId}/participants/${participantId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Participant removed');
+      fetchTicket();
+    } catch (error) {
+      toast.error('Failed to remove participant');
+    }
+  };
+
   const formatDateTime = (dateStr) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleString('en-GB', {
