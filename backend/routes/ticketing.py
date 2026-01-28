@@ -90,7 +90,7 @@ async def get_ticketing_enums():
 # ==================== DEPARTMENTS ====================
 
 @router.get("/admin/departments")
-async def list_departments(include_inactive: bool = False, admin: dict = Depends(get_admin_dep)):
+async def list_departments(include_inactive: bool = False, admin: dict = Depends(get_admin)):
     """List all departments (admin only)"""
     query = {"is_deleted": {"$ne": True}}
     if not include_inactive:
@@ -100,7 +100,7 @@ async def list_departments(include_inactive: bool = False, admin: dict = Depends
 
 
 @router.post("/admin/departments")
-async def create_department(data: DepartmentCreate, admin: dict = Depends(get_admin_dep)):
+async def create_department(data: DepartmentCreate, admin: dict = Depends(get_admin)):
     """Create a new department"""
     dept = Department(**data.model_dump(), created_by=admin.get("id"))
     await _db.ticketing_departments.insert_one(dept.model_dump())
@@ -109,7 +109,7 @@ async def create_department(data: DepartmentCreate, admin: dict = Depends(get_ad
 
 
 @router.get("/admin/departments/{dept_id}")
-async def get_department(dept_id: str, admin: dict = Depends(get_admin_dep)):
+async def get_department(dept_id: str, admin: dict = Depends(get_admin)):
     """Get department by ID"""
     dept = await _db.ticketing_departments.find_one({"id": dept_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not dept:
@@ -118,7 +118,7 @@ async def get_department(dept_id: str, admin: dict = Depends(get_admin_dep)):
 
 
 @router.put("/admin/departments/{dept_id}")
-async def update_department(dept_id: str, updates: DepartmentUpdate, admin: dict = Depends(get_admin_dep)):
+async def update_department(dept_id: str, updates: DepartmentUpdate, admin: dict = Depends(get_admin)):
     """Update a department"""
     dept = await _db.ticketing_departments.find_one({"id": dept_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not dept:
@@ -133,7 +133,7 @@ async def update_department(dept_id: str, updates: DepartmentUpdate, admin: dict
 
 
 @router.delete("/admin/departments/{dept_id}")
-async def delete_department(dept_id: str, admin: dict = Depends(get_admin_dep)):
+async def delete_department(dept_id: str, admin: dict = Depends(get_admin)):
     """Soft delete a department"""
     dept = await _db.ticketing_departments.find_one({"id": dept_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not dept:
@@ -153,7 +153,7 @@ async def delete_department(dept_id: str, admin: dict = Depends(get_admin_dep)):
 # ==================== SLA POLICIES ====================
 
 @router.get("/admin/sla-policies")
-async def list_sla_policies(include_inactive: bool = False, admin: dict = Depends(get_admin_dep)):
+async def list_sla_policies(include_inactive: bool = False, admin: dict = Depends(get_admin)):
     """List all SLA policies"""
     query = {"is_deleted": {"$ne": True}}
     if not include_inactive:
@@ -162,7 +162,7 @@ async def list_sla_policies(include_inactive: bool = False, admin: dict = Depend
 
 
 @router.post("/admin/sla-policies")
-async def create_sla_policy(data: SLAPolicyCreate, admin: dict = Depends(get_admin_dep)):
+async def create_sla_policy(data: SLAPolicyCreate, admin: dict = Depends(get_admin)):
     """Create a new SLA policy"""
     policy = SLAPolicy(**data.model_dump(), created_by=admin.get("id"))
     
@@ -175,7 +175,7 @@ async def create_sla_policy(data: SLAPolicyCreate, admin: dict = Depends(get_adm
 
 
 @router.get("/admin/sla-policies/{policy_id}")
-async def get_sla_policy(policy_id: str, admin: dict = Depends(get_admin_dep)):
+async def get_sla_policy(policy_id: str, admin: dict = Depends(get_admin)):
     """Get SLA policy by ID"""
     policy = await _db.ticketing_sla_policies.find_one({"id": policy_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not policy:
@@ -184,7 +184,7 @@ async def get_sla_policy(policy_id: str, admin: dict = Depends(get_admin_dep)):
 
 
 @router.put("/admin/sla-policies/{policy_id}")
-async def update_sla_policy(policy_id: str, updates: SLAPolicyUpdate, admin: dict = Depends(get_admin_dep)):
+async def update_sla_policy(policy_id: str, updates: SLAPolicyUpdate, admin: dict = Depends(get_admin)):
     """Update an SLA policy"""
     policy = await _db.ticketing_sla_policies.find_one({"id": policy_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not policy:
@@ -201,7 +201,7 @@ async def update_sla_policy(policy_id: str, updates: SLAPolicyUpdate, admin: dic
 
 
 @router.delete("/admin/sla-policies/{policy_id}")
-async def delete_sla_policy(policy_id: str, admin: dict = Depends(get_admin_dep)):
+async def delete_sla_policy(policy_id: str, admin: dict = Depends(get_admin)):
     """Soft delete an SLA policy"""
     policy = await _db.ticketing_sla_policies.find_one({"id": policy_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not policy:
@@ -215,13 +215,13 @@ async def delete_sla_policy(policy_id: str, admin: dict = Depends(get_admin_dep)
 # ==================== CATEGORIES ====================
 
 @router.get("/admin/categories")
-async def list_categories(admin: dict = Depends(get_admin_dep)):
+async def list_categories(admin: dict = Depends(get_admin)):
     """List all ticket categories"""
     return await _db.ticketing_categories.find({"is_deleted": {"$ne": True}}, {"_id": 0}).sort("sort_order", 1).to_list(100)
 
 
 @router.post("/admin/categories")
-async def create_category(data: dict, admin: dict = Depends(get_admin_dep)):
+async def create_category(data: dict, admin: dict = Depends(get_admin)):
     """Create a ticket category"""
     category = TicketCategory(
         name=data.get("name"), description=data.get("description"), parent_id=data.get("parent_id"),
@@ -234,7 +234,7 @@ async def create_category(data: dict, admin: dict = Depends(get_admin_dep)):
 
 
 @router.put("/admin/categories/{category_id}")
-async def update_category(category_id: str, data: dict, admin: dict = Depends(get_admin_dep)):
+async def update_category(category_id: str, data: dict, admin: dict = Depends(get_admin)):
     """Update a ticket category"""
     category = await _db.ticketing_categories.find_one({"id": category_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not category:
@@ -246,7 +246,7 @@ async def update_category(category_id: str, data: dict, admin: dict = Depends(ge
 
 
 @router.delete("/admin/categories/{category_id}")
-async def delete_category(category_id: str, admin: dict = Depends(get_admin_dep)):
+async def delete_category(category_id: str, admin: dict = Depends(get_admin)):
     """Soft delete a category"""
     await _db.ticketing_categories.update_one({"id": category_id}, {"$set": {"is_deleted": True}})
     return {"message": "Category deleted"}
@@ -259,7 +259,7 @@ async def list_tickets_admin(
     status: Optional[str] = None, priority: Optional[str] = None, department_id: Optional[str] = None,
     assigned_to: Optional[str] = None, company_id: Optional[str] = None, unassigned: bool = False,
     search: Optional[str] = None, limit: int = Query(50, le=200), skip: int = 0,
-    admin: dict = Depends(get_admin_dep)
+    admin: dict = Depends(get_admin)
 ):
     """List tickets with filters (admin view)"""
     query = {"is_deleted": {"$ne": True}}
@@ -285,7 +285,7 @@ async def list_tickets_admin(
 @router.post("/admin/tickets")
 async def create_ticket_admin(
     data: TicketCreate, requester_id: str = Query(..., description="Company user ID of requester"),
-    admin: dict = Depends(get_admin_dep)
+    admin: dict = Depends(get_admin)
 ):
     """Create a ticket on behalf of a customer (admin)"""
     requester = await _db.company_users.find_one({"id": requester_id, "is_deleted": {"$ne": True}}, {"_id": 0})
@@ -320,7 +320,7 @@ async def create_ticket_admin(
 
 
 @router.get("/admin/tickets/{ticket_id}")
-async def get_ticket_admin(ticket_id: str, admin: dict = Depends(get_admin_dep)):
+async def get_ticket_admin(ticket_id: str, admin: dict = Depends(get_admin)):
     """Get ticket details with thread"""
     ticket = await _db.tickets.find_one({"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not ticket:
@@ -335,7 +335,7 @@ async def get_ticket_admin(ticket_id: str, admin: dict = Depends(get_admin_dep))
 
 
 @router.put("/admin/tickets/{ticket_id}")
-async def update_ticket_admin(ticket_id: str, updates: TicketUpdate, admin: dict = Depends(get_admin_dep)):
+async def update_ticket_admin(ticket_id: str, updates: TicketUpdate, admin: dict = Depends(get_admin)):
     """Update ticket (admin)"""
     ticket = await _db.tickets.find_one({"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not ticket:
@@ -400,7 +400,7 @@ async def update_ticket_admin(ticket_id: str, updates: TicketUpdate, admin: dict
 
 
 @router.post("/admin/tickets/{ticket_id}/reply")
-async def reply_to_ticket_admin(ticket_id: str, reply: TicketReplyCreate, admin: dict = Depends(get_admin_dep)):
+async def reply_to_ticket_admin(ticket_id: str, reply: TicketReplyCreate, admin: dict = Depends(get_admin)):
     """Add a reply or internal note to a ticket (admin)"""
     ticket = await _db.tickets.find_one({"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not ticket:
@@ -427,7 +427,7 @@ async def reply_to_ticket_admin(ticket_id: str, reply: TicketReplyCreate, admin:
 
 
 @router.post("/admin/tickets/{ticket_id}/assign")
-async def assign_ticket(ticket_id: str, assignee_id: str, admin: dict = Depends(get_admin_dep)):
+async def assign_ticket(ticket_id: str, assignee_id: str, admin: dict = Depends(get_admin)):
     """Assign or reassign a ticket"""
     ticket = await _db.tickets.find_one({"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not ticket:
@@ -449,7 +449,7 @@ async def assign_ticket(ticket_id: str, assignee_id: str, admin: dict = Depends(
 # ==================== TICKETS - CUSTOMER PORTAL ====================
 
 @router.get("/portal/tickets")
-async def list_tickets_customer(status: Optional[str] = None, limit: int = Query(20, le=100), user: dict = Depends(get_company_user_dep)):
+async def list_tickets_customer(status: Optional[str] = None, limit: int = Query(20, le=100), user: dict = Depends(get_company_user)):
     """List tickets for current customer"""
     query = {"company_id": user.get("company_id"), "requester_id": user.get("id"), "is_deleted": {"$ne": True}}
     if status:
@@ -458,7 +458,7 @@ async def list_tickets_customer(status: Optional[str] = None, limit: int = Query
 
 
 @router.post("/portal/tickets")
-async def create_ticket_customer(data: TicketCreate, user: dict = Depends(get_company_user_dep)):
+async def create_ticket_customer(data: TicketCreate, user: dict = Depends(get_company_user)):
     """Create a ticket (customer portal)"""
     sla_policy = None
     if data.department_id:
@@ -485,7 +485,7 @@ async def create_ticket_customer(data: TicketCreate, user: dict = Depends(get_co
 
 
 @router.get("/portal/tickets/{ticket_id}")
-async def get_ticket_customer(ticket_id: str, user: dict = Depends(get_company_user_dep)):
+async def get_ticket_customer(ticket_id: str, user: dict = Depends(get_company_user)):
     """Get ticket details (customer view - no internal notes)"""
     ticket = await _db.tickets.find_one({"id": ticket_id, "company_id": user.get("company_id"), "requester_id": user.get("id"), "is_deleted": {"$ne": True}}, {"_id": 0, "internal_note_count": 0})
     if not ticket:
@@ -495,7 +495,7 @@ async def get_ticket_customer(ticket_id: str, user: dict = Depends(get_company_u
 
 
 @router.post("/portal/tickets/{ticket_id}/reply")
-async def reply_to_ticket_customer(ticket_id: str, reply: TicketReplyCreate, user: dict = Depends(get_company_user_dep)):
+async def reply_to_ticket_customer(ticket_id: str, reply: TicketReplyCreate, user: dict = Depends(get_company_user)):
     """Add a reply to a ticket (customer)"""
     ticket = await _db.tickets.find_one({"id": ticket_id, "company_id": user.get("company_id"), "requester_id": user.get("id"), "is_deleted": {"$ne": True}}, {"_id": 0})
     if not ticket:
@@ -520,7 +520,7 @@ async def reply_to_ticket_customer(ticket_id: str, reply: TicketReplyCreate, use
 # ==================== DASHBOARD & STATS ====================
 
 @router.get("/admin/dashboard")
-async def get_ticketing_dashboard(admin: dict = Depends(get_admin_dep)):
+async def get_ticketing_dashboard(admin: dict = Depends(get_admin)):
     """Get ticketing dashboard stats"""
     status_counts = {}
     for status in TICKET_STATUSES:
@@ -573,7 +573,7 @@ def calculate_sla_due_times(sla_policy, priority):
 # ==================== PUBLIC DEPARTMENTS (for customer portal) ====================
 
 @router.get("/portal/departments")
-async def list_departments_public(user: dict = Depends(get_company_user_dep)):
+async def list_departments_public(user: dict = Depends(get_company_user)):
     """List public departments for ticket creation"""
     return await _db.ticketing_departments.find(
         {"is_deleted": {"$ne": True}, "is_active": True, "is_public": True, "$or": [{"company_id": None}, {"company_id": user.get("company_id")}]},
