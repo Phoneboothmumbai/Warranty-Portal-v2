@@ -988,7 +988,7 @@ async def update_ticket_admin(ticket_id: str, updates: TicketUpdate, admin: dict
 
 
 @router.post("/admin/tickets/{ticket_id}/reply")
-async def reply_to_ticket_admin(ticket_id: str, reply: TicketReplyCreate, admin: dict = Depends(get_current_admin)):
+async def reply_to_ticket_admin(ticket_id: str, reply: TicketReplyCreate, background_tasks: BackgroundTasks, admin: dict = Depends(get_current_admin)):
     """Add a reply or internal note to a ticket (admin)"""
     ticket = await _db.tickets.find_one({"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not ticket:
@@ -1009,6 +1009,14 @@ async def reply_to_ticket_admin(ticket_id: str, reply: TicketReplyCreate, admin:
             sla_status["first_response_at"] = get_ist_isoformat()
             sla_status["response_met"] = not sla_status.get("response_breached", False)
             update_data["sla_status"] = sla_status
+        
+        # Send email notification (non-internal replies only)
+        from services.email_service import get_email_service
+        email_service = get_email_service()
+        if email_service and email_service.is_configured():
+            async def send_notification():
+                await email_service.send_ticket_notification(ticket, "reply_added", reply.content)
+            background_tasks.add_task(send_notification)
     
     await _db.tickets.update_one({"id": ticket_id}, {"$set": update_data})
     return entry
