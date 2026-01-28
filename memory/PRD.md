@@ -187,6 +187,9 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - `/api/company/amc-requests` - Company AMC request CRUD
 - `/api/company/notifications` - In-app notifications
 - `/api/admin/notifications` - Admin notifications
+- `/api/admin/services/options` - Service form dropdown options (OEM names, statuses, etc.)
+- `/api/admin/services` - Full CRUD with OEM service support
+- `/api/admin/services?service_category=oem_warranty_service` - Filter by category
 
 ## Test Credentials
 - Admin: admin@demo.com / admin123
@@ -200,6 +203,11 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - `/app/test_reports/iteration_11.json` - Sidebar & Asset Transfer tests (14/14 passed)
 - `/app/test_reports/iteration_12.json` - Security Enhancements & Part Details tests (21/21 passed)
 - `/app/test_reports/iteration_13.json` - AMC Self-Service Request System tests (25/25 passed, 100%)
+- `/app/test_reports/iteration_14.json` - Technician Panel for OEM Service Records (18/18 backend, 100%)
+
+## Deployment Scripts
+- `/app/deploy.sh` - One-command production deployment script
+- `/app/scripts/find_admin.py` - Find admin accounts in database
 
 ## File Structure
 ```
