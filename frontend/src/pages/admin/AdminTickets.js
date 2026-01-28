@@ -610,8 +610,18 @@ export default function AdminTickets() {
       </div>
 
       {/* Create Ticket Modal */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="max-w-2xl">
+      <Dialog open={showCreate} onOpenChange={(open) => {
+        setShowCreate(open);
+        if (!open) {
+          setSelectedCompanyId('');
+          setCompanyUsers([]);
+          setCreateData({ subject: '', description: '', department_id: '', priority: 'medium', category: '', tags: '', requester_id: '' });
+          setCcParticipants([]);
+          setNewCcEmail('');
+          setNewCcName('');
+        }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create New Ticket</DialogTitle>
           </DialogHeader>
