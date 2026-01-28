@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Plus, Search, Edit2, Trash2, Users as UsersIcon, MoreVertical, Building2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Users as UsersIcon, MoreVertical, Building2, ChevronDown, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
@@ -8,6 +8,91 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// Searchable Select Component
+const SearchableCompanySelect = ({ companies, value, onChange, disabled = false }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef(null);
+  
+  const filteredOptions = companies.filter(c => 
+    (c.name || '').toLowerCase().includes(search.toLowerCase())
+  );
+  
+  const selectedCompany = companies.find(c => c.id === value);
+  
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+  
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={`w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-left flex items-center justify-between ${disabled ? 'bg-slate-100 cursor-not-allowed' : 'bg-white hover:border-slate-300'}`}
+      >
+        <span className="flex items-center gap-2 truncate">
+          <Building2 className="h-4 w-4 text-slate-400 flex-shrink-0" />
+          {selectedCompany ? (
+            <span className="text-slate-900">{selectedCompany.name}</span>
+          ) : (
+            <span className="text-slate-400">Select Company</span>
+          )}
+        </span>
+        <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-64 overflow-hidden">
+          <div className="p-2 border-b border-slate-100">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search companies..."
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+              />
+            </div>
+          </div>
+          <div className="overflow-y-auto max-h-48">
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-4 text-sm text-slate-500 text-center">
+                {companies.length === 0 ? 'No companies available' : 'No matches found'}
+              </div>
+            ) : (
+              filteredOptions.map(c => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(c.id);
+                    setIsOpen(false);
+                    setSearch('');
+                  }}
+                  className={`w-full px-3 py-2 text-sm text-left hover:bg-slate-50 flex items-center justify-between ${value === c.id ? 'bg-blue-50' : ''}`}
+                >
+                  <span className="font-medium text-slate-900">{c.name}</span>
+                  {value === c.id && <Check className="h-4 w-4 text-blue-600" />}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Users = () => {
   const { token } = useAuth();
