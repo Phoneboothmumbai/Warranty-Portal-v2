@@ -15,6 +15,7 @@ const navGroups = [
     id: 'main',
     items: [
       { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { path: '/admin/tickets', label: 'Support Tickets', icon: Inbox },
       { path: '/admin/renewal-alerts', label: 'Renewal Alerts', icon: AlertTriangle },
       { path: '/admin/credentials', label: 'Credentials', icon: Lock },
     ]
