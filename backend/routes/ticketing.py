@@ -1299,12 +1299,11 @@ async def create_public_ticket(data: PublicTicketCreate):
         "assigned_to": auto_assign_to,
         "assigned_to_name": assigned_to_name,
         "assigned_at": get_ist_isoformat() if auto_assign_to else None,
-        "assigned_to_name": None,
-        "assigned_at": None,
         "watchers": [],
         "sla_status": sla_status,
         "tags": [],
         "category": data.category,
+        "form_data": form_data_snapshot,
         "custom_fields": {},
         "device_id": None,
         "service_id": None,
@@ -1328,7 +1327,7 @@ async def create_public_ticket(data: PublicTicketCreate):
     # Create initial thread entry
     await create_thread_entry(
         ticket_id, "system_event", "public", data.name, "customer",
-        event_type="ticket_created", event_data={"source": "public_portal"},
+        event_type="ticket_created", event_data={"source": "public_portal", "help_topic": help_topic.get("name") if help_topic else None},
         author_email=data.email
     )
     
