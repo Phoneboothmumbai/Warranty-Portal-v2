@@ -618,33 +618,34 @@ export default function AdminTickets() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1">Company *</label>
-                <select
-                  required
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
-                  onChange={(e) => {
+                <SearchableSelect
+                  options={companies}
+                  value={selectedCompanyId}
+                  onChange={(val) => {
+                    setSelectedCompanyId(val);
                     setCreateData({ ...createData, requester_id: '' });
-                    fetchCompanyUsers(e.target.value);
+                    fetchCompanyUsers(val);
                   }}
-                >
-                  <option value="">Select Company</option>
-                  {companies.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                  placeholder="Search & select company..."
+                  displayKey="name"
+                  valueKey="id"
+                  icon={Building2}
+                />
+                {!selectedCompanyId && <input type="hidden" name="company_required" required />}
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1">Requester *</label>
-                <select
-                  required
+                <SearchableSelect
+                  options={companyUsers}
                   value={createData.requester_id}
-                  onChange={(e) => setCreateData({ ...createData, requester_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
-                >
-                  <option value="">Select Requester</option>
-                  {companyUsers.map(u => (
-                    <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-                  ))}
-                </select>
+                  onChange={(val) => setCreateData({ ...createData, requester_id: val })}
+                  placeholder={selectedCompanyId ? "Search & select requester..." : "Select company first"}
+                  displayKey="name"
+                  valueKey="id"
+                  disabled={!selectedCompanyId}
+                  icon={User}
+                />
+                {!createData.requester_id && <input type="hidden" name="requester_required" required />}
               </div>
             </div>
 
