@@ -420,12 +420,11 @@ export default function PublicSupportPortal() {
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   data-testid="select-priority"
                 >
-                    <option value="low">Low - General inquiry</option>
-                    <option value="medium">Medium - Standard request</option>
-                    <option value="high">High - Urgent issue</option>
-                    <option value="critical">Critical - System down</option>
-                  </select>
-                </div>
+                  <option value="low">Low - General inquiry</option>
+                  <option value="medium">Medium - Standard request</option>
+                  <option value="high">High - Urgent issue</option>
+                  <option value="critical">Critical - System down</option>
+                </select>
               </div>
 
               {/* Subject */}
