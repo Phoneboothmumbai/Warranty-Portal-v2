@@ -9205,6 +9205,10 @@ from routes.ticketing import router as ticketing_router, init_ticketing_router
 init_ticketing_router(db, get_current_admin, get_current_company_user, log_audit)
 app.include_router(ticketing_router, prefix="/api")
 
+# Initialize Email Service for Ticketing
+from services.email_service import init_email_service
+init_email_service(db)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
