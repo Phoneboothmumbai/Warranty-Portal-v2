@@ -451,12 +451,162 @@ export default function TicketingSettings() {
               <span className={`text-xs px-2 py-0.5 rounded-full ${
                 activeTab === tab.id ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'
               }`}>
-                {tab.count}
+                {tab.count !== null && tab.count}
               </span>
             </button>
           ))}
         </div>
       </div>
+
+      {/* Email Tab */}
+      {activeTab === 'email' && (
+        <div className="space-y-6">
+          <p className="text-sm text-slate-500">
+            Configure email integration to send notifications to ticket participants and receive tickets via email.
+          </p>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Connection Status */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6">
+              <h3 className="font-medium text-slate-900 mb-4 flex items-center gap-2">
+                <Shield className="h-5 w-5 text-blue-600" />
+                Connection Status
+              </h3>
+              
+              {emailStatus ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600">Status</span>
+                    {emailStatus.is_configured ? (
+                      <span className="flex items-center gap-1 text-emerald-600">
+                        <CheckCircle2 className="h-4 w-4" /> Configured
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-amber-600">
+                        <AlertTriangle className="h-4 w-4" /> Not Configured
+                      </span>
+                    )}
+                  </div>
+                  
+                  {emailStatus.is_configured && (
+                    <>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500">Email Account</span>
+                        <span className="font-mono text-slate-700">{emailStatus.email_user}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500">SMTP Server</span>
+                        <span className="font-mono text-slate-700">{emailStatus.smtp_host}:{emailStatus.smtp_port}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500">IMAP Server</span>
+                        <span className="font-mono text-slate-700">{emailStatus.imap_host}:{emailStatus.imap_port}</span>
+                      </div>
+                    </>
+                  )}
+                  
+                  <Button 
+                    onClick={handleTestEmailConnection} 
+                    disabled={emailTesting || !emailStatus.is_configured}
+                    className="w-full mt-4"
+                    variant="outline"
+                    data-testid="test-email-btn"
+                  >
+                    {emailTesting ? (
+                      <><RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Testing...</>
+                    ) : (
+                      <><Zap className="h-4 w-4 mr-2" /> Test Connection</>
+                    )}
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-center py-4 text-slate-400">
+                  <p>Loading email status...</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Email Actions */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6">
+              <h3 className="font-medium text-slate-900 mb-4 flex items-center gap-2">
+                <Layers className="h-5 w-5 text-purple-600" />
+                Email Actions
+              </h3>
+              
+              <div className="space-y-4">
+                {/* Sync Emails */}
+                <div className="p-4 bg-slate-50 rounded-lg">
+                  <h4 className="font-medium text-sm text-slate-900 mb-2">Sync Incoming Emails</h4>
+                  <p className="text-xs text-slate-500 mb-3">
+                    Fetch unread emails from the inbox and create/update tickets automatically.
+                  </p>
+                  <Button 
+                    onClick={handleSyncEmails} 
+                    disabled={emailSyncing || !emailStatus?.is_configured}
+                    size="sm"
+                    data-testid="sync-emails-btn"
+                  >
+                    {emailSyncing ? (
+                      <><RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Syncing...</>
+                    ) : (
+                      <><RefreshCw className="h-4 w-4 mr-2" /> Sync Now</>
+                    )}
+                  </Button>
+                </div>
+                
+                {/* Send Test Email */}
+                <div className="p-4 bg-slate-50 rounded-lg">
+                  <h4 className="font-medium text-sm text-slate-900 mb-2">Send Test Email</h4>
+                  <p className="text-xs text-slate-500 mb-3">
+                    Send a test email to verify SMTP is working correctly.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={testEmailAddress}
+                      onChange={(e) => setTestEmailAddress(e.target.value)}
+                      placeholder="recipient@example.com"
+                      className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                      data-testid="test-email-input"
+                    />
+                    <Button 
+                      onClick={handleSendTestEmail} 
+                      disabled={!emailStatus?.is_configured || !testEmailAddress}
+                      size="sm"
+                      data-testid="send-test-email-btn"
+                    >
+                      Send
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Configuration Instructions */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+            <h3 className="font-medium text-blue-900 mb-3">Configuration Instructions</h3>
+            <div className="text-sm text-blue-800 space-y-2">
+              <p>To enable email integration with Google Workspace:</p>
+              <ol className="list-decimal list-inside space-y-1 ml-2">
+                <li>Enable 2-Step Verification on your Google account</li>
+                <li>Generate an App Password at <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="underline">Google App Passwords</a></li>
+                <li>Set the following environment variables in your server:</li>
+              </ol>
+              <pre className="bg-blue-100 p-3 rounded-lg mt-2 text-xs overflow-x-auto">
+{`EMAIL_USER=your-email@yourdomain.com
+EMAIL_PASSWORD=your-app-password
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+IMAP_HOST=imap.gmail.com
+IMAP_PORT=993
+EMAIL_FROM_NAME=Support Team
+SYSTEM_BASE_URL=https://your-support-portal.com`}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Help Topics Tab */}
       {activeTab === 'help-topics' && (
