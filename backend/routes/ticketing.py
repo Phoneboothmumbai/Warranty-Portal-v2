@@ -39,11 +39,14 @@ def init_ticketing_router(database, admin_dependency, company_user_dependency, a
     _log_audit = audit_function
 
 
-def get_admin_dep():
-    return _get_current_admin
+# Wrapper dependency functions that call the injected dependencies
+async def get_admin():
+    """Get current admin user - wrapper for injected dependency"""
+    return await _get_current_admin()
 
-def get_company_user_dep():
-    return _get_current_company_user
+async def get_company_user():
+    """Get current company user - wrapper for injected dependency"""
+    return await _get_current_company_user()
 
 
 # ==================== ENUMS ENDPOINT ====================
