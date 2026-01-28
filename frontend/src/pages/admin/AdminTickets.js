@@ -227,13 +227,19 @@ export default function AdminTickets() {
       setCompanyUsers([]);
       return;
     }
+    setLoadingCompanyUsers(true);
     try {
       const res = await axios.get(`${API}/admin/company-users?company_id=${companyId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCompanyUsers(res.data || []);
+      console.log('Company users loaded:', res.data?.length || 0);
     } catch (error) {
+      console.error('Failed to load company users:', error);
       toast.error('Failed to load company users');
+      setCompanyUsers([]);
+    } finally {
+      setLoadingCompanyUsers(false);
     }
   };
 
