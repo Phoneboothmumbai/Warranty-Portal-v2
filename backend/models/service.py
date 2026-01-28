@@ -339,6 +339,9 @@ class ServiceHistoryCreate(BaseModel):
     amc_contract_id: Optional[str] = None
     billing_type: str = "covered"
     chargeable_reason: Optional[str] = None
+    
+    # Stage initialization (optional - auto-initialized if not provided)
+    initialize_stages: bool = True  # Auto-create default stages on creation
 
 
 class ServiceHistoryUpdate(BaseModel):
