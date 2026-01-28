@@ -569,3 +569,208 @@ async def list_departments_public(user: dict = Depends(get_current_company_user)
         {"is_deleted": {"$ne": True}, "is_active": True, "is_public": True, "$or": [{"company_id": None}, {"company_id": user.get("company_id")}]},
         {"_id": 0, "id": 1, "name": 1, "description": 1}
     ).sort("sort_order", 1).to_list(50)
+
+
+# ==================== PUBLIC TICKET PORTAL (No Auth Required) ====================
+
+class PublicTicketCreate(BaseModel):
+    """Create ticket from public portal - no auth required"""
+    name: str
+    email: str
+    phone: Optional[str] = None
+    subject: str
+    description: str
+    department_id: Optional[str] = None
+    priority: str = "medium"
+    category: Optional[str] = None
+    attachments: List[dict] = []
+
+
+@router.get("/public/departments")
+async def list_departments_for_public():
+    """List public departments for anonymous ticket creation"""
+    return await _db.ticketing_departments.find(
+        {"is_deleted": {"$ne": True}, "is_active": True, "is_public": True, "company_id": None},
+        {"_id": 0, "id": 1, "name": 1, "description": 1}
+    ).sort("sort_order", 1).to_list(50)
+
+
+@router.get("/public/categories")
+async def list_categories_for_public():
+    """List categories for anonymous ticket creation"""
+    return await _db.ticketing_categories.find(
+        {"is_deleted": {"$ne": True}, "is_active": True, "company_id": None},
+        {"_id": 0, "id": 1, "name": 1, "description": 1, "auto_department_id": 1, "auto_priority": 1}
+    ).sort("sort_order", 1).to_list(50)
+
+
+@router.post("/public/tickets")
+async def create_public_ticket(data: PublicTicketCreate):
+    """Create a ticket from the public portal (no authentication required)"""
+    # Validate email format
+    import re
+    email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    if not re.match(email_regex, data.email):
+        raise HTTPException(status_code=400, detail="Invalid email format")
+    
+    # Get department and SLA
+    sla_policy = None
+    dept = None
+    if data.department_id:
+        dept = await _db.ticketing_departments.find_one(
+            {"id": data.department_id, "is_deleted": {"$ne": True}, "is_public": True, "company_id": None},
+            {"_id": 0}
+        )
+        if dept and dept.get("default_sla_id"):
+            sla_policy = await _db.ticketing_sla_policies.find_one({"id": dept["default_sla_id"]}, {"_id": 0})
+    
+    if not sla_policy:
+        sla_policy = await _db.ticketing_sla_policies.find_one(
+            {"is_default": True, "is_deleted": {"$ne": True}}, {"_id": 0}
+        )
+    
+    sla_status = calculate_sla_due_times(sla_policy, data.priority) if sla_policy else None
+    
+    # Create ticket
+    ticket_id = str(uuid.uuid4())
+    ticket_number = f"TKT-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}"
+    
+    ticket = {
+        "id": ticket_id,
+        "ticket_number": ticket_number,
+        "company_id": "PUBLIC",  # Special marker for public tickets
+        "source": "portal",
+        "department_id": data.department_id,
+        "subject": data.subject,
+        "description": data.description,
+        "status": "open",
+        "priority": data.priority,
+        "priority_order": {"critical": 4, "high": 3, "medium": 2, "low": 1}.get(data.priority, 2),
+        "requester_id": "public",
+        "requester_name": data.name,
+        "requester_email": data.email,
+        "requester_phone": data.phone,
+        "assigned_to": None,
+        "assigned_to_name": None,
+        "assigned_at": None,
+        "watchers": [],
+        "sla_status": sla_status,
+        "tags": [],
+        "category": data.category,
+        "custom_fields": {},
+        "device_id": None,
+        "service_id": None,
+        "attachments": data.attachments,
+        "reply_count": 0,
+        "internal_note_count": 0,
+        "created_at": get_ist_isoformat(),
+        "updated_at": get_ist_isoformat(),
+        "first_response_at": None,
+        "resolved_at": None,
+        "closed_at": None,
+        "last_customer_reply_at": None,
+        "last_staff_reply_at": None,
+        "created_by": "public",
+        "created_by_type": "customer",
+        "is_deleted": False
+    }
+    
+    await _db.tickets.insert_one(ticket)
+    
+    # Create initial thread entry
+    await create_thread_entry(
+        ticket_id, "system_event", "public", data.name, "customer",
+        event_type="ticket_created", event_data={"source": "public_portal"},
+        author_email=data.email
+    )
+    
+    # Return ticket info (excluding internal fields)
+    return {
+        "id": ticket_id,
+        "ticket_number": ticket_number,
+        "subject": data.subject,
+        "status": "open",
+        "created_at": ticket["created_at"],
+        "message": "Your ticket has been submitted successfully. Please save your ticket number for future reference."
+    }
+
+
+@router.get("/public/tickets/{ticket_number}")
+async def get_public_ticket_status(ticket_number: str, email: str = Query(..., description="Email used when creating the ticket")):
+    """Check status of a public ticket by ticket number and email"""
+    ticket = await _db.tickets.find_one(
+        {
+            "ticket_number": ticket_number,
+            "requester_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"},
+            "is_deleted": {"$ne": True}
+        },
+        {"_id": 0, "internal_note_count": 0}
+    )
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found. Please check your ticket number and email.")
+    
+    # Get public thread entries (exclude internal notes)
+    thread = await _db.ticket_thread.find(
+        {"ticket_id": ticket["id"], "is_internal": {"$ne": True}, "is_hidden": {"$ne": True}},
+        {"_id": 0}
+    ).sort("created_at", 1).to_list(100)
+    
+    # Get department name
+    department = None
+    if ticket.get("department_id"):
+        department = await _db.ticketing_departments.find_one(
+            {"id": ticket["department_id"]}, {"_id": 0, "name": 1}
+        )
+    
+    return {
+        **ticket,
+        "thread": thread,
+        "department_name": department.get("name") if department else None
+    }
+
+
+@router.post("/public/tickets/{ticket_number}/reply")
+async def reply_to_public_ticket(ticket_number: str, content: str = Query(...), email: str = Query(...)):
+    """Add a reply to a public ticket"""
+    ticket = await _db.tickets.find_one(
+        {
+            "ticket_number": ticket_number,
+            "requester_email": {"$regex": f"^{re.escape(email)}$", "$options": "i"},
+            "is_deleted": {"$ne": True}
+        },
+        {"_id": 0}
+    )
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    if ticket.get("status") in ["closed"]:
+        raise HTTPException(status_code=400, detail="Cannot reply to a closed ticket")
+    
+    # Create reply entry
+    entry = await create_thread_entry(
+        ticket["id"], "customer_message", "public", ticket.get("requester_name", "Customer"), "customer",
+        content=content, is_internal=False, author_email=email
+    )
+    
+    # Update ticket
+    update_data = {
+        "updated_at": get_ist_isoformat(),
+        "last_customer_reply_at": get_ist_isoformat(),
+        "reply_count": ticket.get("reply_count", 0) + 1
+    }
+    
+    # If waiting on customer, reopen
+    if ticket.get("status") == "waiting_on_customer":
+        update_data["status"] = "open"
+        sla_status = ticket.get("sla_status") or {}
+        if sla_status.get("paused_at"):
+            paused_duration = (datetime.now() - datetime.fromisoformat(sla_status["paused_at"].replace("Z", "+00:00"))).total_seconds()
+            sla_status["total_paused_seconds"] = sla_status.get("total_paused_seconds", 0) + int(paused_duration)
+        sla_status["is_paused"], sla_status["paused_at"] = False, None
+        update_data["sla_status"] = sla_status
+    
+    await _db.tickets.update_one({"id": ticket["id"]}, {"$set": update_data})
+    
+    return {"message": "Reply added successfully", "entry_id": entry.get("id")}
