@@ -784,11 +784,14 @@ async def list_tickets_admin(
 
 @router.post("/admin/tickets")
 async def create_ticket_admin(
-    data: TicketCreate, requester_id: str = Query(..., description="Company user ID of requester"),
+    data: TicketCreate, requester_id: str = Query(..., description="Employee or Company user ID of requester"),
     admin: dict = Depends(get_current_admin)
 ):
     """Create a ticket on behalf of a customer (admin) with Help Topic auto-routing"""
-    requester = await _db.company_users.find_one({"id": requester_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    # First try to find in company_employees, then fall back to company_users
+    requester = await _db.company_employees.find_one({"id": requester_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not requester:
+        requester = await _db.company_users.find_one({"id": requester_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not requester:
         raise HTTPException(status_code=404, detail="Requester not found")
     
