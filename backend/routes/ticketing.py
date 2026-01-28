@@ -306,7 +306,7 @@ async def create_ticket_admin(
     await _db.tickets.insert_one(ticket_dict)
     await create_thread_entry(ticket.id, "system_event", admin.get("id"), admin.get("name"), "admin", event_type="ticket_created", event_data={"created_by_staff": True})
     await _log_audit("ticket", ticket.id, "create", data.model_dump(), admin)
-    return ticket_dict
+    return await _db.tickets.find_one({"id": ticket.id}, {"_id": 0})
 
 
 @router.get("/admin/tickets/{ticket_id}")
