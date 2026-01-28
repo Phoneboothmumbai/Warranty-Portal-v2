@@ -161,9 +161,11 @@ export default function PublicSupportPortal() {
   const resetForm = () => {
     setForm({
       name: '', email: '', phone: '', subject: '', description: '',
-      department_id: '', category: '', priority: 'medium'
+      help_topic_id: '', department_id: '', priority: 'medium', form_data: {}
     });
     setSubmittedTicket(null);
+    setSelectedTopic(null);
+    setCustomForm(null);
   };
 
   return (
