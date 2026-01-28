@@ -1142,6 +1142,15 @@ const ServiceHistory = () => {
                 <p className="text-slate-900 bg-slate-50 p-3 rounded-lg">{selectedService.action_taken}</p>
               </div>
 
+              {/* Stage Timeline */}
+              {selectedService.stages && selectedService.stages.length > 0 && (
+                <StageTimeline 
+                  service={selectedService} 
+                  onStageUpdate={handleStageUpdate}
+                  disabled={selectedService.is_closed}
+                />
+              )}
+
               {/* OEM Details */}
               {selectedService.oem_details && (
                 <div className="bg-purple-50 rounded-lg p-4 space-y-3">
