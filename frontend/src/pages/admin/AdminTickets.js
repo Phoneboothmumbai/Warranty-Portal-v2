@@ -118,6 +118,33 @@ export default function AdminTickets() {
     }
   };
 
+  const addCcParticipant = () => {
+    if (!newCcEmail.trim()) {
+      toast.error('Please enter an email address');
+      return;
+    }
+    // Basic email validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCcEmail.trim())) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+    // Check for duplicates
+    if (ccParticipants.some(p => p.email.toLowerCase() === newCcEmail.trim().toLowerCase())) {
+      toast.error('This email is already added');
+      return;
+    }
+    setCcParticipants([...ccParticipants, {
+      email: newCcEmail.trim(),
+      name: newCcName.trim() || newCcEmail.trim().split('@')[0]
+    }]);
+    setNewCcEmail('');
+    setNewCcName('');
+  };
+
+  const removeCcParticipant = (email) => {
+    setCcParticipants(ccParticipants.filter(p => p.email !== email));
+  };
+
   const handleCreateTicket = async (e) => {
     e.preventDefault();
     if (!createData.requester_id) {
