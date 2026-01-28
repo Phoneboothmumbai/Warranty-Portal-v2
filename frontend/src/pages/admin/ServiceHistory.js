@@ -1,16 +1,111 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { 
   Plus, Search, Edit2, Trash2, Wrench, MoreVertical, 
   Calendar, FileText, Paperclip, Download, X, Clock,
   ChevronDown, Filter, Laptop, Building2, AlertTriangle,
-  CheckCircle2, ExternalLink, Shield, Upload
+  CheckCircle2, ExternalLink, Shield, Upload, Check
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { toast } from 'sonner';
+
+// Searchable Device Selector Component
+const SearchableDeviceSelect = ({ devices, value, onChange, disabled }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const wrapperRef = useRef(null);
+  
+  const selectedDevice = devices.find(d => d.id === value);
+  
+  const filteredDevices = devices.filter(d => {
+    const searchLower = search.toLowerCase();
+    return (
+      d.brand?.toLowerCase().includes(searchLower) ||
+      d.model?.toLowerCase().includes(searchLower) ||
+      d.serial_number?.toLowerCase().includes(searchLower) ||
+      d.asset_tag?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <button
+        type="button"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={`w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-left flex items-center justify-between ${
+          disabled ? 'bg-slate-100 cursor-not-allowed' : 'bg-white cursor-pointer hover:border-slate-300'
+        }`}
+      >
+        <span className={selectedDevice ? 'text-slate-900' : 'text-slate-400'}>
+          {selectedDevice 
+            ? `${selectedDevice.brand} ${selectedDevice.model} - ${selectedDevice.serial_number}`
+            : 'Select Device'
+          }
+        </span>
+        <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-64 overflow-hidden">
+          <div className="p-2 border-b border-slate-100">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by brand, model, serial..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+              />
+            </div>
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {filteredDevices.length > 0 ? (
+              filteredDevices.map(device => (
+                <button
+                  key={device.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(device.id);
+                    setIsOpen(false);
+                    setSearch('');
+                  }}
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-slate-50 flex items-center justify-between ${
+                    device.id === value ? 'bg-blue-50' : ''
+                  }`}
+                >
+                  <div>
+                    <p className="font-medium text-slate-900">{device.brand} {device.model}</p>
+                    <p className="text-xs text-slate-500">{device.serial_number} {device.asset_tag ? `• ${device.asset_tag}` : ''}</p>
+                  </div>
+                  {device.id === value && <Check className="h-4 w-4 text-blue-600" />}
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-4 text-sm text-slate-500 text-center">No devices found</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
