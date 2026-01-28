@@ -99,7 +99,7 @@ export default function TicketingSettings() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [deptRes, slaRes, topicsRes, formsRes, cannedRes, adminsRes] = await Promise.all([
+      const [deptRes, slaRes, topicsRes, formsRes, cannedRes, adminsRes, emailRes] = await Promise.all([
         axios.get(`${API}/ticketing/admin/departments`, { headers }),
         axios.get(`${API}/ticketing/admin/sla-policies`, { headers }),
         axios.get(`${API}/ticketing/admin/help-topics?include_inactive=true`, { headers }),
