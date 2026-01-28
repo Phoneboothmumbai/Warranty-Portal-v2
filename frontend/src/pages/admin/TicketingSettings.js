@@ -1081,7 +1081,7 @@ export default function TicketingSettings() {
                 ))}
                 {formBuilderData.fields.length === 0 && (
                   <div className="text-center py-8 text-slate-400 border border-dashed border-slate-200 rounded-lg">
-                    No fields yet. Click "Add Field" to start building your form.
+                    No fields yet. Click &quot;Add Field&quot; to start building your form.
                   </div>
                 )}
               </div>
