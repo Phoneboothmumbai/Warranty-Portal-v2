@@ -159,6 +159,7 @@ export default function AdminTickets() {
     requester_id: ''
   });
   const [creating, setCreating] = useState(false);
+  const [loadingCompanyUsers, setLoadingCompanyUsers] = useState(false);
   
   // CC Participants for new ticket
   const [ccParticipants, setCcParticipants] = useState([]);
