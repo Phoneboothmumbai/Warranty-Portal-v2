@@ -4,11 +4,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Send, Clock, User, Building2, AlertTriangle, 
   CheckCircle2, MessageSquare, Lock, RefreshCw, Edit2,
-  ChevronDown, Paperclip, Tag, Calendar, Timer, Users
+  ChevronDown, Paperclip, Tag, Calendar, Timer, Users,
+  UserPlus, X, Mail, Phone, FileText, Zap
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../components/ui/dialog';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
