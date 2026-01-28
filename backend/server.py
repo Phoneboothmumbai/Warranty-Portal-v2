@@ -3273,6 +3273,187 @@ async def update_service(service_id: str, updates: ServiceHistoryUpdate, admin: 
     await log_audit("service", service_id, "update", changes, admin)
     return await db.service_history.find_one({"id": service_id}, {"_id": 0})
 
+
+# ==================== STAGE MANAGEMENT ENDPOINTS ====================
+@api_router.put("/admin/services/{service_id}/stages/{stage_key}")
+async def update_service_stage(
+    service_id: str, 
+    stage_key: str, 
+    stage_update: dict,
+    admin: dict = Depends(get_current_admin)
+):
+    """Update a specific stage in the service timeline"""
+    service = await db.service_history.find_one({"id": service_id}, {"_id": 0})
+    if not service:
+        raise HTTPException(status_code=404, detail="Service record not found")
+    
+    if service.get("is_closed"):
+        raise HTTPException(status_code=400, detail="Closed service records cannot be modified")
+    
+    stages = service.get("stages", [])
+    stage_history = service.get("stage_history", [])
+    
+    # Find the stage to update
+    stage_found = False
+    for i, stage in enumerate(stages):
+        if stage.get("stage_key") == stage_key:
+            stage_found = True
+            old_status = stage.get("status")
+            new_status = stage_update.get("status", old_status)
+            
+            # Update stage fields
+            stage["status"] = new_status
+            stage["notes"] = stage_update.get("notes", stage.get("notes"))
+            stage["metadata"] = stage_update.get("metadata", stage.get("metadata"))
+            stage["updated_by"] = admin.get("id")
+            stage["updated_by_name"] = admin.get("name")
+            stage["timestamp"] = get_ist_isoformat()
+            
+            # Handle status transitions
+            if new_status == "in_progress" and not stage.get("started_at"):
+                stage["started_at"] = get_ist_isoformat()
+            elif new_status == "completed" and not stage.get("completed_at"):
+                stage["completed_at"] = get_ist_isoformat()
+            
+            # Add attachments if provided
+            if stage_update.get("attachments"):
+                existing_attachments = stage.get("attachments", [])
+                stage["attachments"] = existing_attachments + stage_update.get("attachments", [])
+            
+            stages[i] = stage
+            
+            # Record in history
+            stage_history.append({
+                "stage_key": stage_key,
+                "action": new_status,
+                "old_status": old_status,
+                "notes": stage_update.get("notes"),
+                "timestamp": get_ist_isoformat(),
+                "updated_by": admin.get("id"),
+                "updated_by_name": admin.get("name")
+            })
+            break
+    
+    if not stage_found:
+        raise HTTPException(status_code=404, detail=f"Stage '{stage_key}' not found")
+    
+    # Update current stage to the latest in-progress or completed stage
+    current_stage = stage_key
+    for stage in sorted(stages, key=lambda x: x.get("order", 0), reverse=True):
+        if stage.get("status") in ["in_progress", "completed"]:
+            current_stage = stage.get("stage_key")
+            break
+    
+    # Update the service record
+    await db.service_history.update_one(
+        {"id": service_id},
+        {
+            "$set": {
+                "stages": stages,
+                "stage_history": stage_history,
+                "current_stage": current_stage,
+                "updated_at": get_ist_isoformat()
+            }
+        }
+    )
+    
+    await log_audit("service", service_id, "stage_update", {
+        "stage_key": stage_key,
+        "new_status": stage_update.get("status")
+    }, admin)
+    
+    return await db.service_history.find_one({"id": service_id}, {"_id": 0})
+
+
+@api_router.post("/admin/services/{service_id}/stages")
+async def add_custom_stage(
+    service_id: str,
+    stage_data: dict,
+    admin: dict = Depends(get_current_admin)
+):
+    """Add a custom stage to the service timeline"""
+    service = await db.service_history.find_one({"id": service_id}, {"_id": 0})
+    if not service:
+        raise HTTPException(status_code=404, detail="Service record not found")
+    
+    if service.get("is_closed"):
+        raise HTTPException(status_code=400, detail="Closed service records cannot be modified")
+    
+    stages = service.get("stages", [])
+    stage_history = service.get("stage_history", [])
+    
+    # Validate required fields
+    if not stage_data.get("stage_label"):
+        raise HTTPException(status_code=400, detail="Stage label is required")
+    
+    # Generate stage key from label if not provided
+    stage_key = stage_data.get("stage_key") or stage_data["stage_label"].lower().replace(" ", "_")
+    
+    # Check for duplicate stage keys
+    if any(s.get("stage_key") == stage_key for s in stages):
+        raise HTTPException(status_code=400, detail=f"Stage '{stage_key}' already exists")
+    
+    # Determine order (insert after specified position or at end)
+    insert_after = stage_data.get("insert_after_stage")
+    max_order = max((s.get("order", 0) for s in stages), default=0)
+    
+    if insert_after:
+        # Find the stage to insert after
+        for i, s in enumerate(stages):
+            if s.get("stage_key") == insert_after:
+                new_order = s.get("order", 0) + 0.5
+                break
+        else:
+            new_order = max_order + 1
+    else:
+        new_order = max_order + 1
+    
+    # Create new stage
+    new_stage = {
+        "id": str(uuid.uuid4()),
+        "stage_key": stage_key,
+        "stage_label": stage_data["stage_label"],
+        "order": new_order,
+        "status": stage_data.get("status", "pending"),
+        "timestamp": get_ist_isoformat() if stage_data.get("status") == "completed" else None,
+        "started_at": get_ist_isoformat() if stage_data.get("status") in ["in_progress", "completed"] else None,
+        "completed_at": get_ist_isoformat() if stage_data.get("status") == "completed" else None,
+        "notes": stage_data.get("notes"),
+        "updated_by": admin.get("id"),
+        "updated_by_name": admin.get("name"),
+        "attachments": [],
+        "metadata": stage_data.get("metadata"),
+        "is_custom": True
+    }
+    
+    stages.append(new_stage)
+    stages.sort(key=lambda x: x.get("order", 0))
+    
+    # Record in history
+    stage_history.append({
+        "stage_key": stage_key,
+        "action": "added",
+        "timestamp": get_ist_isoformat(),
+        "updated_by": admin.get("id"),
+        "updated_by_name": admin.get("name")
+    })
+    
+    await db.service_history.update_one(
+        {"id": service_id},
+        {
+            "$set": {
+                "stages": stages,
+                "stage_history": stage_history,
+                "updated_at": get_ist_isoformat()
+            }
+        }
+    )
+    
+    await log_audit("service", service_id, "stage_add", {"stage_key": stage_key}, admin)
+    
+    return await db.service_history.find_one({"id": service_id}, {"_id": 0})
+
+
 @api_router.post("/admin/services/{service_id}/attachments")
 async def upload_service_attachment(
     service_id: str, 
