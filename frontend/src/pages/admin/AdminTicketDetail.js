@@ -536,6 +536,39 @@ export default function AdminTicketDetail() {
             </div>
           </div>
 
+          {/* Participants (CC) */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-medium text-slate-900 flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                CC / Participants
+              </h3>
+              <Button size="sm" variant="ghost" onClick={() => setShowAddParticipant(true)} data-testid="add-participant-btn">
+                <UserPlus className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {ticket.participants && ticket.participants.length > 0 ? (
+                ticket.participants.map(p => (
+                  <div key={p.id} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
+                    <div className="text-sm">
+                      <p className="font-medium text-slate-900">{p.name}</p>
+                      <p className="text-xs text-slate-500">{p.email}</p>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveParticipant(p.id)}
+                      className="p-1 hover:bg-slate-200 rounded"
+                    >
+                      <X className="h-3 w-3 text-slate-400" />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-slate-400 text-center py-2">No participants added</p>
+              )}
+            </div>
+          </div>
+
           {/* Quick Assign */}
           {!ticket.assigned_to && (
             <div className="bg-amber-50 rounded-xl border border-amber-200 p-4">
