@@ -182,14 +182,23 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
   - Backend: 28 test cases passing (100%)
   - Admin Settings: Departments, SLA Policies, Categories management
   - Public Portal: Anonymous ticket submission and status check
+- ✅ **Enterprise Ticketing System Phase 3** - osTicket-Inspired Features
+  - Backend: 28 test cases passing (100%)
+  - Help Topics with auto-routing (replaces Categories)
+  - Custom Forms with dynamic field builder (10 field types)
+  - Canned Responses with variable replacement
+  - Ticket Participants (CC/Collaboration)
 
 ### P0 - Critical (In Progress)
 - [ ] **Renewal Alerts Dashboard** - Backend API + Frontend to track expiring warranties/AMCs/licenses/parts
 
-### P1 - Next Up (Ticketing Phase 3)
+### P1 - Next Up (Ticketing Phase 4)
+- [ ] **Email Integration** - Google Workspace SMTP for ticket notifications
+  - Notification to all participants on replies
+  - Create tickets from incoming emails
 - [ ] **SLA Breach Checking** - Automated background task to check SLA deadlines
 - [ ] **Auto-Escalation** - Escalate tickets on SLA breach
-- [ ] **Email Integration** - Create tickets from incoming emails
+- [ ] **Update Public Support Portal** - Use Help Topics instead of legacy Categories
 
 ### P1 - Verified Complete
 - ✅ **Accessories & Peripherals Module** - Full CRUD implementation
