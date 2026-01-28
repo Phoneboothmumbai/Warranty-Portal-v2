@@ -1,12 +1,13 @@
 """
 Enterprise Ticketing System API Routes
 Phase 2: Advanced Features - Help Topics, Custom Forms, Collaboration, Canned Responses
+Phase 3: Email Integration - SMTP notifications and IMAP sync
 """
 import uuid
 import re
 from datetime import datetime, timedelta
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
 
