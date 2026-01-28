@@ -153,7 +153,8 @@ async def list_sla_policies(include_inactive: bool = False, admin: dict = Depend
 @router.post("/admin/sla-policies")
 async def create_sla_policy(data: SLAPolicyCreate, admin: dict = Depends(get_current_admin)):
     """Create a new SLA policy"""
-    policy = SLAPolicy(**data.model_dump(), created_by=admin.get("id"))
+    policy_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    policy = SLAPolicy(**policy_data, created_by=admin.get("id"))
     
     if data.is_default:
         await _db.ticketing_sla_policies.update_many({"is_default": True}, {"$set": {"is_default": False}})
