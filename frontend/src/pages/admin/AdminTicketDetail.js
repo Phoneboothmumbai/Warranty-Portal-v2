@@ -362,28 +362,63 @@ export default function AdminTicketDetail() {
           <div className="bg-white rounded-xl border border-slate-200 p-4">
             <form onSubmit={handleSendReply}>
               <div className="mb-3">
-                <div className="flex items-center gap-4 mb-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      checked={!isInternal}
-                      onChange={() => setIsInternal(false)}
-                      className="text-blue-600"
-                    />
-                    <span className="text-sm text-slate-700">Reply to Customer</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      checked={isInternal}
-                      onChange={() => setIsInternal(true)}
-                      className="text-amber-600"
-                    />
-                    <span className="text-sm text-slate-700 flex items-center gap-1">
-                      <Lock className="h-3 w-3" />
-                      Internal Note
-                    </span>
-                  </label>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        checked={!isInternal}
+                        onChange={() => setIsInternal(false)}
+                        className="text-blue-600"
+                      />
+                      <span className="text-sm text-slate-700">Reply to Customer</span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        checked={isInternal}
+                        onChange={() => setIsInternal(true)}
+                        className="text-amber-600"
+                      />
+                      <span className="text-sm text-slate-700 flex items-center gap-1">
+                        <Lock className="h-3 w-3" />
+                        Internal Note
+                      </span>
+                    </label>
+                  </div>
+                  {/* Canned Responses Dropdown */}
+                  <div className="relative">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCannedDropdown(!showCannedDropdown)}
+                      data-testid="canned-responses-btn"
+                    >
+                      <Zap className="h-4 w-4 mr-1" />
+                      Canned Responses
+                      <ChevronDown className="h-3 w-3 ml-1" />
+                    </Button>
+                    {showCannedDropdown && (
+                      <div className="absolute right-0 top-full mt-1 w-72 bg-white rounded-lg shadow-lg border border-slate-200 z-50 max-h-64 overflow-y-auto">
+                        {cannedResponses.length > 0 ? (
+                          cannedResponses.map(canned => (
+                            <button
+                              key={canned.id}
+                              type="button"
+                              onClick={() => handleUseCanned(canned.id)}
+                              className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0"
+                            >
+                              <p className="font-medium text-sm text-slate-900">{canned.title}</p>
+                              <p className="text-xs text-slate-500 truncate">{canned.content?.substring(0, 50)}...</p>
+                            </button>
+                          ))
+                        ) : (
+                          <p className="px-3 py-4 text-sm text-slate-500 text-center">No canned responses</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <textarea
                   value={replyContent}
