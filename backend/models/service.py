@@ -8,6 +8,101 @@ from typing import List, Optional
 from utils.helpers import get_ist_isoformat
 
 
+# ==================== ENUMS FOR SERVICE RECORDS ====================
+
+SERVICE_CATEGORIES = [
+    "internal_service",           # Provided by Us
+    "oem_warranty_service",       # OEM Warranty Service (Facilitated)
+    "paid_third_party_service",   # Paid Third-Party Service
+    "inspection_diagnosis"        # Inspection / Diagnosis Only
+]
+
+SERVICE_RESPONSIBILITIES = [
+    "our_team",      # Our Team
+    "oem",           # OEM
+    "partner_vendor" # Partner / Vendor
+]
+
+SERVICE_ROLES = [
+    "provider",              # Provider
+    "coordinator_facilitator", # Coordinator / Facilitator
+    "observer"               # Observer
+]
+
+OEM_NAMES = [
+    "Dell", "HP", "Lenovo", "Asus", "Acer", "Apple", 
+    "Microsoft", "Samsung", "LG", "Epson", "Canon", 
+    "Brother", "Cisco", "Logitech", "Other"
+]
+
+OEM_WARRANTY_TYPES = [
+    "ADP",       # Accidental Damage Protection
+    "NBD",       # Next Business Day
+    "Standard",  # Standard Warranty
+    "ProSupport",
+    "Premium",
+    "Extended",
+    "Other"
+]
+
+OEM_CASE_RAISED_VIA = [
+    "phone",
+    "oem_portal",
+    "email",
+    "chat"
+]
+
+OEM_PRIORITY = [
+    "NBD",        # Next Business Day
+    "Standard",   # Standard
+    "Deferred",   # Deferred
+    "Critical"    # Critical/Urgent
+]
+
+OEM_CASE_STATUSES = [
+    "reported_to_oem",      # Reported to OEM
+    "oem_accepted",         # OEM Accepted
+    "engineer_assigned",    # Engineer Assigned
+    "parts_dispatched",     # Parts Dispatched
+    "visit_scheduled",      # Visit Scheduled
+    "resolved_by_oem",      # Resolved by OEM
+    "closed_by_oem"         # Closed by OEM
+]
+
+BILLING_IMPACT = [
+    "not_billable",      # Not Billable
+    "warranty_covered",  # Warranty Covered
+    "chargeable"         # Chargeable
+]
+
+
+class OEMServiceDetails(BaseModel):
+    """OEM-specific service details - required for OEM warranty cases"""
+    oem_name: str                          # Dell, HP, Lenovo, etc.
+    oem_service_tag: Optional[str] = None  # OEM Service Tag / Serial Number
+    oem_warranty_type: str                 # ADP, NBD, Standard, etc.
+    oem_case_number: str                   # OEM Case / SR Number (REQUIRED)
+    case_raised_date: str                  # Case Raised Date
+    case_raised_via: str                   # Phone, OEM Portal, Email
+    oem_priority: str = "Standard"         # NBD, Standard, Deferred
+    oem_case_status: str = "reported_to_oem"  # OEM-specific status
+    oem_engineer_name: Optional[str] = None
+    oem_engineer_phone: Optional[str] = None
+    oem_visit_date: Optional[str] = None
+    oem_resolution_date: Optional[str] = None
+    oem_closure_date: Optional[str] = None
+    oem_remarks: Optional[str] = None
+
+
+class ServiceOutcome(BaseModel):
+    """Service closure/outcome details"""
+    resolution_summary: str
+    part_replaced: Optional[str] = None
+    cost_incurred: float = 0.0
+    closed_by: str  # OEM, Our Team, Customer, etc.
+    closure_date: str
+
+
 class ServiceTicket(BaseModel):
     """Service tickets created by company users"""
     model_config = ConfigDict(extra="ignore")
