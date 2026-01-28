@@ -477,10 +477,247 @@ class TicketingStaffProfile(BaseModel):
     updated_at: str = Field(default_factory=get_ist_isoformat)
 
 
-# ==================== TICKET CATEGORY ====================
+# ==================== HELP TOPICS (Replaces Categories) ====================
+
+class HelpTopic(BaseModel):
+    """Help Topics define what the issue is about and drive form logic, routing, and assignment"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    company_id: Optional[str] = None  # None = system-wide
+    
+    name: str  # e.g., "Hardware Issue", "AppleCare+ Request"
+    description: Optional[str] = None
+    parent_id: Optional[str] = None  # For nested topics
+    icon: Optional[str] = None  # Icon name for UI
+    
+    # Auto-routing configuration
+    auto_department_id: Optional[str] = None
+    auto_priority: Optional[str] = None
+    auto_sla_id: Optional[str] = None
+    auto_assign_to: Optional[str] = None  # Staff user ID
+    auto_assign_team: Optional[str] = None  # Team/queue name
+    
+    # Custom form linked to this help topic
+    custom_form_id: Optional[str] = None
+    
+    # Visibility
+    is_public: bool = True  # Visible in customer portal
+    is_active: bool = True
+    sort_order: int = 0
+    
+    # Metadata
+    created_by: Optional[str] = None
+    created_at: str = Field(default_factory=get_ist_isoformat)
+    updated_at: str = Field(default_factory=get_ist_isoformat)
+    is_deleted: bool = False
+
+
+class HelpTopicCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    parent_id: Optional[str] = None
+    icon: Optional[str] = None
+    auto_department_id: Optional[str] = None
+    auto_priority: Optional[str] = None
+    auto_sla_id: Optional[str] = None
+    auto_assign_to: Optional[str] = None
+    auto_assign_team: Optional[str] = None
+    custom_form_id: Optional[str] = None
+    is_public: bool = True
+    sort_order: int = 0
+
+
+class HelpTopicUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    parent_id: Optional[str] = None
+    icon: Optional[str] = None
+    auto_department_id: Optional[str] = None
+    auto_priority: Optional[str] = None
+    auto_sla_id: Optional[str] = None
+    auto_assign_to: Optional[str] = None
+    auto_assign_team: Optional[str] = None
+    custom_form_id: Optional[str] = None
+    is_public: Optional[bool] = None
+    is_active: Optional[bool] = None
+    sort_order: Optional[int] = None
+
+
+# ==================== CUSTOM FORMS (Dynamic Forms per Help Topic) ====================
+
+class CustomFormField(BaseModel):
+    """Single field in a custom form"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str  # Internal field name (e.g., "serial_number")
+    label: str  # Display label (e.g., "Serial Number")
+    field_type: str  # text, textarea, number, email, phone, select, multiselect, checkbox, date, datetime, file
+    
+    # For select/multiselect fields
+    options: List[Dict[str, str]] = Field(default_factory=list)  # [{"value": "laptop", "label": "Laptop"}]
+    
+    # Validation
+    required: bool = False
+    min_length: Optional[int] = None
+    max_length: Optional[int] = None
+    pattern: Optional[str] = None  # Regex pattern
+    
+    # UI
+    placeholder: Optional[str] = None
+    help_text: Optional[str] = None
+    default_value: Optional[Any] = None
+    width: str = "full"  # full, half, third
+    
+    # Visibility
+    visible_to_customer: bool = True
+    editable_by_customer: bool = True
+    
+    sort_order: int = 0
+
+
+class CustomForm(BaseModel):
+    """Custom form definition - linked to Help Topics"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    company_id: Optional[str] = None
+    
+    name: str  # e.g., "Hardware Issue Form", "AppleCare+ Request Form"
+    description: Optional[str] = None
+    
+    # Form fields
+    fields: List[CustomFormField] = Field(default_factory=list)
+    
+    # Versioning - when form changes, increment version
+    version: int = 1
+    
+    is_active: bool = True
+    created_by: Optional[str] = None
+    created_at: str = Field(default_factory=get_ist_isoformat)
+    updated_at: str = Field(default_factory=get_ist_isoformat)
+    is_deleted: bool = False
+
+
+class CustomFormCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    fields: List[dict] = []
+
+
+class CustomFormUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    fields: Optional[List[dict]] = None
+    is_active: Optional[bool] = None
+
+
+# ==================== TICKET PARTICIPANTS (CC/Collaboration) ====================
+
+class TicketParticipant(BaseModel):
+    """Participant on a ticket - for CC/collaboration"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    ticket_id: str
+    
+    # Participant info
+    user_id: Optional[str] = None  # If internal user
+    name: str
+    email: str
+    phone: Optional[str] = None
+    
+    # Type
+    participant_type: str = "cc"  # cc, collaborator, watcher
+    is_external: bool = False  # True for email-only participants
+    
+    # Permissions
+    can_reply: bool = True
+    can_view_internal_notes: bool = False
+    receives_notifications: bool = True
+    
+    # Metadata
+    added_by: str  # User ID who added this participant
+    added_by_name: str
+    added_at: str = Field(default_factory=get_ist_isoformat)
+    removed_at: Optional[str] = None
+    is_active: bool = True
+
+
+class AddParticipantRequest(BaseModel):
+    name: str
+    email: str
+    phone: Optional[str] = None
+    participant_type: str = "cc"
+    can_reply: bool = True
+
+
+# ==================== CANNED RESPONSES ====================
+
+class CannedResponse(BaseModel):
+    """Predefined reply templates"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    
+    # Ownership
+    company_id: Optional[str] = None  # None = system-wide
+    department_id: Optional[str] = None  # None = all departments
+    created_by: str  # Staff user ID
+    
+    # Content
+    title: str  # Short name for quick selection
+    content: str  # The actual response text with variables
+    
+    # Variables supported: {{customer_name}}, {{ticket_id}}, {{ticket_number}}, 
+    # {{device_name}}, {{sla_due}}, {{department_name}}, {{assigned_to}}
+    
+    # Categorization
+    category: Optional[str] = None  # e.g., "Acknowledgement", "Troubleshooting", "Closure"
+    tags: List[str] = Field(default_factory=list)
+    
+    # Scope
+    is_personal: bool = False  # True = only creator can use, False = shared
+    is_active: bool = True
+    
+    # Stats
+    usage_count: int = 0
+    last_used_at: Optional[str] = None
+    
+    created_at: str = Field(default_factory=get_ist_isoformat)
+    updated_at: str = Field(default_factory=get_ist_isoformat)
+    is_deleted: bool = False
+
+
+class CannedResponseCreate(BaseModel):
+    title: str
+    content: str
+    department_id: Optional[str] = None
+    category: Optional[str] = None
+    tags: List[str] = []
+    is_personal: bool = False
+
+
+class CannedResponseUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    department_id: Optional[str] = None
+    category: Optional[str] = None
+    tags: Optional[List[str]] = None
+    is_personal: Optional[bool] = None
+    is_active: Optional[bool] = None
+
+
+# ==================== TICKET FORM DATA (Versioned snapshot) ====================
+
+class TicketFormData(BaseModel):
+    """Stores the form data submitted with a ticket - immutable snapshot"""
+    form_id: str
+    form_name: str
+    form_version: int
+    fields: List[dict]  # Snapshot of field definitions at submission time
+    values: Dict[str, Any]  # Actual values submitted
+    submitted_at: str = Field(default_factory=get_ist_isoformat)
+
+
+# ==================== LEGACY: TICKET CATEGORY (Deprecated - use HelpTopic) ====================
 
 class TicketCategory(BaseModel):
-    """Ticket categories/issue types"""
+    """Ticket categories/issue types - DEPRECATED: Use HelpTopic instead"""
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     company_id: Optional[str] = None
