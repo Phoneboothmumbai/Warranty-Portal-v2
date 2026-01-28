@@ -260,6 +260,11 @@ class ServiceHistory(BaseModel):
     # ==================== NEW: Service Outcome ====================
     service_outcome: Optional[dict] = None  # ServiceOutcome on closure
     
+    # ==================== NEW: Stage Timeline ====================
+    stages: List[dict] = Field(default_factory=list)  # List of ServiceStage objects
+    current_stage: Optional[str] = None               # Current stage key
+    stage_history: List[dict] = Field(default_factory=list)  # Audit log of all stage changes
+    
     # Parts and costs
     parts_used: Optional[List[dict]] = None
     parts_involved: Optional[List[dict]] = None
