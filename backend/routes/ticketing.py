@@ -1177,9 +1177,11 @@ class PublicTicketCreate(BaseModel):
     phone: Optional[str] = None
     subject: str
     description: str
+    help_topic_id: Optional[str] = None
     department_id: Optional[str] = None
     priority: str = "medium"
     category: Optional[str] = None
+    form_data: Optional[dict] = None
     attachments: List[dict] = []
 
 
@@ -1203,19 +1205,59 @@ async def list_categories_for_public():
 
 @router.post("/public/tickets")
 async def create_public_ticket(data: PublicTicketCreate):
-    """Create a ticket from the public portal (no authentication required)"""
+    """Create a ticket from the public portal (no authentication required) with Help Topic support"""
     # Validate email format
-    import re
     email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
     if not re.match(email_regex, data.email):
         raise HTTPException(status_code=400, detail="Invalid email format")
     
-    # Get department and SLA
+    # Help Topic auto-routing
+    help_topic = None
+    department_id = data.department_id
+    priority = data.priority
+    sla_id = None
+    auto_assign_to = None
+    form_data_snapshot = None
+    
+    if data.help_topic_id:
+        help_topic = await _db.ticketing_help_topics.find_one(
+            {"id": data.help_topic_id, "is_deleted": {"$ne": True}, "is_public": True},
+            {"_id": 0}
+        )
+        if help_topic:
+            # Apply auto-routing from help topic
+            if not department_id and help_topic.get("auto_department_id"):
+                department_id = help_topic["auto_department_id"]
+            if help_topic.get("auto_priority"):
+                priority = help_topic["auto_priority"]
+            if help_topic.get("auto_sla_id"):
+                sla_id = help_topic["auto_sla_id"]
+            if help_topic.get("auto_assign_to"):
+                auto_assign_to = help_topic["auto_assign_to"]
+            
+            # Process custom form data if provided
+            if data.form_data and help_topic.get("custom_form_id"):
+                form = await _db.ticketing_custom_forms.find_one(
+                    {"id": help_topic["custom_form_id"]},
+                    {"_id": 0}
+                )
+                if form:
+                    form_data_snapshot = {
+                        "form_id": form.get("id"),
+                        "form_name": form.get("name"),
+                        "form_version": form.get("version", 1),
+                        "fields": form.get("fields", []),
+                        "values": data.form_data,
+                        "submitted_at": get_ist_isoformat()
+                    }
+    
+    # Get SLA policy
     sla_policy = None
-    dept = None
-    if data.department_id:
+    if sla_id:
+        sla_policy = await _db.ticketing_sla_policies.find_one({"id": sla_id}, {"_id": 0})
+    elif department_id:
         dept = await _db.ticketing_departments.find_one(
-            {"id": data.department_id, "is_deleted": {"$ne": True}, "is_public": True, "company_id": None},
+            {"id": department_id, "is_deleted": {"$ne": True}},
             {"_id": 0}
         )
         if dept and dept.get("default_sla_id"):
@@ -1226,7 +1268,13 @@ async def create_public_ticket(data: PublicTicketCreate):
             {"is_default": True, "is_deleted": {"$ne": True}}, {"_id": 0}
         )
     
-    sla_status = calculate_sla_due_times(sla_policy, data.priority) if sla_policy else None
+    sla_status = calculate_sla_due_times(sla_policy, priority) if sla_policy else None
+    
+    # Get assignee name if auto-assigned
+    assigned_to_name = None
+    if auto_assign_to:
+        assignee = await _db.admin_users.find_one({"id": auto_assign_to}, {"name": 1})
+        assigned_to_name = assignee.get("name") if assignee else None
     
     # Create ticket
     ticket_id = str(uuid.uuid4())
@@ -1235,19 +1283,22 @@ async def create_public_ticket(data: PublicTicketCreate):
     ticket = {
         "id": ticket_id,
         "ticket_number": ticket_number,
-        "company_id": "PUBLIC",  # Special marker for public tickets
+        "company_id": "PUBLIC",
         "source": "portal",
-        "department_id": data.department_id,
+        "help_topic_id": data.help_topic_id,
+        "department_id": department_id,
         "subject": data.subject,
         "description": data.description,
         "status": "open",
-        "priority": data.priority,
-        "priority_order": {"critical": 4, "high": 3, "medium": 2, "low": 1}.get(data.priority, 2),
+        "priority": priority,
+        "priority_order": {"critical": 4, "high": 3, "medium": 2, "low": 1}.get(priority, 2),
         "requester_id": "public",
         "requester_name": data.name,
         "requester_email": data.email,
         "requester_phone": data.phone,
-        "assigned_to": None,
+        "assigned_to": auto_assign_to,
+        "assigned_to_name": assigned_to_name,
+        "assigned_at": get_ist_isoformat() if auto_assign_to else None,
         "assigned_to_name": None,
         "assigned_at": None,
         "watchers": [],
