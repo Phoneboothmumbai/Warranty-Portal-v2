@@ -42,6 +42,8 @@ import Credentials from "./pages/admin/Credentials";
 import DeviceModelCatalog from "./pages/admin/DeviceModelCatalog";
 import AdminAMCRequests from "./pages/admin/AdminAMCRequests";
 import AdminAMCRequestDetail from "./pages/admin/AdminAMCRequestDetail";
+import AdminTickets from "./pages/admin/AdminTickets";
+import AdminTicketDetail from "./pages/admin/AdminTicketDetail";
 
 // Company Portal Pages
 import CompanyLayout from "./layouts/CompanyLayout";
