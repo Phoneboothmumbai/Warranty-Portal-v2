@@ -47,16 +47,22 @@ export default function AdminTicketDetail() {
   const [departments, setDepartments] = useState([]);
   const [admins, setAdmins] = useState([]);
   const [enums, setEnums] = useState(null);
+  const [cannedResponses, setCannedResponses] = useState([]);
   
   // Reply form
   const [replyContent, setReplyContent] = useState('');
   const [isInternal, setIsInternal] = useState(false);
   const [sending, setSending] = useState(false);
+  const [showCannedDropdown, setShowCannedDropdown] = useState(false);
   const threadEndRef = useRef(null);
   
   // Edit modal
   const [showEdit, setShowEdit] = useState(false);
   const [editData, setEditData] = useState({});
+  
+  // Participants
+  const [showAddParticipant, setShowAddParticipant] = useState(false);
+  const [participantForm, setParticipantForm] = useState({ name: '', email: '', phone: '' });
 
   const fetchTicket = useCallback(async () => {
     try {
