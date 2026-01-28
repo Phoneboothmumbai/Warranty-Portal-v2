@@ -240,6 +240,7 @@ class ServiceHistory(BaseModel):
 
 
 class ServiceHistoryCreate(BaseModel):
+    """Create service record - with OEM support"""
     device_id: str
     site_id: Optional[str] = None
     deployment_id: Optional[str] = None
@@ -247,10 +248,27 @@ class ServiceHistoryCreate(BaseModel):
     service_type: str
     problem_reported: Optional[str] = None
     action_taken: str
+    status: str = "open"
+    
+    # Service Classification (NEW)
+    service_category: str = "internal_service"
+    service_responsibility: str = "our_team"
+    service_role: str = "provider"
+    
+    # OEM Details (NEW - required if service_category = oem_warranty_service)
+    oem_details: Optional[dict] = None
+    
+    # Billing (NEW)
+    billing_impact: str = "not_billable"
+    counts_toward_amc: bool = True
+    
+    # Parts and costs
     parts_used: Optional[List[dict]] = None
     parts_involved: Optional[List[dict]] = None
     labor_cost: Optional[float] = None
     parts_cost: Optional[float] = None
+    
+    # Legacy fields
     warranty_impact: str = "not_applicable"
     extends_device_warranty: bool = False
     new_warranty_end_date: Optional[str] = None
@@ -265,14 +283,35 @@ class ServiceHistoryCreate(BaseModel):
 
 
 class ServiceHistoryUpdate(BaseModel):
+    """Update service record - with OEM support and closure"""
     service_date: Optional[str] = None
     service_type: Optional[str] = None
     problem_reported: Optional[str] = None
     action_taken: Optional[str] = None
+    status: Optional[str] = None
+    
+    # Service Classification (NEW)
+    service_category: Optional[str] = None
+    service_responsibility: Optional[str] = None
+    service_role: Optional[str] = None
+    
+    # OEM Details (NEW)
+    oem_details: Optional[dict] = None
+    
+    # Billing (NEW)
+    billing_impact: Optional[str] = None
+    counts_toward_amc: Optional[bool] = None
+    
+    # Service Outcome (NEW - for closure)
+    service_outcome: Optional[dict] = None
+    
+    # Parts and costs
     parts_used: Optional[List[dict]] = None
     parts_involved: Optional[List[dict]] = None
     labor_cost: Optional[float] = None
     parts_cost: Optional[float] = None
+    
+    # Legacy fields
     warranty_impact: Optional[str] = None
     extends_device_warranty: Optional[bool] = None
     new_warranty_end_date: Optional[str] = None
