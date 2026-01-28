@@ -3,7 +3,7 @@ import axios from 'axios';
 import { 
   Plus, Search, Filter, Clock, AlertTriangle, CheckCircle2, 
   User, Building2, ChevronDown, MoreVertical, MessageSquare,
-  RefreshCw, Inbox, AlertCircle, Timer, Users
+  RefreshCw, Inbox, AlertCircle, Timer, Users, X, UserPlus
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
