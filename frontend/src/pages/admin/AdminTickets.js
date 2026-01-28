@@ -618,6 +618,64 @@ export default function AdminTickets() {
               />
             </div>
 
+            {/* CC / Participants Section */}
+            <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+              <label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-3">
+                <Users className="h-4 w-4" />
+                CC / Additional Recipients
+                <span className="text-xs text-slate-500 font-normal">(will receive email updates)</span>
+              </label>
+              
+              {/* Added participants */}
+              {ccParticipants.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {ccParticipants.map((p, idx) => (
+                    <div key={idx} className="flex items-center gap-2 bg-white border border-slate-200 rounded-full px-3 py-1 text-sm">
+                      <User className="h-3 w-3 text-slate-400" />
+                      <span className="text-slate-700">{p.name}</span>
+                      <span className="text-slate-400 text-xs">({p.email})</span>
+                      <button
+                        type="button"
+                        onClick={() => removeCcParticipant(p.email)}
+                        className="text-slate-400 hover:text-red-500 ml-1"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Add new participant */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newCcName}
+                  onChange={(e) => setNewCcName(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
+                  placeholder="Name (optional)"
+                />
+                <input
+                  type="email"
+                  value={newCcEmail}
+                  onChange={(e) => setNewCcEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCcParticipant())}
+                  className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
+                  placeholder="Email address"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addCcParticipant}
+                  className="flex items-center gap-1"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Add
+                </Button>
+              </div>
+            </div>
+
             <div className="flex justify-end gap-3 pt-4">
               <Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
               <Button type="submit" disabled={creating}>
