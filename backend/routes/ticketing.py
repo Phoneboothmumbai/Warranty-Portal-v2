@@ -1483,6 +1483,21 @@ async def create_public_ticket(data: PublicTicketCreate):
     if not re.match(email_regex, data.email):
         raise HTTPException(status_code=400, detail="Invalid email format")
     
+    # Extract email domain for company matching
+    email_domain = data.email.split('@')[1].lower() if '@' in data.email else None
+    matched_company = None
+    matched_company_id = None
+    
+    if email_domain:
+        # Try to find a company with matching email domain
+        matched_company = await _db.companies.find_one(
+            {"email_domains": {"$regex": f"^{re.escape(email_domain)}$", "$options": "i"}, "is_deleted": {"$ne": True}},
+            {"_id": 0}
+        )
+        if matched_company:
+            matched_company_id = matched_company.get("id")
+            logger.info(f"Auto-matched email {data.email} to company {matched_company.get('name')} via domain {email_domain}")
+    
     # Help Topic auto-routing
     help_topic = None
     department_id = data.department_id
