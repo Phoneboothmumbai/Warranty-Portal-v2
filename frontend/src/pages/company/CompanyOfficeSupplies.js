@@ -307,7 +307,12 @@ const CompanyOfficeSupplies = () => {
                       {product.description && (
                         <p className="text-sm text-slate-500">{product.description}</p>
                       )}
-                      <p className="text-xs text-slate-400 mt-1">Unit: {product.unit}</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <p className="text-xs text-slate-400">Unit: {product.unit}</p>
+                        {product.price && (
+                          <p className="text-sm font-semibold text-emerald-600">₹{product.price.toLocaleString('en-IN')}</p>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-3">
                       {cart[product.id] ? (
