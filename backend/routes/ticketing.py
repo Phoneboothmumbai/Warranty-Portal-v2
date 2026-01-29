@@ -1054,9 +1054,10 @@ async def assign_ticket(ticket_id: str, assignee_id: str, admin: dict = Depends(
 # ==================== TICKETS - CUSTOMER PORTAL ====================
 
 @router.get("/portal/tickets")
-async def list_tickets_customer(status: Optional[str] = None, limit: int = Query(20, le=100), user: dict = Depends(get_current_company_user)):
-    """List tickets for current customer"""
-    query = {"company_id": user.get("company_id"), "requester_id": user.get("id"), "is_deleted": {"$ne": True}}
+async def list_tickets_customer(status: Optional[str] = None, limit: int = Query(50, le=100), user: dict = Depends(get_current_company_user)):
+    """List tickets for current customer's company - shows all company tickets"""
+    # Show all tickets for the company, not just the user's own tickets
+    query = {"company_id": user.get("company_id"), "is_deleted": {"$ne": True}}
     if status:
         query["status"] = status
     return await _db.tickets.find(query, {"_id": 0, "internal_note_count": 0}).sort("created_at", -1).limit(limit).to_list(limit)
