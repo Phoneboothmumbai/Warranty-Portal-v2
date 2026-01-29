@@ -2176,9 +2176,9 @@ async def list_users(
     skip = (page - 1) * limit
     users = await db.users.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     
-    # Add label field for SmartSelect compatibility
+    # Add label field for SmartSelect compatibility (handle missing name field)
     for u in users:
-        u["label"] = u["name"]
+        u["label"] = u.get("name", u.get("email", "Unknown User"))
     
     return users
 
