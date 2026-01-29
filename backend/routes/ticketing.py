@@ -1593,7 +1593,7 @@ async def create_public_ticket(data: PublicTicketCreate):
     
     # Create ticket
     ticket_id = str(uuid.uuid4())
-    ticket_number = f"TKT-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}"
+    ticket_number = f"TKT-{str(uuid.uuid4())[:6].upper()}"
     
     ticket = {
         "id": ticket_id,
