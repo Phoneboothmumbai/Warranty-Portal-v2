@@ -326,7 +326,7 @@ const SupplyProducts = () => {
     if (!window.confirm(`Are you sure you want to delete ${selectedProducts.length} product(s)?`)) return;
     
     try {
-      await axios.post(`${API}/admin/supply-products/bulk-delete`, 
+      const response = await axios.post(`${API}/admin/supply-products/bulk-delete`, 
         { product_ids: selectedProducts },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -334,7 +334,8 @@ const SupplyProducts = () => {
       setSelectedProducts([]);
       fetchData();
     } catch (error) {
-      toast.error('Failed to delete products');
+      console.error('Bulk delete error:', error.response?.data || error.message);
+      toast.error(error.response?.data?.detail || 'Failed to delete products');
     }
   };
 
