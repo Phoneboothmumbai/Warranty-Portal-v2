@@ -9047,6 +9047,43 @@ async def delete_supply_product(product_id: str, admin: dict = Depends(get_curre
         raise HTTPException(status_code=404, detail="Product not found")
     return {"message": "Product deleted"}
 
+@api_router.post("/admin/supply-products/bulk-delete")
+async def bulk_delete_supply_products(data: dict, admin: dict = Depends(get_current_admin)):
+    """Bulk soft delete supply products"""
+    product_ids = data.get("product_ids", [])
+    if not product_ids:
+        raise HTTPException(status_code=400, detail="No products selected")
+    
+    result = await db.supply_products.update_many(
+        {"id": {"$in": product_ids}},
+        {"$set": {"is_deleted": True}}
+    )
+    return {"message": f"{result.modified_count} products deleted"}
+
+@api_router.post("/admin/supply-products/bulk-update")
+async def bulk_update_supply_products(data: dict, admin: dict = Depends(get_current_admin)):
+    """Bulk update supply products (category, status, price)"""
+    product_ids = data.get("product_ids", [])
+    updates = data.get("updates", {})
+    
+    if not product_ids:
+        raise HTTPException(status_code=400, detail="No products selected")
+    if not updates:
+        raise HTTPException(status_code=400, detail="No updates provided")
+    
+    # Only allow certain fields to be bulk updated
+    allowed_fields = {"category_id", "is_active", "price", "unit"}
+    update_data = {k: v for k, v in updates.items() if k in allowed_fields and v is not None}
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No valid updates provided")
+    
+    result = await db.supply_products.update_many(
+        {"id": {"$in": product_ids}},
+        {"$set": update_data}
+    )
+    return {"message": f"{result.modified_count} products updated"}
+
 @api_router.get("/admin/supply-orders")
 async def list_supply_orders(
     status: Optional[str] = None,
