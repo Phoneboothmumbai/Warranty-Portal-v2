@@ -301,6 +301,82 @@ const SupplyProducts = () => {
     return response.data;
   };
 
+  // Bulk selection handlers
+  const toggleProductSelection = (productId) => {
+    setSelectedProducts(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedProducts.length === filteredProducts.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(filteredProducts.map(p => p.id));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedProducts([]);
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Are you sure you want to delete ${selectedProducts.length} product(s)?`)) return;
+    
+    try {
+      await axios.post(`${API}/admin/supply-products/bulk-delete`, 
+        { product_ids: selectedProducts },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(`${selectedProducts.length} products deleted`);
+      setSelectedProducts([]);
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to delete products');
+    }
+  };
+
+  const openBulkEditModal = () => {
+    setBulkEditForm({
+      category_id: '',
+      is_active: '',
+      price: '',
+      unit: ''
+    });
+    setBulkEditModalOpen(true);
+  };
+
+  const handleBulkEdit = async (e) => {
+    e.preventDefault();
+    
+    // Build updates object with only non-empty values
+    const updates = {};
+    if (bulkEditForm.category_id) updates.category_id = bulkEditForm.category_id;
+    if (bulkEditForm.is_active !== '') updates.is_active = bulkEditForm.is_active === 'true';
+    if (bulkEditForm.price) updates.price = parseFloat(bulkEditForm.price);
+    if (bulkEditForm.unit) updates.unit = bulkEditForm.unit;
+    
+    if (Object.keys(updates).length === 0) {
+      toast.error('Please select at least one field to update');
+      return;
+    }
+    
+    try {
+      await axios.post(`${API}/admin/supply-products/bulk-update`, 
+        { product_ids: selectedProducts, updates },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(`${selectedProducts.length} products updated`);
+      setSelectedProducts([]);
+      setBulkEditModalOpen(false);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update products');
+    }
+  };
+
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = !filterCategory || product.category_id === filterCategory;
