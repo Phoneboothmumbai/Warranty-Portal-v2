@@ -444,7 +444,7 @@ const CompanyOfficeSupplies = () => {
               <div className="bg-slate-50 rounded-lg p-4 space-y-3 max-h-48 overflow-y-auto">
                 {getCartItems().map(item => (
                   <div key={item.id} className="flex items-center justify-between">
-                    <div>
+                    <div className="flex-1">
                       <p className="font-medium text-slate-900 text-sm">{item.name}</p>
                       <p className="text-xs text-slate-500">{item.category_name}</p>
                     </div>
@@ -462,12 +462,29 @@ const CompanyOfficeSupplies = () => {
                       >
                         <Plus className="h-3 w-3" />
                       </button>
-                      <span className="text-xs text-slate-400 w-16">{item.unit}</span>
+                      <span className="text-xs text-slate-400 w-12">{item.unit}</span>
+                      {item.price ? (
+                        <span className="text-sm font-medium text-slate-900 w-20 text-right">
+                          ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400 w-20 text-right">-</span>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-slate-500 mt-2 italic">* GST and Shipping Charges extra as applicable</p>
+              
+              {/* Cart Total */}
+              <div className="mt-3 pt-3 border-t border-slate-200">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-600">Subtotal</span>
+                  <span className="font-semibold text-slate-900">
+                    ₹{getCartItems().reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0).toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-2 italic">* GST and Shipping Charges extra as applicable</p>
+              </div>
             </div>
 
             {/* Delivery Location */}
