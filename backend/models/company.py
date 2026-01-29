@@ -20,6 +20,22 @@ class Company(BaseModel):
     notification_email: Optional[str] = None
     email_domains: List[str] = Field(default_factory=list)  # e.g., ["abc.com", "abc.co.in"]
     amc_status: str = "not_applicable"
+    # SLA Configuration
+    sla_policy_id: Optional[str] = None  # Link to SLA policy
+    sla_config: Optional[dict] = Field(default_factory=lambda: {
+        "response_time": {  # Hours to first response by priority
+            "critical": 1,
+            "high": 2,
+            "medium": 4,
+            "low": 8
+        },
+        "resolution_time": {  # Hours to resolution by priority
+            "critical": 4,
+            "high": 8,
+            "medium": 24,
+            "low": 48
+        }
+    })
     notes: Optional[str] = None
     is_deleted: bool = False
     created_at: str = Field(default_factory=get_ist_isoformat)
