@@ -1934,11 +1934,21 @@ async def bulk_import_supply_products(data: dict, admin: dict = Depends(get_curr
                     errors.append({"row": idx + 2, "message": "Category is required"})
                     continue
             
+            # Parse price if provided
+            price = None
+            if record.get("price"):
+                try:
+                    price = float(str(record["price"]).replace(",", "").replace("₹", "").strip())
+                except (ValueError, TypeError):
+                    pass
+            
             product = SupplyProduct(
                 category_id=category_id,
                 name=record.get("name"),
                 description=record.get("description"),
                 unit=record.get("unit", "piece"),
+                price=price,
+                sku=record.get("sku"),
                 internal_notes=record.get("internal_notes")
             )
             
