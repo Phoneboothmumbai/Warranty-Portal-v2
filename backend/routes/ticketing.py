@@ -1055,12 +1055,52 @@ async def assign_ticket(ticket_id: str, assignee_id: str, admin: dict = Depends(
 
 @router.get("/portal/tickets")
 async def list_tickets_customer(status: Optional[str] = None, limit: int = Query(50, le=100), user: dict = Depends(get_current_company_user)):
-    """List tickets for current customer's company - shows all company tickets"""
-    # Show all tickets for the company, not just the user's own tickets
-    query = {"company_id": user.get("company_id"), "is_deleted": {"$ne": True}}
+    """List tickets for current customer's company - shows all company tickets from both systems"""
+    company_id = user.get("company_id")
+    
+    # Get tickets from enterprise system
+    query = {"company_id": company_id, "is_deleted": {"$ne": True}}
     if status:
         query["status"] = status
-    return await _db.tickets.find(query, {"_id": 0, "internal_note_count": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    enterprise_tickets = await _db.tickets.find(query, {"_id": 0, "internal_note_count": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    # Also get tickets from legacy service_tickets that don't have a corresponding enterprise ticket
+    existing_service_ticket_ids = [t.get("service_ticket_id") for t in enterprise_tickets if t.get("service_ticket_id")]
+    
+    legacy_query = {"company_id": company_id, "is_deleted": {"$ne": True}}
+    if status:
+        legacy_query["status"] = status
+    
+    legacy_tickets = await _db.service_tickets.find(legacy_query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    # Convert legacy tickets to compatible format and exclude those already in enterprise
+    converted_legacy = []
+    for st in legacy_tickets:
+        if st.get("id") not in existing_service_ticket_ids:
+            converted_legacy.append({
+                "id": st.get("id"),
+                "ticket_number": st.get("ticket_number"),
+                "company_id": st.get("company_id"),
+                "subject": st.get("subject"),
+                "description": st.get("description"),
+                "status": st.get("status", "open"),
+                "priority": st.get("priority", "medium"),
+                "requester_id": st.get("created_by"),
+                "requester_name": st.get("requester_name") or "Portal User",
+                "requester_email": st.get("requester_email", ""),
+                "category": st.get("issue_category"),
+                "device_id": st.get("device_id"),
+                "created_at": st.get("created_at"),
+                "updated_at": st.get("updated_at"),
+                "source": "service_request",
+                "osticket_id": st.get("osticket_id")
+            })
+    
+    # Merge and sort by created_at
+    all_tickets = enterprise_tickets + converted_legacy
+    all_tickets.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    
+    return all_tickets[:limit]
 
 
 @router.post("/portal/tickets")
