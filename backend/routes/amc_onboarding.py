@@ -139,7 +139,7 @@ async def list_onboardings(
 
 
 @router.get("/admin/onboardings/{onboarding_id}")
-async def get_onboarding_detail(onboarding_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def get_onboarding_detail(onboarding_id: str, admin: dict = Depends(get_current_admin)):
     """Get detailed onboarding data"""
     onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id}, {"_id": 0})
     if not onboarding:
