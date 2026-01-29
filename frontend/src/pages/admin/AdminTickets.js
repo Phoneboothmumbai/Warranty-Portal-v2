@@ -189,14 +189,14 @@ export default function AdminTickets() {
         }),
         axios.get(`${API}/ticketing/admin/dashboard`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API}/ticketing/admin/departments`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API}/admin/users`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API}/admin/staff`, { headers: { Authorization: `Bearer ${token}` } }),  // Admin staff only for assignment
         axios.get(`${API}/admin/companies`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API}/ticketing/enums`),
         axios.get(`${API}/ticketing/admin/help-topics`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       
       // Extract data from settled promises
-      const [ticketsRes, dashboardRes, deptsRes, adminsRes, companiesRes, enumsRes, helpTopicsRes] = results;
+      const [ticketsRes, dashboardRes, deptsRes, staffRes, companiesRes, enumsRes, helpTopicsRes] = results;
       
       if (ticketsRes.status === 'fulfilled') {
         setTickets(ticketsRes.value.data.tickets || []);
