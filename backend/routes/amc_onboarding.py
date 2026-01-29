@@ -24,22 +24,6 @@ def init_db(database):
     global _db
     _db = database
 
-# Auth dependencies will be imported from main server
-_get_current_company_user = None
-_get_current_admin = None
-
-def init_auth(company_auth, admin_auth):
-    global _get_current_company_user, _get_current_admin
-    _get_current_company_user = company_auth
-    _get_current_admin = admin_auth
-
-
-def get_company_user_dep():
-    return Depends(_get_current_company_user)
-
-def get_admin_dep():
-    return Depends(_get_current_admin)
-
 
 # ==================== COMPANY PORTAL ENDPOINTS ====================
 
