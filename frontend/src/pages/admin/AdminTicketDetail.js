@@ -48,6 +48,7 @@ export default function AdminTicketDetail() {
   const [admins, setAdmins] = useState([]);
   const [enums, setEnums] = useState(null);
   const [cannedResponses, setCannedResponses] = useState([]);
+  const [companyEmployees, setCompanyEmployees] = useState([]);  // For CC suggestions
   
   // Reply form
   const [replyContent, setReplyContent] = useState('');
@@ -66,17 +67,17 @@ export default function AdminTicketDetail() {
 
   const fetchTicket = useCallback(async () => {
     try {
-      const [ticketRes, deptsRes, adminsRes, enumsRes, cannedRes] = await Promise.all([
+      const [ticketRes, deptsRes, staffRes, enumsRes, cannedRes] = await Promise.all([
         axios.get(`${API}/ticketing/admin/tickets/${ticketId}`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API}/ticketing/admin/departments`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API}/admin/users`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API}/admin/staff`, { headers: { Authorization: `Bearer ${token}` } }),  // Admin staff for assignment
         axios.get(`${API}/ticketing/enums`),
         axios.get(`${API}/ticketing/admin/canned-responses`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       
       setTicket(ticketRes.data);
       setDepartments(deptsRes.data || []);
-      setAdmins(adminsRes.data || []);
+      setAdmins(staffRes.data || []);  // Admin panel staff
       setEnums(enumsRes.data);
       setCannedResponses(cannedRes.data || []);
       setEditData({
@@ -85,6 +86,18 @@ export default function AdminTicketDetail() {
         department_id: ticketRes.data.department_id || '',
         assigned_to: ticketRes.data.assigned_to || ''
       });
+      
+      // Fetch company employees for CC suggestions (same company as ticket)
+      if (ticketRes.data.company_id) {
+        try {
+          const empRes = await axios.get(`${API}/admin/company-employees?company_id=${ticketRes.data.company_id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setCompanyEmployees(empRes.data || []);
+        } catch (e) {
+          console.log('Could not load company employees for CC');
+        }
+      }
     } catch (error) {
       console.error('Failed to load ticket:', error.response?.data || error.message);
       toast.error(error.response?.data?.detail || 'Failed to load ticket');
