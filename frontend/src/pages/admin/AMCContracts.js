@@ -1263,6 +1263,44 @@ const AMCContracts = () => {
                 </div>
               )}
 
+              {/* Documents */}
+              {selectedContract.documents?.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-slate-900 mb-2 flex items-center gap-2">
+                    <Paperclip className="h-4 w-4" />
+                    Attached Documents ({selectedContract.documents.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedContract.documents.map((doc) => {
+                      const typeInfo = getDocTypeInfo(doc.document_type);
+                      return (
+                        <div 
+                          key={doc.id} 
+                          className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg">{typeInfo?.icon || '📎'}</span>
+                            <div>
+                              <p className="font-medium text-slate-900 text-sm">{doc.name}</p>
+                              <p className="text-xs text-slate-500">
+                                {typeInfo?.label} {doc.file_size && `• ${formatFileSize(doc.file_size)}`}
+                              </p>
+                            </div>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => downloadDocument(doc)}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Actions */}
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button variant="outline" onClick={() => setDetailModalOpen(false)}>
