@@ -83,7 +83,7 @@ async def update_company_onboarding(data: AMCOnboardingUpdate, user: dict = Depe
 
 
 @router.post("/portal/onboarding/submit")
-async def submit_company_onboarding(user: dict = Depends(lambda: _get_current_company_user)):
+async def submit_company_onboarding(user: dict = Depends(get_current_company_user)):
     """Submit onboarding for admin review"""
     company_id = user.get("company_id")
     
