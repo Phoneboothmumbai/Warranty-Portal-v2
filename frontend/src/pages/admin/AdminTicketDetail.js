@@ -86,7 +86,8 @@ export default function AdminTicketDetail() {
         assigned_to: ticketRes.data.assigned_to || ''
       });
     } catch (error) {
-      toast.error('Failed to load ticket');
+      console.error('Failed to load ticket:', error.response?.data || error.message);
+      toast.error(error.response?.data?.detail || 'Failed to load ticket');
       navigate('/admin/tickets');
     } finally {
       setLoading(false);
