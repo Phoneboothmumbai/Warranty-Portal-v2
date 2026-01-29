@@ -168,7 +168,7 @@ async def get_public_masters(
     
     # Add label for SmartSelect compatibility
     for m in masters:
-        m["label"] = m["name"]
+        m.get("label", m.get("name", "Unknown")) or m.get("name", "Unknown"); m["label"] = m.get("name", "Unknown")
     
     return masters
 
@@ -1575,7 +1575,7 @@ async def quick_create_master(item: MasterItemCreate, admin: dict = Depends(get_
     
     result = master.model_dump()
     # Add label for SmartSelect compatibility
-    result["label"] = result["name"]
+    result.get("label", result.get("name", "Unknown")) or result.get("name", "Unknown"); result["label"] = result.get("name", "Unknown")
     return result
 
 # ==================== ADMIN ENDPOINTS - COMPANIES ====================
@@ -1605,7 +1605,7 @@ async def list_companies(
     
     # Add label field for SmartSelect compatibility
     for c in companies:
-        c["label"] = c["name"]
+        c.get("label", c.get("name", "Unknown")) or c.get("name", "Unknown"); c["label"] = c.get("name", "Unknown")
     
     return companies
 
@@ -1617,7 +1617,7 @@ async def create_company(company_data: CompanyCreate, admin: dict = Depends(get_
     await db.companies.insert_one(company.model_dump())
     await log_audit("company", company.id, "create", {"data": company_data.model_dump()}, admin)
     result = company.model_dump()
-    result["label"] = result["name"]
+    result.get("label", result.get("name", "Unknown")) or result.get("name", "Unknown"); result["label"] = result.get("name", "Unknown")
     return result
 
 @api_router.post("/admin/companies/quick-create")
@@ -1630,7 +1630,7 @@ async def quick_create_company(company_data: CompanyCreate, admin: dict = Depend
     )
     if existing:
         # Return existing instead of error (idempotent)
-        existing["label"] = existing["name"]
+        existing.get("label", existing.get("name", "Unknown")) or existing.get("name", "Unknown"); existing["label"] = existing.get("name", "Unknown")
         return existing
     
     # Filter out None values to allow Company model defaults to work
@@ -1640,7 +1640,7 @@ async def quick_create_company(company_data: CompanyCreate, admin: dict = Depend
     await log_audit("company", company.id, "quick_create", {"data": company_data.model_dump()}, admin)
     
     result = company.model_dump()
-    result["label"] = result["name"]
+    result.get("label", result.get("name", "Unknown")) or result.get("name", "Unknown"); result["label"] = result.get("name", "Unknown")
     return result
 
 @api_router.get("/admin/companies/{company_id}")
@@ -2192,7 +2192,7 @@ async def create_user(user_data: UserCreate, admin: dict = Depends(get_current_a
     await db.users.insert_one(user.model_dump())
     await log_audit("user", user.id, "create", {"data": user_data.model_dump()}, admin)
     result = user.model_dump()
-    result["label"] = result["name"]
+    result.get("label", result.get("name", "Unknown")) or result.get("name", "Unknown"); result["label"] = result.get("name", "Unknown")
     return result
 
 @api_router.post("/admin/users/quick-create")
@@ -2208,7 +2208,7 @@ async def quick_create_user(user_data: UserCreate, admin: dict = Depends(get_cur
         {"_id": 0}
     )
     if existing:
-        existing["label"] = existing["name"]
+        existing.get("label", existing.get("name", "Unknown")) or existing.get("name", "Unknown"); existing["label"] = existing.get("name", "Unknown")
         return existing
     
     user = User(**user_data.model_dump())
@@ -2216,7 +2216,7 @@ async def quick_create_user(user_data: UserCreate, admin: dict = Depends(get_cur
     await log_audit("user", user.id, "quick_create", {"data": user_data.model_dump()}, admin)
     
     result = user.model_dump()
-    result["label"] = result["name"]
+    result.get("label", result.get("name", "Unknown")) or result.get("name", "Unknown"); result["label"] = result.get("name", "Unknown")
     return result
 
 @api_router.get("/admin/users/{user_id}")
@@ -2293,7 +2293,7 @@ async def list_company_employees(
     
     for emp in employees:
         emp["company_name"] = companies.get(emp.get("company_id"), "Unknown")
-        emp["label"] = emp["name"]  # For SmartSelect
+        emp.get("label", emp.get("name", "Unknown")) or emp.get("name", "Unknown"); emp["label"] = emp.get("name", "Unknown")  # For SmartSelect
     
     return employees
 
@@ -4015,7 +4015,7 @@ async def list_sites(
     for site in sites:
         company = await db.companies.find_one({"id": site.get("company_id")}, {"_id": 0, "name": 1})
         site["company_name"] = company.get("name") if company else "Unknown"
-        site["label"] = site["name"]  # SmartSelect compatibility
+        site.get("label", site.get("name", "Unknown")) or site.get("name", "Unknown"); site["label"] = site.get("name", "Unknown")  # SmartSelect compatibility
         
         # Count deployments and items
         deployments = await db.deployments.find(
@@ -4044,7 +4044,7 @@ async def create_site(data: SiteCreate, admin: dict = Depends(get_current_admin)
     
     result = site.model_dump()
     result["company_name"] = company.get("name")
-    result["label"] = result["name"]
+    result.get("label", result.get("name", "Unknown")) or result.get("name", "Unknown"); result["label"] = result.get("name", "Unknown")
     return result
 
 @api_router.post("/admin/sites/quick-create")
@@ -4061,7 +4061,7 @@ async def quick_create_site(data: SiteCreate, admin: dict = Depends(get_current_
         {"_id": 0}
     )
     if existing:
-        existing["label"] = existing["name"]
+        existing.get("label", existing.get("name", "Unknown")) or existing.get("name", "Unknown"); existing["label"] = existing.get("name", "Unknown")
         existing["company_name"] = company.get("name")
         return existing
     
@@ -4071,7 +4071,7 @@ async def quick_create_site(data: SiteCreate, admin: dict = Depends(get_current_
     
     result = site.model_dump()
     result["company_name"] = company.get("name")
-    result["label"] = result["name"]
+    result.get("label", result.get("name", "Unknown")) or result.get("name", "Unknown"); result["label"] = result.get("name", "Unknown")
     return result
 
 @api_router.get("/admin/sites/{site_id}")
