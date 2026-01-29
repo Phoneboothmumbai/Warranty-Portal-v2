@@ -909,6 +909,7 @@ const AMCContracts = () => {
                         value={newDocForm.document_type}
                         onChange={(e) => setNewDocForm({ ...newDocForm, document_type: e.target.value })}
                         className="form-select"
+                        data-testid="document-type-select"
                       >
                         {DOCUMENT_TYPES.map(type => (
                           <option key={type.value} value={type.value}>
