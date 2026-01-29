@@ -5,6 +5,7 @@ Phase 3: Email Integration - SMTP notifications and IMAP sync
 """
 import uuid
 import re
+import logging
 from datetime import datetime, timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
@@ -27,6 +28,9 @@ from models.ticketing import (
     THREAD_ENTRY_TYPES, SYSTEM_EVENT_TYPES, STAFF_ROLES
 )
 from utils.helpers import get_ist_isoformat
+from services.osticket import create_osticket
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ticketing", tags=["Ticketing"])
 
