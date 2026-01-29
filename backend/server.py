@@ -7442,12 +7442,67 @@ Order Created: {get_ist_isoformat()}</em>
             {"$set": {"osticket_id": osticket_id}}
         )
     
+    # ALSO create in the Enterprise Ticketing System (tickets collection)
+    enterprise_ticket_id = str(uuid.uuid4())
+    enterprise_ticket = {
+        "id": enterprise_ticket_id,
+        "ticket_number": order.order_number,  # Use order number as ticket number
+        "company_id": user["company_id"],
+        "source": "company_portal",
+        "device_id": device.get("id"),
+        "device_serial": device.get("serial_number"),
+        "subject": f"Consumable Order: {consumable_info}",
+        "description": f"Consumable order for {device.get('serial_number', 'device')}.\n\nItems: {consumable_info}\n\nNotes: {order_data.get('notes', 'N/A')}",
+        "status": "open",
+        "priority": "medium",
+        "priority_order": 2,
+        "requester_id": user.get("id"),
+        "requester_name": user.get("name", "Portal User"),
+        "requester_email": user.get("email", ""),
+        "requester_phone": user.get("phone"),
+        "assigned_to": None,
+        "assigned_to_name": None,
+        "assigned_at": None,
+        "department_id": None,
+        "help_topic_id": None,
+        "category": "consumable_order",
+        "tags": ["consumable-order", f"device:{device.get('serial_number', 'unknown')}"],
+        "watchers": [],
+        "sla_status": None,
+        "custom_fields": {
+            "order_number": order.order_number,
+            "device_serial": device.get("serial_number"),
+            "device_type": device.get("device_type"),
+            "items_count": len(order_items),
+            "total_quantity": total_quantity
+        },
+        "form_data": None,
+        "attachments": [],
+        "reply_count": 0,
+        "internal_note_count": 0,
+        "created_at": get_ist_isoformat(),
+        "updated_at": get_ist_isoformat(),
+        "first_response_at": None,
+        "resolved_at": None,
+        "closed_at": None,
+        "last_customer_reply_at": None,
+        "last_staff_reply_at": None,
+        "created_by": user.get("id"),
+        "created_by_type": "customer",
+        "osticket_id": osticket_id,
+        "consumable_order_id": order.id,  # Link to the consumable_orders collection
+        "is_deleted": False
+    }
+    
+    await db.tickets.insert_one(enterprise_ticket)
+    
     return {
         "message": "Consumable order submitted successfully",
         "order_number": order.order_number,
         "id": order.id,
         "items_count": len(order_items),
         "total_quantity": total_quantity,
+        "enterprise_ticket_id": enterprise_ticket_id,
         "osticket_id": osticket_id,
         "osticket_error": osticket_error
     }
