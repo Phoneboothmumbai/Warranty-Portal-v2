@@ -711,7 +711,9 @@ export default function AdminTickets() {
         if (!open) {
           setSelectedCompanyId('');
           setCompanyUsers([]);
-          setCreateData({ subject: '', description: '', department_id: '', priority: 'medium', category: '', tags: '', requester_id: '' });
+          setSelectedHelpTopic(null);
+          setCustomForm(null);
+          setCreateData({ subject: '', description: '', department_id: '', priority: 'medium', category: '', tags: '', requester_id: '', help_topic_id: '', form_data: {} });
           setCcParticipants([]);
           setNewCcEmail('');
           setNewCcName('');
