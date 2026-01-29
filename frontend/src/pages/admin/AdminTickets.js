@@ -758,6 +758,117 @@ export default function AdminTickets() {
               </div>
             </div>
 
+            {/* Help Topic Selection */}
+            {helpTopics.length > 0 && (
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1">Help Topic *</label>
+                <select
+                  required
+                  value={createData.help_topic_id}
+                  onChange={(e) => handleHelpTopicSelect(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
+                >
+                  <option value="">Select Help Topic</option>
+                  {helpTopics.map(topic => (
+                    <option key={topic.id} value={topic.id}>{topic.name}</option>
+                  ))}
+                </select>
+                {selectedHelpTopic?.description && (
+                  <p className="text-xs text-slate-500 mt-1">{selectedHelpTopic.description}</p>
+                )}
+              </div>
+            )}
+
+            {/* Custom Form Fields (Dynamic based on Help Topic) */}
+            {loadingForm && (
+              <div className="py-4 text-center text-slate-500 text-sm flex items-center justify-center gap-2">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Loading form fields...
+              </div>
+            )}
+            
+            {customForm && customForm.fields && customForm.fields.length > 0 && (
+              <div className="border border-blue-200 rounded-lg p-4 bg-blue-50/50 space-y-3">
+                <h4 className="text-sm font-medium text-blue-800 flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  {customForm.name || 'Additional Information'}
+                </h4>
+                {customForm.fields.map((field, idx) => (
+                  <div key={idx}>
+                    <label className="text-sm font-medium text-slate-700 block mb-1">
+                      {field.label} {field.required && <span className="text-red-500">*</span>}
+                    </label>
+                    {field.field_type === 'text' && (
+                      <input
+                        type="text"
+                        required={field.required}
+                        value={createData.form_data[field.name] || ''}
+                        onChange={(e) => updateFormData(field.name, e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
+                        placeholder={field.placeholder || ''}
+                      />
+                    )}
+                    {field.field_type === 'textarea' && (
+                      <textarea
+                        required={field.required}
+                        rows={3}
+                        value={createData.form_data[field.name] || ''}
+                        onChange={(e) => updateFormData(field.name, e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none bg-white"
+                        placeholder={field.placeholder || ''}
+                      />
+                    )}
+                    {field.field_type === 'select' && (
+                      <select
+                        required={field.required}
+                        value={createData.form_data[field.name] || ''}
+                        onChange={(e) => updateFormData(field.name, e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
+                      >
+                        <option value="">Select {field.label}</option>
+                        {(field.options || []).map((opt, i) => (
+                          <option key={i} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    )}
+                    {field.field_type === 'checkbox' && (
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={createData.form_data[field.name] || false}
+                          onChange={(e) => updateFormData(field.name, e.target.checked)}
+                          className="rounded border-slate-300"
+                        />
+                        <span className="text-slate-600">{field.placeholder || 'Yes'}</span>
+                      </label>
+                    )}
+                    {field.field_type === 'number' && (
+                      <input
+                        type="number"
+                        required={field.required}
+                        value={createData.form_data[field.name] || ''}
+                        onChange={(e) => updateFormData(field.name, e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
+                        placeholder={field.placeholder || ''}
+                      />
+                    )}
+                    {field.field_type === 'date' && (
+                      <input
+                        type="date"
+                        required={field.required}
+                        value={createData.form_data[field.name] || ''}
+                        onChange={(e) => updateFormData(field.name, e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
+                      />
+                    )}
+                    {field.help_text && (
+                      <p className="text-xs text-slate-500 mt-1">{field.help_text}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div>
               <label className="text-sm font-medium text-slate-700 block mb-1">Subject *</label>
               <input
