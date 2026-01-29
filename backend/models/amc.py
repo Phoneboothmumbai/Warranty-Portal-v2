@@ -100,6 +100,7 @@ class AMCContractCreate(BaseModel):
     exclusions: Optional[dict] = None
     entitlements: Optional[dict] = None
     asset_mapping: Optional[dict] = None
+    documents: Optional[List[dict]] = None
     internal_notes: Optional[str] = None
 
 
@@ -112,6 +113,7 @@ class AMCContractUpdate(BaseModel):
     exclusions: Optional[dict] = None
     entitlements: Optional[dict] = None
     asset_mapping: Optional[dict] = None
+    documents: Optional[List[dict]] = None
     internal_notes: Optional[str] = None
 
 
