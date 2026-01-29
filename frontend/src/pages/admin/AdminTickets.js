@@ -262,6 +262,36 @@ export default function AdminTickets() {
     }
   };
 
+  // Handle Help Topic selection and load custom form
+  const handleHelpTopicSelect = async (topicId) => {
+    const topic = helpTopics.find(t => t.id === topicId);
+    setSelectedHelpTopic(topic);
+    setCreateData(prev => ({ ...prev, help_topic_id: topicId, form_data: {} }));
+    setCustomForm(null);
+    
+    if (topic?.custom_form_id) {
+      setLoadingForm(true);
+      try {
+        const res = await axios.get(`${API}/ticketing/admin/custom-forms/${topic.custom_form_id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setCustomForm(res.data);
+      } catch (error) {
+        console.error('Failed to load custom form:', error);
+      } finally {
+        setLoadingForm(false);
+      }
+    }
+  };
+
+  // Update form data for custom fields
+  const updateFormData = (fieldName, value) => {
+    setCreateData(prev => ({
+      ...prev,
+      form_data: { ...prev.form_data, [fieldName]: value }
+    }));
+  };
+
   const addCcParticipant = () => {
     if (!newCcEmail.trim()) {
       toast.error('Please enter an email address');
