@@ -291,8 +291,9 @@ class EmailService:
         return plain_body, html_body
     
     def _extract_ticket_number_from_subject(self, subject: str) -> Optional[str]:
-        """Extract ticket number from email subject (e.g., [TKT-20250128-ABC123])"""
-        match = re.search(r'\[?(TKT-\d{8}-[A-Z0-9]{6})\]?', subject, re.IGNORECASE)
+        """Extract ticket number from email subject (e.g., [TKT-ABC123] or [TKT-20250128-ABC123])"""
+        # Support both new short format (TKT-XXXXXX) and old long format (TKT-YYYYMMDD-XXXXXX)
+        match = re.search(r'\[?(TKT-(?:\d{8}-)?[A-Z0-9]{6})\]?', subject, re.IGNORECASE)
         return match.group(1).upper() if match else None
     
     def _clean_reply_content(self, body: str, ticket_number: Optional[str] = None) -> str:
