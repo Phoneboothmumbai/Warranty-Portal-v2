@@ -1120,6 +1120,34 @@ async def update_ticket_admin(ticket_id: str, updates: TicketUpdate, admin: dict
     return await _db.tickets.find_one({"id": ticket_id}, {"_id": 0})
 
 
+@router.post("/admin/tickets/{ticket_id}/assign-company")
+async def assign_ticket_to_company(ticket_id: str, company_id: str = Query(...), admin: dict = Depends(get_current_admin)):
+    """Assign an unassigned ticket to a company (for tickets from unknown email domains)"""
+    ticket = await _db.tickets.find_one({"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    company = await _db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    await _db.tickets.update_one(
+        {"id": ticket_id},
+        {"$set": {
+            "company_id": company_id,
+            "company_name": company.get("name"),
+            "updated_at": get_ist_isoformat()
+        }}
+    )
+    
+    await create_thread_entry(
+        ticket_id, "system_event", admin.get("id"), admin.get("name"), "admin",
+        event_type="company_assigned", event_data={"company_id": company_id, "company_name": company.get("name")}
+    )
+    
+    return {"message": "Ticket assigned to company", "company_id": company_id, "company_name": company.get("name")}
+
+
 @router.post("/admin/tickets/{ticket_id}/reply")
 async def reply_to_ticket_admin(ticket_id: str, reply: TicketReplyCreate, background_tasks: BackgroundTasks, admin: dict = Depends(get_current_admin)):
     """Add a reply or internal note to a ticket (admin) - handles both enterprise and legacy tickets"""
