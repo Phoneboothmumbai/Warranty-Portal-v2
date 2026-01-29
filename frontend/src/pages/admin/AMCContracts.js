@@ -623,7 +623,7 @@ const AMCContracts = () => {
           
           {/* Tabs */}
           <div className="flex border-b border-slate-200 mt-4">
-            {['basic', 'coverage', 'assets', 'entitlements'].map((tab) => (
+            {['basic', 'coverage', 'assets', 'documents', 'entitlements'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
