@@ -3,7 +3,7 @@ Company and User related models
 """
 import uuid
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional
+from typing import Optional, List
 from utils.helpers import get_ist_isoformat
 
 
