@@ -4,7 +4,7 @@ AMC Onboarding Routes - Multi-step wizard API endpoints
 import io
 import uuid
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from fastapi.responses import StreamingResponse
 from typing import Optional
 import openpyxl
