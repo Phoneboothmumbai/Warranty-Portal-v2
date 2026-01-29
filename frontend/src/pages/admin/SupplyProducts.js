@@ -481,6 +481,45 @@ const SupplyProducts = () => {
         </select>
       </div>
 
+      {/* Bulk Action Bar */}
+      {selectedProducts.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between" data-testid="bulk-action-bar">
+          <div className="flex items-center gap-3">
+            <CheckSquare className="h-5 w-5 text-blue-600" />
+            <span className="font-medium text-blue-900">
+              {selectedProducts.length} product{selectedProducts.length > 1 ? 's' : ''} selected
+            </span>
+            <button 
+              onClick={clearSelection}
+              className="text-blue-600 hover:text-blue-800 text-sm underline"
+            >
+              Clear selection
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={openBulkEditModal}
+              data-testid="bulk-edit-btn"
+            >
+              <Edit2 className="h-4 w-4 mr-2" />
+              Edit Selected
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleBulkDelete}
+              className="text-red-600 border-red-200 hover:bg-red-50"
+              data-testid="bulk-delete-btn"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Selected
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Products Table */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <table className="w-full">
