@@ -1110,9 +1110,39 @@ async def update_ticket_admin(ticket_id: str, updates: TicketUpdate, admin: dict
 
 @router.post("/admin/tickets/{ticket_id}/reply")
 async def reply_to_ticket_admin(ticket_id: str, reply: TicketReplyCreate, background_tasks: BackgroundTasks, admin: dict = Depends(get_current_admin)):
-    """Add a reply or internal note to a ticket (admin)"""
+    """Add a reply or internal note to a ticket (admin) - handles both enterprise and legacy tickets"""
     ticket = await _db.tickets.find_one({"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    
+    # Check legacy service_tickets if not found
     if not ticket:
+        service_ticket = await _db.service_tickets.find_one({"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+        if service_ticket:
+            # Add comment to legacy service ticket
+            comment = {
+                "id": str(uuid.uuid4()),
+                "ticket_id": ticket_id,
+                "content": reply.content,
+                "author_id": admin.get("id"),
+                "author_name": admin.get("name"),
+                "author_type": "staff",
+                "is_internal": reply.is_internal,
+                "attachments": reply.attachments or [],
+                "created_at": get_ist_isoformat()
+            }
+            await _db.service_ticket_comments.insert_one(comment)
+            await _db.service_tickets.update_one({"id": ticket_id}, {"$set": {"updated_at": get_ist_isoformat()}})
+            return {
+                "id": comment["id"],
+                "ticket_id": ticket_id,
+                "type": "internal_note" if reply.is_internal else "technician_reply",
+                "content": reply.content,
+                "author_id": admin.get("id"),
+                "author_name": admin.get("name"),
+                "author_type": "staff",
+                "created_at": comment["created_at"],
+                "attachments": reply.attachments or [],
+                "is_internal": reply.is_internal
+            }
         raise HTTPException(status_code=404, detail="Ticket not found")
     
     entry_type = "internal_note" if reply.is_internal else "technician_reply"
