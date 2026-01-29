@@ -365,7 +365,7 @@ const SupplyProducts = () => {
     }
     
     try {
-      await axios.post(`${API}/admin/supply-products/bulk-update`, 
+      const response = await axios.post(`${API}/admin/supply-products/bulk-update`, 
         { product_ids: selectedProducts, updates },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -374,6 +374,7 @@ const SupplyProducts = () => {
       setBulkEditModalOpen(false);
       fetchData();
     } catch (error) {
+      console.error('Bulk update error:', error.response?.data || error.message);
       toast.error(error.response?.data?.detail || 'Failed to update products');
     }
   };
