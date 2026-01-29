@@ -1337,7 +1337,8 @@ async def create_public_ticket(data: PublicTicketCreate):
         "last_staff_reply_at": None,
         "created_by": "public",
         "created_by_type": "customer",
-        "is_deleted": False
+        "is_deleted": False,
+        "osticket_id": None
     }
     
     await _db.tickets.insert_one(ticket)
@@ -1348,6 +1349,28 @@ async def create_public_ticket(data: PublicTicketCreate):
         event_type="ticket_created", event_data={"source": "public_portal", "help_topic": help_topic.get("name") if help_topic else None},
         author_email=data.email
     )
+    
+    # Sync to osTicket (if configured)
+    try:
+        osticket_result = await create_osticket(
+            email=data.email,
+            name=data.name,
+            subject=data.subject,
+            message=data.description,
+            phone=data.phone or ""
+        )
+        
+        if osticket_result.get("ticket_id"):
+            # Update ticket with osTicket ID
+            await _db.tickets.update_one(
+                {"id": ticket_id},
+                {"$set": {"osticket_id": osticket_result["ticket_id"]}}
+            )
+            logger.info(f"Public ticket {ticket_number} synced to osTicket: {osticket_result['ticket_id']}")
+        elif osticket_result.get("error"):
+            logger.warning(f"osTicket sync failed for {ticket_number}: {osticket_result['error']}")
+    except Exception as e:
+        logger.error(f"osTicket sync exception for {ticket_number}: {str(e)}")
     
     # Return ticket info (excluding internal fields)
     return {
