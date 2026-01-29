@@ -886,6 +886,139 @@ const AMCContracts = () => {
               </div>
             )}
 
+            {/* Documents Tab */}
+            {activeTab === 'documents' && (
+              <div className="space-y-6">
+                {/* Document Upload Section */}
+                <div className="border-2 border-dashed border-slate-200 rounded-xl p-6">
+                  <h4 className="text-sm font-medium text-slate-900 mb-4">Add Document</h4>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="form-label">Document Name</label>
+                      <input
+                        type="text"
+                        value={newDocForm.name}
+                        onChange={(e) => setNewDocForm({ ...newDocForm, name: e.target.value })}
+                        className="form-input"
+                        placeholder="e.g., AMC Agreement 2025"
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label">Document Type</label>
+                      <select
+                        value={newDocForm.document_type}
+                        onChange={(e) => setNewDocForm({ ...newDocForm, document_type: e.target.value })}
+                        className="form-select"
+                      >
+                        {DOCUMENT_TYPES.map(type => (
+                          <option key={type.value} value={type.value}>
+                            {type.icon} {type.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="mb-4">
+                    <label className="form-label">Notes (Optional)</label>
+                    <input
+                      type="text"
+                      value={newDocForm.notes}
+                      onChange={(e) => setNewDocForm({ ...newDocForm, notes: e.target.value })}
+                      className="form-input"
+                      placeholder="Any additional notes about this document"
+                    />
+                  </div>
+                  <label className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                    uploadingDoc ? 'bg-slate-100 border-slate-300' : 'border-blue-200 hover:border-blue-400 hover:bg-blue-50'
+                  }`}>
+                    <input
+                      type="file"
+                      onChange={handleDocumentUpload}
+                      className="hidden"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                      disabled={uploadingDoc}
+                    />
+                    {uploadingDoc ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                        <span className="text-sm text-slate-500">Uploading...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 text-blue-500 mb-2" />
+                        <span className="text-sm font-medium text-slate-700">Click to upload file</span>
+                        <span className="text-xs text-slate-500 mt-1">PDF, DOC, XLS, Images (max 10MB)</span>
+                      </>
+                    )}
+                  </label>
+                </div>
+
+                {/* Uploaded Documents List */}
+                <div>
+                  <h4 className="text-sm font-medium text-slate-900 mb-3 flex items-center gap-2">
+                    <Paperclip className="h-4 w-4" />
+                    Attached Documents ({formData.documents?.length || 0})
+                  </h4>
+                  
+                  {formData.documents?.length > 0 ? (
+                    <div className="space-y-2">
+                      {formData.documents.map((doc) => {
+                        const typeInfo = getDocTypeInfo(doc.document_type);
+                        return (
+                          <div 
+                            key={doc.id} 
+                            className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-white rounded-lg border border-slate-200 flex items-center justify-center text-lg">
+                                {typeInfo?.icon || '📎'}
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-900">{doc.name}</p>
+                                <div className="flex items-center gap-2 text-xs text-slate-500">
+                                  <span className="px-1.5 py-0.5 bg-slate-200 rounded">{typeInfo?.label}</span>
+                                  {doc.file_size && <span>{formatFileSize(doc.file_size)}</span>}
+                                  {doc.file_name && <span>• {doc.file_name}</span>}
+                                </div>
+                                {doc.notes && (
+                                  <p className="text-xs text-slate-500 mt-1">{doc.notes}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                type="button"
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => downloadDocument(doc)}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                type="button"
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => removeDocument(doc.id)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-slate-500">
+                      <File className="h-10 w-10 mx-auto text-slate-300 mb-2" />
+                      <p className="text-sm">No documents attached yet</p>
+                      <p className="text-xs text-slate-400">Upload SLA, NDA, AMC agreements, etc.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Entitlements Tab */}
             {activeTab === 'entitlements' && (
               <div className="space-y-4">
