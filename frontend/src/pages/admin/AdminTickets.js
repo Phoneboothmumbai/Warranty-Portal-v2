@@ -828,9 +828,12 @@ export default function AdminTickets() {
                         className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
                       >
                         <option value="">Select {field.label}</option>
-                        {(field.options || []).map((opt, i) => (
-                          <option key={i} value={opt}>{opt}</option>
-                        ))}
+                        {(field.options || []).map((opt, i) => {
+                          // Handle both object {value, label} and string options
+                          const optValue = typeof opt === 'object' ? opt.value : opt;
+                          const optLabel = typeof opt === 'object' ? opt.label : opt;
+                          return <option key={i} value={optValue}>{optLabel}</option>;
+                        })}
                       </select>
                     )}
                     {field.field_type === 'checkbox' && (
