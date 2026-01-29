@@ -468,10 +468,10 @@ async def download_device_template():
 @router.post("/portal/onboarding/upload-devices")
 async def upload_device_inventory(
     data: dict,
-    user: dict = Depends(lambda: get_current_company_user)
+    request: Request
 ):
     """Process uploaded device inventory from Excel (parsed on frontend)"""
-    user = await get_current_company_user(user) if callable(get_current_company_user) else user
+    user = await _get_current_company_user(request)
     
     devices = data.get("devices", [])
     
