@@ -1,6 +1,19 @@
 # Warranty & Asset Tracking Portal - PRD
 
 ## CHANGELOG
+- **2026-01-29**: Implemented comprehensive AMC Onboarding Wizard (8-step flow)
+  - Company portal multi-step form with draft save
+  - Excel device inventory template & import
+  - Admin approval workflow with "Request Changes" flow
+  - Auto-conversion to AMC contract with device import
+  - Backend: `/api/portal/onboarding`, `/api/admin/onboardings/*`
+  - Frontend: `/company/amc-onboarding`
+
+- **2026-01-29**: Added SLA configuration to Company model
+  - Response & resolution times per priority level
+  - Auto-applied to tickets based on company config
+  - UI in company create/edit form
+
 - **2026-01-29**: Added AMC Contract document attachments feature
   - New "Documents" tab in AMC Contract modal
   - Support for SLA, NDA, AMC agreements, quotes, invoices, POs
