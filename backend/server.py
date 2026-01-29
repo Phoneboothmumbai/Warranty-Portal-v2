@@ -1490,6 +1490,17 @@ async def setup_first_admin(request: Request, admin_data: AdminCreate):
     
     return {"message": "Admin created successfully", "email": admin.email}
 
+
+@api_router.get("/admin/staff")
+async def list_admin_staff(admin: dict = Depends(get_current_admin)):
+    """List all admin panel users/staff for assignment"""
+    staff = await db.admins.find({"is_deleted": {"$ne": True}}, {"_id": 0, "password": 0}).to_list(100)
+    # Add label for SmartSelect compatibility
+    for s in staff:
+        s["label"] = s.get("name", s.get("email", "Unknown"))
+    return staff
+
+
 # ==================== MASTER DATA ENDPOINTS ====================
 
 @api_router.get("/admin/masters")
