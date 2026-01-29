@@ -68,6 +68,8 @@ class CompanyUpdate(BaseModel):
     notification_email: Optional[str] = None
     email_domains: Optional[List[str]] = None  # e.g., ["abc.com", "abc.co.in"]
     amc_status: Optional[str] = None
+    sla_policy_id: Optional[str] = None
+    sla_config: Optional[dict] = None
     notes: Optional[str] = None
 
 
