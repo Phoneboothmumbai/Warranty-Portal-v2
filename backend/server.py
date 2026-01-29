@@ -9375,9 +9375,8 @@ init_ticketing_router(db, get_current_admin, get_current_company_user, log_audit
 app.include_router(ticketing_router, prefix="/api")
 
 # Include AMC Onboarding router
-from routes.amc_onboarding import router as amc_onboarding_router, init_db as init_onboarding_db, init_auth as init_onboarding_auth
+from routes.amc_onboarding import router as amc_onboarding_router, init_db as init_onboarding_db
 init_onboarding_db(db)
-init_onboarding_auth(get_current_company_user, get_current_admin)
 app.include_router(amc_onboarding_router, prefix="/api")
 
 # Initialize Email Service for Ticketing
