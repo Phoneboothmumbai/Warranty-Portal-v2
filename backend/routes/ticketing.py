@@ -964,12 +964,21 @@ async def create_ticket_admin(
 @router.get("/admin/tickets/{ticket_id}")
 async def get_ticket_admin(ticket_id: str, admin: dict = Depends(get_current_admin)):
     """Get ticket details with thread, participants, and help topic - checks both collections"""
+    logger.info(f"Getting ticket {ticket_id}")
+    
+    # First check enterprise tickets collection
     ticket = await _db.tickets.find_one({"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     
     # If not found in enterprise tickets, check legacy service_tickets
     if not ticket:
+        logger.info(f"Ticket {ticket_id} not in tickets collection, checking service_tickets")
+        # Try with is_deleted filter first, then without (for old records without this field)
         service_ticket = await _db.service_tickets.find_one({"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+        if not service_ticket:
+            service_ticket = await _db.service_tickets.find_one({"id": ticket_id}, {"_id": 0})
+        
         if service_ticket:
+            logger.info(f"Found ticket {ticket_id} in service_tickets")
             # Get device info if available
             device = None
             if service_ticket.get("device_id"):
