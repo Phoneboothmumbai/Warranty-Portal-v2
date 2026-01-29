@@ -46,7 +46,11 @@ const Companies = () => {
     contact_email: '',
     contact_phone: '',
     amc_status: 'not_applicable',
-    notes: ''
+    notes: '',
+    sla_config: {
+      response_time: { critical: 1, high: 2, medium: 4, low: 8 },
+      resolution_time: { critical: 4, high: 8, medium: 24, low: 48 }
+    }
   });
 
   useEffect(() => {
