@@ -455,11 +455,9 @@ async def download_device_template():
 @router.post("/portal/onboarding/upload-devices")
 async def upload_device_inventory(
     data: dict,
-    request: Request
+    user: dict = Depends(lambda: _get_current_company_user)
 ):
     """Process uploaded device inventory from Excel (parsed on frontend)"""
-    user = await _get_current_company_user(request)
-    
     devices = data.get("devices", [])
     
     # Validate and normalize devices
