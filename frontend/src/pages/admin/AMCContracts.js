@@ -81,6 +81,17 @@ const PM_FREQUENCIES = [
   { value: 'yearly', label: 'Yearly', desc: '1 visit/year' },
 ];
 
+// Document type options
+const DOCUMENT_TYPES = [
+  { value: 'amc_contract', label: 'AMC Contract', icon: '📄' },
+  { value: 'sla', label: 'SLA Document', icon: '📋' },
+  { value: 'nda', label: 'NDA', icon: '🔒' },
+  { value: 'quote', label: 'Quotation', icon: '💰' },
+  { value: 'invoice', label: 'Invoice', icon: '🧾' },
+  { value: 'po', label: 'Purchase Order', icon: '📑' },
+  { value: 'other', label: 'Other', icon: '📎' },
+];
+
 const AMCContracts = () => {
   const { token } = useAuth();
   const [contracts, setContracts] = useState([]);
