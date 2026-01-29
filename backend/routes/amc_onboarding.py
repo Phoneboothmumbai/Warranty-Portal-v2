@@ -55,7 +55,7 @@ async def get_company_onboarding(user: dict = Depends(get_current_company_user))
 
 
 @router.put("/portal/onboarding")
-async def update_company_onboarding(data: AMCOnboardingUpdate, user: dict = Depends(lambda: _get_current_company_user)):
+async def update_company_onboarding(data: AMCOnboardingUpdate, user: dict = Depends(get_current_company_user)):
     """Save draft or update onboarding (company can only edit draft or changes_requested)"""
     company_id = user.get("company_id")
     
