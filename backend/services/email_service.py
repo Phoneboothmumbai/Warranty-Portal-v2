@@ -473,7 +473,7 @@ class EmailService:
             
             # Create new ticket
             ticket_id = str(uuid.uuid4())
-            new_ticket_number = f"TKT-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}"
+            new_ticket_number = f"TKT-{str(uuid.uuid4())[:6].upper()}"
             
             # Clean subject (remove Re:, Fwd:, etc.)
             clean_subject = re.sub(r'^(re:|fw:|fwd:)\s*', '', subject, flags=re.IGNORECASE).strip()
