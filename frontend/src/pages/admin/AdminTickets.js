@@ -207,8 +207,9 @@ export default function AdminTickets() {
       if (deptsRes.status === 'fulfilled') {
         setDepartments(deptsRes.value.data || []);
       }
-      if (adminsRes.status === 'fulfilled') {
-        setAdmins(adminsRes.value.data || []);
+      if (staffRes.status === 'fulfilled') {
+        setAdmins(staffRes.value.data || []);  // Admin panel staff only
+        console.log('Admin staff loaded:', staffRes.value.data?.length || 0);
       }
       if (companiesRes.status === 'fulfilled') {
         setCompanies(companiesRes.value.data || []);
