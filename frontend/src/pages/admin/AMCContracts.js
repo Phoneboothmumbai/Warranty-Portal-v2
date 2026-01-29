@@ -290,8 +290,10 @@ const AMCContracts = () => {
       exclusions: contract.exclusions || {},
       entitlements: contract.entitlements || {},
       asset_mapping: contract.asset_mapping || { mapping_type: 'all_company', selected_asset_ids: [], selected_device_types: [] },
+      documents: contract.documents || [],
       internal_notes: contract.internal_notes || '',
     });
+    setNewDocForm({ name: '', document_type: 'amc_contract', notes: '' });
     setActiveTab('basic');
     setModalOpen(true);
   };
