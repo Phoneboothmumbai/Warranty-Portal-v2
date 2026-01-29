@@ -161,10 +161,18 @@ export default function AdminTickets() {
     priority: 'medium',
     category: '',
     tags: '',
-    requester_id: ''
+    requester_id: '',
+    help_topic_id: '',
+    form_data: {}
   });
   const [creating, setCreating] = useState(false);
   const [loadingCompanyUsers, setLoadingCompanyUsers] = useState(false);
+  
+  // Help Topics and Custom Forms
+  const [helpTopics, setHelpTopics] = useState([]);
+  const [selectedHelpTopic, setSelectedHelpTopic] = useState(null);
+  const [customForm, setCustomForm] = useState(null);
+  const [loadingForm, setLoadingForm] = useState(false);
   
   // CC Participants for new ticket
   const [ccParticipants, setCcParticipants] = useState([]);
