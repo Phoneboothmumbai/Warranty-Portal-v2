@@ -3,7 +3,7 @@ import axios from 'axios';
 import { 
   Plus, Search, Edit2, Trash2, Shield, MoreVertical, Building2, 
   CheckCircle2, XCircle, Clock, AlertTriangle, ChevronRight, ChevronLeft,
-  Eye, Calendar, Settings2, FileText, X
+  Eye, Calendar, Settings2, FileText, X, Upload, Download, File, Paperclip
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
