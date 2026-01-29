@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { 
   Plus, Search, Edit2, Trash2, Package, MoreVertical, FolderOpen, 
-  CheckCircle, XCircle, Tag, Box, Upload, Image, IndianRupee
+  CheckCircle, XCircle, Tag, Box, Upload, Image, IndianRupee, CheckSquare, Square, X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { BulkImport } from '../../components/ui/bulk-import';
+import { Checkbox } from '../../components/ui/checkbox';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
