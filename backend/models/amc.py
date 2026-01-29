@@ -58,6 +58,19 @@ class AMCAssetMapping(BaseModel):
     selected_device_types: List[str] = []
 
 
+class AMCDocument(BaseModel):
+    """Document attached to an AMC Contract"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str  # Display name
+    document_type: str = "other"  # sla, nda, amc_contract, quote, invoice, other
+    file_url: str  # URL or base64 data
+    file_name: str  # Original filename
+    file_size: Optional[int] = None  # File size in bytes
+    uploaded_at: str = Field(default_factory=get_ist_isoformat)
+    uploaded_by: Optional[str] = None
+    notes: Optional[str] = None
+
+
 class AMCContract(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
