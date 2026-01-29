@@ -871,6 +871,94 @@ const SupplyProducts = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Edit Modal */}
+      <Dialog open={bulkEditModalOpen} onOpenChange={setBulkEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk Edit {selectedProducts.length} Product{selectedProducts.length > 1 ? 's' : ''}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleBulkEdit} className="space-y-4 mt-4">
+            <p className="text-sm text-slate-500">
+              Only fill in the fields you want to update. Empty fields will not be changed.
+            </p>
+            
+            <div>
+              <label className="form-label">Category</label>
+              <select
+                value={bulkEditForm.category_id}
+                onChange={(e) => setBulkEditForm({ ...bulkEditForm, category_id: e.target.value })}
+                className="form-select"
+              >
+                <option value="">-- Don't change --</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="form-label">Status</label>
+              <select
+                value={bulkEditForm.is_active}
+                onChange={(e) => setBulkEditForm({ ...bulkEditForm, is_active: e.target.value })}
+                className="form-select"
+              >
+                <option value="">-- Don't change --</option>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="form-label">Unit</label>
+              <select
+                value={bulkEditForm.unit}
+                onChange={(e) => setBulkEditForm({ ...bulkEditForm, unit: e.target.value })}
+                className="form-select"
+              >
+                <option value="">-- Don't change --</option>
+                <option value="piece">Piece</option>
+                <option value="pack">Pack</option>
+                <option value="box">Box</option>
+                <option value="ream">Ream</option>
+                <option value="set">Set</option>
+                <option value="cartridge">Cartridge</option>
+                <option value="roll">Roll</option>
+                <option value="bottle">Bottle</option>
+                <option value="pack of 10">Pack of 10</option>
+                <option value="pack of 50">Pack of 50</option>
+                <option value="pack of 100">Pack of 100</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="form-label">Price (₹)</label>
+              <div className="relative">
+                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="number"
+                  value={bulkEditForm.price}
+                  onChange={(e) => setBulkEditForm({ ...bulkEditForm, price: e.target.value })}
+                  className="form-input pl-9"
+                  placeholder="Leave empty to not change"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={() => setBulkEditModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
+                Update {selectedProducts.length} Product{selectedProducts.length > 1 ? 's' : ''}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
