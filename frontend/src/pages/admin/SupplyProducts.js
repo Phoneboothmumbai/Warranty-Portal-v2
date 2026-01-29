@@ -525,6 +525,13 @@ const SupplyProducts = () => {
         <table className="w-full">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
+              <th className="px-4 py-3 text-left">
+                <Checkbox
+                  checked={filteredProducts.length > 0 && selectedProducts.length === filteredProducts.length}
+                  onCheckedChange={toggleSelectAll}
+                  data-testid="select-all-checkbox"
+                />
+              </th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Product</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Category</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">SKU</th>
