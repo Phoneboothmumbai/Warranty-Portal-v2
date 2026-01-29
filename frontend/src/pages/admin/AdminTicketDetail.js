@@ -68,17 +68,19 @@ export default function AdminTicketDetail() {
 
   const fetchTicket = useCallback(async () => {
     try {
-      const [ticketRes, deptsRes, staffRes, enumsRes, cannedRes] = await Promise.all([
+      const [ticketRes, deptsRes, staffRes, enumsRes, cannedRes, companiesRes] = await Promise.all([
         axios.get(`${API}/ticketing/admin/tickets/${ticketId}`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API}/ticketing/admin/departments`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API}/admin/staff`, { headers: { Authorization: `Bearer ${token}` } }),  // Admin staff for assignment
         axios.get(`${API}/ticketing/enums`),
-        axios.get(`${API}/ticketing/admin/canned-responses`, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API}/ticketing/admin/canned-responses`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API}/admin/companies`, { headers: { Authorization: `Bearer ${token}` } })  // For company assignment
       ]);
       
       setTicket(ticketRes.data);
       setDepartments(deptsRes.data || []);
       setAdmins(staffRes.data || []);  // Admin panel staff
+      setCompanies(companiesRes.data || []);  // All companies
       setEnums(enumsRes.data);
       setCannedResponses(cannedRes.data || []);
       setEditData({
