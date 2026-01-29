@@ -18,6 +18,7 @@ class Company(BaseModel):
     contact_email: str
     contact_phone: str
     notification_email: Optional[str] = None
+    email_domains: List[str] = Field(default_factory=list)  # e.g., ["abc.com", "abc.co.in"]
     amc_status: str = "not_applicable"
     notes: Optional[str] = None
     is_deleted: bool = False
@@ -33,6 +34,7 @@ class CompanyCreate(BaseModel):
     contact_email: str
     contact_phone: str
     notification_email: Optional[str] = None
+    email_domains: Optional[List[str]] = None  # e.g., ["abc.com"]
     amc_status: str = "not_applicable"
     notes: Optional[str] = None
 
@@ -46,6 +48,7 @@ class CompanyUpdate(BaseModel):
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
     notification_email: Optional[str] = None
+    email_domains: Optional[List[str]] = None  # e.g., ["abc.com", "abc.co.in"]
     amc_status: Optional[str] = None
     notes: Optional[str] = None
 
