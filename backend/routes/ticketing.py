@@ -909,8 +909,66 @@ async def create_ticket_admin(
 
 @router.get("/admin/tickets/{ticket_id}")
 async def get_ticket_admin(ticket_id: str, admin: dict = Depends(get_current_admin)):
-    """Get ticket details with thread, participants, and help topic"""
+    """Get ticket details with thread, participants, and help topic - checks both collections"""
     ticket = await _db.tickets.find_one({"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    
+    # If not found in enterprise tickets, check legacy service_tickets
+    if not ticket:
+        service_ticket = await _db.service_tickets.find_one({"id": ticket_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+        if service_ticket:
+            # Get device info if available
+            device = None
+            if service_ticket.get("device_id"):
+                device = await _db.devices.find_one({"id": service_ticket["device_id"]}, {"_id": 0, "serial_number": 1, "brand": 1, "model": 1})
+            
+            # Get company info
+            company = await _db.companies.find_one({"id": service_ticket.get("company_id")}, {"_id": 0, "name": 1})
+            
+            # Convert service_ticket to compatible format
+            ticket = {
+                "id": service_ticket.get("id"),
+                "ticket_number": service_ticket.get("ticket_number"),
+                "company_id": service_ticket.get("company_id"),
+                "company_name": company.get("name") if company else "Unknown",
+                "subject": service_ticket.get("subject"),
+                "description": service_ticket.get("description"),
+                "status": service_ticket.get("status", "open"),
+                "priority": service_ticket.get("priority", "medium"),
+                "priority_order": {"critical": 4, "high": 3, "medium": 2, "low": 1}.get(service_ticket.get("priority", "medium"), 2),
+                "requester_id": service_ticket.get("created_by"),
+                "requester_name": service_ticket.get("requester_name") or "Portal User",
+                "requester_email": service_ticket.get("requester_email", ""),
+                "requester_phone": service_ticket.get("requester_phone"),
+                "category": service_ticket.get("issue_category"),
+                "device_id": service_ticket.get("device_id"),
+                "device_serial": device.get("serial_number") if device else None,
+                "created_at": service_ticket.get("created_at"),
+                "updated_at": service_ticket.get("updated_at"),
+                "source": "service_request",
+                "osticket_id": service_ticket.get("osticket_id"),
+                "assigned_to": service_ticket.get("assigned_to"),
+                "assigned_to_name": service_ticket.get("assigned_to_name"),
+                "tags": ["legacy-service-request"],
+                "attachments": service_ticket.get("attachments", [])
+            }
+            
+            # Get comments as thread
+            comments = await _db.service_ticket_comments.find({"ticket_id": ticket_id}, {"_id": 0}).sort("created_at", 1).to_list(500)
+            thread = [{
+                "id": c.get("id"),
+                "ticket_id": ticket_id,
+                "type": "staff_message" if c.get("author_type") == "staff" else "customer_message",
+                "content": c.get("content"),
+                "author_id": c.get("author_id"),
+                "author_name": c.get("author_name"),
+                "author_type": c.get("author_type", "customer"),
+                "created_at": c.get("created_at"),
+                "attachments": c.get("attachments", []),
+                "is_internal": False
+            } for c in comments]
+            
+            return {**ticket, "thread": thread, "department": None, "help_topic": None, "participants": [], "_legacy": True}
+    
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     
