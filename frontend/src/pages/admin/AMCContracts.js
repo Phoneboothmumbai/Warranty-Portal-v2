@@ -1117,7 +1117,7 @@ const AMCContracts = () => {
               <div className="flex gap-2">
                 {activeTab !== 'basic' && (
                   <Button type="button" variant="outline" onClick={() => {
-                    const tabs = ['basic', 'coverage', 'assets', 'entitlements'];
+                    const tabs = ['basic', 'coverage', 'assets', 'documents', 'entitlements'];
                     const idx = tabs.indexOf(activeTab);
                     if (idx > 0) setActiveTab(tabs[idx - 1]);
                   }}>
@@ -1131,7 +1131,7 @@ const AMCContracts = () => {
                 </Button>
                 {activeTab !== 'entitlements' ? (
                   <Button type="button" onClick={() => {
-                    const tabs = ['basic', 'coverage', 'assets', 'entitlements'];
+                    const tabs = ['basic', 'coverage', 'assets', 'documents', 'entitlements'];
                     const idx = tabs.indexOf(activeTab);
                     if (idx < tabs.length - 1) setActiveTab(tabs[idx + 1]);
                   }} className="bg-[#0F62FE] hover:bg-[#0043CE] text-white">
