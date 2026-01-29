@@ -11,7 +11,7 @@ import requests
 import os
 import io
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://enterprise-ticket.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://ticket-system-82.preview.emergentagent.com')
 
 # Test credentials
 ADMIN_EMAIL = "admin@demo.com"
