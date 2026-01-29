@@ -1,5 +1,12 @@
 # Warranty & Asset Tracking Portal - PRD
 
+## CHANGELOG
+- **2026-01-29**: Added bulk edit/delete functionality for Office Supply Products
+  - Checkbox selection (individual + select all)
+  - Bulk action bar with Edit/Delete buttons
+  - Bulk edit modal for Category, Status, Unit, Price
+  - Backend endpoints: `/api/admin/supply-products/bulk-delete`, `/api/admin/supply-products/bulk-update`
+
 ## Original Problem Statement
 Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - B2B office supplies ordering system
