@@ -467,6 +467,7 @@ const CompanyOfficeSupplies = () => {
                   </div>
                 ))}
               </div>
+              <p className="text-xs text-slate-500 mt-2 italic">* GST and Shipping Charges extra as applicable</p>
             </div>
 
             {/* Delivery Location */}
