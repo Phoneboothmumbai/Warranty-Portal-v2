@@ -1457,6 +1457,33 @@ def calculate_sla_due_times(sla_policy, priority):
     }
 
 
+def calculate_sla_from_company_config(company_sla_config, priority):
+    """Calculate SLA due times from company's custom SLA config"""
+    now = datetime.now()
+    
+    response_time = company_sla_config.get("response_time", {})
+    resolution_time = company_sla_config.get("resolution_time", {})
+    
+    # Get hours based on priority, with defaults
+    default_response = {"critical": 1, "high": 2, "medium": 4, "low": 8}
+    default_resolution = {"critical": 4, "high": 8, "medium": 24, "low": 48}
+    
+    response_hours = response_time.get(priority, default_response.get(priority, 4))
+    resolution_hours = resolution_time.get(priority, default_resolution.get(priority, 24))
+    
+    return {
+        "sla_policy_id": None, 
+        "sla_policy_name": "Company SLA",
+        "response_due_at": (now + timedelta(hours=response_hours)).isoformat(),
+        "resolution_due_at": (now + timedelta(hours=resolution_hours)).isoformat(),
+        "response_met": None, "resolution_met": None, "first_response_at": None, "resolved_at": None,
+        "is_paused": False, "paused_at": None, "total_paused_seconds": 0,
+        "response_breached": False, "resolution_breached": False, "escalated": False,
+        "response_hours": response_hours,
+        "resolution_hours": resolution_hours
+    }
+
+
 # ==================== PUBLIC DEPARTMENTS (for customer portal) ====================
 
 @router.get("/portal/departments")
