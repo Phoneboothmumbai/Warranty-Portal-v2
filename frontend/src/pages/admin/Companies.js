@@ -332,7 +332,7 @@ const Companies = () => {
 
       {/* Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingCompany ? 'Edit Company' : 'Add Company'}</DialogTitle>
           </DialogHeader>
@@ -411,6 +411,58 @@ const Companies = () => {
                 data-testid="company-contact-email-input"
               />
             </div>
+            
+            {/* SLA Configuration */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-blue-600" />
+                SLA Configuration (Hours)
+              </h3>
+              <p className="text-xs text-slate-500 mb-4">Define response and resolution times for each priority level</p>
+              
+              <div className="bg-slate-50 rounded-lg p-4 space-y-4">
+                {/* Response Time */}
+                <div>
+                  <label className="text-xs font-medium text-slate-700 mb-2 block">First Response Time (Hours)</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {['critical', 'high', 'medium', 'low'].map(priority => (
+                      <div key={`response-${priority}`}>
+                        <label className="text-xs text-slate-500 capitalize">{priority}</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={formData.sla_config?.response_time?.[priority] || ''}
+                          onChange={(e) => updateSlaConfig('response_time', priority, e.target.value)}
+                          className="form-input text-sm"
+                          placeholder="hrs"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Resolution Time */}
+                <div>
+                  <label className="text-xs font-medium text-slate-700 mb-2 block">Resolution Time (Hours)</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {['critical', 'high', 'medium', 'low'].map(priority => (
+                      <div key={`resolution-${priority}`}>
+                        <label className="text-xs text-slate-500 capitalize">{priority}</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={formData.sla_config?.resolution_time?.[priority] || ''}
+                          onChange={(e) => updateSlaConfig('resolution_time', priority, e.target.value)}
+                          className="form-input text-sm"
+                          placeholder="hrs"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
             <div>
               <label className="form-label">Notes</label>
               <textarea
