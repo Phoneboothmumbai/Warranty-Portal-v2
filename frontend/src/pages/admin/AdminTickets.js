@@ -191,11 +191,12 @@ export default function AdminTickets() {
         axios.get(`${API}/ticketing/admin/departments`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API}/admin/users`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API}/admin/companies`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API}/ticketing/enums`)
+        axios.get(`${API}/ticketing/enums`),
+        axios.get(`${API}/ticketing/admin/help-topics`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       
       // Extract data from settled promises
-      const [ticketsRes, dashboardRes, deptsRes, adminsRes, companiesRes, enumsRes] = results;
+      const [ticketsRes, dashboardRes, deptsRes, adminsRes, companiesRes, enumsRes, helpTopicsRes] = results;
       
       if (ticketsRes.status === 'fulfilled') {
         setTickets(ticketsRes.value.data.tickets || []);
@@ -217,6 +218,10 @@ export default function AdminTickets() {
       }
       if (enumsRes.status === 'fulfilled') {
         setEnums(enumsRes.value.data);
+      }
+      if (helpTopicsRes.status === 'fulfilled') {
+        setHelpTopics(helpTopicsRes.value.data || []);
+        console.log('Help topics loaded:', helpTopicsRes.value.data?.length || 0);
       }
       
       // Show error if tickets failed to load
