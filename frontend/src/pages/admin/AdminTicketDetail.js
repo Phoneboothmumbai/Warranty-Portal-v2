@@ -548,6 +548,42 @@ export default function AdminTicketDetail() {
                 <p className="text-slate-500">{ticket.requester_phone}</p>
               )}
             </div>
+            
+            {/* Company Info */}
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <p className="text-xs font-medium text-slate-500 mb-2">Company</p>
+              {ticket.company_id && ticket.company_name ? (
+                <p className="font-medium text-slate-900">{ticket.company_name}</p>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-amber-600 text-sm">No company assigned</p>
+                  <select
+                    className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg"
+                    defaultValue=""
+                    onChange={async (e) => {
+                      if (e.target.value) {
+                        try {
+                          await axios.post(
+                            `${API}/ticketing/admin/tickets/${ticket.id}/assign-company?company_id=${e.target.value}`,
+                            {},
+                            { headers: { Authorization: `Bearer ${token}` } }
+                          );
+                          toast.success('Ticket assigned to company');
+                          fetchTicket();
+                        } catch (error) {
+                          toast.error('Failed to assign company');
+                        }
+                      }
+                    }}
+                  >
+                    <option value="">Assign to company...</option>
+                    {companies.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Participants (CC) */}
