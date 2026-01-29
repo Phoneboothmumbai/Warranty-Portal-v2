@@ -32,13 +32,18 @@ def init_auth(company_auth, admin_auth):
     _get_current_admin = admin_auth
 
 
+def get_company_user_dep():
+    return Depends(_get_current_company_user)
+
+def get_admin_dep():
+    return Depends(_get_current_admin)
+
+
 # ==================== COMPANY PORTAL ENDPOINTS ====================
 
 @router.get("/portal/onboarding")
-async def get_company_onboarding(request: Request):
+async def get_company_onboarding(user: dict = Depends(lambda: _get_current_company_user)):
     """Get current onboarding for company (or create new draft)"""
-    user = await _get_current_company_user(request)
-    
     company_id = user.get("company_id")
     
     # Find existing onboarding (not converted)
@@ -64,10 +69,8 @@ async def get_company_onboarding(request: Request):
 
 
 @router.put("/portal/onboarding")
-async def update_company_onboarding(data: AMCOnboardingUpdate, request: Request):
+async def update_company_onboarding(data: AMCOnboardingUpdate, user: dict = Depends(lambda: _get_current_company_user)):
     """Save draft or update onboarding (company can only edit draft or changes_requested)"""
-    user = await _get_current_company_user(request)
-    
     company_id = user.get("company_id")
     
     # Find existing onboarding
@@ -94,10 +97,8 @@ async def update_company_onboarding(data: AMCOnboardingUpdate, request: Request)
 
 
 @router.post("/portal/onboarding/submit")
-async def submit_company_onboarding(request: Request):
+async def submit_company_onboarding(user: dict = Depends(lambda: _get_current_company_user)):
     """Submit onboarding for admin review"""
-    user = await _get_current_company_user(request)
-    
     company_id = user.get("company_id")
     
     # Find draft onboarding
@@ -124,8 +125,6 @@ async def submit_company_onboarding(request: Request):
         }}
     )
     
-    # TODO: Send email notification to admin
-    
     return {"message": "Onboarding submitted successfully", "status": "submitted"}
 
 
@@ -134,11 +133,9 @@ async def submit_company_onboarding(request: Request):
 @router.get("/admin/onboardings")
 async def list_onboardings(
     status: Optional[str] = None,
-    request: Request = None
+    admin: dict = Depends(lambda: _get_current_admin)
 ):
     """List all onboarding submissions"""
-    admin = await _get_current_admin(request)
-    
     query = {}
     if status:
         query["status"] = status
@@ -156,10 +153,8 @@ async def list_onboardings(
 
 
 @router.get("/admin/onboardings/{onboarding_id}")
-async def get_onboarding_detail(onboarding_id: str, request: Request):
+async def get_onboarding_detail(onboarding_id: str, admin: dict = Depends(lambda: _get_current_admin)):
     """Get detailed onboarding data"""
-    admin = await _get_current_admin(request)
-    
     onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id}, {"_id": 0})
     if not onboarding:
         raise HTTPException(status_code=404, detail="Onboarding not found")
@@ -175,11 +170,9 @@ async def get_onboarding_detail(onboarding_id: str, request: Request):
 async def update_onboarding_admin(
     onboarding_id: str,
     data: AMCOnboardingUpdate,
-    request: Request
+    admin: dict = Depends(lambda: _get_current_admin)
 ):
     """Admin can edit any onboarding"""
-    admin = await _get_current_admin(request)
-    
     onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id}, {"_id": 0})
     if not onboarding:
         raise HTTPException(status_code=404, detail="Onboarding not found")
@@ -200,11 +193,9 @@ async def update_onboarding_admin(
 async def request_onboarding_changes(
     onboarding_id: str,
     data: dict,
-    request: Request
+    admin: dict = Depends(lambda: _get_current_admin)
 ):
     """Request changes from company"""
-    admin = await _get_current_admin(request)
-    
     feedback = data.get("feedback", "")
     if not feedback:
         raise HTTPException(status_code=400, detail="Feedback is required")
@@ -230,11 +221,9 @@ async def request_onboarding_changes(
 @router.post("/admin/onboardings/{onboarding_id}/approve")
 async def approve_onboarding(
     onboarding_id: str,
-    request: Request
+    admin: dict = Depends(lambda: _get_current_admin)
 ):
     """Approve onboarding"""
-    admin = await _get_current_admin(request)
-    
     onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id}, {"_id": 0})
     if not onboarding:
         raise HTTPException(status_code=404, detail="Onboarding not found")
@@ -255,11 +244,9 @@ async def approve_onboarding(
 @router.post("/admin/onboardings/{onboarding_id}/convert-to-amc")
 async def convert_to_amc(
     onboarding_id: str,
-    request: Request
+    admin: dict = Depends(lambda: _get_current_admin)
 ):
     """Convert approved onboarding to AMC contract and import devices"""
-    admin = await _get_current_admin(request)
-    
     onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id}, {"_id": 0})
     if not onboarding:
         raise HTTPException(status_code=404, detail="Onboarding not found")
