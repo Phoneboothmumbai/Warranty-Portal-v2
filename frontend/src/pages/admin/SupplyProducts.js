@@ -544,14 +544,24 @@ const SupplyProducts = () => {
           <tbody className="divide-y divide-slate-100">
             {filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
+                <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
                   <Package className="h-12 w-12 mx-auto text-slate-300 mb-3" />
                   <p>No products found</p>
                 </td>
               </tr>
             ) : (
               filteredProducts.map(product => (
-                <tr key={product.id} className="hover:bg-slate-50">
+                <tr 
+                  key={product.id} 
+                  className={`hover:bg-slate-50 ${selectedProducts.includes(product.id) ? 'bg-blue-50' : ''}`}
+                >
+                  <td className="px-4 py-4">
+                    <Checkbox
+                      checked={selectedProducts.includes(product.id)}
+                      onCheckedChange={() => toggleProductSelection(product.id)}
+                      data-testid={`product-checkbox-${product.id}`}
+                    />
+                  </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       {product.image_url ? (
