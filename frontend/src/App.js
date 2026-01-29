@@ -68,6 +68,7 @@ import CompanyAMCRequests from "./pages/company/CompanyAMCRequests";
 import NewAMCRequest from "./pages/company/NewAMCRequest";
 import CompanySupportTickets from "./pages/company/CompanySupportTickets";
 import CompanySupportTicketDetail from "./pages/company/CompanySupportTicketDetail";
+import CompanyAMCOnboarding from "./pages/company/CompanyAMCOnboarding";
 
 // Engineer Portal Pages
 import EngineerLogin from "./pages/engineer/EngineerLogin";
