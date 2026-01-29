@@ -119,7 +119,7 @@ async def submit_company_onboarding(user: dict = Depends(get_current_company_use
 @router.get("/admin/onboardings")
 async def list_onboardings(
     status: Optional[str] = None,
-    admin: dict = Depends(lambda: _get_current_admin)
+    admin: dict = Depends(get_current_admin)
 ):
     """List all onboarding submissions"""
     query = {}
@@ -156,7 +156,7 @@ async def get_onboarding_detail(onboarding_id: str, admin: dict = Depends(lambda
 async def update_onboarding_admin(
     onboarding_id: str,
     data: AMCOnboardingUpdate,
-    admin: dict = Depends(lambda: _get_current_admin)
+    admin: dict = Depends(get_current_admin)
 ):
     """Admin can edit any onboarding"""
     onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id}, {"_id": 0})
@@ -179,7 +179,7 @@ async def update_onboarding_admin(
 async def request_onboarding_changes(
     onboarding_id: str,
     data: dict,
-    admin: dict = Depends(lambda: _get_current_admin)
+    admin: dict = Depends(get_current_admin)
 ):
     """Request changes from company"""
     feedback = data.get("feedback", "")
@@ -207,7 +207,7 @@ async def request_onboarding_changes(
 @router.post("/admin/onboardings/{onboarding_id}/approve")
 async def approve_onboarding(
     onboarding_id: str,
-    admin: dict = Depends(lambda: _get_current_admin)
+    admin: dict = Depends(get_current_admin)
 ):
     """Approve onboarding"""
     onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id}, {"_id": 0})
@@ -230,7 +230,7 @@ async def approve_onboarding(
 @router.post("/admin/onboardings/{onboarding_id}/convert-to-amc")
 async def convert_to_amc(
     onboarding_id: str,
-    admin: dict = Depends(lambda: _get_current_admin)
+    admin: dict = Depends(get_current_admin)
 ):
     """Convert approved onboarding to AMC contract and import devices"""
     onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id}, {"_id": 0})
