@@ -315,6 +315,84 @@ const AMCContracts = () => {
     setEditingContract(null);
   };
 
+  // Document handling functions
+  const handleDocumentUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File size should be less than 10MB');
+      return;
+    }
+
+    setUploadingDoc(true);
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const newDoc = {
+          id: `doc_${Date.now()}`,
+          name: newDocForm.name || file.name.replace(/\.[^/.]+$/, ''),
+          document_type: newDocForm.document_type,
+          file_url: reader.result,
+          file_name: file.name,
+          file_size: file.size,
+          uploaded_at: new Date().toISOString(),
+          notes: newDocForm.notes
+        };
+        
+        setFormData(prev => ({
+          ...prev,
+          documents: [...(prev.documents || []), newDoc]
+        }));
+        
+        setNewDocForm({ name: '', document_type: 'amc_contract', notes: '' });
+        toast.success('Document added');
+        setUploadingDoc(false);
+      };
+      reader.onerror = () => {
+        toast.error('Failed to read file');
+        setUploadingDoc(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      toast.error('Failed to upload document');
+      setUploadingDoc(false);
+    }
+    
+    // Reset file input
+    e.target.value = '';
+  };
+
+  const removeDocument = (docId) => {
+    setFormData(prev => ({
+      ...prev,
+      documents: prev.documents.filter(d => d.id !== docId)
+    }));
+    toast.success('Document removed');
+  };
+
+  const downloadDocument = (doc) => {
+    const link = document.createElement('a');
+    link.href = doc.file_url;
+    link.download = doc.file_name || doc.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const getDocTypeInfo = (type) => {
+    return DOCUMENT_TYPES.find(t => t.value === type) || DOCUMENT_TYPES.find(t => t.value === 'other');
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
