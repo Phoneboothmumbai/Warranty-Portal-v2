@@ -52,6 +52,8 @@ class CompanyCreate(BaseModel):
     notification_email: Optional[str] = None
     email_domains: Optional[List[str]] = None  # e.g., ["abc.com"]
     amc_status: str = "not_applicable"
+    sla_policy_id: Optional[str] = None
+    sla_config: Optional[dict] = None
     notes: Optional[str] = None
 
 
