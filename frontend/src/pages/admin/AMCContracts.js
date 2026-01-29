@@ -140,7 +140,16 @@ const AMCContracts = () => {
       selected_asset_ids: [],
       selected_device_types: [],
     },
+    documents: [],
     internal_notes: '',
+  });
+  
+  // Document upload state
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [newDocForm, setNewDocForm] = useState({
+    name: '',
+    document_type: 'amc_contract',
+    notes: ''
   });
 
   useEffect(() => {
