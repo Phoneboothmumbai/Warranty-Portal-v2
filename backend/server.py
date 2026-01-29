@@ -8201,10 +8201,66 @@ Ticket Created: {get_ist_isoformat()}</em>
             {"$set": {"osticket_id": osticket_id}}
         )
     
+    # ALSO create in the Enterprise Ticketing System (tickets collection)
+    enterprise_ticket_id = str(uuid.uuid4())
+    enterprise_ticket = {
+        "id": enterprise_ticket_id,
+        "ticket_number": ticket.ticket_number,  # Use same ticket number for consistency
+        "company_id": user["company_id"],
+        "source": "company_portal",
+        "device_id": device.get("id"),
+        "device_serial": device.get("serial_number"),
+        "subject": data.subject,
+        "description": data.description,
+        "status": "open",
+        "priority": getattr(data, 'priority', 'medium') or "medium",
+        "priority_order": {"critical": 4, "high": 3, "medium": 2, "low": 1}.get(getattr(data, 'priority', 'medium') or "medium", 2),
+        "requester_id": user.get("id"),
+        "requester_name": user.get("name", "Portal User"),
+        "requester_email": user.get("email", ""),
+        "requester_phone": user.get("phone"),
+        "assigned_to": None,
+        "assigned_to_name": None,
+        "assigned_at": None,
+        "department_id": None,
+        "help_topic_id": None,
+        "category": data.issue_category,
+        "tags": ["device-service", f"device:{device.get('serial_number', 'unknown')}"],
+        "watchers": [],
+        "sla_status": None,
+        "custom_fields": {
+            "device_serial": device.get("serial_number"),
+            "device_type": device.get("device_type"),
+            "device_brand": device.get("brand"),
+            "device_model": device.get("model"),
+            "warranty_status": warranty_status,
+            "warranty_days_left": warranty_days_left
+        },
+        "form_data": None,
+        "attachments": data.attachments if hasattr(data, 'attachments') else [],
+        "reply_count": 0,
+        "internal_note_count": 0,
+        "created_at": get_ist_isoformat(),
+        "updated_at": get_ist_isoformat(),
+        "first_response_at": None,
+        "resolved_at": None,
+        "closed_at": None,
+        "last_customer_reply_at": None,
+        "last_staff_reply_at": None,
+        "created_by": user.get("id"),
+        "created_by_type": "customer",
+        "osticket_id": osticket_id,
+        "service_ticket_id": ticket.id,  # Link to the old service_tickets collection
+        "is_deleted": False
+    }
+    
+    await db.tickets.insert_one(enterprise_ticket)
+    
     return {
         "message": "Ticket created successfully", 
         "ticket_number": ticket.ticket_number, 
         "id": ticket.id,
+        "enterprise_ticket_id": enterprise_ticket_id,
         "osticket_id": osticket_id,
         "osticket_error": osticket_error
     }
