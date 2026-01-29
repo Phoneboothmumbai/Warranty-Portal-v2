@@ -83,6 +83,7 @@ class AMCContract(BaseModel):
     exclusions: dict = Field(default_factory=lambda: AMCExclusions().model_dump())
     entitlements: dict = Field(default_factory=lambda: AMCEntitlements().model_dump())
     asset_mapping: dict = Field(default_factory=lambda: AMCAssetMapping().model_dump())
+    documents: List[dict] = Field(default_factory=list)  # List of AMCDocument dicts
     internal_notes: Optional[str] = None
     is_deleted: bool = False
     created_at: str = Field(default_factory=get_ist_isoformat)
