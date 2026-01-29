@@ -325,6 +325,17 @@ export default function AdminTickets() {
       toast.error('Please select a requester');
       return;
     }
+    
+    // Validate custom form required fields
+    if (customForm && customForm.fields) {
+      for (const field of customForm.fields) {
+        if (field.required && !createData.form_data[field.name]) {
+          toast.error(`Please fill in the required field: ${field.label}`);
+          return;
+        }
+      }
+    }
+    
     setCreating(true);
     try {
       const payload = {
@@ -334,7 +345,9 @@ export default function AdminTickets() {
         priority: createData.priority,
         category: createData.category || undefined,
         tags: createData.tags ? createData.tags.split(',').map(t => t.trim()) : [],
-        participants: ccParticipants.length > 0 ? ccParticipants : undefined
+        participants: ccParticipants.length > 0 ? ccParticipants : undefined,
+        help_topic_id: createData.help_topic_id || undefined,
+        form_data: Object.keys(createData.form_data).length > 0 ? createData.form_data : undefined
       };
       const res = await axios.post(
         `${API}/ticketing/admin/tickets?requester_id=${createData.requester_id}`,
@@ -345,7 +358,9 @@ export default function AdminTickets() {
       setShowCreate(false);
       setSelectedCompanyId('');
       setCompanyUsers([]);
-      setCreateData({ subject: '', description: '', department_id: '', priority: 'medium', category: '', tags: '', requester_id: '' });
+      setSelectedHelpTopic(null);
+      setCustomForm(null);
+      setCreateData({ subject: '', description: '', department_id: '', priority: 'medium', category: '', tags: '', requester_id: '', help_topic_id: '', form_data: {} });
       setCcParticipants([]);
       fetchData();
     } catch (error) {
