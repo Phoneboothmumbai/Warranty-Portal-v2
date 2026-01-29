@@ -1305,14 +1305,30 @@ async def list_tickets_customer(status: Optional[str] = None, limit: int = Query
 async def create_ticket_customer(data: TicketCreate, user: dict = Depends(get_current_company_user)):
     """Create a ticket (customer portal)"""
     sla_policy = None
+    sla_status = None
+    
     if data.department_id:
         dept = await _db.ticketing_departments.find_one({"id": data.department_id, "is_deleted": {"$ne": True}, "is_public": True}, {"_id": 0})
         if dept and dept.get("default_sla_id"):
             sla_policy = await _db.ticketing_sla_policies.find_one({"id": dept["default_sla_id"]}, {"_id": 0})
+    
+    # If no SLA from department, check company's SLA config
     if not sla_policy:
+        company = await _db.companies.find_one({"id": user.get("company_id")}, {"_id": 0})
+        if company:
+            if company.get("sla_policy_id"):
+                sla_policy = await _db.ticketing_sla_policies.find_one({"id": company["sla_policy_id"]}, {"_id": 0})
+            elif company.get("sla_config"):
+                # Use company's custom SLA config
+                sla_status = calculate_sla_from_company_config(company["sla_config"], data.priority)
+    
+    # Fall back to system default
+    if not sla_policy and not sla_status:
         sla_policy = await _db.ticketing_sla_policies.find_one({"is_default": True, "is_deleted": {"$ne": True}}, {"_id": 0})
     
-    sla_status = calculate_sla_due_times(sla_policy, data.priority) if sla_policy else None
+    # Calculate SLA status if we have a policy but no status yet
+    if sla_policy and not sla_status:
+        sla_status = calculate_sla_due_times(sla_policy, data.priority)
     
     ticket = Ticket(
         **data.model_dump(), company_id=user.get("company_id"), requester_id=user.get("id"),
