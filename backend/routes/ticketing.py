@@ -873,18 +873,34 @@ async def create_ticket_admin(
             if help_topic.get("auto_assign_to"):
                 auto_assign_to = help_topic["auto_assign_to"]
     
-    # Get SLA policy
+    # Get SLA policy - Priority: Help Topic > Department > Company SLA Config > Default
     sla_policy = None
+    sla_status = None
+    
     if sla_id:
         sla_policy = await _db.ticketing_sla_policies.find_one({"id": sla_id}, {"_id": 0})
     elif department_id:
         dept = await _db.ticketing_departments.find_one({"id": department_id, "is_deleted": {"$ne": True}}, {"_id": 0})
         if dept and dept.get("default_sla_id"):
             sla_policy = await _db.ticketing_sla_policies.find_one({"id": dept["default_sla_id"]}, {"_id": 0})
+    
+    # If no SLA from help topic or department, check company's SLA config
     if not sla_policy:
+        company = await _db.companies.find_one({"id": requester.get("company_id")}, {"_id": 0})
+        if company:
+            if company.get("sla_policy_id"):
+                sla_policy = await _db.ticketing_sla_policies.find_one({"id": company["sla_policy_id"]}, {"_id": 0})
+            elif company.get("sla_config"):
+                # Use company's custom SLA config
+                sla_status = calculate_sla_from_company_config(company["sla_config"], priority)
+    
+    # Fall back to system default
+    if not sla_policy and not sla_status:
         sla_policy = await _db.ticketing_sla_policies.find_one({"is_default": True, "is_deleted": {"$ne": True}}, {"_id": 0})
     
-    sla_status = calculate_sla_due_times(sla_policy, priority) if sla_policy else None
+    # Calculate SLA status if we have a policy but no status yet
+    if sla_policy and not sla_status:
+        sla_status = calculate_sla_due_times(sla_policy, priority)
     
     # Process custom form data if provided
     form_data_snapshot = None
