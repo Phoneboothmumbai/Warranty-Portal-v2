@@ -1570,7 +1570,8 @@ async def create_public_ticket(data: PublicTicketCreate):
     ticket = {
         "id": ticket_id,
         "ticket_number": ticket_number,
-        "company_id": "PUBLIC",
+        "company_id": matched_company_id,  # Auto-matched company or None
+        "company_name": matched_company.get("name") if matched_company else None,
         "source": "portal",
         "help_topic_id": data.help_topic_id,
         "department_id": department_id,
@@ -1607,7 +1608,8 @@ async def create_public_ticket(data: PublicTicketCreate):
         "created_by": "public",
         "created_by_type": "customer",
         "is_deleted": False,
-        "osticket_id": None
+        "osticket_id": None,
+        "email_domain_matched": email_domain if matched_company_id else None  # Track which domain was matched
     }
     
     await _db.tickets.insert_one(ticket)
@@ -1615,7 +1617,11 @@ async def create_public_ticket(data: PublicTicketCreate):
     # Create initial thread entry
     await create_thread_entry(
         ticket_id, "system_event", "public", data.name, "customer",
-        event_type="ticket_created", event_data={"source": "public_portal", "help_topic": help_topic.get("name") if help_topic else None},
+        event_type="ticket_created", event_data={
+            "source": "public_portal", 
+            "help_topic": help_topic.get("name") if help_topic else None,
+            "company_auto_matched": matched_company.get("name") if matched_company else None
+        },
         author_email=data.email
     )
     
