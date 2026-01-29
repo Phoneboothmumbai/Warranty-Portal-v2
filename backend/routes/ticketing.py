@@ -1092,8 +1092,8 @@ async def create_ticket_customer(data: TicketCreate, user: dict = Depends(get_cu
 
 @router.get("/portal/tickets/{ticket_id}")
 async def get_ticket_customer(ticket_id: str, user: dict = Depends(get_current_company_user)):
-    """Get ticket details (customer view - no internal notes)"""
-    ticket = await _db.tickets.find_one({"id": ticket_id, "company_id": user.get("company_id"), "requester_id": user.get("id"), "is_deleted": {"$ne": True}}, {"_id": 0, "internal_note_count": 0})
+    """Get ticket details (customer view - no internal notes) - any company ticket"""
+    ticket = await _db.tickets.find_one({"id": ticket_id, "company_id": user.get("company_id"), "is_deleted": {"$ne": True}}, {"_id": 0, "internal_note_count": 0})
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     thread = await _db.ticket_thread.find({"ticket_id": ticket_id, "is_internal": {"$ne": True}, "is_hidden": {"$ne": True}}, {"_id": 0}).sort("created_at", 1).to_list(500)
@@ -1102,8 +1102,8 @@ async def get_ticket_customer(ticket_id: str, user: dict = Depends(get_current_c
 
 @router.post("/portal/tickets/{ticket_id}/reply")
 async def reply_to_ticket_customer(ticket_id: str, reply: TicketReplyCreate, user: dict = Depends(get_current_company_user)):
-    """Add a reply to a ticket (customer)"""
-    ticket = await _db.tickets.find_one({"id": ticket_id, "company_id": user.get("company_id"), "requester_id": user.get("id"), "is_deleted": {"$ne": True}}, {"_id": 0})
+    """Add a reply to a ticket (customer) - any company ticket"""
+    ticket = await _db.tickets.find_one({"id": ticket_id, "company_id": user.get("company_id"), "is_deleted": {"$ne": True}}, {"_id": 0})
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     
