@@ -38,6 +38,16 @@ const SupplyProducts = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   
+  // Bulk selection state
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [bulkEditModalOpen, setBulkEditModalOpen] = useState(false);
+  const [bulkEditForm, setBulkEditForm] = useState({
+    category_id: '',
+    is_active: '',
+    price: '',
+    unit: ''
+  });
+  
   // Product modal
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
