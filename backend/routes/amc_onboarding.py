@@ -28,7 +28,7 @@ def init_db(database):
 # ==================== COMPANY PORTAL ENDPOINTS ====================
 
 @router.get("/portal/onboarding")
-async def get_company_onboarding(user: dict = Depends(lambda: _get_current_company_user)):
+async def get_company_onboarding(user: dict = Depends(get_current_company_user)):
     """Get current onboarding for company (or create new draft)"""
     company_id = user.get("company_id")
     
