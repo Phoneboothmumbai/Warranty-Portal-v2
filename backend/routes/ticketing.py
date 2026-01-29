@@ -762,9 +762,10 @@ async def list_tickets_admin(
     status: Optional[str] = None, priority: Optional[str] = None, department_id: Optional[str] = None,
     help_topic_id: Optional[str] = None, assigned_to: Optional[str] = None, company_id: Optional[str] = None,
     unassigned: bool = False, search: Optional[str] = None, limit: int = Query(50, le=200), skip: int = 0,
+    include_legacy: bool = True,
     admin: dict = Depends(get_current_admin)
 ):
-    """List tickets with filters (admin view)"""
+    """List tickets with filters (admin view) - includes legacy service_tickets"""
     query = {"is_deleted": {"$ne": True}}
     if status: query["status"] = status
     if priority: query["priority"] = priority
@@ -783,7 +784,60 @@ async def list_tickets_admin(
     
     total = await _db.tickets.count_documents(query)
     tickets = await _db.tickets.find(query, {"_id": 0}).sort([("priority_order", -1), ("created_at", -1)]).skip(skip).limit(limit).to_list(limit)
-    return {"tickets": tickets, "total": total, "limit": limit, "skip": skip}
+    
+    # Also fetch legacy service_tickets if requested and no specific filters that don't apply
+    if include_legacy and not help_topic_id and not department_id:
+        # Get IDs of service_tickets that are already synced to enterprise
+        synced_service_ids = [t.get("service_ticket_id") for t in tickets if t.get("service_ticket_id")]
+        
+        legacy_query = {"is_deleted": {"$ne": True}}
+        if status: legacy_query["status"] = status
+        if priority: legacy_query["priority"] = priority
+        if company_id: legacy_query["company_id"] = company_id
+        if assigned_to: legacy_query["assigned_to"] = assigned_to
+        if unassigned: legacy_query["assigned_to"] = None
+        if search:
+            legacy_query["$or"] = [
+                {"ticket_number": {"$regex": search, "$options": "i"}},
+                {"subject": {"$regex": search, "$options": "i"}},
+                {"requester_name": {"$regex": search, "$options": "i"}},
+                {"requester_email": {"$regex": search, "$options": "i"}}
+            ]
+        
+        legacy_tickets = await _db.service_tickets.find(legacy_query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+        
+        # Convert and add legacy tickets that aren't already synced
+        for st in legacy_tickets:
+            if st.get("id") not in synced_service_ids:
+                tickets.append({
+                    "id": st.get("id"),
+                    "ticket_number": st.get("ticket_number"),
+                    "company_id": st.get("company_id"),
+                    "subject": st.get("subject"),
+                    "description": st.get("description"),
+                    "status": st.get("status", "open"),
+                    "priority": st.get("priority", "medium"),
+                    "priority_order": {"critical": 4, "high": 3, "medium": 2, "low": 1}.get(st.get("priority", "medium"), 2),
+                    "requester_id": st.get("created_by"),
+                    "requester_name": st.get("requester_name") or "Portal User",
+                    "requester_email": st.get("requester_email", ""),
+                    "category": st.get("issue_category"),
+                    "device_id": st.get("device_id"),
+                    "created_at": st.get("created_at"),
+                    "updated_at": st.get("updated_at"),
+                    "source": "service_request",
+                    "osticket_id": st.get("osticket_id"),
+                    "assigned_to": st.get("assigned_to"),
+                    "assigned_to_name": st.get("assigned_to_name"),
+                    "_legacy": True
+                })
+                total += 1
+        
+        # Re-sort by priority and created_at
+        tickets.sort(key=lambda x: (-x.get("priority_order", 2), x.get("created_at", "")), reverse=False)
+        tickets.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    
+    return {"tickets": tickets[:limit], "total": total, "limit": limit, "skip": skip}
 
 
 @router.post("/admin/tickets")
