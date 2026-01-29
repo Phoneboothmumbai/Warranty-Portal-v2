@@ -254,7 +254,7 @@ class Ticket(BaseModel):
     
     # Identity
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    ticket_number: str = Field(default_factory=lambda: f"TKT-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}")
+    ticket_number: str = Field(default_factory=lambda: f"TKT-{str(uuid.uuid4())[:6].upper()}")
     
     # Multi-tenant
     company_id: str

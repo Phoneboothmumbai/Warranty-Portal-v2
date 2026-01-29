@@ -161,7 +161,7 @@ class ServiceTicket(BaseModel):
     """Service tickets created by company users"""
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    ticket_number: str = Field(default_factory=lambda: f"TKT-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}")
+    ticket_number: str = Field(default_factory=lambda: f"TKT-{str(uuid.uuid4())[:6].upper()}")
     company_id: str
     device_id: str
     created_by: str
