@@ -1030,7 +1030,10 @@ async def get_ticket_admin(ticket_id: str, admin: dict = Depends(get_current_adm
                 "is_internal": False
             } for c in comments]
             
+            logger.info(f"Returning legacy ticket {ticket_id} with {len(thread)} thread entries")
             return {**ticket, "thread": thread, "department": None, "help_topic": None, "participants": [], "_legacy": True}
+        else:
+            logger.warning(f"Ticket {ticket_id} not found in any collection")
     
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
