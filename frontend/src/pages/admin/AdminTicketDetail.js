@@ -678,6 +678,50 @@ export default function AdminTicketDetail() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Quick Add from suggestions */}
+            {(companyEmployees.length > 0 || admins.length > 0) && (
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-2">Quick Add</label>
+                <div className="max-h-32 overflow-y-auto border border-slate-200 rounded-lg">
+                  {companyEmployees.length > 0 && (
+                    <div className="border-b border-slate-100">
+                      <div className="px-2 py-1 text-xs font-medium text-slate-500 bg-slate-50">Company Employees</div>
+                      {companyEmployees.slice(0, 5).map(emp => (
+                        <button
+                          key={emp.id}
+                          type="button"
+                          onClick={() => setParticipantForm({ name: emp.name, email: emp.email || '', phone: emp.phone || '' })}
+                          className="w-full px-3 py-1.5 text-sm text-left hover:bg-slate-50 flex justify-between items-center"
+                        >
+                          <span>{emp.name}</span>
+                          <span className="text-xs text-slate-400">{emp.email}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {admins.length > 0 && (
+                    <div>
+                      <div className="px-2 py-1 text-xs font-medium text-slate-500 bg-slate-50">Admin Staff</div>
+                      {admins.slice(0, 5).map(staff => (
+                        <button
+                          key={staff.id}
+                          type="button"
+                          onClick={() => setParticipantForm({ name: staff.name || staff.email, email: staff.email, phone: '' })}
+                          className="w-full px-3 py-1.5 text-sm text-left hover:bg-slate-50 flex justify-between items-center"
+                        >
+                          <span>{staff.name || staff.email}</span>
+                          <span className="text-xs text-slate-400">{staff.email}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            <div className="border-t border-slate-200 pt-4">
+              <label className="text-sm font-medium text-slate-700 block mb-2">Or enter manually</label>
+            </div>
             <div>
               <label className="text-sm font-medium text-slate-700 block mb-1">Name *</label>
               <input
