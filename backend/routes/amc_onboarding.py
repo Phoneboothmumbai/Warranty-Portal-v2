@@ -23,21 +23,21 @@ def init_db(database):
     _db = database
 
 # Auth dependencies will be imported from main server
-get_current_company_user = None
-get_current_admin = None
+_get_current_company_user = None
+_get_current_admin = None
 
 def init_auth(company_auth, admin_auth):
-    global get_current_company_user, get_current_admin
-    get_current_company_user = company_auth
-    get_current_admin = admin_auth
+    global _get_current_company_user, _get_current_admin
+    _get_current_company_user = company_auth
+    _get_current_admin = admin_auth
 
 
 # ==================== COMPANY PORTAL ENDPOINTS ====================
 
 @router.get("/portal/onboarding")
-async def get_company_onboarding(user: dict = Depends(lambda: get_current_company_user)):
+async def get_company_onboarding(request: Request):
     """Get current onboarding for company (or create new draft)"""
-    user = await get_current_company_user(user) if callable(get_current_company_user) else user
+    user = await _get_current_company_user(request)
     
     company_id = user.get("company_id")
     
@@ -64,9 +64,9 @@ async def get_company_onboarding(user: dict = Depends(lambda: get_current_compan
 
 
 @router.put("/portal/onboarding")
-async def update_company_onboarding(data: AMCOnboardingUpdate, user: dict = Depends(lambda: get_current_company_user)):
+async def update_company_onboarding(data: AMCOnboardingUpdate, request: Request):
     """Save draft or update onboarding (company can only edit draft or changes_requested)"""
-    user = await get_current_company_user(user) if callable(get_current_company_user) else user
+    user = await _get_current_company_user(request)
     
     company_id = user.get("company_id")
     
@@ -94,9 +94,9 @@ async def update_company_onboarding(data: AMCOnboardingUpdate, user: dict = Depe
 
 
 @router.post("/portal/onboarding/submit")
-async def submit_company_onboarding(user: dict = Depends(lambda: get_current_company_user)):
+async def submit_company_onboarding(request: Request):
     """Submit onboarding for admin review"""
-    user = await get_current_company_user(user) if callable(get_current_company_user) else user
+    user = await _get_current_company_user(request)
     
     company_id = user.get("company_id")
     
@@ -125,7 +125,6 @@ async def submit_company_onboarding(user: dict = Depends(lambda: get_current_com
     )
     
     # TODO: Send email notification to admin
-    # For now, we'll add this later with the email service
     
     return {"message": "Onboarding submitted successfully", "status": "submitted"}
 
@@ -135,10 +134,10 @@ async def submit_company_onboarding(user: dict = Depends(lambda: get_current_com
 @router.get("/admin/onboardings")
 async def list_onboardings(
     status: Optional[str] = None,
-    admin: dict = Depends(lambda: get_current_admin)
+    request: Request = None
 ):
     """List all onboarding submissions"""
-    admin = await get_current_admin(admin) if callable(get_current_admin) else admin
+    admin = await _get_current_admin(request)
     
     query = {}
     if status:
@@ -157,9 +156,9 @@ async def list_onboardings(
 
 
 @router.get("/admin/onboardings/{onboarding_id}")
-async def get_onboarding_detail(onboarding_id: str, admin: dict = Depends(lambda: get_current_admin)):
+async def get_onboarding_detail(onboarding_id: str, request: Request):
     """Get detailed onboarding data"""
-    admin = await get_current_admin(admin) if callable(get_current_admin) else admin
+    admin = await _get_current_admin(request)
     
     onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id}, {"_id": 0})
     if not onboarding:
@@ -176,10 +175,10 @@ async def get_onboarding_detail(onboarding_id: str, admin: dict = Depends(lambda
 async def update_onboarding_admin(
     onboarding_id: str,
     data: AMCOnboardingUpdate,
-    admin: dict = Depends(lambda: get_current_admin)
+    request: Request
 ):
     """Admin can edit any onboarding"""
-    admin = await get_current_admin(admin) if callable(get_current_admin) else admin
+    admin = await _get_current_admin(request)
     
     onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id}, {"_id": 0})
     if not onboarding:
@@ -201,10 +200,10 @@ async def update_onboarding_admin(
 async def request_onboarding_changes(
     onboarding_id: str,
     data: dict,
-    admin: dict = Depends(lambda: get_current_admin)
+    request: Request
 ):
     """Request changes from company"""
-    admin = await get_current_admin(admin) if callable(get_current_admin) else admin
+    admin = await _get_current_admin(request)
     
     feedback = data.get("feedback", "")
     if not feedback:
@@ -225,18 +224,16 @@ async def request_onboarding_changes(
         }}
     )
     
-    # TODO: Send email to company
-    
     return {"message": "Changes requested", "status": "changes_requested"}
 
 
 @router.post("/admin/onboardings/{onboarding_id}/approve")
 async def approve_onboarding(
     onboarding_id: str,
-    admin: dict = Depends(lambda: get_current_admin)
+    request: Request
 ):
     """Approve onboarding"""
-    admin = await get_current_admin(admin) if callable(get_current_admin) else admin
+    admin = await _get_current_admin(request)
     
     onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id}, {"_id": 0})
     if not onboarding:
@@ -258,10 +255,10 @@ async def approve_onboarding(
 @router.post("/admin/onboardings/{onboarding_id}/convert-to-amc")
 async def convert_to_amc(
     onboarding_id: str,
-    admin: dict = Depends(lambda: get_current_admin)
+    request: Request
 ):
     """Convert approved onboarding to AMC contract and import devices"""
-    admin = await get_current_admin(admin) if callable(get_current_admin) else admin
+    admin = await _get_current_admin(request)
     
     onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id}, {"_id": 0})
     if not onboarding:
