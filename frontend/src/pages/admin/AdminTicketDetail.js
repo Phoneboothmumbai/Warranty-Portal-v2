@@ -46,6 +46,7 @@ export default function AdminTicketDetail() {
   const [loading, setLoading] = useState(true);
   const [departments, setDepartments] = useState([]);
   const [admins, setAdmins] = useState([]);
+  const [companies, setCompanies] = useState([]);  // For company assignment
   const [enums, setEnums] = useState(null);
   const [cannedResponses, setCannedResponses] = useState([]);
   const [companyEmployees, setCompanyEmployees] = useState([]);  // For CC suggestions
