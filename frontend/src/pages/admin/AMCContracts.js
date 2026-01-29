@@ -270,8 +270,10 @@ const AMCContracts = () => {
         selected_asset_ids: [],
         selected_device_types: [],
       },
+      documents: [],
       internal_notes: '',
     });
+    setNewDocForm({ name: '', document_type: 'amc_contract', notes: '' });
     setActiveTab('basic');
     setModalOpen(true);
   };
