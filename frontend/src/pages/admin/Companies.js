@@ -129,7 +129,11 @@ const Companies = () => {
       contact_email: '',
       contact_phone: '',
       amc_status: 'not_applicable',
-      notes: ''
+      notes: '',
+      sla_config: {
+        response_time: { critical: 1, high: 2, medium: 4, low: 8 },
+        resolution_time: { critical: 4, high: 8, medium: 24, low: 48 }
+      }
     });
     setModalOpen(true);
   };
@@ -144,9 +148,27 @@ const Companies = () => {
       contact_email: company.contact_email,
       contact_phone: company.contact_phone,
       amc_status: company.amc_status || 'not_applicable',
-      notes: company.notes || ''
+      notes: company.notes || '',
+      sla_config: company.sla_config || {
+        response_time: { critical: 1, high: 2, medium: 4, low: 8 },
+        resolution_time: { critical: 4, high: 8, medium: 24, low: 48 }
+      }
     });
     setModalOpen(true);
+  };
+
+  const updateSlaConfig = (type, priority, value) => {
+    const numValue = parseInt(value) || 0;
+    setFormData(prev => ({
+      ...prev,
+      sla_config: {
+        ...prev.sla_config,
+        [type]: {
+          ...prev.sla_config[type],
+          [priority]: numValue
+        }
+      }
+    }));
   };
 
   const closeModal = () => {
