@@ -1,6 +1,12 @@
 # Warranty & Asset Tracking Portal - PRD
 
 ## CHANGELOG
+- **2026-01-29**: Added AMC Contract document attachments feature
+  - New "Documents" tab in AMC Contract modal
+  - Support for SLA, NDA, AMC agreements, quotes, invoices, POs
+  - Upload, download, and remove functionality
+  - Backend model updated with `documents` field
+  
 - **2026-01-29**: Added bulk edit/delete functionality for Office Supply Products
   - Checkbox selection (individual + select all)
   - Bulk action bar with Edit/Delete buttons
