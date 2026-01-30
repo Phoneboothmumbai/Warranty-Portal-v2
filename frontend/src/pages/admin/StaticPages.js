@@ -18,7 +18,7 @@ export default function StaticPages() {
   const [loading, setLoading] = useState(true);
   const [editingPage, setEditingPage] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('admin_token');
 
   useEffect(() => {
     fetchPages();
