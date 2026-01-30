@@ -95,6 +95,7 @@ const CompanyAMCOnboarding = () => {
       internet_providers: [],
       bandwidth: '',
       has_static_ip: false,
+      static_ip_addresses: '',
       router_firewall_brand: '',
       router_firewall_model: '',
       switch_count: '',
