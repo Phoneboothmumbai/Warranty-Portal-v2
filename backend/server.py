@@ -1660,6 +1660,12 @@ async def list_companies(
 async def create_company(company_data: CompanyCreate, admin: dict = Depends(get_current_admin)):
     # Filter out None values to allow Company model defaults to work
     company_dict = {k: v for k, v in company_data.model_dump().items() if v is not None}
+    
+    # Add organization_id for multi-tenancy
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    if org_id:
+        company_dict["organization_id"] = org_id
+    
     company = Company(**company_dict)
     await db.companies.insert_one(company.model_dump())
     await log_audit("company", company.id, "create", {"data": company_data.model_dump()}, admin)
@@ -1670,11 +1676,12 @@ async def create_company(company_data: CompanyCreate, admin: dict = Depends(get_
 @api_router.post("/admin/companies/quick-create")
 async def quick_create_company(company_data: CompanyCreate, admin: dict = Depends(get_current_admin)):
     """Quick create company (for inline creation from dropdowns)"""
-    # Check if company with same name exists
-    existing = await db.companies.find_one(
-        {"name": {"$regex": f"^{company_data.name}$", "$options": "i"}, "is_deleted": {"$ne": True}},
-        {"_id": 0}
-    )
+    # Apply tenant scoping to duplicate check
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    check_query = {"name": {"$regex": f"^{company_data.name}$", "$options": "i"}, "is_deleted": {"$ne": True}}
+    check_query = scope_query(check_query, org_id)
+    
+    existing = await db.companies.find_one(check_query, {"_id": 0})
     if existing:
         # Return existing instead of error (idempotent)
         existing.get("label", existing.get("name", "Unknown")) or existing.get("name", "Unknown"); existing["label"] = existing.get("name", "Unknown")
@@ -1682,6 +1689,11 @@ async def quick_create_company(company_data: CompanyCreate, admin: dict = Depend
     
     # Filter out None values to allow Company model defaults to work
     company_dict = {k: v for k, v in company_data.model_dump().items() if v is not None}
+    
+    # Add organization_id for multi-tenancy
+    if org_id:
+        company_dict["organization_id"] = org_id
+    
     company = Company(**company_dict)
     await db.companies.insert_one(company.model_dump())
     await log_audit("company", company.id, "quick_create", {"data": company_data.model_dump()}, admin)
@@ -1692,14 +1704,24 @@ async def quick_create_company(company_data: CompanyCreate, admin: dict = Depend
 
 @api_router.get("/admin/companies/{company_id}")
 async def get_company(company_id: str, admin: dict = Depends(get_current_admin)):
-    company = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    query = {"id": company_id, "is_deleted": {"$ne": True}}
+    query = scope_query(query, org_id)
+    
+    company = await db.companies.find_one(query, {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     return company
 
 @api_router.put("/admin/companies/{company_id}")
 async def update_company(company_id: str, updates: CompanyUpdate, admin: dict = Depends(get_current_admin)):
-    existing = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    query = {"id": company_id, "is_deleted": {"$ne": True}}
+    query = scope_query(query, org_id)
+    
+    existing = await db.companies.find_one(query, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Company not found")
     
@@ -1709,7 +1731,7 @@ async def update_company(company_id: str, updates: CompanyUpdate, admin: dict = 
     
     changes = {k: {"old": existing.get(k), "new": v} for k, v in update_data.items() if existing.get(k) != v}
     
-    result = await db.companies.update_one({"id": company_id}, {"$set": update_data})
+    result = await db.companies.update_one(query, {"$set": update_data})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Company not found")
     
