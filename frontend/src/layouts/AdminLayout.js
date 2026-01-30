@@ -75,6 +75,7 @@ const navGroups = [
     icon: Settings,
     items: [
       { path: '/admin/organization', label: 'Organization', icon: Building2 },
+      { path: '/admin/knowledge-base', label: 'Knowledge Base', icon: BookOpen },
       { path: '/admin/static-pages', label: 'Static Pages', icon: FileText },
       { path: '/admin/master-data', label: 'Master Data', icon: Database },
       { path: '/admin/ticketing-settings', label: 'Ticketing Config', icon: Inbox },
