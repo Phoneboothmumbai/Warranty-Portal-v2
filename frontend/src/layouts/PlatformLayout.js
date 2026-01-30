@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Helmet } from 'react-helmet';
 import { 
   Shield, LayoutDashboard, Building2, Settings, LogOut, 
   Menu, X, Users, CreditCard, FileText, ChevronDown, ScrollText
@@ -21,6 +20,28 @@ export default function PlatformLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // SEO: Add noindex meta tag to prevent search engine crawling
+  useEffect(() => {
+    // Set page title
+    document.title = 'Platform Admin | AfterSales';
+    
+    // Add noindex meta tag
+    let robotsMeta = document.querySelector('meta[name="robots"]');
+    if (!robotsMeta) {
+      robotsMeta = document.createElement('meta');
+      robotsMeta.name = 'robots';
+      document.head.appendChild(robotsMeta);
+    }
+    robotsMeta.content = 'noindex, nofollow';
+    
+    // Cleanup on unmount
+    return () => {
+      if (robotsMeta) {
+        robotsMeta.content = 'index, follow';
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('platformToken');
