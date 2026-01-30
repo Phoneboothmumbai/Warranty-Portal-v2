@@ -96,12 +96,12 @@ const PricingPage = () => {
   ];
 
   const featureLabels = {
-    companies: 'Companies',
-    devices: 'Devices',
-    users: 'Team Members',
+    companies: 'Client Organizations',
+    devices: 'Total Devices',
+    users: 'Technicians',
     tickets: 'Monthly Tickets',
     sla: 'SLA Management',
-    email: 'Email Integration',
+    email: 'Email-to-Ticket',
     api: 'API Access',
     customForms: 'Custom Forms',
     priority: 'Priority Support',
@@ -110,20 +110,20 @@ const PricingPage = () => {
 
   const faqs = [
     {
-      question: 'Can I switch plans later?',
-      answer: 'Yes, you can upgrade or downgrade your plan at any time. When upgrading, you\'ll be prorated for the remaining period. When downgrading, the new price applies from your next billing cycle.'
+      question: 'Can I switch plans as my MSP grows?',
+      answer: 'Absolutely! You can upgrade anytime as you onboard more clients. When upgrading, you\'ll be prorated for the remaining period. Downgrading applies from your next billing cycle.'
     },
     {
       question: 'What happens after my trial ends?',
-      answer: 'After your 14-day trial, you\'ll need to select a paid plan to continue using the platform. Your data will be preserved for 30 days, giving you time to decide.'
+      answer: 'After your 14-day trial, you\'ll need to select a paid plan to continue. Your data (all clients, assets, tickets) will be preserved for 30 days, giving you time to decide.'
     },
     {
-      question: 'Is there a setup fee?',
-      answer: 'No, there are no setup fees or hidden charges. You only pay for your subscription plan.'
+      question: 'Is there a setup fee or onboarding cost?',
+      answer: 'No setup fees or hidden charges. Enterprise plans include free onboarding and training for your team.'
     },
     {
       question: 'Do you offer discounts for annual billing?',
-      answer: 'Yes! When you choose annual billing, you save approximately 17% compared to monthly billing (pay for 10 months, get 12).'
+      answer: 'Yes! Annual billing saves you approximately 17% (pay for 10 months, get 12). Great for MSPs with predictable client bases.'
     },
     {
       question: 'What payment methods do you accept?',
