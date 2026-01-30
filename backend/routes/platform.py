@@ -670,6 +670,7 @@ async def get_platform_dashboard_stats(admin: dict = Depends(get_current_platfor
     total_companies = await _db.companies.count_documents({"is_deleted": {"$ne": True}})
     total_devices = await _db.devices.count_documents({"is_deleted": {"$ne": True}})
     total_users = await _db.company_users.count_documents({"is_deleted": {"$ne": True}})
+    total_tickets = await _db.tickets.count_documents({})
     
     # Recent organizations
     recent_orgs = await _db.organizations.find(
@@ -677,12 +678,61 @@ async def get_platform_dashboard_stats(admin: dict = Depends(get_current_platfor
         {"_id": 0, "id": 1, "name": 1, "slug": 1, "status": 1, "created_at": 1, "subscription.plan": 1}
     ).sort("created_at", -1).limit(5).to_list(5)
     
+    # MRR Calculation (Monthly Recurring Revenue)
+    plan_prices = {
+        "trial": 0,
+        "starter": 2999,
+        "professional": 7999,
+        "enterprise": 19999
+    }
+    
+    mrr = 0
+    active_orgs = await _db.organizations.find(
+        {"status": {"$in": ["active", "trial"]}, "is_deleted": {"$ne": True}},
+        {"subscription.plan": 1}
+    ).to_list(1000)
+    
+    for org in active_orgs:
+        plan = org.get("subscription", {}).get("plan", "trial")
+        mrr += plan_prices.get(plan, 0)
+    
+    arr = mrr * 12
+    
+    # New signups this month
+    start_of_month = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    new_this_month = await _db.organizations.count_documents({
+        "created_at": {"$gte": start_of_month.isoformat()},
+        "is_deleted": {"$ne": True}
+    })
+    
+    # Trial conversion (orgs that were trial and now have paid plan)
+    total_trials_ever = await _db.organizations.count_documents({
+        "is_deleted": {"$ne": True}
+    })
+    paid_orgs = await _db.organizations.count_documents({
+        "subscription.plan": {"$in": ["starter", "professional", "enterprise"]},
+        "status": "active",
+        "is_deleted": {"$ne": True}
+    })
+    
+    conversion_rate = round((paid_orgs / max(total_trials_ever, 1)) * 100, 1)
+    
     return {
         "totals": {
             "organizations": total_orgs,
             "companies": total_companies,
             "devices": total_devices,
-            "users": total_users
+            "users": total_users,
+            "tickets": total_tickets
+        },
+        "revenue": {
+            "mrr": mrr,
+            "arr": arr,
+            "paid_organizations": paid_orgs
+        },
+        "growth": {
+            "new_this_month": new_this_month,
+            "trial_conversion_rate": conversion_rate
         },
         "organizations_by_status": org_by_status,
         "organizations_by_plan": org_by_plan,
