@@ -5,6 +5,17 @@
 
 ## CHANGELOG
 
+### 2026-01-30: Subdomain-Based Multi-Tenancy (Complete)
+- **Tenant Resolution Middleware**: Extracts tenant from subdomain, X-Tenant-Slug header, or ?_tenant query param
+- **Tenant-Aware Login**: Login endpoint validates user belongs to resolved tenant
+- **Cross-Tenant Protection**: Generic "Invalid credentials" error for cross-tenant login attempts (no information leakage)
+- **Platform Admin Isolation**: Platform routes (/platform/*) completely separate from tenant routes
+- **Frontend TenantProvider**: Resolves tenant context and applies branding
+- **Tenant Error Pages**: Dedicated pages for suspended/not found workspaces
+- **Admin Login Branding**: Shows tenant name, logo, workspace indicator when tenant context present
+- **Dev Mode Support**: Query param fallback for local development
+- **All tests passed**: 100% backend (16/16) and frontend success rate
+
 ### 2026-01-30: Platform Super Admin Portal Build-out (Complete)
 - **Enhanced Dashboard**: Added MRR/ARR revenue metrics, new signups this month, trial conversion rate
 - **Organizations Management**: Plan change capability in detail modal
