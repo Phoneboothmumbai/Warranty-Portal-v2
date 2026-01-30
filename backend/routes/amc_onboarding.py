@@ -305,14 +305,68 @@ async def convert_to_amc(
 
 # ==================== EXCEL TEMPLATE ====================
 
-@router.get("/portal/onboarding/device-template")
-async def download_device_template():
-    """Download Excel template for device inventory"""
-    
-    # Create workbook
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Device Inventory"
+# Category to sheet mapping with sample data
+CATEGORY_CONFIG = {
+    "desktops": {
+        "sheet_name": "Desktops",
+        "device_types": ["Desktop"],
+        "sample": ["Desktop", "Dell", "OptiPlex 7090", "ABC123XYZ", "i5-11500, 16GB RAM, 512GB SSD", 
+                   "Windows 11 Pro", "2023-06-15", "Under OEM", "Working", "John Doe", "IT", "Floor 2, Desk 15"],
+    },
+    "laptops": {
+        "sheet_name": "Laptops",
+        "device_types": ["Laptop"],
+        "sample": ["Laptop", "HP", "EliteBook 840 G8", "DEF456UVW", "i7-1165G7, 16GB RAM, 512GB SSD",
+                   "Windows 11 Pro", "2022-03-20", "Extended", "Working", "Jane Smith", "Sales", "Mobile"],
+    },
+    "apple_devices": {
+        "sheet_name": "Apple Devices",
+        "device_types": ["Apple Mac", "Apple iPhone", "Apple iPad"],
+        "sample": ["Apple Mac", "Apple", "MacBook Pro 14", "C02XL12345", "M3 Pro, 18GB RAM, 512GB SSD",
+                   "macOS Sonoma 14.2", "2024-01-10", "Under OEM", "Working", "CEO", "Executive", "Corner Office"],
+    },
+    "servers": {
+        "sheet_name": "Servers",
+        "device_types": ["Server"],
+        "sample": ["Server", "Dell", "PowerEdge R740", "JKL012MNO", "Xeon Gold 6248, 128GB RAM, 4TB RAID",
+                   "Windows Server 2019", "2020-08-05", "Under OEM", "Working", "N/A", "IT", "Server Room"],
+    },
+    "network_devices": {
+        "sheet_name": "Network Devices",
+        "device_types": ["Router", "Switch", "Firewall"],
+        "sample": ["Router", "Cisco", "ISR 4331", "FCZ2312A1BC", "3 GE ports, 2 NIM slots",
+                   "IOS XE 17.3", "2021-06-01", "Under OEM", "Working", "N/A", "IT", "Server Room"],
+    },
+    "printers": {
+        "sheet_name": "Printers & Scanners",
+        "device_types": ["Printer", "Scanner"],
+        "sample": ["Printer", "Canon", "imageRUNNER 2630i", "GHI789RST", "A3 MFP, 30ppm",
+                   "N/A", "2021-01-10", "Expired", "Working", "Shared", "Admin", "Reception"],
+    },
+    "cctv": {
+        "sheet_name": "CCTV & Access Control",
+        "device_types": ["CCTV"],
+        "sample": ["CCTV", "Hikvision", "DS-2CD2T86G2-4I", "HIK20241234", "8MP, 4mm lens, IR 80m",
+                   "N/A", "2023-03-15", "Under OEM", "Working", "N/A", "Security", "Main Entrance"],
+    },
+    "wifi_aps": {
+        "sheet_name": "Wi-Fi Access Points",
+        "device_types": ["Access Point"],
+        "sample": ["Access Point", "Ubiquiti", "U6-Pro", "24:5A:4C:AB:12:34", "Wi-Fi 6, 4x4 MIMO",
+                   "N/A", "2022-11-20", "Under OEM", "Working", "N/A", "IT", "Conference Room"],
+    },
+    "ups": {
+        "sheet_name": "UPS & Power Backup",
+        "device_types": ["UPS"],
+        "sample": ["UPS", "APC", "Smart-UPS 3000", "AS1234567890", "3000VA, 2700W, Line Interactive",
+                   "N/A", "2021-09-01", "Extended", "Working", "N/A", "IT", "Server Room"],
+    },
+}
+
+
+def _create_device_sheet(wb, sheet_name, device_types, sample_data):
+    """Helper to create a formatted device inventory sheet"""
+    ws = wb.create_sheet(sheet_name)
     
     # Headers
     headers = [
@@ -339,50 +393,84 @@ async def download_device_template():
         cell.border = thin_border
         cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
     
-    # Sample data rows
-    sample_data = [
-        ["Desktop", "Dell", "OptiPlex 7090", "ABC123XYZ", "i5-11500, 16GB RAM, 512GB SSD", 
-         "Windows 11 Pro", "2023-06-15", "Under OEM", "Working", "John Doe", "IT", "Floor 2, Desk 15"],
-        ["Laptop", "HP", "EliteBook 840 G8", "DEF456UVW", "i7-1165G7, 16GB RAM, 512GB SSD",
-         "Windows 11 Pro", "2022-03-20", "Extended", "Working", "Jane Smith", "Sales", "Mobile"],
-        ["Printer", "Canon", "imageRUNNER 2630i", "GHI789RST", "N/A",
-         "N/A", "2021-01-10", "Expired", "Intermittent", "Shared", "Admin", "Reception"],
-        ["Server", "Dell", "PowerEdge R740", "JKL012MNO", "Xeon Gold 6248, 128GB RAM, 4TB RAID",
-         "Windows Server 2019", "2020-08-05", "Under OEM", "Working", "N/A", "IT", "Server Room"],
-    ]
-    
-    for row_idx, row_data in enumerate(sample_data, 2):
-        for col_idx, value in enumerate(row_data, 1):
-            cell = ws.cell(row=row_idx, column=col_idx, value=value)
-            cell.border = thin_border
+    # Sample data row
+    for col_idx, value in enumerate(sample_data, 1):
+        cell = ws.cell(row=2, column=col_idx, value=value)
+        cell.border = thin_border
     
     # Add data validation for dropdowns
     from openpyxl.worksheet.datavalidation import DataValidation
     
-    # Device Type dropdown
-    device_types = '"Desktop,Laptop,Apple Mac,Apple iPhone,Apple iPad,Server,Router,Switch,Firewall,Printer,Scanner,CCTV,Access Point,UPS,Other"'
-    dv_device = DataValidation(type="list", formula1=device_types, showDropDown=False)
+    # Device Type dropdown (category-specific)
+    device_types_str = f'"{",".join(device_types)}"'
+    dv_device = DataValidation(type="list", formula1=device_types_str, showDropDown=False)
     dv_device.error = "Please select from the list"
     dv_device.errorTitle = "Invalid Device Type"
     ws.add_data_validation(dv_device)
-    dv_device.add(f'A2:A1000')
+    dv_device.add('A2:A1000')
     
     # Warranty Status dropdown
     warranty_statuses = '"Under OEM,Extended,Expired"'
     dv_warranty = DataValidation(type="list", formula1=warranty_statuses, showDropDown=False)
     ws.add_data_validation(dv_warranty)
-    dv_warranty.add(f'H2:H1000')
+    dv_warranty.add('H2:H1000')
     
     # Condition dropdown
     conditions = '"Working,Intermittent,Faulty"'
     dv_condition = DataValidation(type="list", formula1=conditions, showDropDown=False)
     ws.add_data_validation(dv_condition)
-    dv_condition.add(f'I2:I1000')
+    dv_condition.add('I2:I1000')
     
     # Set column widths
     widths = [15, 12, 20, 18, 35, 18, 22, 15, 12, 18, 15, 20]
     for col, width in enumerate(widths, 1):
         ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = width
+    
+    return ws
+
+
+@router.get("/portal/onboarding/device-template")
+async def download_device_template(
+    categories: Optional[str] = Query(None, description="Comma-separated category keys: desktops,laptops,apple_devices,servers,network_devices,printers,cctv,wifi_aps,ups")
+):
+    """Download Excel template for device inventory with category-specific tabs"""
+    
+    # Parse categories (if provided) or use all
+    if categories:
+        selected_categories = [c.strip() for c in categories.split(",") if c.strip() in CATEGORY_CONFIG]
+    else:
+        selected_categories = list(CATEGORY_CONFIG.keys())
+    
+    # Create workbook
+    wb = openpyxl.Workbook()
+    
+    # Remove default sheet (we'll create category-specific ones)
+    default_sheet = wb.active
+    wb.remove(default_sheet)
+    
+    # Create a sheet for each selected category
+    for cat_key in selected_categories:
+        config = CATEGORY_CONFIG[cat_key]
+        _create_device_sheet(
+            wb,
+            config["sheet_name"],
+            config["device_types"],
+            config["sample"]
+        )
+    
+    # If no categories selected, create a generic "All Devices" sheet
+    if not selected_categories:
+        ws = wb.create_sheet("All Devices")
+        all_device_types = ["Desktop", "Laptop", "Apple Mac", "Apple iPhone", "Apple iPad", 
+                           "Server", "Router", "Switch", "Firewall", "Printer", "Scanner", 
+                           "CCTV", "Access Point", "UPS", "Other"]
+        _create_device_sheet(
+            wb,
+            "All Devices",
+            all_device_types,
+            ["Desktop", "Dell", "OptiPlex 7090", "ABC123XYZ", "i5-11500, 16GB RAM, 512GB SSD", 
+             "Windows 11 Pro", "2023-06-15", "Under OEM", "Working", "John Doe", "IT", "Floor 2, Desk 15"]
+        )
     
     # Add instructions sheet
     ws_info = wb.create_sheet("Instructions")
@@ -390,15 +478,21 @@ async def download_device_template():
         "AMC DEVICE INVENTORY TEMPLATE",
         "",
         "Instructions:",
-        "1. Fill in all device details in the 'Device Inventory' sheet",
-        "2. Fields marked with * are mandatory",
-        "3. Use dropdowns where available for consistency",
-        "4. Delete the sample rows before adding your data",
+        "1. Fill in device details in the relevant category tabs",
+        "2. Each tab is pre-configured for specific device types",
+        "3. Fields marked with * are mandatory",
+        "4. Use dropdowns where available for consistency",
+        "5. Delete the sample rows before adding your data",
         "",
-        "Device Types:",
-        "- Desktop, Laptop, Apple Mac, Apple iPhone, Apple iPad",
-        "- Server, Router, Switch, Firewall",
-        "- Printer, Scanner, CCTV, Access Point, UPS, Other",
+        "Tabs in this workbook:",
+    ]
+    
+    # Add tab names to instructions
+    for cat_key in selected_categories:
+        config = CATEGORY_CONFIG[cat_key]
+        instructions.append(f"- {config['sheet_name']}: {', '.join(config['device_types'])}")
+    
+    instructions.extend([
         "",
         "Warranty Status:",
         "- Under OEM: Currently under manufacturer warranty",
@@ -413,8 +507,9 @@ async def download_device_template():
         "Configuration Format:",
         "For PCs/Laptops: 'CPU, RAM, Storage' (e.g., 'i5-11500, 16GB RAM, 512GB SSD')",
         "For Servers: Include RAID configuration",
+        "For Network devices: Ports, modules",
         "For other devices: N/A or relevant specs",
-    ]
+    ])
     
     for row, text in enumerate(instructions, 1):
         cell = ws_info.cell(row=row, column=1, value=text)
@@ -423,7 +518,7 @@ async def download_device_template():
         elif text.endswith(":") and text != "":
             cell.font = Font(bold=True)
     
-    ws_info.column_dimensions['A'].width = 60
+    ws_info.column_dimensions['A'].width = 70
     
     # Save to buffer
     buffer = io.BytesIO()
