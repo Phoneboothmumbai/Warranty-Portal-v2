@@ -991,9 +991,39 @@ async def verify_custom_domain(
             "verified": False,
             "domain": domain,
             "message": f"DNS record _aftersales-verification.{domain} not found. Please add the TXT record."
+        }
+    except dns.resolver.NoAnswer:
+        return {
+            "verified": False,
+            "domain": domain,
+            "message": "No TXT record found. Please add the verification TXT record."
+        }
+    except Exception as e:
+        return {
+            "verified": False,
+            "domain": domain,
+            "message": f"DNS lookup failed: {str(e)}"
+        }
 
 
-# ==================== EMAIL WHITE-LABELING ====================
+@router.delete("/custom-domains/{domain_id}")
+async def delete_custom_domain(
+    domain_id: str,
+    member: dict = Depends(require_org_role("owner", "admin", "msp_admin")),
+    auth_info: dict = Depends(get_org_from_token)
+):
+    """Remove a custom domain"""
+    org = auth_info.get("organization", {})
+    
+    result = await _db.custom_domains.update_one(
+        {"id": domain_id, "organization_id": org["id"]},
+        {"$set": {"is_deleted": True}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Domain not found")
+    
+    return {"message": "Domain removed"}
 
 class EmailSettingsUpdate(PydanticBaseModel):
     email_enabled: Optional[bool] = None
