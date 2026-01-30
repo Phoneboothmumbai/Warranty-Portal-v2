@@ -1722,6 +1722,86 @@ async def delete_company(company_id: str, admin: dict = Depends(get_current_admi
     await log_audit("company", company_id, "delete", {"is_deleted": True}, admin)
     return {"message": "Company archived"}
 
+
+# ==================== COMPANY DOMAIN MANAGEMENT ====================
+
+@api_router.post("/admin/companies/{company_id}/domains")
+async def add_company_domain(company_id: str, data: dict, admin: dict = Depends(get_current_admin)):
+    """Add an email domain to a company for ticket routing"""
+    domain = data.get("domain", "").lower().strip()
+    
+    if not domain:
+        raise HTTPException(status_code=400, detail="Domain is required")
+    
+    # Validate domain format
+    import re
+    if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z]{2,}$', domain):
+        raise HTTPException(status_code=400, detail="Invalid domain format")
+    
+    # Check if company exists
+    company = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    # Check if domain is already assigned to another company
+    existing = await db.companies.find_one({
+        "id": {"$ne": company_id},
+        "email_domains": domain,
+        "is_deleted": {"$ne": True}
+    })
+    if existing:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Domain '{domain}' is already assigned to {existing.get('name')}"
+        )
+    
+    # Add domain to company
+    current_domains = company.get("email_domains", [])
+    if domain in current_domains:
+        raise HTTPException(status_code=400, detail="Domain already exists for this company")
+    
+    await db.companies.update_one(
+        {"id": company_id},
+        {"$addToSet": {"email_domains": domain}}
+    )
+    
+    await log_audit("company", company_id, "add_domain", {"domain": domain}, admin)
+    return {"message": "Domain added", "domain": domain}
+
+
+@api_router.delete("/admin/companies/{company_id}/domains/{domain}")
+async def remove_company_domain(company_id: str, domain: str, admin: dict = Depends(get_current_admin)):
+    """Remove an email domain from a company"""
+    company = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    domain = domain.lower()
+    
+    await db.companies.update_one(
+        {"id": company_id},
+        {"$pull": {"email_domains": domain}}
+    )
+    
+    await log_audit("company", company_id, "remove_domain", {"domain": domain}, admin)
+    return {"message": "Domain removed"}
+
+
+@api_router.get("/admin/company-domains")
+async def list_all_company_domains(admin: dict = Depends(get_current_admin)):
+    """List all companies with their email domains"""
+    companies = await db.companies.find(
+        {"is_deleted": {"$ne": True}},
+        {"_id": 0, "id": 1, "name": 1, "email_domains": 1, "contact_email": 1}
+    ).to_list(500)
+    
+    # Add domain count
+    for company in companies:
+        company["domain_count"] = len(company.get("email_domains", []))
+    
+    return companies
+
+
 # ==================== BULK IMPORT ENDPOINTS ====================
 
 @api_router.post("/admin/bulk-import/companies")
