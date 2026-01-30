@@ -109,6 +109,9 @@ function App() {
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<LandingPage />} />
+                  <Route path="/features" element={<FeaturesPage />} />
+                  <Route path="/pricing" element={<PricingPage />} />
+                  <Route path="/about" element={<AboutPage />} />
                   <Route path="/signup" element={<SignupPage />} />
                   <Route path="/page/:slug" element={<StaticPage />} />
                   <Route path="/warranty/:serialNumber" element={<WarrantyResult />} />
