@@ -7,13 +7,13 @@ import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Depends, Query
-from typing import Optional
+from typing import Optional, List
 
 from models.organization import (
     Organization, OrganizationCreate, OrganizationUpdate,
     OrganizationMember, OrganizationMemberCreate, OrganizationMemberUpdate,
     OrganizationInvitation, OrganizationBrandingUpdate, OrganizationSettingsUpdate,
-    SUBSCRIPTION_PLANS, ORGANIZATION_STATUSES
+    SUBSCRIPTION_PLANS, ORGANIZATION_STATUSES, TENANT_ROLES
 )
 from services.auth import get_password_hash, verify_password, create_access_token
 from services.tenant import (
