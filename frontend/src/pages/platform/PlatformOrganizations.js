@@ -442,6 +442,8 @@ function CreateOrganizationModal({ onClose, onSuccess, token }) {
 function OrganizationDetailModal({ org, onClose, token }) {
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [changingPlan, setChangingPlan] = useState(false);
+  const [newPlan, setNewPlan] = useState('');
 
   useEffect(() => {
     fetchDetails();
@@ -453,10 +455,27 @@ function OrganizationDetailModal({ org, onClose, token }) {
         headers: { Authorization: `Bearer ${token}` }
       });
       setDetails(response.data);
+      setNewPlan(response.data.organization?.subscription?.plan || 'trial');
     } catch (error) {
       toast.error('Failed to fetch details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChangePlan = async () => {
+    try {
+      setChangingPlan(true);
+      await axios.put(`${API}/api/platform/organizations/${org.id}`, 
+        { plan: newPlan },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Plan updated successfully');
+      fetchDetails();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update plan');
+    } finally {
+      setChangingPlan(false);
     }
   };
 
@@ -496,8 +515,46 @@ function OrganizationDetailModal({ org, onClose, token }) {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Plan</span>
-                    <span className="text-white capitalize">{details.organization.subscription?.plan}</span>
+                    <span className="text-slate-400">Created</span>
+                    <span className="text-white">{new Date(details.organization.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Subscription Management */}
+              <div>
+                <h3 className="text-sm font-medium text-slate-400 mb-2">Subscription</h3>
+                <div className="bg-slate-700/50 rounded-lg p-4 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Current Plan</span>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${PLAN_BADGES[details.organization.subscription?.plan]?.class}`}>
+                      {details.organization.subscription?.plan?.toUpperCase() || 'TRIAL'}
+                    </span>
+                  </div>
+                  
+                  <div className="border-t border-slate-600 pt-4">
+                    <label className="text-sm text-slate-300 mb-2 block">Change Plan</label>
+                    <div className="flex gap-2">
+                      <select
+                        value={newPlan}
+                        onChange={(e) => setNewPlan(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white text-sm"
+                        data-testid="plan-select"
+                      >
+                        <option value="trial">Trial (Free)</option>
+                        <option value="starter">Starter (₹2,999/mo)</option>
+                        <option value="professional">Professional (₹7,999/mo)</option>
+                        <option value="enterprise">Enterprise (₹19,999/mo)</option>
+                      </select>
+                      <Button
+                        onClick={handleChangePlan}
+                        disabled={changingPlan || newPlan === details.organization.subscription?.plan}
+                        className="bg-purple-600 hover:bg-purple-700"
+                        data-testid="change-plan-btn"
+                      >
+                        {changingPlan ? 'Updating...' : 'Update'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -519,12 +576,22 @@ function OrganizationDetailModal({ org, onClose, token }) {
                     <p className="text-sm text-slate-400">Users</p>
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div className="bg-slate-700/50 rounded-lg p-4 text-center">
+                    <p className="text-2xl font-bold text-white">{details.stats.tickets || 0}</p>
+                    <p className="text-sm text-slate-400">Tickets</p>
+                  </div>
+                  <div className="bg-slate-700/50 rounded-lg p-4 text-center">
+                    <p className="text-2xl font-bold text-white">{details.stats.amc_contracts || 0}</p>
+                    <p className="text-sm text-slate-400">AMC Contracts</p>
+                  </div>
+                </div>
               </div>
 
               {/* Members */}
               <div>
                 <h3 className="text-sm font-medium text-slate-400 mb-2">Team Members ({details.members.length})</h3>
-                <div className="bg-slate-700/50 rounded-lg divide-y divide-slate-600">
+                <div className="bg-slate-700/50 rounded-lg divide-y divide-slate-600 max-h-48 overflow-y-auto">
                   {details.members.map(member => (
                     <div key={member.id} className="p-3 flex items-center justify-between">
                       <div>
