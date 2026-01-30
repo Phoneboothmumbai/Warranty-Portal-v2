@@ -1,34 +1,17 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
-  Search, Shield, ArrowRight, Check, ChevronRight, 
-  HardDrive, Ticket, FileText, BarChart3, Users, 
-  QrCode, Bell, Wrench, Building2, Zap, Lock,
-  Menu, X, Play, Star, ArrowUpRight
+  Shield, ArrowRight, Check, 
+  HardDrive, Ticket, FileText, BarChart3, 
+  QrCode, Building2,
+  Menu, X, Play, ArrowUpRight
 } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { Button } from '../../components/ui/button';
 
 const LandingPage = () => {
-  const [query, setQuery] = useState('');
-  const [error, setError] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const navigate = useNavigate();
   const { settings } = useSettings();
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (!query.trim()) {
-      setError('Please enter a Serial Number or Asset Tag');
-      return;
-    }
-    if (query.trim().length < 2) {
-      setError('Search query too short');
-      return;
-    }
-    setError('');
-    navigate(`/warranty/${encodeURIComponent(query.trim())}`);
-  };
 
   const features = [
     {
