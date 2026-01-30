@@ -58,6 +58,10 @@ import PlatformLogin from "./pages/platform/PlatformLogin";
 import PlatformLayout from "./layouts/PlatformLayout";
 import PlatformDashboard from "./pages/platform/PlatformDashboard";
 import PlatformOrganizations from "./pages/platform/PlatformOrganizations";
+import PlatformAdmins from "./pages/platform/PlatformAdmins";
+import PlatformSettings from "./pages/platform/PlatformSettings";
+import PlatformBilling from "./pages/platform/PlatformBilling";
+import PlatformAuditLogs from "./pages/platform/PlatformAuditLogs";
 
 // Signup Page
 import SignupPage from "./pages/SignupPage";
@@ -130,6 +134,10 @@ function App() {
                     <Route index element={<PlatformDashboard />} />
                     <Route path="dashboard" element={<PlatformDashboard />} />
                     <Route path="organizations" element={<PlatformOrganizations />} />
+                    <Route path="admins" element={<PlatformAdmins />} />
+                    <Route path="settings" element={<PlatformSettings />} />
+                    <Route path="billing" element={<PlatformBilling />} />
+                    <Route path="audit-logs" element={<PlatformAuditLogs />} />
                   </Route>
                   
                   {/* Protected Admin Routes */}
