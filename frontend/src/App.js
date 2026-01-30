@@ -160,6 +160,8 @@ function App() {
                     <Route path="settings" element={<Settings />} />
                     <Route path="organization" element={<OrganizationSettings />} />
                     <Route path="static-pages" element={<StaticPages />} />
+                    <Route path="usage" element={<UsageDashboard />} />
+                    <Route path="company-domains" element={<CompanyDomains />} />
                   </Route>
 
                   {/* Company Portal Routes */}
