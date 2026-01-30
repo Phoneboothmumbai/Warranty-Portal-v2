@@ -72,10 +72,22 @@ export const AuthProvider = ({ children }) => {
     fetchAdmin(token);
   }, [token, fetchAdmin]);
 
-  const login = async (email, password) => {
-    const response = await axios.post(`${API}/auth/login`, { email, password });
-    const { access_token } = response.data;
+  const login = async (email, password, tenantSlug = null) => {
+    // Build URL with tenant context if provided
+    let url = `${API}/auth/login`;
+    if (tenantSlug) {
+      url += `?_tenant=${tenantSlug}`;
+    }
+    
+    const response = await axios.post(url, { email, password });
+    const { access_token, tenant } = response.data;
     localStorage.setItem('admin_token', access_token);
+    
+    // Store tenant info if returned
+    if (tenant) {
+      localStorage.setItem('admin_tenant', JSON.stringify(tenant));
+    }
+    
     setToken(access_token);
     setAuthError(null);
     return response.data;
