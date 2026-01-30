@@ -232,6 +232,10 @@ class OrganizationBrandingUpdate(BaseModel):
     company_name: Optional[str] = None
     favicon_url: Optional[str] = None
     custom_css: Optional[str] = None
+    custom_domain: Optional[str] = None
+    support_email: Optional[str] = None
+    footer_text: Optional[str] = None
+    hide_powered_by: Optional[bool] = None
 
 
 class OrganizationSettingsUpdate(BaseModel):
