@@ -23,6 +23,41 @@ current_org: ContextVar[Optional[dict]] = ContextVar('current_org', default=None
 security = HTTPBearer()
 
 
+async def get_org_id_from_admin(admin_email: str) -> Optional[str]:
+    """
+    Get organization_id for an admin user.
+    Used to scope admin queries to their organization.
+    """
+    # Check if admin has an organization member entry
+    org_member = await db.organization_members.find_one(
+        {"email": admin_email, "is_active": True, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    )
+    
+    if org_member:
+        return org_member.get("organization_id")
+    
+    return None
+
+
+def add_tenant_filter(query: dict, org_id: Optional[str]) -> dict:
+    """
+    Add organization_id filter to a query if org_id is available.
+    For backward compatibility, returns original query if no org_id.
+    """
+    if org_id:
+        return {**query, "organization_id": org_id}
+    return query
+
+
+async def get_tenant_scoped_query(query: dict, admin: dict) -> dict:
+    """
+    Get a tenant-scoped query based on admin's organization.
+    """
+    org_id = await get_org_id_from_admin(admin.get("email", ""))
+    return add_tenant_filter(query, org_id)
+
+
 class TenantContext:
     """
     Tenant context manager for multi-tenancy.
