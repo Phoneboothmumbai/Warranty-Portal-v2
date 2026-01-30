@@ -179,6 +179,13 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - ✅ Ticket Participants (CC/Collaboration)
 - ✅ Email Integration (SMTP + IMAP)
 
+### Multi-Tenant SaaS Features (Complete - All 3 Phases)
+- ✅ **5-Tier Role System UI** - Team Members page with full role management
+- ✅ **Company Switcher** - Sidebar dropdown for MSP users
+- ✅ **Technician Assignment Management** - Assign technicians to companies
+- ✅ **Custom Domains** - DNS TXT verification, domain status tracking
+- ✅ **Email White-labeling** - Full SMTP configuration, sender info, branding
+
 ## Prioritized Backlog
 
 ### P0 - Critical (Complete)
@@ -187,14 +194,16 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - ✅ **Knowledge Base System** - Full CRUD with tenant scoping
 - ✅ **Platform Super Admin Portal** - Full build-out complete
 - ✅ **P0 Signup Bug Fix** - Signup now creates records in both admins and organization_members collections
+- ✅ **5-Tier Role System UI** - Complete with Team Members page
+- ✅ **Company Switcher** - Complete with session persistence
+- ✅ **Technician Assignment Management** - Complete with bulk assignment
+- ✅ **Custom Domains** - Complete with DNS verification
+- ✅ **Email White-labeling** - Complete with SMTP config and test email
 
 ### P1 - In Progress
-- [ ] **5-Tier Role System UI** - Frontend components for role-based access control
-- [ ] **Technician Assignment Management** - UI for MSP admins to assign technicians to companies
-- [ ] **Company Switcher** - UI component for MSP users to switch between assigned companies
-- [ ] **Custom Domains** (Phase 2) - DNS verification, SSL automation (deferred to later)
 - [ ] **Finalize Razorpay Integration** - Need API keys (KEY_ID, KEY_SECRET)
 - [ ] **Finalize Tactical RMM Integration** - Need API URL & Key
+- [ ] **SSL Automation for Custom Domains** - Server-level integration needed
 
 ### P2 - Upcoming
 - [ ] Scheduled Email Sync - Background task for IMAP
@@ -203,7 +212,6 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - [ ] Add Dashboard Screenshots to Features Page
 
 ### P3 - Future/Backlog
-- [ ] White-labeling (Advanced) - Custom email domains
 - [ ] Integrations for other RMMs (NinjaRMM, ConnectWise)
 - [ ] PDF Export for service history reports
 - [ ] Full Refactor of `server.py` into modular routes
@@ -215,6 +223,7 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - AI: OpenAI GPT-4o-mini via emergentintegrations
 - File Processing: pandas, openpyxl
 - Security: slowapi (rate limiting), bcrypt (password hashing), JWT (authentication)
+- DNS Verification: dnspython
 
 ## Key API Endpoints
 
