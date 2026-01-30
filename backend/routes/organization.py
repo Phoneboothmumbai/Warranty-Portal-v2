@@ -662,3 +662,366 @@ async def get_usage_stats(auth_info: dict = Depends(get_org_from_token)):
         "limits": limits,
         "plan": plan
     }
+
+
+# ==================== TECHNICIAN ASSIGNMENTS ====================
+
+from models.technician_assignment import TechnicianAssignment, TechnicianAssignmentCreate, TechnicianAssignmentUpdate
+
+
+@router.get("/technician-assignments")
+async def list_technician_assignments(
+    technician_id: Optional[str] = None,
+    company_id: Optional[str] = None,
+    auth_info: dict = Depends(get_org_from_token)
+):
+    """
+    List technician-to-company assignments.
+    Filter by technician_id or company_id optionally.
+    """
+    org = auth_info.get("organization", {})
+    
+    query = {
+        "organization_id": org["id"],
+        "is_deleted": {"$ne": True},
+        "is_active": True
+    }
+    
+    if technician_id:
+        query["technician_id"] = technician_id
+    if company_id:
+        query["company_id"] = company_id
+    
+    assignments = await _db.technician_assignments.find(
+        query,
+        {"_id": 0}
+    ).to_list(500)
+    
+    return assignments
+
+
+@router.post("/technician-assignments")
+async def create_technician_assignment(
+    data: TechnicianAssignmentCreate,
+    member: dict = Depends(require_org_role("owner", "admin", "msp_admin")),
+    auth_info: dict = Depends(get_org_from_token)
+):
+    """
+    Assign a technician to a company.
+    Only MSP admins/owners can create assignments.
+    """
+    org = auth_info.get("organization", {})
+    
+    # Verify technician exists and is msp_technician
+    technician = await _db.organization_members.find_one({
+        "id": data.technician_id,
+        "organization_id": org["id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not technician:
+        raise HTTPException(status_code=404, detail="Technician not found")
+    
+    if technician.get("role") not in ["msp_technician", "member"]:
+        raise HTTPException(status_code=400, detail="User is not a technician")
+    
+    # Verify company exists
+    company = await _db.companies.find_one({
+        "id": data.company_id,
+        "organization_id": org["id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    # Check if assignment already exists
+    existing = await _db.technician_assignments.find_one({
+        "technician_id": data.technician_id,
+        "company_id": data.company_id,
+        "organization_id": org["id"],
+        "is_deleted": {"$ne": True}
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Assignment already exists")
+    
+    # Create assignment
+    assignment = TechnicianAssignment(
+        organization_id=org["id"],
+        technician_id=data.technician_id,
+        technician_email=technician.get("email"),
+        technician_name=technician.get("name"),
+        company_id=data.company_id,
+        company_name=company.get("name"),
+        assignment_type=data.assignment_type,
+        permissions=data.permissions or [],
+        assigned_by=member.get("id"),
+        assigned_by_name=member.get("name"),
+        notes=data.notes
+    )
+    
+    await _db.technician_assignments.insert_one(assignment.model_dump())
+    
+    # Update technician's assigned_company_ids list
+    await _db.organization_members.update_one(
+        {"id": data.technician_id},
+        {"$addToSet": {"assigned_company_ids": data.company_id}}
+    )
+    
+    return assignment.model_dump()
+
+
+@router.put("/technician-assignments/{assignment_id}")
+async def update_technician_assignment(
+    assignment_id: str,
+    data: TechnicianAssignmentUpdate,
+    member: dict = Depends(require_org_role("owner", "admin", "msp_admin")),
+    auth_info: dict = Depends(get_org_from_token)
+):
+    """Update a technician assignment"""
+    org = auth_info.get("organization", {})
+    
+    assignment = await _db.technician_assignments.find_one({
+        "id": assignment_id,
+        "organization_id": org["id"],
+        "is_deleted": {"$ne": True}
+    })
+    
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    update_data["updated_at"] = get_ist_isoformat()
+    
+    await _db.technician_assignments.update_one(
+        {"id": assignment_id},
+        {"$set": update_data}
+    )
+    
+    return await _db.technician_assignments.find_one(
+        {"id": assignment_id},
+        {"_id": 0}
+    )
+
+
+@router.delete("/technician-assignments/{assignment_id}")
+async def delete_technician_assignment(
+    assignment_id: str,
+    member: dict = Depends(require_org_role("owner", "admin", "msp_admin")),
+    auth_info: dict = Depends(get_org_from_token)
+):
+    """Remove a technician assignment"""
+    org = auth_info.get("organization", {})
+    
+    assignment = await _db.technician_assignments.find_one({
+        "id": assignment_id,
+        "organization_id": org["id"],
+        "is_deleted": {"$ne": True}
+    })
+    
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    
+    # Soft delete
+    await _db.technician_assignments.update_one(
+        {"id": assignment_id},
+        {"$set": {
+            "is_deleted": True,
+            "is_active": False,
+            "revoked_at": get_ist_isoformat(),
+            "revoked_by": member.get("id")
+        }}
+    )
+    
+    # Remove from technician's assigned_company_ids
+    await _db.organization_members.update_one(
+        {"id": assignment["technician_id"]},
+        {"$pull": {"assigned_company_ids": assignment["company_id"]}}
+    )
+    
+    return {"message": "Assignment removed"}
+
+
+# ==================== CUSTOM DOMAINS ====================
+
+from pydantic import BaseModel as PydanticBaseModel
+
+
+class CustomDomainCreate(PydanticBaseModel):
+    domain: str
+
+
+class CustomDomainVerify(PydanticBaseModel):
+    domain: str
+
+
+@router.get("/custom-domains")
+async def list_custom_domains(auth_info: dict = Depends(get_org_from_token)):
+    """List configured custom domains for the organization"""
+    org = auth_info.get("organization", {})
+    
+    domains = await _db.custom_domains.find(
+        {"organization_id": org["id"], "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    ).to_list(100)
+    
+    return domains
+
+
+@router.post("/custom-domains")
+async def add_custom_domain(
+    data: CustomDomainCreate,
+    member: dict = Depends(require_org_role("owner", "admin", "msp_admin")),
+    auth_info: dict = Depends(get_org_from_token)
+):
+    """
+    Add a custom domain for the organization.
+    Generates a DNS TXT verification record.
+    """
+    org = auth_info.get("organization", {})
+    domain = data.domain.lower().strip()
+    
+    # Validate domain format
+    import re
+    if not re.match(r'^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$', domain):
+        raise HTTPException(status_code=400, detail="Invalid domain format")
+    
+    # Check if domain already exists (for any org)
+    existing = await _db.custom_domains.find_one({
+        "domain": domain,
+        "is_deleted": {"$ne": True}
+    })
+    
+    if existing:
+        if existing.get("organization_id") == org["id"]:
+            raise HTTPException(status_code=400, detail="Domain already added")
+        else:
+            raise HTTPException(status_code=400, detail="Domain is already registered by another organization")
+    
+    # Generate verification token
+    verification_token = f"aftersales-verify={str(uuid.uuid4())[:12]}"
+    
+    domain_record = {
+        "id": str(uuid.uuid4()),
+        "organization_id": org["id"],
+        "domain": domain,
+        "verification_token": verification_token,
+        "verification_status": "pending",  # pending, verified, failed
+        "ssl_status": "pending",  # pending, provisioning, active, failed
+        "added_by": member.get("id"),
+        "added_by_name": member.get("name"),
+        "created_at": get_ist_isoformat(),
+        "verified_at": None,
+        "is_primary": False,
+        "is_deleted": False
+    }
+    
+    await _db.custom_domains.insert_one(domain_record)
+    
+    return {
+        "domain": domain,
+        "verification_token": verification_token,
+        "verification_instructions": {
+            "type": "TXT",
+            "host": "_aftersales-verification",
+            "value": verification_token,
+            "instructions": f"Add a TXT record to your DNS:\n\nHost: _aftersales-verification.{domain}\nValue: {verification_token}\n\nNote: DNS propagation can take up to 48 hours."
+        }
+    }
+
+
+@router.post("/custom-domains/verify")
+async def verify_custom_domain(
+    data: CustomDomainVerify,
+    member: dict = Depends(require_org_role("owner", "admin", "msp_admin")),
+    auth_info: dict = Depends(get_org_from_token)
+):
+    """
+    Verify domain ownership by checking DNS TXT record.
+    """
+    import dns.resolver
+    
+    org = auth_info.get("organization", {})
+    domain = data.domain.lower().strip()
+    
+    # Get domain record
+    domain_record = await _db.custom_domains.find_one({
+        "domain": domain,
+        "organization_id": org["id"],
+        "is_deleted": {"$ne": True}
+    })
+    
+    if not domain_record:
+        raise HTTPException(status_code=404, detail="Domain not found")
+    
+    expected_token = domain_record.get("verification_token")
+    
+    try:
+        # Query DNS TXT record
+        answers = dns.resolver.resolve(f"_aftersales-verification.{domain}", 'TXT')
+        
+        for rdata in answers:
+            txt_value = str(rdata).strip('"')
+            if txt_value == expected_token:
+                # Verification successful
+                await _db.custom_domains.update_one(
+                    {"id": domain_record["id"]},
+                    {"$set": {
+                        "verification_status": "verified",
+                        "verified_at": get_ist_isoformat()
+                    }}
+                )
+                
+                return {
+                    "verified": True,
+                    "domain": domain,
+                    "message": "Domain verified successfully! SSL provisioning will begin automatically."
+                }
+        
+        # Token not found in TXT records
+        return {
+            "verified": False,
+            "domain": domain,
+            "message": "Verification token not found in DNS TXT records. Please check your DNS configuration."
+        }
+        
+    except dns.resolver.NXDOMAIN:
+        return {
+            "verified": False,
+            "domain": domain,
+            "message": f"DNS record _aftersales-verification.{domain} not found. Please add the TXT record."
+        }
+    except dns.resolver.NoAnswer:
+        return {
+            "verified": False,
+            "domain": domain,
+            "message": "No TXT record found. Please add the verification TXT record."
+        }
+    except Exception as e:
+        return {
+            "verified": False,
+            "domain": domain,
+            "message": f"DNS lookup failed: {str(e)}"
+        }
+
+
+@router.delete("/custom-domains/{domain_id}")
+async def delete_custom_domain(
+    domain_id: str,
+    member: dict = Depends(require_org_role("owner", "admin", "msp_admin")),
+    auth_info: dict = Depends(get_org_from_token)
+):
+    """Remove a custom domain"""
+    org = auth_info.get("organization", {})
+    
+    result = await _db.custom_domains.update_one(
+        {"id": domain_id, "organization_id": org["id"]},
+        {"$set": {"is_deleted": True}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Domain not found")
+    
+    return {"message": "Domain removed"}
+
