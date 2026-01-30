@@ -1,6 +1,14 @@
 # Warranty & Asset Tracking Portal - PRD
 
 ## CHANGELOG
+- **2026-01-30**: Self-Signup & Razorpay Billing Implementation
+  - **Public Signup Page** (`/signup`): 3-step wizard (Plan Selection → Account Details → Payment)
+  - **Razorpay Integration**: Subscription billing with webhooks for payment events
+  - **Organization Branding**: BrandingContext for tenant-specific logos and colors
+  - **Tenant Scoping Utilities**: Helper functions for organization-filtered queries
+  - Backend: `/api/billing/*` routes, Razorpay subscription and order handling
+  - Frontend: SignupPage.js, BrandingContext.js
+
 - **2026-01-30**: Multi-tenant SaaS Architecture Implementation
   - **Platform Super Admin Layer**: Separate login (`/platform/login`), dashboard, organization management
   - **Organization (Tenant) Model**: Complete data isolation with `organization_id` on all collections
