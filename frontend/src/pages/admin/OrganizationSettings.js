@@ -20,7 +20,7 @@ export default function OrganizationSettings() {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('admin_token');
 
   useEffect(() => {
     fetchOrganization();
