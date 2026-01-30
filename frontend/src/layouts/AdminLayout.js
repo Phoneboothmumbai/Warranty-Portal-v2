@@ -77,6 +77,8 @@ const navGroups = [
     icon: Settings,
     items: [
       { path: '/admin/organization', label: 'Organization', icon: Building2 },
+      { path: '/admin/custom-domains', label: 'Custom Domains', icon: Globe },
+      { path: '/admin/email-whitelabel', label: 'Email Settings', icon: Mail },
       { path: '/admin/knowledge-base', label: 'Knowledge Base', icon: BookOpen },
       { path: '/admin/static-pages', label: 'Static Pages', icon: FileText },
       { path: '/admin/master-data', label: 'Master Data', icon: Database },
