@@ -152,6 +152,80 @@ async def get_public_settings():
         "company_name": settings.get("company_name", "Warranty Portal")
     }
 
+
+# ==================== TENANT CONTEXT ENDPOINT ====================
+
+@api_router.get("/tenant/context")
+async def get_tenant_context_api(request: Request):
+    """
+    Get tenant context from subdomain/header/query param.
+    Frontend calls this to get branding and tenant info.
+    
+    Resolution methods:
+    - Production: Subdomain in URL (acme.assetvault.io)
+    - Development: X-Tenant-Slug header or ?_tenant=slug query param
+    """
+    tenant = getattr(request.state, "tenant", None)
+    resolution = getattr(request.state, "tenant_resolution", None)
+    
+    if not tenant:
+        return {
+            "tenant": None,
+            "resolution": resolution,
+            "message": "No tenant context. Use subdomain, X-Tenant-Slug header, or _tenant query param."
+        }
+    
+    # Build tenant context response
+    branding = tenant.get("branding", {})
+    settings = tenant.get("settings", {})
+    
+    return {
+        "tenant": {
+            "id": tenant.get("id"),
+            "name": tenant.get("name"),
+            "slug": tenant.get("slug"),
+            "status": tenant.get("status"),
+            "branding": {
+                "logo_url": branding.get("logo_url"),
+                "logo_base64": branding.get("logo_base64"),
+                "accent_color": branding.get("accent_color", "#0F62FE"),
+                "company_name": branding.get("company_name") or tenant.get("name"),
+                "favicon_url": branding.get("favicon_url"),
+                "custom_css": branding.get("custom_css")
+            },
+            "settings": {
+                "timezone": settings.get("timezone", "Asia/Kolkata"),
+                "currency": settings.get("currency", "INR"),
+                "enable_public_portal": settings.get("enable_public_portal", True),
+                "enable_ai_features": settings.get("enable_ai_features", True)
+            }
+        },
+        "resolution": resolution
+    }
+
+
+@api_router.get("/tenant/verify/{slug}")
+async def verify_tenant_slug(slug: str):
+    """
+    Public endpoint to verify if a tenant slug exists.
+    Used for subdomain validation during signup.
+    """
+    org = await db.organizations.find_one(
+        {"slug": slug.lower(), "is_deleted": {"$ne": True}},
+        {"_id": 0, "id": 1, "name": 1, "slug": 1, "status": 1}
+    )
+    
+    if not org:
+        return {"exists": False, "slug": slug}
+    
+    return {
+        "exists": True,
+        "slug": org.get("slug"),
+        "name": org.get("name"),
+        "status": org.get("status")
+    }
+
+
 @api_router.get("/masters/public")
 async def get_public_masters(
     master_type: Optional[str] = None,
