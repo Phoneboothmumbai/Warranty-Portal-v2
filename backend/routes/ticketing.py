@@ -41,6 +41,7 @@ _log_audit = None
 
 # These will be imported directly from services.auth
 from services.auth import get_current_admin, get_current_company_user
+from utils.tenant_scope import get_admin_org_id, scope_query
 
 
 def init_ticketing_router(database, admin_dependency, company_user_dependency, audit_function):
