@@ -211,66 +211,66 @@ const PricingPage = () => {
       </section>
 
       {/* Pricing Cards */}
-      <section className="pb-20 md:pb-24">
+      <section className="pb-20 md:pb-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {plans.map((plan, index) => (
               <div 
                 key={index}
-                className={`relative p-8 rounded-2xl border-2 transition-all duration-300 ${
+                className={`relative p-8 rounded-2xl border transition-all duration-300 ${
                   plan.highlighted 
-                    ? 'bg-[#0F62FE] text-white border-[#0F62FE] shadow-2xl shadow-blue-500/30 scale-105 z-10' 
-                    : 'bg-white text-slate-900 border-slate-100 hover:border-slate-200 hover:shadow-xl'
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-xl' 
+                    : 'bg-white text-slate-900 border-slate-200 hover:border-slate-300 hover:shadow-lg'
                 }`}
               >
                 {plan.highlighted && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-amber-400 text-slate-900 text-xs font-bold rounded-full uppercase tracking-wide">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#0F62FE] text-white text-xs font-medium rounded-full">
                     Most Popular
                   </div>
                 )}
                 
-                <h3 className={`text-xl font-semibold mb-2 font-display ${plan.highlighted ? 'text-white' : 'text-slate-900'}`}>
+                <h3 className={`text-xl font-semibold mb-2 ${plan.highlighted ? 'text-white' : 'text-slate-900'}`}>
                   {plan.name}
                 </h3>
-                <p className={`text-sm mb-6 ${plan.highlighted ? 'text-blue-100' : 'text-slate-500'}`}>
+                <p className={`text-sm mb-6 ${plan.highlighted ? 'text-slate-400' : 'text-slate-500'}`}>
                   {plan.description}
                 </p>
                 
                 <div className="mb-8">
-                  <span className="text-4xl font-bold font-display">
+                  <span className="text-4xl font-bold">
                     {formatPrice(billingPeriod === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice)}
                   </span>
                   {plan.monthlyPrice !== null && (
-                    <span className={`text-sm ${plan.highlighted ? 'text-blue-100' : 'text-slate-500'}`}>
+                    <span className={`text-sm ${plan.highlighted ? 'text-slate-400' : 'text-slate-500'}`}>
                       {billingPeriod === 'yearly' ? '/year' : plan.period}
                     </span>
                   )}
                 </div>
 
-                <div className="space-y-4 mb-8">
+                <div className="space-y-3 mb-8">
                   <div className="flex items-center justify-between text-sm">
-                    <span className={plan.highlighted ? 'text-blue-100' : 'text-slate-600'}>Companies</span>
-                    <span className={`font-semibold ${plan.highlighted ? 'text-white' : 'text-slate-900'}`}>{plan.features.companies}</span>
+                    <span className={plan.highlighted ? 'text-slate-400' : 'text-slate-600'}>Companies</span>
+                    <span className={`font-medium ${plan.highlighted ? 'text-white' : 'text-slate-900'}`}>{plan.features.companies}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className={plan.highlighted ? 'text-blue-100' : 'text-slate-600'}>Devices</span>
-                    <span className={`font-semibold ${plan.highlighted ? 'text-white' : 'text-slate-900'}`}>{plan.features.devices}</span>
+                    <span className={plan.highlighted ? 'text-slate-400' : 'text-slate-600'}>Devices</span>
+                    <span className={`font-medium ${plan.highlighted ? 'text-white' : 'text-slate-900'}`}>{plan.features.devices}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className={plan.highlighted ? 'text-blue-100' : 'text-slate-600'}>Users</span>
-                    <span className={`font-semibold ${plan.highlighted ? 'text-white' : 'text-slate-900'}`}>{plan.features.users}</span>
+                    <span className={plan.highlighted ? 'text-slate-400' : 'text-slate-600'}>Users</span>
+                    <span className={`font-medium ${plan.highlighted ? 'text-white' : 'text-slate-900'}`}>{plan.features.users}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className={plan.highlighted ? 'text-blue-100' : 'text-slate-600'}>Tickets</span>
-                    <span className={`font-semibold ${plan.highlighted ? 'text-white' : 'text-slate-900'}`}>{plan.features.tickets}</span>
+                    <span className={plan.highlighted ? 'text-slate-400' : 'text-slate-600'}>Tickets</span>
+                    <span className={`font-medium ${plan.highlighted ? 'text-white' : 'text-slate-900'}`}>{plan.features.tickets}</span>
                   </div>
                 </div>
 
                 <Link to={plan.name === 'Enterprise' ? '/page/contact-us' : '/signup'}>
                   <Button 
-                    className={`w-full py-3 h-auto rounded-xl font-semibold transition-all hover:-translate-y-0.5 ${
+                    className={`w-full py-3 h-auto rounded-lg font-medium transition-all ${
                       plan.highlighted 
-                        ? 'bg-white text-[#0F62FE] hover:bg-blue-50' 
+                        ? 'bg-white text-slate-900 hover:bg-slate-100' 
                         : 'bg-slate-900 text-white hover:bg-slate-800'
                     }`}
                   >
