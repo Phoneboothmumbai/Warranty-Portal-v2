@@ -129,6 +129,7 @@ function App() {
                     <Route path="supply-orders" element={<SupplyOrders />} />
                     <Route path="master-data" element={<MasterData />} />
                     <Route path="settings" element={<Settings />} />
+                    <Route path="organization" element={<OrganizationSettings />} />
                   </Route>
 
                   {/* Company Portal Routes */}
