@@ -9379,6 +9379,11 @@ from routes.amc_onboarding import router as amc_onboarding_router, init_db as in
 init_onboarding_db(db)
 app.include_router(amc_onboarding_router, prefix="/api")
 
+# Include Organization (Multi-tenancy) router
+from routes.organization import router as organization_router, init_db as init_org_db
+init_org_db(db)
+app.include_router(organization_router, prefix="/api/org", tags=["Organization"])
+
 # Initialize Email Service for Ticketing
 from services.email_service import init_email_service
 init_email_service(db)
