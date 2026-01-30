@@ -98,6 +98,14 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - ✅ White-Label UI (logo upload, color picker, custom domain)
 - ✅ Organization Settings Page with all tabs functional
 
+### Subdomain-Based Multi-Tenancy (Complete)
+- ✅ Tenant Resolution Middleware (subdomain, header, query param)
+- ✅ Tenant-Aware Login with cross-tenant protection
+- ✅ Platform Admin completely isolated from tenant routes
+- ✅ Frontend TenantProvider with branding support
+- ✅ Tenant Error Pages (suspended, not found)
+- ✅ Dev mode query param fallback
+
 ### Platform Super Admin Portal (Complete)
 - ✅ Enhanced Dashboard with MRR/ARR/growth metrics
 - ✅ Organizations Management with plan change capability
@@ -118,11 +126,13 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 ## Prioritized Backlog
 
 ### P0 - Critical (Complete)
+- ✅ **Subdomain-Based Multi-Tenancy** - Full subdomain routing with data isolation
 - ✅ **Tenant Scoping Audit** - All admin APIs now filter by organization_id
 - ✅ **Knowledge Base System** - Full CRUD with tenant scoping
 - ✅ **Platform Super Admin Portal** - Full build-out complete
 
 ### P1 - In Progress
+- [ ] **Custom Domains** (Phase 2) - DNS verification, SSL automation (deferred to later)
 - [ ] **Finalize Razorpay Integration** - Need API keys (KEY_ID, KEY_SECRET)
 - [ ] **Finalize Tactical RMM Integration** - Need API URL & Key
 - [ ] **Add Dashboard Screenshots to Features Page**
