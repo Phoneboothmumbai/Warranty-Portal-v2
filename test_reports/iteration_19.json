@@ -1,0 +1,105 @@
+{
+  "summary": "Completed testing of multi-tenant admin authentication fix. All 17 backend API tests pass (100%). Frontend UI verified - Usage Dashboard, Companies, and Devices pages all load correctly with tenant-scoped data.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "Backend: POST /api/auth/login returns access_token with organization_id in JWT payload",
+    "Backend: JWT token contains organization_id='112068e7-d4ec-4516-beff-8d3087c51868'",
+    "Backend: JWT token contains org_member_id for proper member lookup",
+    "Backend: JWT token contains type='org_member' and role='owner'",
+    "Backend: GET /api/auth/me returns organization_id",
+    "Backend: GET /api/auth/me returns organization_name='Acme Corporation'",
+    "Backend: GET /api/auth/me returns org_role='owner'",
+    "Backend: GET /api/org/usage returns usage stats (companies, devices, users, tickets_this_month)",
+    "Backend: GET /api/org/usage returns plan limits",
+    "Backend: GET /api/org/current returns organization details with correct id",
+    "Backend: GET /api/org/current returns usage stats",
+    "Backend: GET /api/org/current returns plan_limits and plan_features",
+    "Backend: GET /api/admin/companies returns companies list",
+    "Backend: GET /api/admin/companies - all companies have correct organization_id",
+    "Backend: GET /api/admin/devices returns devices list",
+    "Backend: GET /api/admin/devices - all devices have correct organization_id",
+    "Backend: Invalid credentials return 401",
+    "Frontend: Admin login works with admin@demo.com / admin123",
+    "Frontend: Usage Dashboard page loads correctly with data-testid='usage-dashboard'",
+    "Frontend: Usage Dashboard shows Companies (21/2), Devices (35/50), Users (7/5), Tickets (24/100)",
+    "Frontend: Usage Dashboard shows 'Near Limit' badges for Companies and Users",
+    "Frontend: Usage Dashboard shows Plan Comparison table",
+    "Frontend: Companies page loads and displays company list",
+    "Frontend: Devices page loads and displays device list with 35 total devices"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_multi_tenant_auth.py",
+    "/app/test_reports/pytest/multi_tenant_auth_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_multi_tenant_auth.py - Created new test file for multi-tenant authentication"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17 tests passed)",
+    "frontend": "100% (all UI tests passed)"
+  },
+  "test_credentials": {
+    "admin_email": "admin@demo.com",
+    "admin_password": "admin123",
+    "expected_organization_id": "112068e7-d4ec-4516-beff-8d3087c51868"
+  },
+  "features_verified": {
+    "admin_login_jwt": {
+      "returns_access_token": true,
+      "token_contains_organization_id": true,
+      "token_contains_org_member_id": true,
+      "token_type_is_org_member": true,
+      "token_role_is_owner": true
+    },
+    "auth_me_endpoint": {
+      "returns_organization_id": true,
+      "returns_organization_name": true,
+      "returns_org_role": true
+    },
+    "org_usage_endpoint": {
+      "returns_usage_stats": true,
+      "returns_plan_limits": true,
+      "returns_plan_name": true
+    },
+    "org_current_endpoint": {
+      "returns_organization_details": true,
+      "returns_usage_stats": true,
+      "returns_plan_limits": true,
+      "returns_plan_features": true
+    },
+    "tenant_scoped_companies": {
+      "returns_companies_list": true,
+      "companies_filtered_by_org_id": true
+    },
+    "tenant_scoped_devices": {
+      "returns_devices_list": true,
+      "devices_filtered_by_org_id": true
+    },
+    "usage_dashboard_ui": {
+      "page_loads_correctly": true,
+      "shows_companies_usage": true,
+      "shows_devices_usage": true,
+      "shows_users_usage": true,
+      "shows_tickets_usage": true,
+      "shows_plan_comparison": true,
+      "shows_near_limit_badges": true
+    }
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "mocked_apis_list": []
+  },
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Multi-tenant admin authentication is fully working. Admin login at /api/auth/login returns JWT with organization_id, org_member_id, type='org_member', and role. The get_org_from_token() function in /app/backend/services/tenant.py correctly extracts org_member_id from JWT payload and queries organization_members by id. Frontend pages (UsageDashboard, Companies, Devices) use 'admin_token' localStorage key correctly. Test file /app/backend/tests/test_multi_tenant_auth.py covers all authentication and tenant-scoping APIs."
+}
