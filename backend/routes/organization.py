@@ -991,6 +991,192 @@ async def verify_custom_domain(
             "verified": False,
             "domain": domain,
             "message": f"DNS record _aftersales-verification.{domain} not found. Please add the TXT record."
+
+
+# ==================== EMAIL WHITE-LABELING ====================
+
+class EmailSettingsUpdate(PydanticBaseModel):
+    email_enabled: Optional[bool] = None
+    from_email: Optional[str] = None
+    from_name: Optional[str] = None
+    reply_to: Optional[str] = None
+    smtp_provider: Optional[str] = None
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = None
+    smtp_username: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_use_tls: Optional[bool] = None
+    show_powered_by: Optional[bool] = None
+    email_logo_url: Optional[str] = None
+    email_footer_text: Optional[str] = None
+    email_primary_color: Optional[str] = None
+
+
+class EmailTestRequest(PydanticBaseModel):
+    email: str
+
+
+@router.get("/email-settings")
+async def get_email_settings(auth_info: dict = Depends(get_org_from_token)):
+    """Get email white-label settings for the organization"""
+    org = auth_info.get("organization", {})
+    
+    settings = await _db.email_settings.find_one(
+        {"organization_id": org["id"]},
+        {"_id": 0, "smtp_password": 0}  # Never expose password
+    )
+    
+    if not settings:
+        # Return default settings
+        return {
+            "email_enabled": False,
+            "from_email": "",
+            "from_name": "",
+            "reply_to": "",
+            "smtp_provider": "custom",
+            "smtp_host": "",
+            "smtp_port": 587,
+            "smtp_username": "",
+            "smtp_use_tls": True,
+            "show_powered_by": True,
+            "email_logo_url": "",
+            "email_footer_text": "",
+            "email_primary_color": "#0F62FE"
+        }
+    
+    return settings
+
+
+@router.put("/email-settings")
+async def update_email_settings(
+    data: EmailSettingsUpdate,
+    member: dict = Depends(require_org_role("owner", "admin", "msp_admin")),
+    auth_info: dict = Depends(get_org_from_token)
+):
+    """Update email white-label settings"""
+    org = auth_info.get("organization", {})
+    
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    update_data["updated_at"] = get_ist_isoformat()
+    update_data["organization_id"] = org["id"]
+    
+    # Upsert
+    await _db.email_settings.update_one(
+        {"organization_id": org["id"]},
+        {"$set": update_data},
+        upsert=True
+    )
+    
+    # Return updated settings (without password)
+    return await _db.email_settings.find_one(
+        {"organization_id": org["id"]},
+        {"_id": 0, "smtp_password": 0}
+    )
+
+
+@router.post("/email-settings/test")
+async def test_email_settings(
+    data: EmailTestRequest,
+    member: dict = Depends(require_org_role("owner", "admin", "msp_admin")),
+    auth_info: dict = Depends(get_org_from_token)
+):
+    """Send a test email to verify SMTP configuration"""
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    
+    org = auth_info.get("organization", {})
+    
+    # Get settings
+    settings = await _db.email_settings.find_one(
+        {"organization_id": org["id"]},
+        {"_id": 0}
+    )
+    
+    if not settings or not settings.get("email_enabled"):
+        raise HTTPException(status_code=400, detail="Email sending is not enabled")
+    
+    required_fields = ["smtp_host", "smtp_port", "smtp_username", "smtp_password", "from_email"]
+    missing = [f for f in required_fields if not settings.get(f)]
+    if missing:
+        raise HTTPException(status_code=400, detail=f"Missing required settings: {', '.join(missing)}")
+    
+    try:
+        # Create message
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = 'Test Email from AfterSales'
+        msg['From'] = f"{settings.get('from_name', 'AfterSales')} <{settings['from_email']}>"
+        msg['To'] = data.email
+        
+        if settings.get('reply_to'):
+            msg['Reply-To'] = settings['reply_to']
+        
+        # Email content
+        text_content = f"""
+Hello,
+
+This is a test email from your AfterSales workspace.
+
+Your SMTP configuration is working correctly!
+
+Workspace: {org.get('name')}
+Sent via: {settings.get('smtp_provider', 'Custom SMTP')}
+
+Best regards,
+AfterSales Team
+        """
+        
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                {f'<img src="{settings["email_logo_url"]}" alt="Logo" style="max-height: 50px; margin-bottom: 20px;">' if settings.get('email_logo_url') else ''}
+                
+                <h2 style="color: {settings.get('email_primary_color', '#0F62FE')};">Test Email</h2>
+                
+                <p>Hello,</p>
+                
+                <p>This is a test email from your <strong>AfterSales</strong> workspace.</p>
+                
+                <p style="background: #f5f5f5; padding: 15px; border-radius: 8px;">
+                    ✅ Your SMTP configuration is working correctly!
+                </p>
+                
+                <p>
+                    <strong>Workspace:</strong> {org.get('name')}<br>
+                    <strong>Sent via:</strong> {settings.get('smtp_provider', 'Custom SMTP')}
+                </p>
+                
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                
+                <p style="font-size: 12px; color: #666;">
+                    {settings.get('email_footer_text', '')}
+                    {' | Powered by AfterSales' if settings.get('show_powered_by', True) else ''}
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        msg.attach(MIMEText(text_content, 'plain'))
+        msg.attach(MIMEText(html_content, 'html'))
+        
+        # Send email
+        with smtplib.SMTP(settings['smtp_host'], settings['smtp_port']) as server:
+            if settings.get('smtp_use_tls', True):
+                server.starttls()
+            server.login(settings['smtp_username'], settings['smtp_password'])
+            server.send_message(msg)
+        
+        return {"message": "Test email sent successfully", "recipient": data.email}
+        
+    except smtplib.SMTPAuthenticationError:
+        raise HTTPException(status_code=400, detail="SMTP authentication failed. Check username/password.")
+    except smtplib.SMTPConnectError:
+        raise HTTPException(status_code=400, detail="Could not connect to SMTP server. Check host/port.")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to send email: {str(e)}")
+
         }
     except dns.resolver.NoAnswer:
         return {
