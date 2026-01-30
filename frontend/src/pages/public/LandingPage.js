@@ -144,9 +144,6 @@ const LandingPage = () => {
 
             {/* Desktop CTA */}
             <div className="hidden md:flex items-center gap-4">
-              <Link to="/company/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors" data-testid="nav-login">
-                Sign In
-              </Link>
               <Link to="/signup">
                 <Button className="bg-[#0F62FE] hover:bg-[#0043CE] text-white px-5 py-2 rounded-lg font-medium transition-all hover:-translate-y-0.5 hover:shadow-lg" data-testid="nav-get-started">
                   Get Started
@@ -174,7 +171,6 @@ const LandingPage = () => {
                 <Link to="/page/contact-us" className="text-sm font-medium text-slate-600 hover:text-slate-900 py-2">Contact</Link>
                 <Link to="/support" className="text-sm font-medium text-slate-600 hover:text-slate-900 py-2">Support Portal</Link>
                 <div className="flex flex-col gap-3 pt-4 border-t border-slate-100">
-                  <Link to="/company/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 py-2">Sign In</Link>
                   <Link to="/signup">
                     <Button className="w-full bg-[#0F62FE] hover:bg-[#0043CE] text-white">Get Started</Button>
                   </Link>

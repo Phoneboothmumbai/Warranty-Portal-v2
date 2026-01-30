@@ -162,7 +162,6 @@ const PricingPage = () => {
             </div>
 
             <div className="hidden md:flex items-center gap-4">
-              <Link to="/company/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">Sign In</Link>
               <Link to="/signup">
                 <Button className="bg-[#0F62FE] hover:bg-[#0043CE] text-white px-5 py-2 rounded-lg font-medium">
                   Get Started
@@ -290,7 +289,7 @@ const PricingPage = () => {
       </section>
 
       {/* Feature Comparison */}
-      <section className="py-20 md:py-24 bg-slate-50">
+      <section className="py-20 md:py-24 bg-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl md:text-4xl font-bold text-slate-900 text-center mb-4 font-display">
             Feature comparison
