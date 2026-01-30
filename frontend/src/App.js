@@ -186,6 +186,8 @@ function App() {
                     <Route path="integrations/tactical-rmm" element={<TacticalRMMIntegration />} />
                     <Route path="knowledge-base" element={<KnowledgeBase />} />
                     <Route path="team" element={<TeamMembers />} />
+                    <Route path="custom-domains" element={<CustomDomains />} />
+                    <Route path="email-whitelabel" element={<EmailWhitelabel />} />
                   </Route>
 
                   {/* Company Portal Routes */}
