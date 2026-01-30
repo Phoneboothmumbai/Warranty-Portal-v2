@@ -58,7 +58,7 @@ const DeviceModelCatalog = () => {
 
   const fetchModels = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('admin_token');
       const params = new URLSearchParams();
       if (searchQuery) params.append('q', searchQuery);
       if (filterType && filterType !== 'all') params.append('device_type', filterType);
@@ -94,7 +94,7 @@ const DeviceModelCatalog = () => {
     setLookupResult(null);
     
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('admin_token');
       const response = await fetch(`${API_URL}/api/device-models/lookup`, {
         method: 'POST',
         headers: {
@@ -123,7 +123,7 @@ const DeviceModelCatalog = () => {
 
   const handleVerify = async (modelId) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('admin_token');
       const response = await fetch(`${API_URL}/api/device-models/${modelId}/verify`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
@@ -142,7 +142,7 @@ const DeviceModelCatalog = () => {
     if (!window.confirm('Are you sure you want to delete this device model?')) return;
     
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('admin_token');
       const response = await fetch(`${API_URL}/api/device-models/${modelId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
