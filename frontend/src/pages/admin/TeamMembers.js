@@ -58,6 +58,28 @@ const ROLES = {
     color: 'bg-amber-100 text-amber-800',
     icon: UserCheck,
     level: 3
+  },
+  // Legacy roles (for backward compatibility)
+  owner: {
+    name: 'Owner',
+    description: 'Organization owner with full access',
+    color: 'bg-indigo-100 text-indigo-800',
+    icon: Shield,
+    level: 0
+  },
+  admin: {
+    name: 'Admin',
+    description: 'Administrator with full access',
+    color: 'bg-purple-100 text-purple-800',
+    icon: Shield,
+    level: 1
+  },
+  member: {
+    name: 'Member',
+    description: 'Team member',
+    color: 'bg-blue-100 text-blue-800',
+    icon: UserCog,
+    level: 1
   }
 };
 
