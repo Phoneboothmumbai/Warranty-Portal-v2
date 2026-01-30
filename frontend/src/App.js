@@ -54,6 +54,8 @@ import OrganizationSettings from "./pages/admin/OrganizationSettings";
 import TacticalRMMIntegration from "./pages/admin/TacticalRMMIntegration";
 import KnowledgeBase from "./pages/admin/KnowledgeBase";
 import TeamMembers from "./pages/admin/TeamMembers";
+import CustomDomains from "./pages/admin/CustomDomains";
+import EmailWhitelabel from "./pages/admin/EmailWhitelabel";
 
 // Platform Super Admin Pages
 import PlatformLogin from "./pages/platform/PlatformLogin";
