@@ -767,7 +767,12 @@ async def list_tickets_admin(
     admin: dict = Depends(get_current_admin)
 ):
     """List tickets with filters (admin view) - includes legacy service_tickets"""
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    
     query = {"is_deleted": {"$ne": True}}
+    query = scope_query(query, org_id)
+    
     if status: query["status"] = status
     if priority: query["priority"] = priority
     if department_id: query["department_id"] = department_id
@@ -792,6 +797,8 @@ async def list_tickets_admin(
         synced_service_ids = [t.get("service_ticket_id") for t in tickets if t.get("service_ticket_id")]
         
         legacy_query = {"is_deleted": {"$ne": True}}
+        legacy_query = scope_query(legacy_query, org_id)
+        
         if status: legacy_query["status"] = status
         if priority: legacy_query["priority"] = priority
         if company_id: legacy_query["company_id"] = company_id
