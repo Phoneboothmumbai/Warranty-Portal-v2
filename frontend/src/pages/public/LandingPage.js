@@ -199,19 +199,19 @@ const LandingPage = () => {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
               </span>
-              <span className="text-sm font-medium text-blue-700">Enterprise Asset Management Platform</span>
+              <span className="text-sm font-medium text-blue-700">Built for MSPs & IT Support Teams</span>
             </div>
 
             {/* Heading */}
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-slate-900 tracking-tight leading-[1.1] mb-6 font-display" data-testid="hero-heading">
-              Track Every Asset.
+              Manage All Your Clients.
               <br />
-              <span className="text-[#0F62FE]">Never Miss a Warranty.</span>
+              <span className="text-[#0F62FE]">One Powerful Platform.</span>
             </h1>
 
             {/* Subheading */}
             <p className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
-              The complete platform for IT asset tracking, warranty management, service tickets, and AMC contracts. Built for enterprises that demand reliability.
+              The complete IT service management platform for MSPs. Track assets, warranties, service tickets, and AMC contracts across all your clients from a single dashboard.
             </p>
 
             {/* CTA Buttons */}
@@ -249,24 +249,24 @@ const LandingPage = () => {
                   <div className="w-3 h-3 rounded-full bg-red-500"></div>
                   <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                   <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <span className="ml-4 text-sm text-slate-400 font-mono">dashboard.assetvault.io</span>
+                  <span className="ml-4 text-sm text-slate-400 font-mono">msp-dashboard.assetvault.io</span>
                 </div>
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-slate-700/50 rounded-lg p-4">
-                    <div className="text-2xl font-bold text-white font-display">847</div>
+                    <div className="text-2xl font-bold text-white font-display">12</div>
+                    <div className="text-xs text-slate-400">Active Clients</div>
+                  </div>
+                  <div className="bg-slate-700/50 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-emerald-400 font-display">847</div>
                     <div className="text-xs text-slate-400">Total Assets</div>
                   </div>
                   <div className="bg-slate-700/50 rounded-lg p-4">
-                    <div className="text-2xl font-bold text-emerald-400 font-display">92%</div>
-                    <div className="text-xs text-slate-400">Under Warranty</div>
-                  </div>
-                  <div className="bg-slate-700/50 rounded-lg p-4">
                     <div className="text-2xl font-bold text-amber-400 font-display">23</div>
-                    <div className="text-xs text-slate-400">Expiring Soon</div>
+                    <div className="text-xs text-slate-400">Warranties Expiring</div>
                   </div>
                   <div className="bg-slate-700/50 rounded-lg p-4">
-                    <div className="text-2xl font-bold text-blue-400 font-display">12</div>
-                    <div className="text-xs text-slate-400">Active Tickets</div>
+                    <div className="text-2xl font-bold text-blue-400 font-display">8</div>
+                    <div className="text-xs text-slate-400">Open Tickets</div>
                   </div>
                 </div>
               </div>
