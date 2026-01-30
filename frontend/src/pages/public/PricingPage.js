@@ -284,22 +284,22 @@ const PricingPage = () => {
       </section>
 
       {/* Feature Comparison */}
-      <section className="py-20 md:py-24 bg-white">
+      <section className="py-16 md:py-20 bg-white border-t border-slate-100">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 text-center mb-4 font-display">
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 text-center mb-4">
             Feature comparison
           </h2>
-          <p className="text-lg text-slate-600 text-center mb-12">
+          <p className="text-slate-600 text-center mb-12">
             See what's included in each plan
           </p>
 
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="text-left p-6 font-semibold text-slate-900">Feature</th>
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="text-left p-4 font-medium text-slate-700">Feature</th>
                   {plans.map((plan, i) => (
-                    <th key={i} className={`p-6 text-center font-semibold ${plan.highlighted ? 'bg-blue-50 text-[#0F62FE]' : 'text-slate-900'}`}>
+                    <th key={i} className={`p-4 text-center font-medium ${plan.highlighted ? 'text-slate-900' : 'text-slate-700'}`}>
                       {plan.name}
                     </th>
                   ))}
@@ -307,10 +307,10 @@ const PricingPage = () => {
               </thead>
               <tbody>
                 {Object.entries(featureLabels).map(([key, label], index) => (
-                  <tr key={key} className={index % 2 === 0 ? 'bg-slate-50/50' : ''}>
-                    <td className="p-4 text-sm text-slate-700 font-medium">{label}</td>
+                  <tr key={key} className="border-b border-slate-100 last:border-b-0">
+                    <td className="p-4 text-sm text-slate-600">{label}</td>
                     {plans.map((plan, i) => (
-                      <td key={i} className={`p-4 text-center ${plan.highlighted ? 'bg-blue-50/50' : ''}`}>
+                      <td key={i} className="p-4 text-center">
                         {typeof plan.features[key] === 'boolean' ? (
                           plan.features[key] ? (
                             <Check className="h-5 w-5 text-emerald-500 mx-auto" />
@@ -318,7 +318,7 @@ const PricingPage = () => {
                             <X className="h-5 w-5 text-slate-300 mx-auto" />
                           )
                         ) : (
-                          <span className="text-sm font-medium text-slate-900">{plan.features[key]}</span>
+                          <span className="text-sm text-slate-900">{plan.features[key]}</span>
                         )}
                       </td>
                     ))}
