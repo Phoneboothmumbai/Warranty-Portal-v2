@@ -7,6 +7,9 @@ import { EngineerAuthProvider } from "./context/EngineerAuthContext";
 
 // Public Pages
 import LandingPage from "./pages/public/LandingPage";
+import FeaturesPage from "./pages/public/FeaturesPage";
+import PricingPage from "./pages/public/PricingPage";
+import AboutPage from "./pages/public/AboutPage";
 import WarrantyResult from "./pages/public/WarrantyResult";
 import PublicDevicePage from "./pages/public/PublicDevicePage";
 import PublicSupportPortal from "./pages/public/PublicSupportPortal";
