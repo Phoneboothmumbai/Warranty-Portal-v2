@@ -1633,6 +1633,10 @@ async def list_companies(
     """List companies with optional search support"""
     query = {"is_deleted": {"$ne": True}}
     
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    query = scope_query(query, org_id)
+    
     # Add search filter
     if q and q.strip():
         search_regex = {"$regex": q.strip(), "$options": "i"}
