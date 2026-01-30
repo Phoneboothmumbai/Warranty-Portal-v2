@@ -105,6 +105,7 @@ function App() {
                   {/* Public Routes */}
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/signup" element={<SignupPage />} />
+                  <Route path="/page/:slug" element={<StaticPage />} />
                   <Route path="/warranty/:serialNumber" element={<WarrantyResult />} />
                   <Route path="/device/:identifier" element={<PublicDevicePage />} />
                   <Route path="/support" element={<PublicSupportPortal />} />
