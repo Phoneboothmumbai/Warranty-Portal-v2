@@ -9425,6 +9425,11 @@ from routes.billing import router as billing_router, init_db as init_billing_db
 init_billing_db(db)
 app.include_router(billing_router, prefix="/api/billing", tags=["Billing"])
 
+# Include Static Pages router
+from routes.static_pages import router as static_pages_router, init_db as init_static_pages_db
+init_static_pages_db(db)
+app.include_router(static_pages_router, prefix="/api", tags=["Static Pages"])
+
 # Initialize Email Service for Ticketing
 from services.email_service import init_email_service
 init_email_service(db)
