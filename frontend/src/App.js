@@ -57,6 +57,10 @@ import PlatformOrganizations from "./pages/platform/PlatformOrganizations";
 // Signup Page
 import SignupPage from "./pages/SignupPage";
 
+// Static Pages
+import StaticPage from "./pages/StaticPage";
+import StaticPages from "./pages/admin/StaticPages";
+
 // Company Portal Pages
 import CompanyLayout from "./layouts/CompanyLayout";
 import CompanyLogin from "./pages/company/CompanyLogin";
