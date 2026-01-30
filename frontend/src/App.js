@@ -48,6 +48,12 @@ import AdminTicketDetail from "./pages/admin/AdminTicketDetail";
 import TicketingSettings from "./pages/admin/TicketingSettings";
 import OrganizationSettings from "./pages/admin/OrganizationSettings";
 
+// Platform Super Admin Pages
+import PlatformLogin from "./pages/platform/PlatformLogin";
+import PlatformLayout from "./layouts/PlatformLayout";
+import PlatformDashboard from "./pages/platform/PlatformDashboard";
+import PlatformOrganizations from "./pages/platform/PlatformOrganizations";
+
 // Company Portal Pages
 import CompanyLayout from "./layouts/CompanyLayout";
 import CompanyLogin from "./pages/company/CompanyLogin";
