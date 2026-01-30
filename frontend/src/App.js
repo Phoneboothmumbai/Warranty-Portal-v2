@@ -171,6 +171,7 @@ function App() {
                     <Route path="usage" element={<UsageDashboard />} />
                     <Route path="company-domains" element={<CompanyDomains />} />
                     <Route path="integrations/tactical-rmm" element={<TacticalRMMIntegration />} />
+                    <Route path="knowledge-base" element={<KnowledgeBase />} />
                   </Route>
 
                   {/* Company Portal Routes */}
