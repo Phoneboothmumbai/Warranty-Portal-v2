@@ -347,7 +347,7 @@ const PricingPage = () => {
 
           <div className="space-y-6">
             {faqs.map((faq, index) => (
-              <div key={index} className="p-6 bg-slate-50 rounded-2xl">
+              <div key={index} className="p-6 bg-white rounded-2xl border border-slate-200">
                 <h3 className="flex items-center gap-3 font-semibold text-slate-900 mb-3">
                   <HelpCircle className="h-5 w-5 text-[#0F62FE] flex-shrink-0" />
                   {faq.question}
