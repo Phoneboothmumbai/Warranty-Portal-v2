@@ -6223,6 +6223,10 @@ async def list_subscriptions(
     """List email/cloud subscriptions with filters"""
     query = {"is_deleted": {"$ne": True}}
     
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    query = scope_query(query, org_id)
+    
     if company_id:
         query["company_id"] = company_id
     if provider:
