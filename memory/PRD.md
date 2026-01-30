@@ -1,6 +1,19 @@
 # Warranty & Asset Tracking Portal - PRD
 
 ## CHANGELOG
+- **2026-01-30**: Multi-Tenant Admin Authentication Fix (P0 Blocker Resolved)
+  - **Root Cause**: `get_org_from_token()` in `/app/backend/services/tenant.py` was querying `organization_members` by email (`user_id=payload.sub`) instead of the actual member ID
+  - **Backend Fix**: Updated function to use `org_member_id` from JWT payload for member lookup
+  - **Frontend Fix**: Updated localStorage key from `'token'` to `'admin_token'` in:
+    - UsageDashboard.js
+    - OrganizationSettings.js
+    - StaticPages.js
+    - CompanyDomains.js
+    - BrandingContext.js
+    - DeviceModelCatalog.js
+  - **Tenant Scoping Added**: `list_companies()`, `create_company()`, `update_company()`, `delete_company()`, `list_devices()`, `create_device()` now filter by organization_id
+  - Test report: `/app/test_reports/iteration_19.json` (17/17 backend, 100% frontend)
+
 - **2026-01-30**: Editable Static Pages Implementation
   - **5 Default Pages**: Contact Us, Privacy Policy, Terms of Service, Refund Policy, Disclaimer
   - **Admin Editor**: HTML content editor with publish/unpublish toggle
