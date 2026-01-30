@@ -20,7 +20,7 @@ export function BrandingProvider({ children }) {
   }, []);
 
   const fetchOrganizationBranding = async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('admin_token');
     if (!token) {
       setLoading(false);
       return;
@@ -56,7 +56,7 @@ export function BrandingProvider({ children }) {
   };
 
   const updateBranding = async (newBranding) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('admin_token');
     
     try {
       await axios.put(`${API}/api/org/current/branding`, newBranding, {
