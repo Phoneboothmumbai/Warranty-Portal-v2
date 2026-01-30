@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Shield, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
+import { Shield, Mail, Lock, ArrowRight, Building2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
+import { useTenant, getTenantRequestConfig, buildTenantUrl } from '../../context/TenantContext';
 import { Button } from '../../components/ui/button';
 import { toast } from 'sonner';
+import TenantError, { TenantLoading } from '../../components/TenantError';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -16,19 +18,20 @@ const AdminLogin = () => {
   const [checkingSetup, setCheckingSetup] = useState(true);
   const { login, isAuthenticated } = useAuth();
   const { settings } = useSettings();
+  const { tenant, loading: tenantLoading, error: tenantError, resolution } = useTenant();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/admin/dashboard');
+      navigate(buildTenantUrl('/admin/dashboard'));
     }
     checkAdminSetup();
   }, [isAuthenticated, navigate]);
 
   const checkAdminSetup = async () => {
     try {
-      // Try to fetch me - if 401, check if setup needed
-      await axios.get(`${API}/auth/me`);
+      const config = getTenantRequestConfig();
+      await axios.get(`${API}/auth/me`, config);
     } catch (error) {
       // This is expected - just checking
     }
@@ -44,21 +47,24 @@ const AdminLogin = () => {
 
     setLoading(true);
     try {
-      await login(email, password);
+      // Pass tenant context to login
+      await login(email, password, tenant?.slug);
       toast.success('Login successful');
       
       // Check for stored redirect path
       const redirectPath = sessionStorage.getItem('redirectAfterLogin');
       if (redirectPath) {
         sessionStorage.removeItem('redirectAfterLogin');
-        navigate(redirectPath);
+        navigate(buildTenantUrl(redirectPath));
       } else {
-        navigate('/admin/dashboard');
+        navigate(buildTenantUrl('/admin/dashboard'));
       }
     } catch (error) {
       const message = error.response?.data?.detail || 'Login failed';
       if (message.includes('Invalid credentials')) {
         toast.error('Invalid email or password');
+      } else if (message.includes('suspended')) {
+        toast.error('This workspace has been suspended. Contact support.');
       } else if (!error.response) {
         toast.error('Network error. Please check your connection.');
       } else {
@@ -69,6 +75,16 @@ const AdminLogin = () => {
     }
   };
 
+  // Show tenant error if present
+  if (tenantError) {
+    return <TenantError error={tenantError} tenantName={tenant?.name} slug={tenant?.slug} />;
+  }
+
+  // Show loading while resolving tenant
+  if (tenantLoading) {
+    return <TenantLoading />;
+  }
+
   if (checkingSetup) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -77,24 +93,46 @@ const AdminLogin = () => {
     );
   }
 
+  // Get branding - prefer tenant branding, fallback to global settings
+  const branding = tenant?.branding || settings;
+  const accentColor = branding?.accent_color || '#0F62FE';
+  const companyName = branding?.company_name || tenant?.name || 'Warranty Portal';
+  const logo = branding?.logo_base64 || branding?.logo_url || settings.logo_base64 || settings.logo_url;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-6 py-12">
       <div className="w-full max-w-md">
-        {/* Logo */}
+        {/* Logo & Branding */}
         <div className="text-center mb-10">
           <div className="flex items-center justify-center gap-3 mb-4">
-            {(settings.logo_base64 || settings.logo_url) ? (
+            {logo ? (
               <img 
-                src={settings.logo_base64 || settings.logo_url} 
-                alt="Logo" 
+                src={logo} 
+                alt={companyName} 
                 className="h-10 w-auto"
               />
             ) : (
-              <Shield className="h-10 w-10 text-[#0F62FE]" />
+              <Shield className="h-10 w-10" style={{ color: accentColor }} />
             )}
           </div>
-          <h1 className="text-2xl font-semibold text-slate-900 mb-2">Admin Portal</h1>
-          <p className="text-slate-500 text-sm">Sign in to manage warranties and assets</p>
+          <h1 className="text-2xl font-semibold text-slate-900 mb-2">
+            {tenant ? companyName : 'Admin Portal'}
+          </h1>
+          <p className="text-slate-500 text-sm">
+            {tenant ? (
+              <>Sign in to <span className="font-medium text-slate-700">{tenant.name}</span></>
+            ) : (
+              'Sign in to manage warranties and assets'
+            )}
+          </p>
+          
+          {/* Tenant indicator */}
+          {tenant && (
+            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full text-xs text-slate-600">
+              <Building2 className="w-3.5 h-3.5" />
+              <span>Workspace: <span className="font-mono font-medium">{tenant.slug}</span></span>
+            </div>
+          )}
         </div>
 
         {/* Login Card */}
@@ -133,7 +171,8 @@ const AdminLogin = () => {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#0F62FE] hover:bg-[#0043CE] text-white py-3"
+              className="w-full py-3"
+              style={{ backgroundColor: accentColor }}
               data-testid="admin-login-btn"
             >
               {loading ? (
@@ -150,29 +189,44 @@ const AdminLogin = () => {
             </Button>
           </form>
 
-          {/* Setup Link */}
-          <div className="mt-6 pt-6 border-t border-slate-100 text-center">
-            <p className="text-sm text-slate-500">
-              First time?{' '}
-              <a 
-                href="/admin/setup" 
-                className="text-[#0F62FE] hover:underline font-medium"
-                data-testid="setup-link"
-              >
-                Create admin account
-              </a>
-            </p>
-          </div>
+          {/* Setup Link - only show if no tenant context */}
+          {!tenant && (
+            <div className="mt-6 pt-6 border-t border-slate-100 text-center">
+              <p className="text-sm text-slate-500">
+                First time?{' '}
+                <Link 
+                  to="/admin/setup" 
+                  className="hover:underline font-medium"
+                  style={{ color: accentColor }}
+                  data-testid="setup-link"
+                >
+                  Create admin account
+                </Link>
+              </p>
+            </div>
+          )}
+          
+          {/* Dev mode info */}
+          {resolution === 'query_param' && (
+            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+              <strong>Dev Mode:</strong> Using <code className="bg-amber-100 px-1 rounded">?_tenant={tenant?.slug}</code> query param
+            </div>
+          )}
         </div>
 
         {/* Back to Portal */}
-        <div className="mt-8 text-center">
-          <a 
-            href="/" 
-            className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
+        <div className="mt-8 text-center space-y-2">
+          <Link 
+            to="/" 
+            className="text-sm text-slate-500 hover:text-slate-700 transition-colors block"
           >
-            ← Back to Warranty Portal
-          </a>
+            ← Back to Home
+          </Link>
+          {tenant && (
+            <p className="text-xs text-slate-400">
+              Not a member of {tenant.name}? Contact your administrator.
+            </p>
+          )}
         </div>
       </div>
     </div>
