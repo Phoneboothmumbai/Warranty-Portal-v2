@@ -78,6 +78,7 @@ const navGroups = [
       { path: '/admin/static-pages', label: 'Static Pages', icon: FileText },
       { path: '/admin/master-data', label: 'Master Data', icon: Database },
       { path: '/admin/ticketing-settings', label: 'Ticketing Config', icon: Inbox },
+      { path: '/admin/integrations/tactical-rmm', label: 'Tactical RMM', icon: Monitor },
       { path: '/admin/settings', label: 'Settings', icon: Settings },
     ]
   },
