@@ -46,6 +46,7 @@ import AdminAMCRequestDetail from "./pages/admin/AdminAMCRequestDetail";
 import AdminTickets from "./pages/admin/AdminTickets";
 import AdminTicketDetail from "./pages/admin/AdminTicketDetail";
 import TicketingSettings from "./pages/admin/TicketingSettings";
+import OrganizationSettings from "./pages/admin/OrganizationSettings";
 
 // Company Portal Pages
 import CompanyLayout from "./layouts/CompanyLayout";
