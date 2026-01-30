@@ -85,14 +85,18 @@ import EngineerLogin from "./pages/engineer/EngineerLogin";
 import EngineerDashboard from "./pages/engineer/EngineerDashboard";
 import EngineerVisitDetail from "./pages/engineer/EngineerVisitDetail";
 
+// Contexts
+import { BrandingProvider } from "./contexts/BrandingContext";
+
 function App() {
   return (
     <SettingsProvider>
       <AuthProvider>
-        <CompanyAuthProvider>
-          <EngineerAuthProvider>
-            <BrowserRouter>
-              <div className="noise-bg min-h-screen">
+        <BrandingProvider>
+          <CompanyAuthProvider>
+            <EngineerAuthProvider>
+              <BrowserRouter>
+                <div className="noise-bg min-h-screen">
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<LandingPage />} />
