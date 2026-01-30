@@ -9420,6 +9420,11 @@ from routes.platform import router as platform_router, init_db as init_platform_
 init_platform_db(db)
 app.include_router(platform_router, prefix="/api/platform", tags=["Platform Admin"])
 
+# Include Billing (Razorpay) router
+from routes.billing import router as billing_router, init_db as init_billing_db
+init_billing_db(db)
+app.include_router(billing_router, prefix="/api/billing", tags=["Billing"])
+
 # Initialize Email Service for Ticketing
 from services.email_service import init_email_service
 init_email_service(db)
