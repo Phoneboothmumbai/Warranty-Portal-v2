@@ -5,6 +5,47 @@
 
 ## CHANGELOG
 
+### 2026-01-30: Full Multi-Tenant SaaS Features (Phases 1-3 Complete)
+
+#### Phase 1: Role System & Team Management
+- **5-Tier Role System UI**: Team Members page with role-based user management
+  - All 5 roles available in dropdown (MSP Admin, MSP Technician, Company Admin, Company Employee, External Customer)
+  - Legacy roles (owner, admin, member) mapped to new roles for display
+- **Company Switcher**: Dropdown in admin sidebar for MSP users to switch between companies
+  - Shows assigned companies for technicians
+  - Persists selection in session storage
+  - Only visible when companies exist with organization_id
+- **Team Members Management**: Full CRUD for organization members
+  - Invite member modal with role selection
+  - Edit member role, phone, active status
+  - Technician Assignments tab for MSP admin
+- **Technician Assignment APIs**: 
+  - `GET/POST/PUT/DELETE /api/org/technician-assignments`
+  - Assign/unassign technicians to specific companies
+
+#### Phase 2: Custom Domains
+- **Custom Domains Page** (`/admin/custom-domains`):
+  - Add custom domain with DNS TXT verification
+  - Verification token generation
+  - Domain status badges (Pending/Verified, SSL status)
+  - Delete domain capability
+- **Backend APIs**:
+  - `GET/POST/DELETE /api/org/custom-domains`
+  - `POST /api/org/custom-domains/verify` - DNS TXT record verification using dnspython
+
+#### Phase 3: Email White-labeling
+- **Email Settings Page** (`/admin/email-whitelabel`):
+  - Enable/disable custom email sending toggle
+  - SMTP Settings tab: Provider presets (SendGrid, Mailgun, SES, Gmail, etc.)
+  - Sender Info tab: From email, from name, reply-to
+  - Branding tab: Logo URL, primary color, footer text, "Powered by" toggle
+  - Test email functionality
+- **Backend APIs**:
+  - `GET/PUT /api/org/email-settings` - SMTP configuration
+  - `POST /api/org/email-settings/test` - Send test email
+
+**All tests passed**: 100% backend (17/17) and frontend success rate
+
 ### 2026-01-30: P0 Signup Bug Fix & 4-Level SaaS Architecture (Complete)
 - **P0 FIX: Signup Flow**: Fixed critical bug where signup created `organization_member` but not `admins` record
   - Now creates records in BOTH `admins` and `organization_members` collections
