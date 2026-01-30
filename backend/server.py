@@ -90,6 +90,7 @@ from models.device_model import (
 )
 from services.device_lookup import get_or_create_device_model
 from utils.security import limiter, RATE_LIMITS, validate_password_strength, sanitize_input
+from utils.tenant_scope import get_admin_org_id, scope_query, get_scoped_query, insert_with_org_id
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from fastapi import Request
