@@ -353,24 +353,23 @@ const PricingPage = () => {
       </section>
 
       {/* CTA */}
-      <section className="py-20 md:py-24 bg-slate-900">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 font-display">
+      <section className="py-16 md:py-20 bg-slate-900">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
             Ready to get started?
           </h2>
-          <p className="text-lg text-slate-400 mb-10">
+          <p className="text-slate-400 mb-8">
             Start your free 14-day trial. No credit card required.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link to="/signup">
-              <Button className="bg-[#0F62FE] hover:bg-[#0043CE] text-white px-8 py-4 h-auto text-base rounded-xl font-semibold">
+              <Button className="bg-white text-slate-900 hover:bg-slate-100 px-6 py-3 h-auto text-sm rounded-lg font-medium">
                 Start Free Trial
-                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
             <Link to="/page/contact-us">
-              <Button variant="outline" className="px-8 py-4 h-auto text-base rounded-xl font-semibold border-2 border-slate-600 text-white hover:bg-slate-800">
-                Talk to Sales
+              <Button variant="outline" className="px-6 py-3 h-auto text-sm rounded-lg font-medium border border-slate-600 text-white hover:bg-slate-800">
+                Contact Sales
               </Button>
             </Link>
           </div>
