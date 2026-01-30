@@ -190,21 +190,32 @@ const AdminLayout = () => {
         lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex flex-col h-full">
-          {/* Logo */}
+          {/* Logo - Uses organization branding if available */}
           <div className="p-6 border-b border-slate-100">
             <div className="flex items-center gap-3">
-              {(settings.logo_base64 || settings.logo_url) ? (
+              {(branding.logo_base64 || branding.logo_url || settings.logo_base64 || settings.logo_url) ? (
                 <img 
-                  src={settings.logo_base64 || settings.logo_url} 
+                  src={branding.logo_base64 || branding.logo_url || settings.logo_base64 || settings.logo_url} 
                   alt="Logo" 
                   className="h-8 w-auto"
                 />
               ) : (
-                <Shield className="h-8 w-8 text-[#0F62FE]" />
+                <div 
+                  className="h-8 w-8 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: branding.accent_color || '#0F62FE' }}
+                >
+                  <Shield className="h-5 w-5 text-white" />
+                </div>
               )}
               <div>
-                <span className="font-semibold text-slate-900 text-sm">{settings.company_name}</span>
-                <p className="text-xs text-slate-500">Admin Portal</p>
+                <span className="font-semibold text-slate-900 text-sm">
+                  {branding.company_name || settings.company_name || 'Warranty Portal'}
+                </span>
+                <p className="text-xs text-slate-500">
+                  {organization?.subscription?.plan ? (
+                    <span className="capitalize">{organization.subscription.plan} Plan</span>
+                  ) : 'Admin Portal'}
+                </p>
               </div>
             </div>
           </div>
