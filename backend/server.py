@@ -4417,6 +4417,11 @@ async def list_deployments(
 ):
     """List all deployments"""
     query = {"is_deleted": {"$ne": True}}
+    
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    query = scope_query(query, org_id)
+    
     if company_id:
         query["company_id"] = company_id
     if site_id:
