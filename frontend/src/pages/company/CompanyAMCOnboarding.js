@@ -1364,6 +1364,38 @@ const CompanyAMCOnboarding = () => {
               </label>
             </div>
 
+            {/* Conditional VPN and Password Manager details */}
+            {(formData.step6.has_vpn || formData.step6.has_password_manager) && (
+              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                {formData.step6.has_vpn && (
+                  <div>
+                    <label className="form-label">VPN Type / Provider</label>
+                    <input
+                      type="text"
+                      value={formData.step6.vpn_type || ''}
+                      onChange={(e) => updateStep(6, 'vpn_type', e.target.value)}
+                      className="form-input"
+                      placeholder="e.g., Cisco AnyConnect, FortiClient, NordVPN"
+                      disabled={!isEditable}
+                    />
+                  </div>
+                )}
+                {formData.step6.has_password_manager && (
+                  <div>
+                    <label className="form-label">Password Manager</label>
+                    <input
+                      type="text"
+                      value={formData.step6.password_manager_name || ''}
+                      onChange={(e) => updateStep(6, 'password_manager_name', e.target.value)}
+                      className="form-input"
+                      placeholder="e.g., LastPass, 1Password, Bitwarden"
+                      disabled={!isEditable}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
             <div>
               <label className="form-label">Additional Software / Notes</label>
               <textarea
