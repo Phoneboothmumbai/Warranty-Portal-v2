@@ -3264,7 +3264,11 @@ async def list_services(
     admin: dict = Depends(get_current_admin)
 ):
     """List service records with filters"""
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
     query = {}
+    query = scope_query(query, org_id)
+    
     if device_id:
         query["device_id"] = device_id
     if company_id:
@@ -3293,11 +3297,20 @@ async def get_stage_templates():
 async def create_service(service_data: ServiceHistoryCreate, admin: dict = Depends(get_current_admin)):
     from models.service import DEFAULT_SERVICE_STAGES, OEM_SERVICE_STAGES, ServiceStage
     
-    device = await db.devices.find_one({"id": service_data.device_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    device_query = {"id": service_data.device_id, "is_deleted": {"$ne": True}}
+    device_query = scope_query(device_query, org_id)
+    
+    device = await db.devices.find_one(device_query, {"_id": 0})
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     
     service_dict = service_data.model_dump()
+    
+    # Add organization_id
+    if org_id:
+        service_dict["organization_id"] = org_id
     
     # ==================== OEM VALIDATION RULES ====================
     is_oem_service = service_dict.get("service_category") == "oem_warranty_service"
