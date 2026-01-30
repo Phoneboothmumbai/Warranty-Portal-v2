@@ -9415,6 +9415,11 @@ from routes.organization import router as organization_router, init_db as init_o
 init_org_db(db)
 app.include_router(organization_router, prefix="/api/org", tags=["Organization"])
 
+# Include Platform Admin (Super Admin) router
+from routes.platform import router as platform_router, init_db as init_platform_db
+init_platform_db(db)
+app.include_router(platform_router, prefix="/api/platform", tags=["Platform Admin"])
+
 # Initialize Email Service for Ticketing
 from services.email_service import init_email_service
 init_email_service(db)
