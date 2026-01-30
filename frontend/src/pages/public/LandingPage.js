@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { 
   Shield, ArrowRight, Check, 
   HardDrive, Ticket, FileText, BarChart3, 
-  QrCode, Building2,
+  QrCode, Building2, Users, Layers,
   Menu, X, Play, ArrowUpRight
 } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
@@ -15,39 +15,39 @@ const LandingPage = () => {
 
   const features = [
     {
-      icon: HardDrive,
-      title: 'Asset Management',
-      description: 'Track all IT assets with complete lifecycle visibility. From procurement to retirement.',
+      icon: Layers,
+      title: 'Multi-Client Management',
+      description: 'Manage all your clients\' IT assets from a single dashboard. Perfect for MSPs handling multiple organizations.',
       color: 'bg-blue-500'
     },
     {
       icon: Shield,
       title: 'Warranty Tracking',
-      description: 'Never miss a warranty claim. Get alerts before expiry and maximize coverage.',
+      description: 'Never miss a warranty claim. Get alerts before expiry and maximize coverage for all clients.',
       color: 'bg-emerald-500'
     },
     {
       icon: Ticket,
-      title: 'Service Tickets',
-      description: 'Enterprise ticketing with SLA management, auto-routing, and email integration.',
+      title: 'Service Desk',
+      description: 'Enterprise ticketing with SLA management, auto-routing, email-to-ticket, and client portals.',
       color: 'bg-purple-500'
     },
     {
       icon: FileText,
-      title: 'AMC Contracts',
-      description: 'Manage service contracts with usage tracking, renewal alerts, and compliance.',
+      title: 'AMC & Contracts',
+      description: 'Track service contracts, usage limits, renewals, and billing across all your clients.',
       color: 'bg-amber-500'
     },
     {
       icon: QrCode,
-      title: 'QR Code Labels',
-      description: 'Generate QR codes for instant asset lookup. Scan to raise tickets or view details.',
+      title: 'QR Asset Labels',
+      description: 'Generate QR codes for instant asset lookup. Engineers scan to view history or raise tickets.',
       color: 'bg-rose-500'
     },
     {
       icon: BarChart3,
-      title: 'Analytics & Reports',
-      description: 'Real-time dashboards, expiry forecasts, and exportable PDF reports.',
+      title: 'Client Reports',
+      description: 'Generate professional reports for clients. Asset health, SLA compliance, and service summaries.',
       color: 'bg-cyan-500'
     }
   ];
@@ -58,7 +58,7 @@ const LandingPage = () => {
       price: '₹0',
       period: '14 days',
       description: 'Try all features risk-free',
-      features: ['Up to 2 companies', '50 devices', '5 users', 'Basic ticketing', 'Email support'],
+      features: ['Up to 2 clients', '50 devices', '5 technicians', 'Basic ticketing', 'Email support'],
       cta: 'Start Free Trial',
       highlighted: false
     },
@@ -66,8 +66,8 @@ const LandingPage = () => {
       name: 'Starter',
       price: '₹2,999',
       period: '/month',
-      description: 'For growing businesses',
-      features: ['Up to 5 companies', '100 devices', '10 users', 'SLA management', 'Email integration', 'API access'],
+      description: 'For small IT teams',
+      features: ['Up to 5 clients', '100 devices', '10 technicians', 'SLA management', 'Email integration', 'API access'],
       cta: 'Get Started',
       highlighted: false
     },
@@ -75,8 +75,8 @@ const LandingPage = () => {
       name: 'Professional',
       price: '₹7,999',
       period: '/month',
-      description: 'For established enterprises',
-      features: ['Up to 25 companies', '500 devices', '50 users', 'Custom forms', 'Priority support', 'SSO integration', 'Advanced analytics'],
+      description: 'For growing MSPs',
+      features: ['Up to 25 clients', '500 devices', '50 technicians', 'Custom forms', 'Priority support', 'White-label reports', 'Advanced analytics'],
       cta: 'Get Started',
       highlighted: true
     },
@@ -84,18 +84,26 @@ const LandingPage = () => {
       name: 'Enterprise',
       price: 'Custom',
       period: '',
-      description: 'For large organizations',
-      features: ['Unlimited everything', 'Dedicated support', 'On-premise option', 'Custom integrations', 'SLA guarantee', 'Training included'],
+      description: 'For large MSPs',
+      features: ['Unlimited clients', 'Unlimited devices', 'Dedicated support', 'Custom integrations', 'SLA guarantee', 'On-site training'],
       cta: 'Contact Sales',
       highlighted: false
     }
   ];
 
   const stats = [
-    { value: '10,000+', label: 'Assets Tracked' },
-    { value: '500+', label: 'Companies' },
+    { value: '50,000+', label: 'Assets Managed' },
+    { value: '200+', label: 'MSPs & IT Teams' },
     { value: '99.9%', label: 'Uptime' },
-    { value: '24/7', label: 'Support' }
+    { value: '< 2hr', label: 'Avg Response' }
+  ];
+
+  const trustedBy = [
+    { name: 'TechServe Solutions', type: 'MSP' },
+    { name: 'CloudIT Partners', type: 'IT Services' },
+    { name: 'SecureNet MSP', type: 'MSP' },
+    { name: 'ProSupport IT', type: 'IT Support' },
+    { name: 'InfraCare Systems', type: 'Infrastructure' }
   ];
 
   return (
