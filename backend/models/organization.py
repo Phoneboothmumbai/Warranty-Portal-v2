@@ -263,17 +263,125 @@ class OrganizationSettingsUpdate(BaseModel):
     enable_email_ticketing: Optional[bool] = None
 
 
+# ==================== ROLE SYSTEM (4-Level SaaS Architecture) ====================
+# 
+# Level 0: Platform (Super Admin) - Managed separately in platform_admins collection
+# Level 1: Tenant (MSP) - msp_admin, msp_technician
+# Level 2: Company (Client) - company_admin, company_employee
+# Level 3: External - external_customer (limited access)
+#
+# This aligns with subdomain-based multi-tenancy:
+# - Platform: app.aftersales.support
+# - Tenants: {tenant}.aftersales.support
+# - Companies: Managed within tenant workspace (no separate subdomain)
+
+TENANT_ROLES = {
+    "msp_admin": {
+        "name": "MSP Admin",
+        "level": 1,
+        "description": "Full access to tenant workspace. Can manage all companies, users, and settings.",
+        "permissions": ["all"],
+        "can_switch_companies": True,
+        "can_manage_companies": True,
+        "can_manage_users": True,
+        "can_manage_settings": True,
+        "can_view_billing": True
+    },
+    "msp_technician": {
+        "name": "MSP Technician",
+        "level": 1,
+        "description": "Access to assigned companies only. Can manage devices, tickets, and service.",
+        "permissions": [
+            "view_assigned_companies",
+            "manage_devices",
+            "manage_tickets",
+            "manage_services",
+            "view_amc",
+            "manage_parts"
+        ],
+        "can_switch_companies": True,  # Only between assigned companies
+        "can_manage_companies": False,
+        "can_manage_users": False,
+        "can_manage_settings": False,
+        "can_view_billing": False
+    },
+    "company_admin": {
+        "name": "Company Admin",
+        "level": 2,
+        "description": "Admin of a specific client company. Can manage company employees and view all company data.",
+        "permissions": [
+            "view_company",
+            "manage_employees",
+            "manage_tickets",
+            "view_devices",
+            "view_amc",
+            "manage_company_settings"
+        ],
+        "can_switch_companies": False,  # Locked to their company
+        "can_manage_companies": False,
+        "can_manage_users": True,  # Only company employees
+        "can_manage_settings": True,  # Only company settings
+        "can_view_billing": False
+    },
+    "company_employee": {
+        "name": "Company Employee",
+        "level": 2,
+        "description": "Regular employee of a client company. Can view devices and create tickets.",
+        "permissions": [
+            "view_company",
+            "view_devices",
+            "create_tickets",
+            "view_own_tickets"
+        ],
+        "can_switch_companies": False,
+        "can_manage_companies": False,
+        "can_manage_users": False,
+        "can_manage_settings": False,
+        "can_view_billing": False
+    },
+    "external_customer": {
+        "name": "External Customer",
+        "level": 3,
+        "description": "External end-user with minimal access. Can view warranty status and create support requests.",
+        "permissions": [
+            "view_warranty",
+            "create_support_request"
+        ],
+        "can_switch_companies": False,
+        "can_manage_companies": False,
+        "can_manage_users": False,
+        "can_manage_settings": False,
+        "can_view_billing": False
+    }
+}
+
+# Legacy role mapping (for backward compatibility)
+LEGACY_ROLE_MAP = {
+    "owner": "msp_admin",
+    "admin": "msp_admin", 
+    "member": "msp_technician",
+    "readonly": "company_employee"
+}
+
+
 # ==================== ORGANIZATION MEMBER ====================
 
 class OrganizationMember(BaseModel):
     """
-    Admin users who belong to an organization.
-    Different from company_users who are end-users of client companies.
+    Users who belong to a tenant (MSP organization).
+    Supports the 4-level SaaS architecture with role-based access.
+    
+    Roles:
+    - msp_admin: Full tenant access
+    - msp_technician: Access to assigned companies
+    - company_admin: Admin of a specific company
+    - company_employee: Regular company user
+    - external_customer: Limited external access
     """
     model_config = ConfigDict(extra="ignore")
     
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    organization_id: str
+    organization_id: str  # The tenant (MSP) this user belongs to
     
     # User info
     email: str
@@ -282,11 +390,18 @@ class OrganizationMember(BaseModel):
     phone: Optional[str] = None
     avatar_url: Optional[str] = None
     
-    # Role within the organization
-    role: str = "member"  # owner, admin, member, readonly
+    # Role within the organization (new 5-tier system)
+    role: str = "company_employee"  # msp_admin, msp_technician, company_admin, company_employee, external_customer
     
-    # Permissions (granular)
-    permissions: List[str] = Field(default_factory=lambda: ["view_all"])
+    # Company assignment (for company_admin, company_employee, external_customer)
+    # None = can access all companies (msp_admin/msp_technician)
+    company_id: Optional[str] = None
+    
+    # For msp_technician: list of company IDs they are assigned to
+    assigned_company_ids: List[str] = Field(default_factory=list)
+    
+    # Permissions (granular, overrides role defaults)
+    permissions: List[str] = Field(default_factory=list)
     
     # Status
     is_active: bool = True
@@ -295,7 +410,35 @@ class OrganizationMember(BaseModel):
     # Audit
     last_login: Optional[str] = None
     created_at: str = Field(default_factory=get_ist_isoformat)
+    updated_at: str = Field(default_factory=get_ist_isoformat)
     invited_by: Optional[str] = None
+    
+    def get_effective_permissions(self) -> List[str]:
+        """Get effective permissions based on role and custom permissions"""
+        role_info = TENANT_ROLES.get(self.role, {})
+        base_perms = role_info.get("permissions", [])
+        if "all" in base_perms:
+            return ["all"]
+        # Merge role permissions with custom permissions
+        return list(set(base_perms + self.permissions))
+    
+    def can_access_company(self, company_id: str) -> bool:
+        """Check if user can access a specific company"""
+        role_info = TENANT_ROLES.get(self.role, {})
+        
+        # MSP Admin can access all companies
+        if self.role == "msp_admin":
+            return True
+        
+        # MSP Technician can access assigned companies
+        if self.role == "msp_technician":
+            return company_id in self.assigned_company_ids
+        
+        # Company-level users can only access their company
+        if self.company_id:
+            return self.company_id == company_id
+        
+        return False
 
 
 class OrganizationMemberCreate(BaseModel):
