@@ -192,9 +192,10 @@ function App() {
             </BrowserRouter>
           </EngineerAuthProvider>
         </CompanyAuthProvider>
-      </AuthProvider>
-    </SettingsProvider>
-  );
+      </BrandingProvider>
+    </AuthProvider>
+  </SettingsProvider>
+);
 }
 
 export default App;
