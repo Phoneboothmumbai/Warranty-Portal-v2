@@ -1063,6 +1063,22 @@ const CompanyAMCOnboarding = () => {
               <label htmlFor="static_ip" className="font-medium">Has Static IP</label>
             </div>
 
+            {/* Conditional Static IP Address field */}
+            {formData.step5.has_static_ip && (
+              <div className="ml-8 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                <label className="form-label">Static IP Address(es)</label>
+                <input
+                  type="text"
+                  value={formData.step5.static_ip_addresses || ''}
+                  onChange={(e) => updateStep(5, 'static_ip_addresses', e.target.value)}
+                  className="form-input"
+                  placeholder="e.g., 203.0.113.10, 203.0.113.11"
+                  disabled={!isEditable}
+                />
+                <p className="text-xs text-slate-500 mt-1">Enter multiple IPs separated by commas</p>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="form-label">Router/Firewall Brand</label>
