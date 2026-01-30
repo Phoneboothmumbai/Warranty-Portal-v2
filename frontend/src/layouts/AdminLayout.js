@@ -86,6 +86,7 @@ const allNavItems = navGroups.flatMap(g => g.items);
 const AdminLayout = () => {
   const { admin, loading, isAuthenticated, logout, authError } = useAuth();
   const { settings } = useSettings();
+  const { branding, organization } = useBranding();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
