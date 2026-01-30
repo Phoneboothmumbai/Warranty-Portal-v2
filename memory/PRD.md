@@ -5,6 +5,16 @@
 
 ## CHANGELOG
 
+### 2026-01-30: Platform Super Admin Portal Build-out (Complete)
+- **Enhanced Dashboard**: Added MRR/ARR revenue metrics, new signups this month, trial conversion rate
+- **Organizations Management**: Plan change capability in detail modal
+- **Revenue & Billing Page**: Detailed revenue analytics by plan
+- **Platform Admins Page**: Manage super admin users
+- **Audit Logs Page**: Track all platform administrative actions with filters
+- **Platform Settings Page**: 5-tab configuration (General, Signup & Trial, Email, Billing, Integrations)
+- **Backend API Enhancement**: `/api/platform/dashboard/stats` now returns revenue metrics
+- **All tests passed**: 100% backend (16/16) and frontend success rate
+
 ### 2026-01-30: Tenant Scoping Audit & Knowledge Base Completion
 - **Complete Tenant Scoping**: Applied `organization_id` filter to ALL remaining admin endpoints:
   - Users (`list_users`)
