@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { useBranding } from '../contexts/BrandingContext';
 import { Button } from '../components/ui/button';
 import UniversalSearch from '../components/UniversalSearch';
 
