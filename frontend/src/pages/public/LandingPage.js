@@ -282,13 +282,18 @@ const LandingPage = () => {
       <section className="py-16 border-y border-slate-100 bg-slate-50/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-center text-sm font-medium text-slate-500 mb-8 uppercase tracking-widest">
-            Trusted by leading enterprises
+            Trusted by MSPs & IT Support Teams
           </p>
-          <div className="flex flex-wrap justify-center items-center gap-12 opacity-60">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex items-center gap-2 text-slate-400">
-                <Building2 className="h-8 w-8" />
-                <span className="text-lg font-semibold">Company {i}</span>
+          <div className="flex flex-wrap justify-center items-center gap-10 md:gap-16">
+            {trustedBy.map((company, i) => (
+              <div key={i} className="flex items-center gap-3 opacity-70 hover:opacity-100 transition-opacity">
+                <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-slate-500" />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-700">{company.name}</div>
+                  <div className="text-xs text-slate-400">{company.type}</div>
+                </div>
               </div>
             ))}
           </div>
@@ -304,10 +309,10 @@ const LandingPage = () => {
               Features
             </span>
             <h2 className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mb-6 font-display">
-              Everything you need to manage IT assets
+              Built for IT Service Providers
             </h2>
             <p className="text-lg text-slate-600 leading-relaxed">
-              From warranty tracking to service management, get complete visibility and control over your entire asset portfolio.
+              Everything MSPs and IT support teams need to deliver exceptional service across multiple clients.
             </p>
           </div>
 
