@@ -1740,12 +1740,19 @@ async def update_company(company_id: str, updates: CompanyUpdate, admin: dict = 
 
 @api_router.delete("/admin/companies/{company_id}")
 async def delete_company(company_id: str, admin: dict = Depends(get_current_admin)):
-    result = await db.companies.update_one({"id": company_id}, {"$set": {"is_deleted": True}})
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    query = {"id": company_id}
+    query = scope_query(query, org_id)
+    
+    result = await db.companies.update_one(query, {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Company not found")
     
-    # Soft delete related users
-    await db.users.update_many({"company_id": company_id}, {"$set": {"is_deleted": True}})
+    # Soft delete related users (also scoped)
+    user_query = {"company_id": company_id}
+    user_query = scope_query(user_query, org_id)
+    await db.users.update_many(user_query, {"$set": {"is_deleted": True}})
     await log_audit("company", company_id, "delete", {"is_deleted": True}, admin)
     return {"message": "Company archived"}
 
