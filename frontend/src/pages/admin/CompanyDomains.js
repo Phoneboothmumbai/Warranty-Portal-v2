@@ -17,7 +17,7 @@ export default function CompanyDomains() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingCompany, setEditingCompany] = useState(null);
   const [newDomain, setNewDomain] = useState('');
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('admin_token');
 
   useEffect(() => {
     fetchCompanies();
