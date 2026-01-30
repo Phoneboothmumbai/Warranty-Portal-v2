@@ -1,0 +1,359 @@
+"""
+Tactical RMM Integration Routes
+===============================
+API endpoints for managing Tactical RMM integration settings and syncing agents.
+"""
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+from typing import Optional, List
+from datetime import datetime
+import uuid
+
+from services.auth import get_current_admin
+from utils.tenant_scope import get_admin_org_id, scope_query
+from services.tactical_rmm import TacticalRMMService, TacticalRMMConfig, map_agent_to_device
+
+router = APIRouter(prefix="/rmm/tactical", tags=["Tactical RMM Integration"])
+
+# Database reference - will be injected
+_db = None
+
+
+def init_tactical_rmm_router(database):
+    """Initialize the router with database dependency"""
+    global _db
+    _db = database
+
+
+# ==================== REQUEST/RESPONSE MODELS ====================
+
+class TacticalRMMSetup(BaseModel):
+    """Setup Tactical RMM integration"""
+    api_url: str  # e.g., https://api.yourdomain.com
+    api_key: str
+    enabled: bool = True
+
+
+class AgentSyncRequest(BaseModel):
+    """Request to sync agents from Tactical RMM"""
+    company_id: str  # Which company to assign synced devices to
+    sync_all: bool = True
+    agent_ids: Optional[List[str]] = None  # Specific agents to sync (if not sync_all)
+
+
+class RunCommandRequest(BaseModel):
+    """Request to run command on an agent"""
+    shell: str = "powershell"  # powershell, cmd, bash
+    cmd: str
+    timeout: int = 30
+
+
+# ==================== HELPER FUNCTIONS ====================
+
+async def get_rmm_config(org_id: str) -> Optional[TacticalRMMConfig]:
+    """Get Tactical RMM configuration for an organization"""
+    config = await _db.integrations.find_one({
+        "organization_id": org_id,
+        "type": "tactical_rmm",
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if config and config.get("enabled"):
+        return TacticalRMMConfig(
+            api_url=config.get("api_url"),
+            api_key=config.get("api_key"),
+            enabled=config.get("enabled", True)
+        )
+    return None
+
+
+async def get_rmm_service(org_id: str) -> TacticalRMMService:
+    """Get authenticated Tactical RMM service for an organization"""
+    config = await get_rmm_config(org_id)
+    if not config:
+        raise HTTPException(status_code=400, detail="Tactical RMM integration not configured")
+    return TacticalRMMService(config)
+
+
+# ==================== CONFIGURATION ENDPOINTS ====================
+
+@router.get("/config")
+async def get_tactical_rmm_config(admin: dict = Depends(get_current_admin)):
+    """Get current Tactical RMM configuration (hides sensitive key)"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    
+    config = await _db.integrations.find_one({
+        "organization_id": org_id,
+        "type": "tactical_rmm",
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not config:
+        return {"configured": False}
+    
+    return {
+        "configured": True,
+        "enabled": config.get("enabled", False),
+        "api_url": config.get("api_url"),
+        "api_key_masked": f"****{config.get('api_key', '')[-4:]}" if config.get("api_key") else None,
+        "last_sync": config.get("last_sync"),
+        "agents_count": config.get("agents_count", 0)
+    }
+
+
+@router.post("/config")
+async def setup_tactical_rmm(setup: TacticalRMMSetup, admin: dict = Depends(get_current_admin)):
+    """Configure Tactical RMM integration"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    
+    # Test connection first
+    try:
+        service = TacticalRMMService(TacticalRMMConfig(
+            api_url=setup.api_url,
+            api_key=setup.api_key,
+            enabled=True
+        ))
+        connected = await service.test_connection()
+        if not connected:
+            raise HTTPException(status_code=400, detail="Failed to connect to Tactical RMM API. Please check your credentials.")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Connection test failed: {str(e)}")
+    
+    # Save or update configuration
+    config_data = {
+        "organization_id": org_id,
+        "type": "tactical_rmm",
+        "api_url": setup.api_url,
+        "api_key": setup.api_key,
+        "enabled": setup.enabled,
+        "updated_at": datetime.utcnow().isoformat(),
+        "is_deleted": False
+    }
+    
+    existing = await _db.integrations.find_one({
+        "organization_id": org_id,
+        "type": "tactical_rmm"
+    })
+    
+    if existing:
+        await _db.integrations.update_one(
+            {"organization_id": org_id, "type": "tactical_rmm"},
+            {"$set": config_data}
+        )
+    else:
+        config_data["id"] = str(uuid.uuid4())
+        config_data["created_at"] = datetime.utcnow().isoformat()
+        await _db.integrations.insert_one(config_data)
+    
+    return {"success": True, "message": "Tactical RMM integration configured successfully"}
+
+
+@router.delete("/config")
+async def disable_tactical_rmm(admin: dict = Depends(get_current_admin)):
+    """Disable Tactical RMM integration"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    
+    await _db.integrations.update_one(
+        {"organization_id": org_id, "type": "tactical_rmm"},
+        {"$set": {"enabled": False, "is_deleted": True}}
+    )
+    
+    return {"success": True, "message": "Tactical RMM integration disabled"}
+
+
+# ==================== AGENT ENDPOINTS ====================
+
+@router.get("/agents")
+async def list_rmm_agents(admin: dict = Depends(get_current_admin)):
+    """List all agents from Tactical RMM"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    service = await get_rmm_service(org_id)
+    
+    agents = await service.get_agents()
+    
+    # Enrich with sync status from our database
+    for agent in agents:
+        existing_device = await _db.devices.find_one({
+            "rmm_agent_id": agent.get("agent_id"),
+            "organization_id": org_id,
+            "is_deleted": {"$ne": True}
+        }, {"_id": 0, "id": 1, "serial_number": 1, "company_id": 1})
+        
+        agent["synced"] = existing_device is not None
+        agent["device_id"] = existing_device.get("id") if existing_device else None
+    
+    return agents
+
+
+@router.get("/agents/{agent_id}")
+async def get_rmm_agent(agent_id: str, admin: dict = Depends(get_current_admin)):
+    """Get detailed agent information"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    service = await get_rmm_service(org_id)
+    
+    agent = await service.get_agent_details(agent_id)
+    return agent
+
+
+@router.post("/agents/sync")
+async def sync_rmm_agents(request: AgentSyncRequest, admin: dict = Depends(get_current_admin)):
+    """Sync agents from Tactical RMM to our device inventory"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    service = await get_rmm_service(org_id)
+    
+    # Verify company exists and belongs to this org
+    company = await _db.companies.find_one({
+        "id": request.company_id,
+        "organization_id": org_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    # Get agents from Tactical RMM
+    all_agents = await service.get_agents()
+    
+    # Filter agents if specific IDs provided
+    if not request.sync_all and request.agent_ids:
+        agents_to_sync = [a for a in all_agents if a.get("agent_id") in request.agent_ids]
+    else:
+        agents_to_sync = all_agents
+    
+    synced = 0
+    updated = 0
+    errors = []
+    
+    for agent in agents_to_sync:
+        try:
+            agent_id = agent.get("agent_id")
+            
+            # Check if device already exists
+            existing = await _db.devices.find_one({
+                "rmm_agent_id": agent_id,
+                "organization_id": org_id,
+                "is_deleted": {"$ne": True}
+            }, {"_id": 0})
+            
+            if existing:
+                # Update existing device
+                update_data = {
+                    "status": "active" if agent.get("status") == "online" else "inactive",
+                    "rmm_last_sync": datetime.utcnow().isoformat(),
+                    "rmm_data": {
+                        "hostname": agent.get("hostname"),
+                        "site_name": agent.get("site_name"),
+                        "client_name": agent.get("client_name"),
+                        "operating_system": agent.get("operating_system"),
+                        "platform": agent.get("plat"),
+                        "public_ip": agent.get("public_ip"),
+                        "total_ram_gb": agent.get("total_ram"),
+                        "last_seen": agent.get("last_seen"),
+                        "needs_reboot": agent.get("needs_reboot", False),
+                        "logged_in_user": agent.get("logged_in_username")
+                    }
+                }
+                await _db.devices.update_one(
+                    {"id": existing["id"]},
+                    {"$set": update_data}
+                )
+                updated += 1
+            else:
+                # Create new device
+                device = map_agent_to_device(agent, request.company_id, org_id)
+                await _db.devices.insert_one(device)
+                synced += 1
+                
+        except Exception as e:
+            errors.append({"agent_id": agent.get("agent_id"), "error": str(e)})
+    
+    # Update integration last sync time
+    await _db.integrations.update_one(
+        {"organization_id": org_id, "type": "tactical_rmm"},
+        {"$set": {
+            "last_sync": datetime.utcnow().isoformat(),
+            "agents_count": len(all_agents)
+        }}
+    )
+    
+    return {
+        "success": True,
+        "synced": synced,
+        "updated": updated,
+        "total_agents": len(agents_to_sync),
+        "errors": errors if errors else None
+    }
+
+
+# ==================== REMOTE ACTIONS ====================
+
+@router.post("/agents/{agent_id}/command")
+async def run_agent_command(
+    agent_id: str, 
+    request: RunCommandRequest,
+    admin: dict = Depends(get_current_admin)
+):
+    """Run a command on a specific agent"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    service = await get_rmm_service(org_id)
+    
+    result = await service.run_command(
+        agent_id=agent_id,
+        shell=request.shell,
+        cmd=request.cmd,
+        timeout=request.timeout
+    )
+    
+    return result
+
+
+@router.post("/agents/{agent_id}/reboot")
+async def reboot_agent(agent_id: str, admin: dict = Depends(get_current_admin)):
+    """Reboot a specific agent"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    service = await get_rmm_service(org_id)
+    
+    result = await service.reboot_agent(agent_id)
+    return {"success": True, "message": "Reboot command sent", "result": result}
+
+
+@router.post("/agents/{agent_id}/recover")
+async def recover_agent(agent_id: str, admin: dict = Depends(get_current_admin)):
+    """Send recovery command to an agent"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    service = await get_rmm_service(org_id)
+    
+    result = await service.send_agent_recovery(agent_id)
+    return {"success": True, "message": "Recovery command sent", "result": result}
+
+
+# ==================== CLIENTS/SITES ====================
+
+@router.get("/clients")
+async def list_rmm_clients(admin: dict = Depends(get_current_admin)):
+    """List all clients from Tactical RMM"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    service = await get_rmm_service(org_id)
+    
+    return await service.get_clients()
+
+
+@router.get("/sites")
+async def list_rmm_sites(
+    client_id: Optional[int] = None,
+    admin: dict = Depends(get_current_admin)
+):
+    """List all sites from Tactical RMM"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    service = await get_rmm_service(org_id)
+    
+    return await service.get_sites(client_id)
+
+
+@router.get("/scripts")
+async def list_rmm_scripts(admin: dict = Depends(get_current_admin)):
+    """List all available scripts from Tactical RMM"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    service = await get_rmm_service(org_id)
+    
+    return await service.get_scripts()
