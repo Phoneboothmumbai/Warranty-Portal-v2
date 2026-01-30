@@ -1,6 +1,13 @@
 # Warranty & Asset Tracking Portal - PRD
 
 ## CHANGELOG
+- **2026-01-30**: Enhanced AMC Onboarding Wizard
+  - **Conditional Fields**: Step 5 (has_static_ip → static_ip_addresses), Step 6 (has_vpn → vpn_type, has_password_manager → password_manager_name)
+  - **Multi-Tab Excel Template**: Device template now generates category-specific sheets based on Step 3 selections (Desktops, Laptops, Apple Devices, Servers, Network Devices, Printers, CCTV, Wi-Fi APs, UPS)
+  - **Multi-Sheet Excel Import**: Upload handler parses all sheets, filters sample data, combines devices
+  - Backend: CATEGORY_CONFIG mapping, _create_device_sheet() helper
+  - Test report: `/app/test_reports/iteration_18.json` (13/13 backend, 100% frontend)
+
 - **2026-01-29**: Implemented comprehensive AMC Onboarding Wizard (8-step flow)
   - Company portal multi-step form with draft save
   - Excel device inventory template & import
