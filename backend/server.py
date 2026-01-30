@@ -95,9 +95,15 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from fastapi import Request
 
+# Import tenant middleware
+from middleware.tenant import TenantMiddleware, require_tenant, get_optional_tenant, get_tenant_context
+
 # Create the main app
 app = FastAPI(title="Warranty & Asset Tracking Portal")
 api_router = APIRouter(prefix="/api")
+
+# Add tenant resolution middleware (before other middleware)
+app.add_middleware(TenantMiddleware)
 
 # Add rate limiter to app
 app.state.limiter = limiter
