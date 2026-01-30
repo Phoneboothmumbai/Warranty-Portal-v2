@@ -1,9 +1,21 @@
 # Warranty & Asset Tracking Portal - PRD
 
+## Target Market
+**MSPs (Managed Service Providers) and IT Support Companies** - Organizations that manage IT assets, warranties, and service tickets across multiple client organizations.
+
 ## CHANGELOG
+- **2026-01-30**: MSP-Focused Landing Pages & Tenant Scoping
+  - **Homepage Copy Update**: Rebranded for MSPs - "Manage All Your Clients. One Powerful Platform."
+  - **MSP-Specific Features**: Multi-Client Management, Client Reports, Per-client SLAs, White-label options
+  - **Trusted By Section**: Updated with MSP/IT company placeholders (TechServe Solutions, CloudIT Partners, etc.)
+  - **Stats Updated**: 50,000+ Assets Managed, 200+ MSPs & IT Teams, 99.9% Uptime, < 2hr Avg Response
+  - **Features Page**: Rewritten for MSP use cases - multi-client management, cross-client alerts, field engineer app
+  - **Pricing Page**: Updated terminology (Clients instead of Companies, Technicians instead of Users)
+  - **Ticketing Tenant Scoping**: Added `organization_id` filter to `list_tickets_admin()` endpoint
+
 - **2026-01-30**: Beautiful SaaS Landing Pages Implementation
-  - **Homepage Redesign**: Modern hero section with warranty search card, features grid (6 cards), "How It Works" section (3 steps), pricing preview (4 plans), CTA section, and professional footer
-  - **Features Page** (`/features`): Detailed feature breakdown with main features (Asset Management, Warranty Tracking, Ticketing, AMC Contracts) and 12 additional feature cards
+  - **Homepage Redesign**: Modern hero section with dashboard preview, features grid (6 cards), "How It Works" section (3 steps), pricing preview (4 plans), CTA section, and professional footer
+  - **Features Page** (`/features`): Detailed feature breakdown with main features (Multi-Client Management, Warranty Tracking, Ticketing, AMC Contracts) and 12 additional feature cards
   - **Pricing Page** (`/pricing`): Monthly/Yearly toggle with 17% discount badge, 4 pricing tiers with feature comparison table and FAQs
   - **About Page** (`/about`): Company story, values, and stats
   - **Design System**: Outfit font for headings, Manrope for body, IBM Blue (#0F62FE) primary color, glassmorphism navigation, responsive mobile menu
