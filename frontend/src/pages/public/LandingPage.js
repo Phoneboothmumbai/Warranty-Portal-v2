@@ -128,9 +128,63 @@ const LandingPage = () => {
       </main>
 
       {/* Footer */}
-      <footer className="px-6 py-6 border-t border-slate-100">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-slate-400">
-          <span>© {new Date().getFullYear()} {settings.company_name}. All rights reserved.</span>
+      <footer className="px-6 py-8 border-t border-slate-100 bg-slate-50">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between gap-8 mb-8">
+            {/* Logo & Description */}
+            <div className="md:max-w-xs">
+              <div className="flex items-center gap-2 mb-3">
+                {(settings.logo_base64 || settings.logo_url) ? (
+                  <img 
+                    src={settings.logo_base64 || settings.logo_url} 
+                    alt="Logo" 
+                    className="h-6 w-auto"
+                  />
+                ) : (
+                  <Shield className="h-6 w-6 text-[#0F62FE]" />
+                )}
+                <span className="font-semibold text-slate-900">{settings.company_name}</span>
+              </div>
+              <p className="text-sm text-slate-500">
+                Enterprise warranty and asset tracking solution for modern businesses.
+              </p>
+            </div>
+
+            {/* Legal Links */}
+            <div>
+              <h4 className="font-semibold text-slate-900 mb-3">Legal</h4>
+              <ul className="space-y-2 text-sm text-slate-500">
+                <li><a href="/page/privacy-policy" className="hover:text-[#0F62FE] transition-colors">Privacy Policy</a></li>
+                <li><a href="/page/terms-of-service" className="hover:text-[#0F62FE] transition-colors">Terms of Service</a></li>
+                <li><a href="/page/refund-policy" className="hover:text-[#0F62FE] transition-colors">Refund Policy</a></li>
+                <li><a href="/page/disclaimer" className="hover:text-[#0F62FE] transition-colors">Disclaimer</a></li>
+              </ul>
+            </div>
+
+            {/* Quick Links */}
+            <div>
+              <h4 className="font-semibold text-slate-900 mb-3">Quick Links</h4>
+              <ul className="space-y-2 text-sm text-slate-500">
+                <li><a href="/signup" className="hover:text-[#0F62FE] transition-colors">Get Started</a></li>
+                <li><a href="/admin/login" className="hover:text-[#0F62FE] transition-colors">Admin Login</a></li>
+                <li><a href="/company/login" className="hover:text-[#0F62FE] transition-colors">Company Portal</a></li>
+                <li><a href="/page/contact-us" className="hover:text-[#0F62FE] transition-colors">Contact Us</a></li>
+              </ul>
+            </div>
+
+            {/* Contact */}
+            <div>
+              <h4 className="font-semibold text-slate-900 mb-3">Contact</h4>
+              <ul className="space-y-2 text-sm text-slate-500">
+                <li>support@yourcompany.com</li>
+                <li>+91 98765 43210</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-200 pt-6 text-sm text-slate-400 text-center">
+            © {new Date().getFullYear()} {settings.company_name}. All rights reserved.
+          </div>
         </div>
       </footer>
     </div>
