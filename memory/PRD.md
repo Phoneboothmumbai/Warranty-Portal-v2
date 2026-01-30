@@ -4,6 +4,20 @@
 **MSPs (Managed Service Providers) and IT Support Companies** - Organizations that manage IT assets, warranties, and service tickets across multiple client organizations.
 
 ## CHANGELOG
+- **2026-01-30**: Complete Tenant Scoping & Tactical RMM Integration
+  - **Full Tenant Scoping**: All major admin routes now filter by `organization_id`:
+    - AMC Contracts (`list_amc_contracts`, `create_amc_contract`)
+    - Engineers (`list_engineers`, `create_engineer`, `update_engineer`, `delete_engineer`)
+    - Parts Inventory (`list_parts`, `create_part`, `get_part`, `update_part`, `delete_part`)
+    - Services (`list_services`, `create_service`)
+    - AMC Legacy (`list_amc`, `create_amc`)
+  - **Tactical RMM Integration**:
+    - Backend service: `/app/backend/services/tactical_rmm.py` - Full API client for Tactical RMM v2 API
+    - Backend routes: `/app/backend/routes/tactical_rmm.py` - Configuration, agent sync, remote commands
+    - Frontend: `/app/frontend/src/pages/admin/TacticalRMMIntegration.js` - Setup UI, agent list, sync controls
+    - Features: Agent sync to devices, remote commands, reboot, recovery, client/site listing
+  - **Admin Sidebar**: Added "Tactical RMM" link under Settings
+
 - **2026-01-30**: MSP-Focused Landing Pages & Tenant Scoping
   - **Homepage Copy Update**: Rebranded for MSPs - "Manage All Your Clients. One Powerful Platform."
   - **MSP-Specific Features**: Multi-Client Management, Client Reports, Per-client SLAs, White-label options
