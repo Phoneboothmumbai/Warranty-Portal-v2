@@ -287,17 +287,42 @@ const CompanyAMCOnboarding = () => {
     try {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      
+      // Parse ALL sheets (except Instructions) and combine devices
+      const allDevices = [];
+      for (const sheetName of workbook.SheetNames) {
+        // Skip the Instructions sheet
+        if (sheetName.toLowerCase() === 'instructions') continue;
+        
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        
+        // Filter out empty rows and sample data rows
+        const validDevices = jsonData.filter(row => {
+          const serial = row['Serial Number*'] || row['serial_number'];
+          // Skip if no serial or if it's the sample serial
+          return serial && !['ABC123XYZ', 'DEF456UVW', 'GHI789RST', 'JKL012MNO', 
+                           'C02XL12345', 'FCZ2312A1BC', 'HIK20241234', 
+                           '24:5A:4C:AB:12:34', 'AS1234567890'].includes(serial);
+        });
+        
+        allDevices.push(...validDevices);
+      }
+      
+      if (allDevices.length === 0) {
+        toast.warning('No devices found. Make sure to replace sample data with real device information.');
+        e.target.value = '';
+        return;
+      }
       
       // Process and normalize devices
       const response = await axios.post(`${API}/portal/onboarding/upload-devices`, 
-        { devices: jsonData },
+        { devices: allDevices },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
       updateStep(4, 'devices', [...formData.step4.devices, ...response.data.devices]);
-      toast.success(`${response.data.count} devices imported`);
+      toast.success(`${response.data.count} devices imported from ${workbook.SheetNames.filter(s => s.toLowerCase() !== 'instructions').length} sheet(s)`);
     } catch (error) {
       toast.error('Failed to import devices');
     }
