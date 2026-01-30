@@ -107,12 +107,13 @@ import { BrandingProvider } from "./contexts/BrandingContext";
 function App() {
   return (
     <SettingsProvider>
-      <AuthProvider>
-        <BrandingProvider>
-          <CompanyAuthProvider>
-            <EngineerAuthProvider>
-              <BrowserRouter>
-                <div className="noise-bg min-h-screen">
+      <TenantProvider>
+        <AuthProvider>
+          <BrandingProvider>
+            <CompanyAuthProvider>
+              <EngineerAuthProvider>
+                <BrowserRouter>
+                  <div className="noise-bg min-h-screen">
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<LandingPage />} />
