@@ -123,7 +123,7 @@ class TestCompanyOnboardingAPI:
         })
         if response.status_code != 200:
             pytest.skip(f"Company login failed: {response.status_code}")
-        return response.json().get("token")
+        return response.json().get("access_token")
     
     def test_get_onboarding(self, company_token):
         """Test fetching onboarding data"""
@@ -271,7 +271,7 @@ class TestDeviceUploadAPI:
         })
         if response.status_code != 200:
             pytest.skip(f"Company login failed: {response.status_code}")
-        return response.json().get("token")
+        return response.json().get("access_token")
     
     def test_upload_devices_normalizes_data(self, company_token):
         """Test that upload-devices endpoint normalizes Excel column names"""
@@ -338,7 +338,7 @@ class TestAdminOnboardingAPI:
         })
         if response.status_code != 200:
             pytest.skip(f"Admin login failed: {response.status_code}")
-        return response.json().get("token")
+        return response.json().get("access_token")
     
     def test_list_onboardings(self, admin_token):
         """Test admin can list all onboardings"""
