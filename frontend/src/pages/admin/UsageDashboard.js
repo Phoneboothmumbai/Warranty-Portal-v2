@@ -30,7 +30,7 @@ export default function UsageDashboard() {
   const [loading, setLoading] = useState(true);
   const [usage, setUsage] = useState(null);
   const [organization, setOrganization] = useState(null);
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('admin_token');
 
   useEffect(() => {
     fetchUsage();
