@@ -3870,13 +3870,19 @@ async def list_amc_contracts(
     admin: dict = Depends(get_current_admin)
 ):
     """List AMC contracts with serial number search - P0 Fix"""
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    
     query = {"is_deleted": {"$ne": True}}
+    query = scope_query(query, org_id)
+    
     if company_id:
         query["company_id"] = company_id
     
     # If searching by serial/asset_tag, first find the device, then find contracts
     if serial or asset_tag:
         device_query = {"is_deleted": {"$ne": True}}
+        device_query = scope_query(device_query, org_id)
         if serial:
             device_query["serial_number"] = {"$regex": serial, "$options": "i"}
         if asset_tag:
@@ -3943,8 +3949,13 @@ async def list_amc_contracts(
 @api_router.post("/admin/amc-contracts")
 async def create_amc_contract(data: AMCContractCreate, admin: dict = Depends(get_current_admin)):
     """Create new AMC contract"""
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    company_query = {"id": data.company_id, "is_deleted": {"$ne": True}}
+    company_query = scope_query(company_query, org_id)
+    
     # Validate company exists
-    company = await db.companies.find_one({"id": data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    company = await db.companies.find_one(company_query, {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
