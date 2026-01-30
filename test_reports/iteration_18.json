@@ -1,0 +1,103 @@
+{
+  "summary": "Completed testing of AMC Onboarding Wizard Enhancement features. All 13 backend API tests pass (100%). Frontend UI verified for all 8 wizard steps, conditional fields (Static IP, VPN, Password Manager), multi-sheet Excel template generation, and Save Draft persistence.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "Backend: GET /api/portal/onboarding/device-template (no categories) - returns all 9 category sheets + Instructions",
+    "Backend: GET /api/portal/onboarding/device-template?categories=desktops,laptops,printers - returns only selected sheets",
+    "Backend: GET /api/portal/onboarding/device-template?categories=servers - single category returns 2 sheets",
+    "Backend: Device template sheet headers are correct (12 columns)",
+    "Backend: Device template sample data row present with correct values",
+    "Backend: GET /api/portal/onboarding - returns onboarding data with status and current_step",
+    "Backend: PUT /api/portal/onboarding - updates step3_device_categories correctly",
+    "Backend: PUT /api/portal/onboarding - updates step5_network_infra with has_static_ip and static_ip_addresses",
+    "Backend: PUT /api/portal/onboarding - updates step6_software_access with has_vpn/vpn_type and has_password_manager/password_manager_name",
+    "Backend: Save draft persists data correctly (verified with GET after PUT)",
+    "Backend: POST /api/portal/onboarding/upload-devices - normalizes Excel column names to snake_case",
+    "Backend: GET /api/admin/onboardings - lists all onboardings",
+    "Backend: GET /api/admin/onboardings?status=draft - filters by status",
+    "Frontend: All 8 wizard steps accessible and navigable",
+    "Frontend: Step 3 - Device Categories shows all 9 category checkboxes",
+    "Frontend: Step 4 - Device Inventory shows Download Template, Import Excel, Add Device buttons",
+    "Frontend: Step 5 - Has Static IP checkbox shows/hides Static IP Address(es) field (conditional)",
+    "Frontend: Step 6 - Uses VPN checkbox shows/hides VPN Type / Provider field (conditional)",
+    "Frontend: Step 6 - Uses Password Manager checkbox shows/hides Password Manager field (conditional)",
+    "Frontend: Save Draft button works and shows 'Draft saved' toast",
+    "Frontend: Data persists after page refresh (VPN, Password Manager values verified)",
+    "Frontend: Step 8 - Scope Confirmation shows all guardrail checkboxes"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_amc_onboarding.py",
+    "/app/test_reports/pytest/amc_onboarding_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_amc_onboarding.py - Created new test file for AMC Onboarding features"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 tests passed)",
+    "frontend": "100% (all UI tests passed)"
+  },
+  "test_credentials": {
+    "company_user_email": "jane@acme.com",
+    "company_user_password": "company123",
+    "admin_email": "admin@demo.com",
+    "admin_password": "admin123"
+  },
+  "features_verified": {
+    "wizard_navigation": {
+      "all_8_steps_accessible": true,
+      "step_indicators_working": true,
+      "next_previous_buttons_working": true
+    },
+    "step3_device_categories": {
+      "all_9_categories_displayed": true,
+      "checkboxes_selectable": true,
+      "other_devices_text_field": true
+    },
+    "step4_device_inventory": {
+      "download_template_button": true,
+      "import_excel_button": true,
+      "add_device_button": true
+    },
+    "step5_conditional_fields": {
+      "has_static_ip_checkbox": true,
+      "static_ip_addresses_field_conditional": true,
+      "field_appears_when_checked": true
+    },
+    "step6_conditional_fields": {
+      "has_vpn_checkbox": true,
+      "vpn_type_field_conditional": true,
+      "has_password_manager_checkbox": true,
+      "password_manager_name_field_conditional": true,
+      "fields_appear_when_checked": true
+    },
+    "save_draft": {
+      "save_draft_button_works": true,
+      "toast_notification_shown": true,
+      "data_persists_after_refresh": true
+    },
+    "multi_sheet_excel_template": {
+      "generates_category_specific_sheets": true,
+      "includes_instructions_sheet": true,
+      "correct_headers_per_sheet": true,
+      "sample_data_included": true,
+      "data_validation_dropdowns": true
+    }
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "mocked_apis_list": []
+  },
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "AMC Onboarding Wizard Enhancement fully tested. All 8 steps work correctly. Conditional fields in Step 5 (has_static_ip -> static_ip_addresses) and Step 6 (has_vpn -> vpn_type, has_password_manager -> password_manager_name) are working. Multi-sheet Excel template generation with category-specific tabs is working. Save Draft persists data correctly. Test file /app/backend/tests/test_amc_onboarding.py covers all backend APIs."
+}
