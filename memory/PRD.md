@@ -1,6 +1,14 @@
 # Warranty & Asset Tracking Portal - PRD
 
 ## CHANGELOG
+- **2026-01-30**: Beautiful SaaS Landing Pages Implementation
+  - **Homepage Redesign**: Modern hero section with warranty search card, features grid (6 cards), "How It Works" section (3 steps), pricing preview (4 plans), CTA section, and professional footer
+  - **Features Page** (`/features`): Detailed feature breakdown with main features (Asset Management, Warranty Tracking, Ticketing, AMC Contracts) and 12 additional feature cards
+  - **Pricing Page** (`/pricing`): Monthly/Yearly toggle with 17% discount badge, 4 pricing tiers with feature comparison table and FAQs
+  - **About Page** (`/about`): Company story, values, and stats
+  - **Design System**: Outfit font for headings, Manrope for body, IBM Blue (#0F62FE) primary color, glassmorphism navigation, responsive mobile menu
+  - Test report: `/app/test_reports/iteration_20.json` (30/30 frontend tests passed)
+
 - **2026-01-30**: Multi-Tenant Admin Authentication Fix (P0 Blocker Resolved)
   - **Root Cause**: `get_org_from_token()` in `/app/backend/services/tenant.py` was querying `organization_members` by email (`user_id=payload.sub`) instead of the actual member ID
   - **Backend Fix**: Updated function to use `org_member_id` from JWT payload for member lookup
