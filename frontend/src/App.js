@@ -60,6 +60,8 @@ import SignupPage from "./pages/SignupPage";
 // Static Pages
 import StaticPage from "./pages/StaticPage";
 import StaticPages from "./pages/admin/StaticPages";
+import UsageDashboard from "./pages/admin/UsageDashboard";
+import CompanyDomains from "./pages/admin/CompanyDomains";
 
 // Company Portal Pages
 import CompanyLayout from "./layouts/CompanyLayout";
