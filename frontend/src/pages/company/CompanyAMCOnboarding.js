@@ -306,7 +306,29 @@ const CompanyAMCOnboarding = () => {
   };
 
   const downloadTemplate = () => {
-    window.open(`${API}/portal/onboarding/device-template`, '_blank');
+    // Build query params based on selected device categories in Step 3
+    const categoryMapping = {
+      has_desktops: 'desktops',
+      has_laptops: 'laptops',
+      has_apple_devices: 'apple_devices',
+      has_servers: 'servers',
+      has_network_devices: 'network_devices',
+      has_printers: 'printers',
+      has_cctv: 'cctv',
+      has_wifi_aps: 'wifi_aps',
+      has_ups: 'ups',
+    };
+    
+    const selectedCategories = Object.entries(categoryMapping)
+      .filter(([key]) => formData.step3[key])
+      .map(([, value]) => value);
+    
+    let url = `${API}/portal/onboarding/device-template`;
+    if (selectedCategories.length > 0) {
+      url += `?categories=${selectedCategories.join(',')}`;
+    }
+    
+    window.open(url, '_blank');
   };
 
   // Server handlers
