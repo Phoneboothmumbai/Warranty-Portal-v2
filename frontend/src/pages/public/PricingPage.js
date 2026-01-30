@@ -174,18 +174,13 @@ const PricingPage = () => {
       </header>
 
       {/* Hero */}
-      <section className="pt-32 pb-16 md:pt-40 md:pb-20 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-blue-50 to-transparent rounded-full blur-3xl opacity-60" />
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative text-center">
-          <span className="text-sm font-mono uppercase tracking-widest text-[#0F62FE] mb-4 block">
-            Pricing
-          </span>
-          <h1 className="text-4xl md:text-6xl font-bold text-slate-900 tracking-tight mb-6 font-display">
+      <section className="pt-32 pb-16 md:pt-40 md:pb-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mb-6 font-display">
             Simple, transparent pricing
           </h1>
-          <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed mb-10">
-            Start free, upgrade when you're ready. No hidden fees, no surprises.
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed mb-10">
+            Start free, upgrade when you're ready. No hidden fees.
           </p>
 
           {/* Billing Toggle */}
