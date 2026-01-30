@@ -3717,7 +3717,10 @@ async def delete_service_attachment(service_id: str, attachment_id: str, admin: 
 
 @api_router.get("/admin/parts")
 async def list_parts(device_id: Optional[str] = None, admin: dict = Depends(get_current_admin)):
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
     query = {"is_deleted": {"$ne": True}}
+    query = scope_query(query, org_id)
     if device_id:
         query["device_id"] = device_id
     parts = await db.parts.find(query, {"_id": 0}).to_list(1000)
@@ -3725,7 +3728,12 @@ async def list_parts(device_id: Optional[str] = None, admin: dict = Depends(get_
 
 @api_router.post("/admin/parts")
 async def create_part(part_data: PartCreate, admin: dict = Depends(get_current_admin)):
-    device = await db.devices.find_one({"id": part_data.device_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    device_query = {"id": part_data.device_id, "is_deleted": {"$ne": True}}
+    device_query = scope_query(device_query, org_id)
+    
+    device = await db.devices.find_one(device_query, {"_id": 0})
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     
@@ -3735,20 +3743,34 @@ async def create_part(part_data: PartCreate, admin: dict = Depends(get_current_a
         **part_data.model_dump(),
         warranty_expiry_date=warranty_expiry
     )
-    await db.parts.insert_one(part.model_dump())
+    part_dict = part.model_dump()
+    if org_id:
+        part_dict["organization_id"] = org_id
+    
+    await db.parts.insert_one(part_dict)
     await log_audit("part", part.id, "create", {"data": part_data.model_dump()}, admin)
     return part.model_dump()
 
 @api_router.get("/admin/parts/{part_id}")
 async def get_part(part_id: str, admin: dict = Depends(get_current_admin)):
-    part = await db.parts.find_one({"id": part_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    query = {"id": part_id, "is_deleted": {"$ne": True}}
+    query = scope_query(query, org_id)
+    
+    part = await db.parts.find_one(query, {"_id": 0})
     if not part:
         raise HTTPException(status_code=404, detail="Part not found")
     return part
 
 @api_router.put("/admin/parts/{part_id}")
 async def update_part(part_id: str, updates: PartUpdate, admin: dict = Depends(get_current_admin)):
-    existing = await db.parts.find_one({"id": part_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    query = {"id": part_id, "is_deleted": {"$ne": True}}
+    query = scope_query(query, org_id)
+    
+    existing = await db.parts.find_one(query, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Part not found")
     
@@ -3763,13 +3785,18 @@ async def update_part(part_id: str, updates: PartUpdate, admin: dict = Depends(g
     
     changes = {k: {"old": existing.get(k), "new": v} for k, v in update_data.items() if existing.get(k) != v}
     
-    result = await db.parts.update_one({"id": part_id}, {"$set": update_data})
+    result = await db.parts.update_one(query, {"$set": update_data})
     await log_audit("part", part_id, "update", changes, admin)
     return await db.parts.find_one({"id": part_id}, {"_id": 0})
 
 @api_router.delete("/admin/parts/{part_id}")
 async def delete_part(part_id: str, admin: dict = Depends(get_current_admin)):
-    result = await db.parts.update_one({"id": part_id}, {"$set": {"is_deleted": True}})
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    query = {"id": part_id}
+    query = scope_query(query, org_id)
+    
+    result = await db.parts.update_one(query, {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Part not found")
     await log_audit("part", part_id, "delete", {"is_deleted": True}, admin)
@@ -3779,7 +3806,10 @@ async def delete_part(part_id: str, admin: dict = Depends(get_current_admin)):
 
 @api_router.get("/admin/amc")
 async def list_amc(device_id: Optional[str] = None, admin: dict = Depends(get_current_admin)):
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
     query = {"is_deleted": {"$ne": True}}
+    query = scope_query(query, org_id)
     if device_id:
         query["device_id"] = device_id
     amc_list = await db.amc.find(query, {"_id": 0}).to_list(1000)
@@ -3787,7 +3817,12 @@ async def list_amc(device_id: Optional[str] = None, admin: dict = Depends(get_cu
 
 @api_router.post("/admin/amc")
 async def create_amc(amc_data: AMCCreate, admin: dict = Depends(get_current_admin)):
-    device = await db.devices.find_one({"id": amc_data.device_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    device_query = {"id": amc_data.device_id, "is_deleted": {"$ne": True}}
+    device_query = scope_query(device_query, org_id)
+    
+    device = await db.devices.find_one(device_query, {"_id": 0})
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     
