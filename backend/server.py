@@ -1454,16 +1454,47 @@ async def admin_login(request: Request, login: AdminLogin):
     if not admin or not verify_password(login.password, admin.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    access_token = create_access_token(data={"sub": admin["email"]})
+    # Check if admin has an organization member entry
+    org_member = await db.organization_members.find_one(
+        {"email": login.email, "is_active": True, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    )
+    
+    token_data = {"sub": admin["email"]}
+    
+    if org_member:
+        # Include organization context in token
+        token_data["organization_id"] = org_member.get("organization_id")
+        token_data["org_member_id"] = org_member.get("id")
+        token_data["type"] = "org_member"
+        token_data["role"] = org_member.get("role", "member")
+    
+    access_token = create_access_token(data=token_data)
     return {"access_token": access_token, "token_type": "bearer"}
 
 @api_router.get("/auth/me")
 async def get_current_admin_info(admin: dict = Depends(get_current_admin)):
+    # Check for organization context
+    org_member = await db.organization_members.find_one(
+        {"email": admin.get("email"), "is_active": True, "is_deleted": {"$ne": True}},
+        {"_id": 0, "password_hash": 0}
+    )
+    
+    organization = None
+    if org_member:
+        organization = await db.organizations.find_one(
+            {"id": org_member.get("organization_id"), "is_deleted": {"$ne": True}},
+            {"_id": 0}
+        )
+    
     return {
         "id": admin.get("id"),
         "email": admin.get("email"),
         "name": admin.get("name"),
-        "role": admin.get("role")
+        "role": admin.get("role"),
+        "organization_id": org_member.get("organization_id") if org_member else None,
+        "organization_name": organization.get("name") if organization else None,
+        "org_role": org_member.get("role") if org_member else None
     }
 
 @api_router.post("/auth/setup")
