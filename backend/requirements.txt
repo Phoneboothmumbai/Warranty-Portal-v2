@@ -75,3 +75,4 @@ limits==5.6.0
 slowapi==0.1.9
 wrapt==2.0.1
 openpyxl==3.1.5
+razorpay==2.0.0
