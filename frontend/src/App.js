@@ -4,6 +4,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { SettingsProvider } from "./context/SettingsContext";
 import { CompanyAuthProvider } from "./context/CompanyAuthContext";
 import { EngineerAuthProvider } from "./context/EngineerAuthContext";
+import { TenantProvider } from "./context/TenantContext";
 
 // Public Pages
 import LandingPage from "./pages/public/LandingPage";
