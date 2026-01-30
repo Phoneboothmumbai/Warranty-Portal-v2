@@ -73,6 +73,7 @@ const navGroups = [
     icon: Settings,
     items: [
       { path: '/admin/organization', label: 'Organization', icon: Building2 },
+      { path: '/admin/static-pages', label: 'Static Pages', icon: FileText },
       { path: '/admin/master-data', label: 'Master Data', icon: Database },
       { path: '/admin/ticketing-settings', label: 'Ticketing Config', icon: Inbox },
       { path: '/admin/settings', label: 'Settings', icon: Settings },
