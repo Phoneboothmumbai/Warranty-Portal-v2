@@ -1,6 +1,14 @@
 # Warranty & Asset Tracking Portal - PRD
 
 ## CHANGELOG
+- **2026-01-30**: Editable Static Pages Implementation
+  - **5 Default Pages**: Contact Us, Privacy Policy, Terms of Service, Refund Policy, Disclaimer
+  - **Admin Editor**: HTML content editor with publish/unpublish toggle
+  - **Public Display**: Clean page rendering at `/page/[slug]`
+  - **Landing Page Footer**: Added all legal and quick links
+  - Backend: `/api/pages/*`, `/api/admin/pages/*` routes
+  - Frontend: StaticPage.js (public), StaticPages.js (admin)
+
 - **2026-01-30**: Self-Signup & Razorpay Billing Implementation
   - **Public Signup Page** (`/signup`): 3-step wizard (Plan Selection → Account Details → Payment)
   - **Razorpay Integration**: Subscription billing with webhooks for payment events
