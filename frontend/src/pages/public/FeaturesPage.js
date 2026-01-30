@@ -100,10 +100,10 @@ const FeaturesPage = () => {
             Features
           </span>
           <h1 className="text-4xl md:text-6xl font-bold text-slate-900 tracking-tight mb-6 font-display">
-            Powerful features for<br />modern IT teams
+            Everything MSPs Need<br />to Scale Service Delivery
           </h1>
           <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
-            Everything you need to track assets, manage warranties, handle service requests, and maintain compliance—all in one platform.
+            Purpose-built for IT service providers. Manage multiple clients, track assets across organizations, handle tickets professionally, and grow your MSP business.
           </p>
         </div>
       </section>
