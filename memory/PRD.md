@@ -5,6 +5,21 @@
 
 ## CHANGELOG
 
+### 2026-01-30: P0 Signup Bug Fix & 4-Level SaaS Architecture (Complete)
+- **P0 FIX: Signup Flow**: Fixed critical bug where signup created `organization_member` but not `admins` record
+  - Now creates records in BOTH `admins` and `organization_members` collections
+  - Login at `/api/auth/login` now works immediately after signup
+  - Token includes organization context for proper tenant scoping
+- **5-Tier Role System Implementation**: Added comprehensive role system to `OrganizationMember` model
+  - `msp_admin`: Full tenant access, can manage all companies
+  - `msp_technician`: Access to assigned companies only
+  - `company_admin`: Admin of specific client company
+  - `company_employee`: Regular company user
+  - `external_customer`: Limited external access
+- **Technician Assignment Model**: Created `/app/backend/models/technician_assignment.py` for granular MSP technician-to-company assignments
+- **Platform Admin noindex**: Added SEO protection to prevent search engine indexing of platform admin pages
+- **All tests passed**: 100% backend (16/16) and frontend success rate
+
 ### 2026-01-30: Subdomain-Based Multi-Tenancy (Complete)
 - **Tenant Resolution Middleware**: Extracts tenant from subdomain, X-Tenant-Slug header, or ?_tenant query param
 - **Tenant-Aware Login**: Login endpoint validates user belongs to resolved tenant
