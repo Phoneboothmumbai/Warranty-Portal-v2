@@ -5938,8 +5938,13 @@ async def engineer_check_out(
 @api_router.get("/admin/engineers")
 async def list_engineers(admin: dict = Depends(get_current_admin)):
     """List all engineers"""
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    query = {"is_deleted": {"$ne": True}}
+    query = scope_query(query, org_id)
+    
     engineers = await db.engineers.find(
-        {"is_deleted": {"$ne": True}},
+        query,
         {"_id": 0, "password_hash": 0}
     ).sort("name", 1).to_list(100)
     return engineers
@@ -5948,8 +5953,13 @@ async def list_engineers(admin: dict = Depends(get_current_admin)):
 @api_router.post("/admin/engineers")
 async def create_engineer(engineer_data: EngineerCreate, admin: dict = Depends(get_current_admin)):
     """Create a new engineer"""
-    # Check if email exists
-    existing = await db.engineers.find_one({"email": engineer_data.email, "is_deleted": {"$ne": True}})
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    
+    # Check if email exists within tenant
+    email_query = {"email": engineer_data.email, "is_deleted": {"$ne": True}}
+    email_query = scope_query(email_query, org_id)
+    existing = await db.engineers.find_one(email_query)
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
@@ -5960,7 +5970,12 @@ async def create_engineer(engineer_data: EngineerCreate, admin: dict = Depends(g
         password_hash=get_password_hash(engineer_data.password)
     )
     
-    await db.engineers.insert_one(engineer.model_dump())
+    # Add organization_id
+    engineer_dict = engineer.model_dump()
+    if org_id:
+        engineer_dict["organization_id"] = org_id
+    
+    await db.engineers.insert_one(engineer_dict)
     
     return {
         "id": engineer.id,
@@ -5977,14 +5992,19 @@ async def update_engineer(
     admin: dict = Depends(get_current_admin)
 ):
     """Update engineer"""
-    engineer = await db.engineers.find_one({"id": engineer_id, "is_deleted": {"$ne": True}})
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    query = {"id": engineer_id, "is_deleted": {"$ne": True}}
+    query = scope_query(query, org_id)
+    
+    engineer = await db.engineers.find_one(query)
     if not engineer:
         raise HTTPException(status_code=404, detail="Engineer not found")
     
     update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
     
     if update_dict:
-        await db.engineers.update_one({"id": engineer_id}, {"$set": update_dict})
+        await db.engineers.update_one(query, {"$set": update_dict})
     
     return {"success": True}
 
@@ -5992,8 +6012,13 @@ async def update_engineer(
 @api_router.delete("/admin/engineers/{engineer_id}")
 async def delete_engineer(engineer_id: str, admin: dict = Depends(get_current_admin)):
     """Delete engineer"""
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    query = {"id": engineer_id}
+    query = scope_query(query, org_id)
+    
     await db.engineers.update_one(
-        {"id": engineer_id},
+        query,
         {"$set": {"is_deleted": True}}
     )
     return {"success": True}
