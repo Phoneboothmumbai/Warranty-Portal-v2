@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Building2, Users, Laptop, Wrench, 
-  FileCheck, Settings, LogOut, Shield, Menu, X, ChevronRight, ChevronDown, Database, History, FileText, MapPin, Package, Key, ShoppingBag, ClipboardList, UserCircle, Mail, Keyboard, Layers, AlertTriangle, Briefcase, HardDrive, FileBarChart, Globe, Lock, Sparkles, Inbox, Monitor, BookOpen
+  FileCheck, Settings, LogOut, Shield, Menu, X, ChevronRight, ChevronDown, Database, History, FileText, MapPin, Package, Key, ShoppingBag, ClipboardList, UserCircle, Mail, Keyboard, Layers, AlertTriangle, Briefcase, HardDrive, FileBarChart, Globe, Lock, Sparkles, Inbox, Monitor, BookOpen, UserCog
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useBranding } from '../contexts/BrandingContext';
 import { Button } from '../components/ui/button';
 import UniversalSearch from '../components/UniversalSearch';
+import CompanySwitcher from '../components/CompanySwitcher';
 
 // Grouped navigation structure
 const navGroups = [
@@ -32,6 +33,7 @@ const navGroups = [
       { path: '/admin/sites', label: 'Sites', icon: MapPin },
       { path: '/admin/users', label: 'Users', icon: Users },
       { path: '/admin/employees', label: 'Employees', icon: UserCircle },
+      { path: '/admin/team', label: 'Team Members', icon: UserCog },
     ]
   },
   {
