@@ -201,116 +201,88 @@ const LandingPage = () => {
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-tr from-slate-100 to-transparent rounded-full blur-3xl opacity-40 translate-y-1/2 -translate-x-1/2" />
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            {/* Left Content */}
-            <div className="text-left">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-full mb-8">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                </span>
-                <span className="text-sm font-medium text-blue-700">Enterprise Asset Management</span>
-              </div>
-
-              {/* Heading */}
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-slate-900 tracking-tight leading-[1.1] mb-6 font-display" data-testid="hero-heading">
-                Track Every Asset.
-                <br />
-                <span className="text-[#0F62FE]">Never Miss a Warranty.</span>
-              </h1>
-
-              {/* Subheading */}
-              <p className="text-lg md:text-xl text-slate-600 mb-10 max-w-xl leading-relaxed">
-                The complete platform for IT asset tracking, warranty management, service tickets, and AMC contracts. Built for enterprises that demand reliability.
-              </p>
-
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-12">
-                <Link to="/signup">
-                  <Button className="bg-[#0F62FE] hover:bg-[#0043CE] text-white px-8 py-4 h-auto text-base rounded-xl font-semibold transition-all hover:-translate-y-1 hover:shadow-xl shadow-lg shadow-blue-500/25" data-testid="hero-cta-primary">
-                    Start Free Trial
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
-                <Link to="/features">
-                  <Button variant="outline" className="px-8 py-4 h-auto text-base rounded-xl font-semibold border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all" data-testid="hero-cta-secondary">
-                    <Play className="mr-2 h-5 w-5 text-[#0F62FE]" />
-                    See How It Works
-                  </Button>
-                </Link>
-              </div>
-
-              {/* Stats */}
-              <div className="flex flex-wrap gap-8">
-                {stats.map((stat, index) => (
-                  <div key={index} className="text-left">
-                    <div className="text-2xl md:text-3xl font-bold text-slate-900 font-display">{stat.value}</div>
-                    <div className="text-sm text-slate-500">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
+          <div className="max-w-4xl mx-auto text-center">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-full mb-8">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+              </span>
+              <span className="text-sm font-medium text-blue-700">Enterprise Asset Management Platform</span>
             </div>
 
-            {/* Right Content - Warranty Search Card */}
-            <div className="relative">
-              <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200/50 border border-slate-100 p-8 md:p-10" data-testid="warranty-search-card">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center">
-                    <Search className="h-6 w-6 text-emerald-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-slate-900 font-display">Warranty Lookup</h3>
-                    <p className="text-sm text-slate-500">Check status instantly</p>
-                  </div>
+            {/* Heading */}
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-slate-900 tracking-tight leading-[1.1] mb-6 font-display" data-testid="hero-heading">
+              Track Every Asset.
+              <br />
+              <span className="text-[#0F62FE]">Never Miss a Warranty.</span>
+            </h1>
+
+            {/* Subheading */}
+            <p className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+              The complete platform for IT asset tracking, warranty management, service tickets, and AMC contracts. Built for enterprises that demand reliability.
+            </p>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+              <Link to="/signup">
+                <Button className="bg-[#0F62FE] hover:bg-[#0043CE] text-white px-8 py-4 h-auto text-base rounded-xl font-semibold transition-all hover:-translate-y-1 hover:shadow-xl shadow-lg shadow-blue-500/25" data-testid="hero-cta-primary">
+                  Start Free Trial
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+              <Link to="/features">
+                <Button variant="outline" className="px-8 py-4 h-auto text-base rounded-xl font-semibold border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all" data-testid="hero-cta-secondary">
+                  <Play className="mr-2 h-5 w-5 text-[#0F62FE]" />
+                  See How It Works
+                </Button>
+              </Link>
+            </div>
+
+            {/* Stats */}
+            <div className="flex flex-wrap justify-center gap-12">
+              {stats.map((stat, index) => (
+                <div key={index} className="text-center">
+                  <div className="text-3xl md:text-4xl font-bold text-slate-900 font-display">{stat.value}</div>
+                  <div className="text-sm text-slate-500">{stat.label}</div>
                 </div>
+              ))}
+            </div>
+          </div>
 
-                <form onSubmit={handleSearch} className="space-y-4">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={query}
-                      onChange={(e) => { setQuery(e.target.value); setError(''); }}
-                      placeholder="Enter Serial Number or Asset Tag"
-                      className="w-full px-5 py-4 bg-slate-50 border border-transparent rounded-xl text-base font-mono focus:bg-white focus:border-[#0F62FE] focus:ring-4 focus:ring-blue-50 transition-all outline-none"
-                      data-testid="warranty-search-input"
-                    />
+          {/* Dashboard Preview */}
+          <div className="mt-20 relative">
+            <div className="bg-slate-900 rounded-2xl p-2 shadow-2xl shadow-slate-300/50 max-w-5xl mx-auto">
+              <div className="bg-slate-800 rounded-xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  <span className="ml-4 text-sm text-slate-400 font-mono">dashboard.assetvault.io</span>
+                </div>
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="bg-slate-700/50 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-white font-display">847</div>
+                    <div className="text-xs text-slate-400">Total Assets</div>
                   </div>
-                  {error && (
-                    <p className="text-red-500 text-sm" data-testid="search-error">{error}</p>
-                  )}
-                  <Button 
-                    type="submit"
-                    className="w-full bg-slate-900 hover:bg-slate-800 text-white py-4 h-auto text-base rounded-xl font-semibold transition-all hover:-translate-y-0.5"
-                    data-testid="warranty-search-btn"
-                  >
-                    Check Warranty Status
-                    <ChevronRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </form>
-
-                <div className="mt-6 pt-6 border-t border-slate-100">
-                  <div className="flex items-center gap-4 text-sm text-slate-500">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                      Real-time data
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                      PDF reports
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                      Secure
-                    </div>
+                  <div className="bg-slate-700/50 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-emerald-400 font-display">92%</div>
+                    <div className="text-xs text-slate-400">Under Warranty</div>
+                  </div>
+                  <div className="bg-slate-700/50 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-amber-400 font-display">23</div>
+                    <div className="text-xs text-slate-400">Expiring Soon</div>
+                  </div>
+                  <div className="bg-slate-700/50 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-blue-400 font-display">12</div>
+                    <div className="text-xs text-slate-400">Active Tickets</div>
                   </div>
                 </div>
               </div>
-
-              {/* Floating Elements */}
-              <div className="absolute -top-6 -right-6 w-24 h-24 bg-blue-100 rounded-2xl rotate-12 -z-10"></div>
-              <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-emerald-100 rounded-2xl -rotate-12 -z-10"></div>
             </div>
+            {/* Decorative Elements */}
+            <div className="absolute -top-4 -left-4 w-20 h-20 bg-blue-100 rounded-2xl rotate-12 -z-10"></div>
+            <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-emerald-100 rounded-2xl -rotate-12 -z-10"></div>
           </div>
         </div>
       </section>
