@@ -1530,16 +1530,44 @@ async def create_quick_service_request(identifier: str, request: QuickServiceReq
 @api_router.post("/auth/login", response_model=Token)
 @limiter.limit(RATE_LIMITS["login"])
 async def admin_login(request: Request, login: AdminLogin):
-    """Admin login with rate limiting (5 attempts/minute per IP)"""
+    """
+    Admin login with tenant-aware authentication.
+    
+    If tenant context is present (from subdomain/header), validates that user
+    belongs to that tenant. This enforces subdomain-based access control.
+    """
+    # Get tenant context from middleware
+    tenant = getattr(request.state, "tenant", None)
+    tenant_id = getattr(request.state, "tenant_id", None)
+    
+    # Find admin by email
     admin = await db.admins.find_one({"email": login.email}, {"_id": 0})
     if not admin or not verify_password(login.password, admin.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # Check if admin has an organization member entry
-    org_member = await db.organization_members.find_one(
-        {"email": login.email, "is_active": True, "is_deleted": {"$ne": True}},
-        {"_id": 0}
-    )
+    org_member_query = {"email": login.email, "is_active": True, "is_deleted": {"$ne": True}}
+    
+    # If tenant context exists, enforce tenant match
+    if tenant_id:
+        org_member_query["organization_id"] = tenant_id
+    
+    org_member = await db.organization_members.find_one(org_member_query, {"_id": 0})
+    
+    # Tenant-aware validation
+    if tenant_id:
+        # Tenant context exists - user MUST belong to this tenant
+        if not org_member:
+            # User exists but not in this tenant - generic error (no information leakage)
+            logger.warning(f"Login attempt for user not in tenant: email={login.email}, tenant={tenant.get('slug') if tenant else 'unknown'}")
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        # Check if tenant is accessible
+        if tenant and tenant.get("status") in ["suspended", "churned"]:
+            raise HTTPException(
+                status_code=403, 
+                detail=f"This workspace is currently {tenant.get('status')}. Please contact support."
+            )
     
     token_data = {"sub": admin["email"]}
     
@@ -1551,10 +1579,25 @@ async def admin_login(request: Request, login: AdminLogin):
         token_data["role"] = org_member.get("role", "member")
     
     access_token = create_access_token(data=token_data)
-    return {"access_token": access_token, "token_type": "bearer"}
+    
+    # Include tenant context in response for frontend
+    response = {"access_token": access_token, "token_type": "bearer"}
+    
+    if tenant:
+        response["tenant"] = {
+            "id": tenant.get("id"),
+            "name": tenant.get("name"),
+            "slug": tenant.get("slug")
+        }
+    
+    return response
 
 @api_router.get("/auth/me")
-async def get_current_admin_info(admin: dict = Depends(get_current_admin)):
+async def get_current_admin_info(request: Request, admin: dict = Depends(get_current_admin)):
+    """Get current admin info with tenant context"""
+    # Get tenant from request state (set by middleware)
+    request_tenant = getattr(request.state, "tenant", None)
+    
     # Check for organization context
     org_member = await db.organization_members.find_one(
         {"email": admin.get("email"), "is_active": True, "is_deleted": {"$ne": True}},
@@ -1568,7 +1611,7 @@ async def get_current_admin_info(admin: dict = Depends(get_current_admin)):
             {"_id": 0}
         )
     
-    return {
+    response = {
         "id": admin.get("id"),
         "email": admin.get("email"),
         "name": admin.get("name"),
@@ -1577,6 +1620,19 @@ async def get_current_admin_info(admin: dict = Depends(get_current_admin)):
         "organization_name": organization.get("name") if organization else None,
         "org_role": org_member.get("role") if org_member else None
     }
+    
+    # Include branding if organization exists
+    if organization:
+        branding = organization.get("branding", {})
+        response["branding"] = {
+            "logo_url": branding.get("logo_url"),
+            "logo_base64": branding.get("logo_base64"),
+            "accent_color": branding.get("accent_color", "#0F62FE"),
+            "company_name": branding.get("company_name") or organization.get("name")
+        }
+    
+    return response
+
 
 @api_router.post("/auth/setup")
 @limiter.limit(RATE_LIMITS["register"])
