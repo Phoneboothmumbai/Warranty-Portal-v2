@@ -2871,7 +2871,12 @@ async def list_devices(
 
 @api_router.post("/admin/devices")
 async def create_device(device_data: DeviceCreate, admin: dict = Depends(get_current_admin)):
-    company = await db.companies.find_one({"id": device_data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    company_query = {"id": device_data.company_id, "is_deleted": {"$ne": True}}
+    company_query = scope_query(company_query, org_id)
+    
+    company = await db.companies.find_one(company_query, {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
@@ -2881,6 +2886,11 @@ async def create_device(device_data: DeviceCreate, admin: dict = Depends(get_cur
     
     # Filter out None values to avoid validation errors with default_factory fields
     device_dict = {k: v for k, v in device_data.model_dump().items() if v is not None}
+    
+    # Add organization_id for multi-tenancy
+    if org_id:
+        device_dict["organization_id"] = org_id
+    
     device = Device(**device_dict)
     await db.devices.insert_one(device.model_dump())
     
