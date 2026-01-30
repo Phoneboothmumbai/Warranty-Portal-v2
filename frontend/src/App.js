@@ -224,6 +224,7 @@ function App() {
         </CompanyAuthProvider>
       </BrandingProvider>
     </AuthProvider>
+  </TenantProvider>
   </SettingsProvider>
 );
 }
