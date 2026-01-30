@@ -111,7 +111,9 @@ const CompanyAMCOnboarding = () => {
       domain_names: [],
       licenses: [],
       has_vpn: false,
+      vpn_type: '',
       has_password_manager: false,
+      password_manager_name: '',
       additional_software: '',
     },
     step7: {
