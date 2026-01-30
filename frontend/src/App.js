@@ -51,6 +51,7 @@ import AdminTicketDetail from "./pages/admin/AdminTicketDetail";
 import TicketingSettings from "./pages/admin/TicketingSettings";
 import OrganizationSettings from "./pages/admin/OrganizationSettings";
 import TacticalRMMIntegration from "./pages/admin/TacticalRMMIntegration";
+import KnowledgeBase from "./pages/admin/KnowledgeBase";
 
 // Platform Super Admin Pages
 import PlatformLogin from "./pages/platform/PlatformLogin";
