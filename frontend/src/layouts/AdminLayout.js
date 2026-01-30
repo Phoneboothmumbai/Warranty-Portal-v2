@@ -16,6 +16,7 @@ const navGroups = [
     id: 'main',
     items: [
       { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { path: '/admin/usage', label: 'Usage & Limits', icon: Layers },
       { path: '/admin/tickets', label: 'Support Tickets', icon: Inbox },
       { path: '/admin/renewal-alerts', label: 'Renewal Alerts', icon: AlertTriangle },
       { path: '/admin/credentials', label: 'Credentials', icon: Lock },
@@ -27,6 +28,7 @@ const navGroups = [
     icon: Building2,
     items: [
       { path: '/admin/companies', label: 'Companies', icon: Building2 },
+      { path: '/admin/company-domains', label: 'Email Domains', icon: Globe },
       { path: '/admin/sites', label: 'Sites', icon: MapPin },
       { path: '/admin/users', label: 'Users', icon: Users },
       { path: '/admin/employees', label: 'Employees', icon: UserCircle },
