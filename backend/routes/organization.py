@@ -61,7 +61,10 @@ async def list_subscription_plans():
 async def signup_organization(data: OrganizationCreate):
     """
     Public endpoint to create a new organization (tenant).
-    Creates the organization and the owner admin user.
+    Creates the organization, the owner admin user in both collections.
+    
+    FIX: Creates records in BOTH 'admins' and 'organization_members' collections
+    to ensure login works via /api/auth/login endpoint.
     """
     # Validate slug format
     slug = generate_slug(data.slug or data.name)
@@ -72,12 +75,16 @@ async def signup_organization(data: OrganizationCreate):
         # Try to make it unique
         slug = f"{slug}-{str(uuid.uuid4())[:6]}"
     
-    # Check if owner email is already used
+    # Check if owner email is already used in either collection
     existing_member = await _db.organization_members.find_one(
         {"email": data.owner_email.lower()},
         {"_id": 0}
     )
-    if existing_member:
+    existing_admin = await _db.admins.find_one(
+        {"email": data.owner_email.lower()},
+        {"_id": 0}
+    )
+    if existing_member or existing_admin:
         raise HTTPException(
             status_code=400,
             detail="Email already registered. Please login or use a different email."
@@ -85,6 +92,9 @@ async def signup_organization(data: OrganizationCreate):
     
     # Calculate trial end date (14 days from now)
     trial_ends = datetime.now(timezone.utc) + timedelta(days=14)
+    
+    # Hash password once for both records
+    password_hash = get_password_hash(data.owner_password)
     
     # Create organization
     org = Organization(
@@ -105,29 +115,46 @@ async def signup_organization(data: OrganizationCreate):
         company_size=data.company_size
     )
     
-    # Create owner member
+    # Generate a shared user ID for consistency across collections
+    user_id = str(uuid.uuid4())
+    
+    # Create owner member (for organization-scoped access)
     member = OrganizationMember(
         organization_id=org.id,
         email=data.owner_email.lower(),
         name=data.owner_name,
-        password_hash=get_password_hash(data.owner_password),
+        password_hash=password_hash,
         phone=data.phone,
         role="owner",
         permissions=["all"]  # Owner has all permissions
     )
+    member.id = user_id  # Use shared ID
+    
+    # Create admin record (for /api/auth/login compatibility)
+    # This is required because admin_login() checks db.admins collection first
+    admin_record = {
+        "id": user_id,
+        "email": data.owner_email.lower(),
+        "name": data.owner_name,
+        "password_hash": password_hash,
+        "role": "admin",
+        "created_at": get_ist_isoformat()
+    }
     
     # Update organization with owner ID
     org.owner_user_id = member.id
     
-    # Save to database
+    # Save to database - both collections for login compatibility
     await _db.organizations.insert_one(org.model_dump())
     await _db.organization_members.insert_one(member.model_dump())
+    await _db.admins.insert_one(admin_record)  # FIX: Create admin record for login
     
     # Create access token
     access_token = create_access_token(
         data={
-            "sub": member.id,
+            "sub": data.owner_email.lower(),  # Use email for token subject (matches login flow)
             "organization_id": org.id,
+            "org_member_id": member.id,
             "type": "org_member",
             "role": member.role
         }
