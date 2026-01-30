@@ -145,22 +145,25 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 - ✅ **Tenant Scoping Audit** - All admin APIs now filter by organization_id
 - ✅ **Knowledge Base System** - Full CRUD with tenant scoping
 - ✅ **Platform Super Admin Portal** - Full build-out complete
+- ✅ **P0 Signup Bug Fix** - Signup now creates records in both admins and organization_members collections
 
 ### P1 - In Progress
+- [ ] **5-Tier Role System UI** - Frontend components for role-based access control
+- [ ] **Technician Assignment Management** - UI for MSP admins to assign technicians to companies
+- [ ] **Company Switcher** - UI component for MSP users to switch between assigned companies
 - [ ] **Custom Domains** (Phase 2) - DNS verification, SSL automation (deferred to later)
 - [ ] **Finalize Razorpay Integration** - Need API keys (KEY_ID, KEY_SECRET)
 - [ ] **Finalize Tactical RMM Integration** - Need API URL & Key
-- [ ] **Add Dashboard Screenshots to Features Page**
 
 ### P2 - Upcoming
 - [ ] Scheduled Email Sync - Background task for IMAP
 - [ ] SLA Breach Checking - Automated background task
 - [ ] Auto-Escalation for tickets
+- [ ] Add Dashboard Screenshots to Features Page
 
 ### P3 - Future/Backlog
 - [ ] White-labeling (Advanced) - Custom email domains
 - [ ] Integrations for other RMMs (NinjaRMM, ConnectWise)
-- [ ] Tenant-level RBAC
 - [ ] PDF Export for service history reports
 - [ ] Full Refactor of `server.py` into modular routes
 
