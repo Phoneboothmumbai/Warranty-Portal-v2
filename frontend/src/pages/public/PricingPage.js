@@ -330,24 +330,20 @@ const PricingPage = () => {
         </div>
       </section>
 
-      {/* FAQs */}
-      <section className="py-20 md:py-24">
+      {/* FAQ */}
+      <section className="py-16 md:py-20 bg-white border-t border-slate-100">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 text-center mb-4 font-display">
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 text-center mb-12">
             Frequently asked questions
           </h2>
-          <p className="text-lg text-slate-600 text-center mb-12">
-            Can't find what you're looking for? <Link to="/page/contact-us" className="text-[#0F62FE] hover:underline">Contact us</Link>
-          </p>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             {faqs.map((faq, index) => (
-              <div key={index} className="p-6 bg-white rounded-2xl border border-slate-200">
-                <h3 className="flex items-center gap-3 font-semibold text-slate-900 mb-3">
-                  <HelpCircle className="h-5 w-5 text-[#0F62FE] flex-shrink-0" />
+              <div key={index} className="p-6 bg-white rounded-lg border border-slate-200">
+                <h3 className="font-medium text-slate-900 mb-2">
                   {faq.question}
                 </h3>
-                <p className="text-slate-600 leading-relaxed pl-8">
+                <p className="text-slate-600 text-sm leading-relaxed">
                   {faq.answer}
                 </p>
               </div>
