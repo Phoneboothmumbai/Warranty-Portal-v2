@@ -1,9 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
+import { Textarea } from '../../components/ui/textarea';
+import { Switch } from '../../components/ui/switch';
 import { toast } from 'sonner';
-import { Building2, Users, HardDrive, Ticket, Settings, CreditCard, Shield, Palette } from 'lucide-react';
+import { 
+  Building2, Users, HardDrive, Ticket, Settings, CreditCard, Shield, Palette,
+  Upload, Globe, Mail, Image, Eye, Loader2, CheckCircle, AlertCircle
+} from 'lucide-react';
 import axios from 'axios';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -19,8 +26,35 @@ export default function OrganizationSettings() {
   const [organization, setOrganization] = useState(null);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [branding, setBranding] = useState({
+    company_name: '',
+    logo_url: '',
+    logo_base64: '',
+    accent_color: '#0F62FE',
+    favicon_url: '',
+    custom_domain: '',
+    support_email: '',
+    footer_text: '',
+    hide_powered_by: false,
+    custom_css: ''
+  });
+  const [emailSettings, setEmailSettings] = useState({
+    email_from_name: '',
+    email_from_address: '',
+    smtp_host: '',
+    smtp_port: 587,
+    smtp_username: '',
+    smtp_password: '',
+    imap_host: '',
+    imap_port: 993,
+    imap_username: '',
+    imap_password: ''
+  });
+  const logoInputRef = useRef(null);
   const token = localStorage.getItem('admin_token');
+  const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
     fetchOrganization();
@@ -29,12 +63,17 @@ export default function OrganizationSettings() {
 
   const fetchOrganization = async () => {
     try {
-      const response = await axios.get(`${API}/api/org/current`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axios.get(`${API}/api/org/current`, { headers });
       setOrganization(response.data);
+      
+      // Populate branding form
+      if (response.data.branding) {
+        setBranding(prev => ({ ...prev, ...response.data.branding }));
+      }
+      if (response.data.settings) {
+        setEmailSettings(prev => ({ ...prev, ...response.data.settings }));
+      }
     } catch (error) {
-      // If no org context, might be legacy admin
       if (error.response?.data?.is_legacy_admin) {
         toast.info('Please migrate to the organization model for full features');
       } else {
@@ -54,23 +93,57 @@ export default function OrganizationSettings() {
     }
   };
 
-  const handleUpgrade = async (planId) => {
+  const handleLogoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Logo must be less than 2MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setBranding(prev => ({ ...prev, logo_base64: reader.result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const saveBranding = async () => {
+    setSaving(true);
     try {
-      await axios.post(`${API}/api/org/subscription/upgrade`, 
-        { plan: planId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success('Plan upgraded successfully!');
+      await axios.put(`${API}/api/org/current/branding`, branding, { headers });
+      toast.success('Branding settings saved');
       fetchOrganization();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to upgrade plan');
+      toast.error(error.response?.data?.detail || 'Failed to save branding');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveEmailSettings = async () => {
+    setSaving(true);
+    try {
+      await axios.put(`${API}/api/org/current/settings`, emailSettings, { headers });
+      toast.success('Email settings saved');
+      fetchOrganization();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save settings');
+    } finally {
+      setSaving(false);
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     );
   }
@@ -84,7 +157,6 @@ export default function OrganizationSettings() {
             <h3 className="text-lg font-medium">Organization Not Found</h3>
             <p className="text-slate-500 mt-2">
               Your account hasn't been migrated to the new multi-tenant model yet.
-              Please contact support for assistance.
             </p>
           </CardContent>
         </Card>
@@ -95,45 +167,14 @@ export default function OrganizationSettings() {
   const plan = organization.subscription?.plan || 'trial';
   const limits = organization.plan_limits || {};
   const usage = organization.usage || {};
+  const isPremium = ['professional', 'enterprise'].includes(plan);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Building2 },
+    { id: 'branding', label: 'White Label', icon: Palette },
+    { id: 'email', label: 'Email Config', icon: Mail },
     { id: 'billing', label: 'Billing', icon: CreditCard },
-    { id: 'branding', label: 'Branding', icon: Palette },
-    { id: 'settings', label: 'Settings', icon: Settings },
   ];
-
-  const UsageCard = ({ label, icon: Icon, current, max }) => {
-    const isUnlimited = max === -1;
-    const percentage = isUnlimited ? 0 : (current / max) * 100;
-    const isWarning = percentage > 80;
-    const isCritical = percentage > 95;
-
-    return (
-      <div className="bg-white rounded-lg border p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <div className={`p-2 rounded-lg ${isCritical ? 'bg-red-100' : isWarning ? 'bg-amber-100' : 'bg-blue-100'}`}>
-            <Icon className={`w-5 h-5 ${isCritical ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-blue-600'}`} />
-          </div>
-          <span className="font-medium text-slate-700">{label}</span>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-bold text-slate-900">{current}</span>
-          <span className="text-slate-500">/ {isUnlimited ? '∞' : max}</span>
-        </div>
-        {!isUnlimited && (
-          <div className="mt-2 bg-slate-200 rounded-full h-2 overflow-hidden">
-            <div 
-              className={`h-full transition-all ${
-                isCritical ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-blue-500'
-              }`}
-              style={{ width: `${Math.min(percentage, 100)}%` }}
-            />
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div className="p-6 max-w-6xl mx-auto" data-testid="organization-settings">
@@ -143,23 +184,20 @@ export default function OrganizationSettings() {
           <h1 className="text-2xl font-bold text-slate-900">{organization.name}</h1>
           <p className="text-slate-500">{organization.slug}.yourportal.com</p>
         </div>
-        <Badge 
-          variant={PLAN_BADGES[plan]?.variant || 'outline'}
-          className="text-sm px-3 py-1"
-        >
+        <Badge variant={PLAN_BADGES[plan]?.variant || 'outline'} className="text-sm px-3 py-1">
           {PLAN_BADGES[plan]?.label || plan}
         </Badge>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b">
+      <div className="flex border-b mb-6">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
-              activeTab === tab.id 
-                ? 'border-blue-600 text-blue-600' 
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === tab.id
+                ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -169,273 +207,456 @@ export default function OrganizationSettings() {
         ))}
       </div>
 
-      {/* Tab Content */}
+      {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          {/* Usage Stats */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Usage</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <UsageCard 
-                label="Companies" 
-                icon={Building2} 
-                current={usage.companies || 0} 
-                max={limits.companies || 5} 
-              />
-              <UsageCard 
-                label="Devices" 
-                icon={HardDrive} 
-                current={usage.devices || 0} 
-                max={limits.devices || 100} 
-              />
-              <UsageCard 
-                label="Users" 
-                icon={Users} 
-                current={usage.users || 0} 
-                max={limits.users || 10} 
-              />
-              <UsageCard 
-                label="Tickets/Month" 
-                icon={Ticket} 
-                current={organization.subscription?.tickets_this_month || 0} 
-                max={limits.tickets_per_month || 500} 
-              />
-            </div>
-          </div>
-
-          {/* Quick Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Organization Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Status</span>
-                  <Badge variant={organization.status === 'active' ? 'default' : 'secondary'}>
-                    {organization.status}
-                  </Badge>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <Building2 className="w-5 h-5 text-blue-500" />
+                  <span className="text-sm text-slate-600">Clients</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Owner</span>
-                  <span>{organization.owner_email}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Created</span>
-                  <span>{new Date(organization.created_at).toLocaleDateString()}</span>
-                </div>
-                {organization.industry && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Industry</span>
-                    <span>{organization.industry}</span>
-                  </div>
-                )}
+                <div className="text-2xl font-bold">{usage.companies || 0} / {limits.max_companies === -1 ? '∞' : limits.max_companies}</div>
               </CardContent>
             </Card>
-
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Subscription</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Current Plan</span>
-                  <span className="font-medium">{PLAN_BADGES[plan]?.label}</span>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <HardDrive className="w-5 h-5 text-emerald-500" />
+                  <span className="text-sm text-slate-600">Devices</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Billing Cycle</span>
-                  <span className="capitalize">{organization.subscription?.billing_cycle || 'monthly'}</span>
+                <div className="text-2xl font-bold">{usage.devices || 0} / {limits.max_devices === -1 ? '∞' : limits.max_devices}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <Users className="w-5 h-5 text-purple-500" />
+                  <span className="text-sm text-slate-600">Users</span>
                 </div>
-                {organization.subscription?.current_period_end && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Renews On</span>
-                    <span>{new Date(organization.subscription.current_period_end).toLocaleDateString()}</span>
-                  </div>
-                )}
-                {plan === 'trial' && organization.subscription?.trial_ends_at && (
-                  <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                    <p className="text-sm text-amber-700">
-                      <strong>Trial ends:</strong> {new Date(organization.subscription.trial_ends_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                )}
+                <div className="text-2xl font-bold">{usage.users || 0} / {limits.max_users === -1 ? '∞' : limits.max_users}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <Ticket className="w-5 h-5 text-amber-500" />
+                  <span className="text-sm text-slate-600">Tickets/mo</span>
+                </div>
+                <div className="text-2xl font-bold">{usage.tickets_this_month || 0} / {limits.max_tickets_per_month === -1 ? '∞' : limits.max_tickets_per_month}</div>
               </CardContent>
             </Card>
           </div>
-        </div>
-      )}
 
-      {activeTab === 'billing' && (
-        <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Subscription Plans</CardTitle>
-              <CardDescription>Choose the plan that best fits your needs</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {plans.map(p => {
-                  const isCurrent = p.id === plan;
-                  const isEnterprise = p.id === 'enterprise';
-                  
-                  return (
-                    <div 
-                      key={p.id}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        isCurrent ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      <h4 className="font-semibold text-lg">{p.name}</h4>
-                      <div className="mt-2 mb-4">
-                        {p.price_monthly ? (
-                          <>
-                            <span className="text-2xl font-bold">₹{p.price_monthly.toLocaleString()}</span>
-                            <span className="text-slate-500">/month</span>
-                          </>
-                        ) : (
-                          <span className="text-lg font-medium text-slate-600">
-                            {p.id === 'trial' ? 'Free' : 'Contact Sales'}
-                          </span>
-                        )}
-                      </div>
-                      
-                      <ul className="space-y-2 text-sm text-slate-600 mb-4">
-                        <li>• {p.limits?.companies === -1 ? 'Unlimited' : p.limits?.companies} Companies</li>
-                        <li>• {p.limits?.devices === -1 ? 'Unlimited' : p.limits?.devices} Devices</li>
-                        <li>• {p.limits?.users === -1 ? 'Unlimited' : p.limits?.users} Users</li>
-                      </ul>
-
-                      {isCurrent ? (
-                        <Badge className="w-full justify-center py-2">Current Plan</Badge>
-                      ) : isEnterprise ? (
-                        <Button variant="outline" className="w-full" disabled>
-                          Contact Sales
-                        </Button>
-                      ) : (
-                        <Button 
-                          className="w-full"
-                          onClick={() => handleUpgrade(p.id)}
-                          disabled={p.id === 'trial'}
-                        >
-                          {p.id === 'trial' ? 'Free Trial' : 'Upgrade'}
-                        </Button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {activeTab === 'branding' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Branding Settings</CardTitle>
-            <CardDescription>Customize your portal's appearance</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Accent Color</label>
-                <div className="flex items-center gap-3">
-                  <input 
-                    type="color" 
-                    value={organization.branding?.accent_color || '#0F62FE'}
-                    className="w-10 h-10 rounded cursor-pointer"
-                    onChange={(e) => {
-                      // TODO: Implement update
-                    }}
-                  />
-                  <span className="text-slate-500">{organization.branding?.accent_color || '#0F62FE'}</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Company Name (Display)</label>
-                <input 
-                  type="text"
-                  className="form-input"
-                  defaultValue={organization.branding?.company_name || organization.name}
-                  placeholder="Your Company Name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Logo</label>
-                <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
-                  {organization.branding?.logo_url ? (
-                    <img src={organization.branding.logo_url} alt="Logo" className="max-h-20 mx-auto" />
-                  ) : (
-                    <p className="text-slate-500">Click to upload logo</p>
-                  )}
-                </div>
-              </div>
-
-              <Button className="mt-4">Save Branding</Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {activeTab === 'settings' && (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>General Settings</CardTitle>
+              <CardTitle>Organization Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Timezone</label>
-                  <select className="form-input" defaultValue={organization.settings?.timezone || 'Asia/Kolkata'}>
-                    <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
-                    <option value="America/New_York">America/New_York (EST)</option>
-                    <option value="Europe/London">Europe/London (GMT)</option>
-                  </select>
+                  <Label className="text-slate-500">Organization ID</Label>
+                  <p className="font-mono text-sm">{organization.id}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Date Format</label>
-                  <select className="form-input" defaultValue={organization.settings?.date_format || 'DD/MM/YYYY'}>
-                    <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                    <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                  </select>
+                  <Label className="text-slate-500">Created</Label>
+                  <p>{new Date(organization.created_at).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <Label className="text-slate-500">Status</Label>
+                  <Badge variant={organization.status === 'active' ? 'default' : 'secondary'}>
+                    {organization.status}
+                  </Badge>
+                </div>
+                <div>
+                  <Label className="text-slate-500">Plan</Label>
+                  <p className="capitalize">{plan}</p>
                 </div>
               </div>
-              <Button>Save Settings</Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* White Label Tab */}
+      {activeTab === 'branding' && (
+        <div className="space-y-6">
+          {!isPremium && (
+            <Card className="border-amber-200 bg-amber-50">
+              <CardContent className="p-4 flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+                <div>
+                  <p className="font-medium text-amber-800">White-label features require Professional or Enterprise plan</p>
+                  <p className="text-sm text-amber-600">Upgrade to customize branding for your clients</p>
+                </div>
+                <Button size="sm" className="ml-auto">Upgrade</Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Logo & Identity */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Image className="w-5 h-5" />
+                Logo & Identity
+              </CardTitle>
+              <CardDescription>Customize how your portal appears to clients</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-start gap-6">
+                <div className="flex-shrink-0">
+                  <div className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center bg-slate-50 overflow-hidden">
+                    {branding.logo_base64 || branding.logo_url ? (
+                      <img 
+                        src={branding.logo_base64 || branding.logo_url} 
+                        alt="Logo" 
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <Building2 className="w-8 h-8 text-slate-400" />
+                    )}
+                  </div>
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-2 w-24"
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={!isPremium}
+                  >
+                    <Upload className="w-4 h-4 mr-1" />
+                    Upload
+                  </Button>
+                </div>
+                <div className="flex-1 space-y-4">
+                  <div>
+                    <Label htmlFor="company_name">Display Name</Label>
+                    <Input
+                      id="company_name"
+                      value={branding.company_name}
+                      onChange={e => setBranding({...branding, company_name: e.target.value})}
+                      placeholder="Your Company Name"
+                      disabled={!isPremium}
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Shown in the header and emails</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="accent_color">Brand Color</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        id="accent_color"
+                        value={branding.accent_color || '#0F62FE'}
+                        onChange={e => setBranding({...branding, accent_color: e.target.value})}
+                        className="w-10 h-10 rounded cursor-pointer border"
+                        disabled={!isPremium}
+                      />
+                      <Input
+                        value={branding.accent_color || '#0F62FE'}
+                        onChange={e => setBranding({...branding, accent_color: e.target.value})}
+                        className="w-32 font-mono"
+                        disabled={!isPremium}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Custom Domain */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="w-5 h-5" />
+                Custom Domain
+              </CardTitle>
+              <CardDescription>Use your own domain for the client portal</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="custom_domain">Domain Name</Label>
+                <Input
+                  id="custom_domain"
+                  value={branding.custom_domain}
+                  onChange={e => setBranding({...branding, custom_domain: e.target.value})}
+                  placeholder="support.yourdomain.com"
+                  disabled={!isPremium}
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Add a CNAME record pointing to <code className="bg-slate-100 px-1 rounded">portal.assetvault.io</code>
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="support_email">Support Email</Label>
+                <Input
+                  id="support_email"
+                  type="email"
+                  value={branding.support_email}
+                  onChange={e => setBranding({...branding, support_email: e.target.value})}
+                  placeholder="support@yourdomain.com"
+                  disabled={!isPremium}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Advanced Branding */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Advanced Branding</CardTitle>
+              <CardDescription>Additional customization options</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="footer_text">Custom Footer Text</Label>
+                <Input
+                  id="footer_text"
+                  value={branding.footer_text}
+                  onChange={e => setBranding({...branding, footer_text: e.target.value})}
+                  placeholder="© 2025 Your Company. All rights reserved."
+                  disabled={!isPremium}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Hide "Powered by AssetVault"</Label>
+                  <p className="text-xs text-slate-500">Remove branding from client portal footer</p>
+                </div>
+                <Switch
+                  checked={branding.hide_powered_by}
+                  onCheckedChange={v => setBranding({...branding, hide_powered_by: v})}
+                  disabled={!isPremium}
+                />
+              </div>
+              <div>
+                <Label htmlFor="custom_css">Custom CSS</Label>
+                <Textarea
+                  id="custom_css"
+                  value={branding.custom_css}
+                  onChange={e => setBranding({...branding, custom_css: e.target.value})}
+                  placeholder=".custom-header { background: #your-color; }"
+                  rows={4}
+                  className="font-mono text-sm"
+                  disabled={!isPremium}
+                />
+                <p className="text-xs text-slate-500 mt-1">Advanced: Add custom CSS to override portal styles</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end">
+            <Button onClick={saveBranding} disabled={saving || !isPremium}>
+              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+              Save Branding Settings
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Email Config Tab */}
+      {activeTab === 'email' && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="w-5 h-5" />
+                Email Sender Settings
+              </CardTitle>
+              <CardDescription>Configure how emails are sent to your clients</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="email_from_name">From Name</Label>
+                  <Input
+                    id="email_from_name"
+                    value={emailSettings.email_from_name}
+                    onChange={e => setEmailSettings({...emailSettings, email_from_name: e.target.value})}
+                    placeholder="Your Company Support"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="email_from_address">From Email</Label>
+                  <Input
+                    id="email_from_address"
+                    type="email"
+                    value={emailSettings.email_from_address}
+                    onChange={e => setEmailSettings({...emailSettings, email_from_address: e.target.value})}
+                    placeholder="support@yourdomain.com"
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5" />
-                Feature Toggles
-              </CardTitle>
+              <CardTitle>SMTP Configuration</CardTitle>
+              <CardDescription>Outgoing email server settings</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="smtp_host">SMTP Host</Label>
+                  <Input
+                    id="smtp_host"
+                    value={emailSettings.smtp_host}
+                    onChange={e => setEmailSettings({...emailSettings, smtp_host: e.target.value})}
+                    placeholder="smtp.gmail.com"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="smtp_port">SMTP Port</Label>
+                  <Input
+                    id="smtp_port"
+                    type="number"
+                    value={emailSettings.smtp_port}
+                    onChange={e => setEmailSettings({...emailSettings, smtp_port: parseInt(e.target.value)})}
+                    placeholder="587"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="smtp_username">Username</Label>
+                  <Input
+                    id="smtp_username"
+                    value={emailSettings.smtp_username}
+                    onChange={e => setEmailSettings({...emailSettings, smtp_username: e.target.value})}
+                    placeholder="your-email@gmail.com"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="smtp_password">Password / App Password</Label>
+                  <Input
+                    id="smtp_password"
+                    type="password"
+                    value={emailSettings.smtp_password}
+                    onChange={e => setEmailSettings({...emailSettings, smtp_password: e.target.value})}
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>IMAP Configuration</CardTitle>
+              <CardDescription>Incoming email server for email-to-ticket</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="imap_host">IMAP Host</Label>
+                  <Input
+                    id="imap_host"
+                    value={emailSettings.imap_host}
+                    onChange={e => setEmailSettings({...emailSettings, imap_host: e.target.value})}
+                    placeholder="imap.gmail.com"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="imap_port">IMAP Port</Label>
+                  <Input
+                    id="imap_port"
+                    type="number"
+                    value={emailSettings.imap_port}
+                    onChange={e => setEmailSettings({...emailSettings, imap_port: parseInt(e.target.value)})}
+                    placeholder="993"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="imap_username">Username</Label>
+                  <Input
+                    id="imap_username"
+                    value={emailSettings.imap_username}
+                    onChange={e => setEmailSettings({...emailSettings, imap_username: e.target.value})}
+                    placeholder="your-email@gmail.com"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="imap_password">Password / App Password</Label>
+                  <Input
+                    id="imap_password"
+                    type="password"
+                    value={emailSettings.imap_password}
+                    onChange={e => setEmailSettings({...emailSettings, imap_password: e.target.value})}
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end">
+            <Button onClick={saveEmailSettings} disabled={saving}>
+              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+              Save Email Settings
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Billing Tab */}
+      {activeTab === 'billing' && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Current Plan</CardTitle>
+              <CardDescription>Your subscription details</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {[
-                  { key: 'enable_public_portal', label: 'Public Portal', desc: 'Allow warranty lookups without login' },
-                  { key: 'enable_qr_codes', label: 'QR Code Generation', desc: 'Generate QR codes for devices' },
-                  { key: 'enable_ai_features', label: 'AI Features', desc: 'AI-powered triage and suggestions' },
-                  { key: 'enable_email_ticketing', label: 'Email Ticketing', desc: 'Create tickets from emails' }
-                ].map(feature => (
-                  <div key={feature.key} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">{feature.label}</p>
-                      <p className="text-sm text-slate-500">{feature.desc}</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        className="sr-only peer"
-                        defaultChecked={organization.settings?.[feature.key]}
-                      />
-                      <div className="w-11 h-6 bg-slate-300 peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                <div>
+                  <h3 className="text-lg font-semibold capitalize">{plan} Plan</h3>
+                  <p className="text-slate-500">
+                    {plan === 'trial' && organization.subscription?.trial_ends_at && (
+                      <>Trial ends: {new Date(organization.subscription.trial_ends_at).toLocaleDateString()}</>
+                    )}
+                    {plan !== 'trial' && 'Active subscription'}
+                  </p>
+                </div>
+                <Button variant="outline">Manage Subscription</Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Available Plans</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-3 gap-4">
+                {plans.filter(p => p.id !== 'trial').map(p => (
+                  <div 
+                    key={p.id}
+                    className={`p-4 rounded-lg border-2 ${
+                      p.id === plan ? 'border-blue-500 bg-blue-50' : 'border-slate-200'
+                    }`}
+                  >
+                    <h4 className="font-semibold">{p.name}</h4>
+                    <p className="text-2xl font-bold mt-2">
+                      {p.price === 0 ? 'Free' : `₹${p.price?.toLocaleString()}`}
+                      <span className="text-sm font-normal text-slate-500">/mo</span>
+                    </p>
+                    <ul className="mt-4 space-y-2 text-sm text-slate-600">
+                      <li>• {p.limits?.max_companies === -1 ? 'Unlimited' : p.limits?.max_companies} clients</li>
+                      <li>• {p.limits?.max_devices === -1 ? 'Unlimited' : p.limits?.max_devices} devices</li>
+                      <li>• {p.limits?.max_users === -1 ? 'Unlimited' : p.limits?.max_users} users</li>
+                    </ul>
+                    {p.id !== plan && (
+                      <Button className="w-full mt-4" size="sm">
+                        {plans.findIndex(x => x.id === p.id) > plans.findIndex(x => x.id === plan) ? 'Upgrade' : 'Downgrade'}
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>
