@@ -9652,6 +9652,11 @@ app.include_router(tactical_rmm_router, prefix="/api", tags=["Tactical RMM Integ
 from services.email_service import init_email_service
 init_email_service(db)
 
+# Include Knowledge Base router
+from routes.knowledge_base import router as kb_router, init_kb_router
+init_kb_router(db)
+app.include_router(kb_router, prefix="/api", tags=["Knowledge Base"])
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
