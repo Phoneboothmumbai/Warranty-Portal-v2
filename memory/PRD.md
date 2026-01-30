@@ -1,6 +1,15 @@
 # Warranty & Asset Tracking Portal - PRD
 
 ## CHANGELOG
+- **2026-01-30**: Multi-tenant SaaS Architecture Implementation
+  - **Platform Super Admin Layer**: Separate login (`/platform/login`), dashboard, organization management
+  - **Organization (Tenant) Model**: Complete data isolation with `organization_id` on all collections
+  - **Migration Script**: `scripts/migrate_to_multitenancy.py` adds org_id to existing data
+  - **Subscription Plans**: Trial, Starter (₹2,999/mo), Professional (₹7,999/mo), Enterprise
+  - **Backend**: `/api/platform/*` routes, `/api/org/*` routes, tenant middleware
+  - **Frontend**: `/platform/login`, `/platform/dashboard`, `/platform/organizations`
+  - **User Hierarchy**: Platform Super Admin → Organization Admin → Company User
+
 - **2026-01-30**: Enhanced AMC Onboarding Wizard
   - **Conditional Fields**: Step 5 (has_static_ip → static_ip_addresses), Step 6 (has_vpn → vpn_type, has_password_manager → password_manager_name)
   - **Multi-Tab Excel Template**: Device template now generates category-specific sheets based on Step 3 selections (Desktops, Laptops, Apple Devices, Servers, Network Devices, Printers, CCTV, Wi-Fi APs, UPS)
@@ -35,6 +44,7 @@
 
 ## Original Problem Statement
 Build an enterprise-grade Warranty & Asset Tracking Portal with:
+- **Multi-tenant SaaS Platform** with independent organizations
 - B2B office supplies ordering system
 - Bulk data import capabilities
 - QR code generation for asset tagging
