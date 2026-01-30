@@ -101,6 +101,14 @@ function App() {
                   <Route path="/admin/login" element={<AdminLogin />} />
                   <Route path="/admin/setup" element={<AdminSetup />} />
                   
+                  {/* Platform Super Admin Routes */}
+                  <Route path="/platform/login" element={<PlatformLogin />} />
+                  <Route path="/platform" element={<PlatformLayout />}>
+                    <Route index element={<PlatformDashboard />} />
+                    <Route path="dashboard" element={<PlatformDashboard />} />
+                    <Route path="organizations" element={<PlatformOrganizations />} />
+                  </Route>
+                  
                   {/* Protected Admin Routes */}
                   <Route path="/admin" element={<AdminLayout />}>
                     <Route index element={<Dashboard />} />
