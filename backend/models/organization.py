@@ -442,11 +442,15 @@ class OrganizationMember(BaseModel):
 
 
 class OrganizationMemberCreate(BaseModel):
-    """Invite a new member to the organization"""
+    """Create a new member in the organization"""
     email: str
     name: str
-    role: str = "member"
+    password: Optional[str] = None  # Optional - can send invite instead
+    role: str = "company_employee"  # msp_admin, msp_technician, company_admin, company_employee, external_customer
+    company_id: Optional[str] = None  # Required for company-level roles
+    assigned_company_ids: Optional[List[str]] = None  # For msp_technician
     permissions: Optional[List[str]] = None
+    phone: Optional[str] = None
 
 
 class OrganizationMemberUpdate(BaseModel):
@@ -454,6 +458,8 @@ class OrganizationMemberUpdate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
     role: Optional[str] = None
+    company_id: Optional[str] = None
+    assigned_company_ids: Optional[List[str]] = None
     permissions: Optional[List[str]] = None
     is_active: Optional[bool] = None
 
