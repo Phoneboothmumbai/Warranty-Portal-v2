@@ -141,11 +141,12 @@ async def get_org_from_token(credentials: HTTPAuthorizationCredentials = Depends
     
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
+        user_email: str = payload.get("sub")  # Email is stored in 'sub'
         org_id: str = payload.get("organization_id")
+        org_member_id: str = payload.get("org_member_id")  # Actual member ID
         user_type: str = payload.get("type")
         
-        if user_id is None:
+        if user_email is None:
             raise credentials_exception
             
     except JWTError:
@@ -154,7 +155,7 @@ async def get_org_from_token(credentials: HTTPAuthorizationCredentials = Depends
     # For backward compatibility: if no org_id in token, check if it's a legacy admin
     if not org_id:
         # Check legacy admins table
-        admin = await db.admins.find_one({"email": payload.get("sub")}, {"_id": 0})
+        admin = await db.admins.find_one({"email": user_email}, {"_id": 0})
         if admin:
             # Legacy admin - they'll need to be migrated to an organization
             return {
@@ -165,11 +166,14 @@ async def get_org_from_token(credentials: HTTPAuthorizationCredentials = Depends
             }
         raise credentials_exception
     
-    # Get organization member
-    member = await db.organization_members.find_one(
-        {"id": user_id, "organization_id": org_id, "is_active": True, "is_deleted": {"$ne": True}},
-        {"_id": 0, "password_hash": 0}
-    )
+    # Get organization member - use org_member_id if available, otherwise lookup by email
+    query = {"organization_id": org_id, "is_active": True, "is_deleted": {"$ne": True}}
+    if org_member_id:
+        query["id"] = org_member_id
+    else:
+        query["email"] = user_email
+    
+    member = await db.organization_members.find_one(query, {"_id": 0, "password_hash": 0})
     
     if not member:
         raise credentials_exception
