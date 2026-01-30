@@ -55,6 +55,12 @@ export default function PlatformLayout() {
 
   return (
     <div className="min-h-screen bg-slate-900" data-testid="platform-layout">
+      {/* SEO: Prevent search engine indexing of platform admin pages */}
+      <Helmet>
+        <meta name="robots" content="noindex, nofollow" />
+        <title>Platform Admin | AfterSales</title>
+      </Helmet>
+      
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div 
