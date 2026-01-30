@@ -3,7 +3,7 @@ import {
   Shield, ArrowRight, HardDrive, Ticket, FileText, 
   BarChart3, QrCode, Bell, Wrench, Users, Building2,
   Lock, Zap, Globe, Mail, Clock, CheckCircle,
-  Smartphone, Database, Cloud, Settings
+  Smartphone, Database, Cloud, Settings, Layers
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { useSettings } from '../../context/SettingsContext';
@@ -13,48 +13,48 @@ const FeaturesPage = () => {
 
   const mainFeatures = [
     {
-      icon: HardDrive,
-      title: 'Asset Lifecycle Management',
-      description: 'Track every IT asset from procurement to retirement. Maintain complete visibility with detailed records including purchase info, warranty status, assignments, and service history.',
-      highlights: ['Complete asset inventory', 'Assignment tracking', 'Lifecycle stages', 'Bulk import/export'],
+      icon: Layers,
+      title: 'Multi-Client Management',
+      description: 'Manage all your clients from one dashboard. Each client gets their own isolated environment with separate assets, tickets, and contracts. Perfect for MSPs handling dozens of organizations.',
+      highlights: ['Isolated client data', 'Bulk client onboarding', 'Per-client reporting', 'White-label options'],
       color: 'bg-blue-500'
     },
     {
       icon: Shield,
-      title: 'Warranty Tracking & Alerts',
-      description: 'Never miss a warranty claim again. Our intelligent system tracks expiry dates and sends automated alerts before coverage ends, maximizing your warranty ROI.',
-      highlights: ['Expiry notifications', 'Coverage verification', 'AMC override logic', 'PDF reports'],
+      title: 'Warranty Intelligence',
+      description: 'Never miss a warranty claim across any client. Our system tracks expiry dates, sends automated alerts, and helps you maximize warranty ROI for your entire client base.',
+      highlights: ['Cross-client alerts', 'Coverage verification', 'AMC override logic', 'Client-ready reports'],
       color: 'bg-emerald-500'
     },
     {
       icon: Ticket,
-      title: 'Enterprise Ticketing System',
-      description: 'Full-featured ticketing inspired by osTicket. Complete with SLA management, auto-routing, canned responses, custom forms, and email integration.',
-      highlights: ['SLA tracking', 'Auto-assignment', 'Email integration', 'Custom forms'],
+      title: 'Service Desk & Ticketing',
+      description: 'Professional service desk for MSPs. Handle tickets across all clients with SLA management, auto-routing based on client contracts, email-to-ticket, and client portals.',
+      highlights: ['Per-client SLAs', 'Auto-assignment', 'Email integration', 'Client self-service'],
       color: 'bg-purple-500'
     },
     {
       icon: FileText,
-      title: 'AMC Contract Management',
-      description: 'Manage Annual Maintenance Contracts with ease. Track coverage, usage limits, renewals, and link contracts to devices for comprehensive service coverage.',
-      highlights: ['Usage tracking', 'Renewal alerts', 'Device assignments', 'Contract documents'],
+      title: 'AMC & Contract Management',
+      description: 'Track service contracts across all clients. Monitor usage limits, renewal dates, and automatically link contracts to devices for comprehensive coverage tracking.',
+      highlights: ['Multi-client contracts', 'Usage tracking', 'Renewal automation', 'Billing integration'],
       color: 'bg-amber-500'
     }
   ];
 
   const additionalFeatures = [
-    { icon: QrCode, title: 'QR Code Generation', description: 'Generate printable QR codes for instant asset lookup and service requests.' },
-    { icon: Bell, title: 'Smart Notifications', description: 'In-app alerts for warranty expiry, SLA breaches, and ticket updates.' },
-    { icon: Users, title: 'Multi-tenant Architecture', description: 'Isolate data between organizations with complete tenant separation.' },
-    { icon: Building2, title: 'Company Portal', description: 'Self-service portal for your clients to view assets and raise tickets.' },
-    { icon: Wrench, title: 'Engineer Portal', description: 'Mobile-friendly interface for field technicians and service visits.' },
-    { icon: BarChart3, title: 'Analytics Dashboard', description: 'Real-time insights into asset health, warranty status, and service metrics.' },
-    { icon: Mail, title: 'Email Integration', description: 'Create and reply to tickets via email. SMTP and IMAP support.' },
-    { icon: Lock, title: 'Role-Based Access', description: 'Granular permissions for admins, company users, and engineers.' },
-    { icon: Database, title: 'Bulk Operations', description: 'Import devices, companies, and employees via Excel/CSV.' },
-    { icon: Globe, title: 'API Access', description: 'RESTful API for integrations with your existing systems.' },
-    { icon: Clock, title: 'Audit Logging', description: 'Complete audit trail of all changes for compliance and accountability.' },
-    { icon: Cloud, title: 'Cloud Hosted', description: 'Secure, reliable cloud infrastructure with 99.9% uptime SLA.' }
+    { icon: QrCode, title: 'QR Asset Labels', description: 'Generate QR codes for instant asset lookup. Engineers scan to view history or raise tickets.' },
+    { icon: Bell, title: 'Smart Notifications', description: 'Alerts for warranty expiry, SLA breaches, and contract renewals across all clients.' },
+    { icon: Users, title: 'Team Management', description: 'Assign technicians to clients, track workload, and manage schedules.' },
+    { icon: Building2, title: 'Client Portals', description: 'Branded self-service portals for your clients to view assets and submit tickets.' },
+    { icon: Wrench, title: 'Field Engineer App', description: 'Mobile-friendly interface for technicians to log visits, update tickets, and capture signatures.' },
+    { icon: BarChart3, title: 'MSP Analytics', description: 'Business insights: profitability per client, SLA compliance, technician utilization.' },
+    { icon: Mail, title: 'Email-to-Ticket', description: 'Clients email support, tickets auto-create and route to the right team.' },
+    { icon: Lock, title: 'Role-Based Access', description: 'Granular permissions: MSP admins, technicians, client admins, and end-users.' },
+    { icon: Database, title: 'Bulk Operations', description: 'Onboard new clients fast with Excel/CSV imports for devices and users.' },
+    { icon: Globe, title: 'REST API', description: 'Integrate with RMM tools, PSA software, and your existing stack.' },
+    { icon: Clock, title: 'Audit Trail', description: 'Complete logging of all changes for compliance and client transparency.' },
+    { icon: Cloud, title: 'Secure Cloud', description: 'SOC 2 compliant infrastructure with 99.9% uptime guarantee.' }
   ];
 
   return (
