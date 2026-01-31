@@ -851,8 +851,11 @@ async def create_plan(
     if existing:
         raise HTTPException(status_code=400, detail="Plan slug already exists")
     
+    # Get data dict and remove None values for features/limits to use defaults
+    plan_data = data.model_dump(exclude_none=True)
+    
     plan = Plan(
-        **data.model_dump(),
+        **plan_data,
         created_by=admin.get("id"),
         updated_by=admin.get("id")
     )
