@@ -13,7 +13,7 @@ const API = process.env.REACT_APP_BACKEND_URL;
 
 const ROLE_BADGES = {
   platform_owner: { label: 'Owner', class: 'bg-amber-500/20 text-amber-400 border-amber-500/30', icon: Crown },
-  platform_admin: { label: 'Admin', class: 'bg-purple-500/20 text-purple-400 border-purple-500/30', icon: Shield },
+  platform_admin: { label: 'Admin', class: 'bg-blue-100 text-blue-600 border-blue-500/30', icon: Shield },
   support: { label: 'Support', class: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: UserCog }
 };
 
@@ -57,12 +57,12 @@ export default function PlatformAdmins() {
     <div className="space-y-6" data-testid="platform-admins">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Platform Admins</h1>
-          <p className="text-slate-400">Manage super admin users with platform access</p>
+          <h1 className="text-2xl font-bold text-slate-900">Platform Admins</h1>
+          <p className="text-slate-600">Manage super admin users with platform access</p>
         </div>
         <Button 
           onClick={() => { setCurrentAdmin(null); setShowModal(true); }}
-          className="bg-purple-600 hover:bg-purple-700"
+          className="bg-blue-600 hover:bg-purple-700"
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Admin
@@ -71,45 +71,45 @@ export default function PlatformAdmins() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-slate-800/50 border-slate-700">
+        <Card className="bg-slate-50/50 border-slate-200">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-amber-500/20">
                 <Crown className="w-5 h-5 text-amber-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-2xl font-bold text-slate-900">
                   {admins.filter(a => a.role === 'platform_owner').length}
                 </p>
-                <p className="text-sm text-slate-400">Owners</p>
+                <p className="text-sm text-slate-600">Owners</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-slate-800/50 border-slate-700">
+        <Card className="bg-slate-50/50 border-slate-200">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-500/20">
-                <Shield className="w-5 h-5 text-purple-400" />
+              <div className="p-2 rounded-lg bg-blue-100">
+                <Shield className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-2xl font-bold text-slate-900">
                   {admins.filter(a => a.role === 'platform_admin').length}
                 </p>
-                <p className="text-sm text-slate-400">Admins</p>
+                <p className="text-sm text-slate-600">Admins</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-slate-800/50 border-slate-700">
+        <Card className="bg-slate-50/50 border-slate-200">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-500/20">
                 <Users className="w-5 h-5 text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">{admins.length}</p>
-                <p className="text-sm text-slate-400">Total Admins</p>
+                <p className="text-2xl font-bold text-slate-900">{admins.length}</p>
+                <p className="text-sm text-slate-600">Total Admins</p>
               </div>
             </div>
           </CardContent>
@@ -117,20 +117,20 @@ export default function PlatformAdmins() {
       </div>
 
       {/* Admins List */}
-      <Card className="bg-slate-800/50 border-slate-700">
+      <Card className="bg-slate-50/50 border-slate-200">
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <Users className="w-5 h-5 text-purple-400" />
+          <CardTitle className="text-slate-900 flex items-center gap-2">
+            <Users className="w-5 h-5 text-blue-600" />
             All Platform Admins
           </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex justify-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
             </div>
           ) : admins.length === 0 ? (
-            <div className="text-center py-8 text-slate-400">
+            <div className="text-center py-8 text-slate-600">
               No platform admins found
             </div>
           ) : (
@@ -142,17 +142,17 @@ export default function PlatformAdmins() {
                 return (
                   <div 
                     key={admin.id} 
-                    className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg hover:bg-slate-700/50 transition-colors"
+                    className="flex items-center justify-between p-4 bg-slate-100/30 rounded-lg hover:bg-slate-100/50 transition-colors"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
-                        <span className="text-lg font-semibold text-purple-400">
+                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                        <span className="text-lg font-semibold text-blue-600">
                           {admin.name?.charAt(0)?.toUpperCase() || 'A'}
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium text-white">{admin.name}</p>
-                        <p className="text-sm text-slate-400">{admin.email}</p>
+                        <p className="font-medium text-slate-900">{admin.name}</p>
+                        <p className="text-sm text-slate-600">{admin.email}</p>
                       </div>
                     </div>
                     
@@ -162,7 +162,7 @@ export default function PlatformAdmins() {
                         {roleConfig.label}
                       </span>
                       
-                      <div className="text-sm text-slate-400">
+                      <div className="text-sm text-slate-600">
                         {admin.last_login ? (
                           <span>Last login: {new Date(admin.last_login).toLocaleDateString()}</span>
                         ) : (
@@ -232,46 +232,46 @@ function CreateAdminModal({ onClose, onSuccess, token }) {
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-md">
-        <div className="flex items-center justify-between p-6 border-b border-slate-700">
-          <h2 className="text-xl font-semibold text-white">Add Platform Admin</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+      <div className="bg-slate-50 rounded-xl border border-slate-200 w-full max-w-md">
+        <div className="flex items-center justify-between p-6 border-b border-slate-200">
+          <h2 className="text-xl font-semibold text-slate-900">Add Platform Admin</h2>
+          <button onClick={onClose} className="text-slate-600 hover:text-slate-900">
             <X className="w-5 h-5" />
           </button>
         </div>
         
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Full Name</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+              className="w-full px-4 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-900"
               placeholder="John Doe"
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
             <input
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+              className="w-full px-4 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-900"
               placeholder="admin@platform.com"
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Password</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
             <input
               type="password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+              className="w-full px-4 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-900"
               placeholder="••••••••"
               required
               minLength={8}
@@ -279,11 +279,11 @@ function CreateAdminModal({ onClose, onSuccess, token }) {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Role</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
             <select
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+              className="w-full px-4 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-900"
             >
               <option value="platform_admin">Platform Admin</option>
               <option value="support">Support</option>
@@ -291,10 +291,10 @@ function CreateAdminModal({ onClose, onSuccess, token }) {
           </div>
           
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1 border-slate-600">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1 border-slate-300">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading} className="flex-1 bg-purple-600 hover:bg-purple-700">
+            <Button type="submit" disabled={loading} className="flex-1 bg-blue-600 hover:bg-purple-700">
               {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
               Create Admin
             </Button>

@@ -16,11 +16,11 @@ const ACTION_COLORS = {
   create_organization: 'bg-emerald-500/20 text-emerald-400',
   update_organization: 'bg-blue-500/20 text-blue-400',
   suspend_organization: 'bg-amber-500/20 text-amber-400',
-  reactivate_organization: 'bg-purple-500/20 text-purple-400',
+  reactivate_organization: 'bg-blue-100 text-blue-600',
   delete_organization: 'bg-red-500/20 text-red-400',
   create_platform_admin: 'bg-emerald-500/20 text-emerald-400',
   update_platform_settings: 'bg-blue-500/20 text-blue-400',
-  default: 'bg-slate-500/20 text-slate-400'
+  default: 'bg-slate-500/20 text-slate-600'
 };
 
 const ACTION_ICONS = {
@@ -90,10 +90,10 @@ export default function PlatformAuditLogs() {
     <div className="space-y-6" data-testid="platform-audit-logs">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Audit Logs</h1>
-          <p className="text-slate-400">Track all platform administrative actions</p>
+          <h1 className="text-2xl font-bold text-slate-900">Audit Logs</h1>
+          <p className="text-slate-600">Track all platform administrative actions</p>
         </div>
-        <Button onClick={fetchLogs} variant="outline" className="border-slate-600 text-slate-300">
+        <Button onClick={fetchLogs} variant="outline" className="border-slate-300 text-slate-700">
           <RefreshCw className="w-4 h-4 mr-2" />
           Refresh
         </Button>
@@ -107,7 +107,7 @@ export default function PlatformAuditLogs() {
             setFilters({ ...filters, action: e.target.value });
             setPagination(prev => ({ ...prev, page: 1 }));
           }}
-          className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-purple-500"
+          className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-blue-500"
         >
           <option value="">All Actions</option>
           <option value="create_organization">Create Organization</option>
@@ -125,7 +125,7 @@ export default function PlatformAuditLogs() {
             setFilters({ ...filters, entity_type: e.target.value });
             setPagination(prev => ({ ...prev, page: 1 }));
           }}
-          className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-purple-500"
+          className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-blue-500"
         >
           <option value="">All Entity Types</option>
           <option value="organization">Organization</option>
@@ -135,14 +135,14 @@ export default function PlatformAuditLogs() {
       </div>
 
       {/* Logs List */}
-      <Card className="bg-slate-800/50 border-slate-700">
+      <Card className="bg-slate-50/50 border-slate-200">
         <CardContent className="p-0">
           {loading ? (
             <div className="flex justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
             </div>
           ) : logs.length === 0 ? (
-            <div className="text-center py-12 text-slate-400">
+            <div className="text-center py-12 text-slate-600">
               <ScrollText className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No audit logs found</p>
             </div>
@@ -154,7 +154,7 @@ export default function PlatformAuditLogs() {
                 return (
                   <div 
                     key={log.id} 
-                    className="p-4 hover:bg-slate-700/30 transition-colors cursor-pointer"
+                    className="p-4 hover:bg-slate-100/30 transition-colors cursor-pointer"
                     onClick={() => setSelectedLog(log)}
                   >
                     <div className="flex items-start gap-4">
@@ -168,20 +168,20 @@ export default function PlatformAuditLogs() {
                             {formatAction(log.action)}
                           </span>
                           <span className="text-slate-500 text-sm">on</span>
-                          <span className="text-slate-300 text-sm font-mono">{log.entity_type}</span>
+                          <span className="text-slate-700 text-sm font-mono">{log.entity_type}</span>
                         </div>
                         
-                        <p className="text-white font-medium">
+                        <p className="text-slate-900 font-medium">
                           {log.performed_by_name || log.performed_by_email || 'Unknown'}
                         </p>
                         
-                        <p className="text-sm text-slate-400">
+                        <p className="text-sm text-slate-600">
                           Entity ID: <span className="font-mono">{log.entity_id?.slice(0, 8)}...</span>
                         </p>
                       </div>
                       
                       <div className="text-right">
-                        <p className="text-sm text-slate-400">
+                        <p className="text-sm text-slate-600">
                           {new Date(log.created_at).toLocaleDateString()}
                         </p>
                         <p className="text-xs text-slate-500">
@@ -189,7 +189,7 @@ export default function PlatformAuditLogs() {
                         </p>
                       </div>
                       
-                      <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+                      <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900">
                         <Eye className="w-4 h-4" />
                       </Button>
                     </div>
@@ -201,8 +201,8 @@ export default function PlatformAuditLogs() {
           
           {/* Pagination */}
           {pagination.pages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700">
-              <p className="text-sm text-slate-400">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
+              <p className="text-sm text-slate-600">
                 Page {pagination.page} of {pagination.pages} ({pagination.total} total)
               </p>
               <div className="flex gap-2">
@@ -211,7 +211,7 @@ export default function PlatformAuditLogs() {
                   size="sm"
                   disabled={pagination.page === 1}
                   onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
-                  className="border-slate-600 text-slate-300"
+                  className="border-slate-300 text-slate-700"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
@@ -220,7 +220,7 @@ export default function PlatformAuditLogs() {
                   size="sm"
                   disabled={pagination.page === pagination.pages}
                   onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
-                  className="border-slate-600 text-slate-300"
+                  className="border-slate-300 text-slate-700"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>
@@ -233,52 +233,52 @@ export default function PlatformAuditLogs() {
       {/* Log Detail Modal */}
       {selectedLog && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setSelectedLog(null)}>
-          <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-lg" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 border-b border-slate-700">
-              <h2 className="text-xl font-semibold text-white">Audit Log Details</h2>
-              <button onClick={() => setSelectedLog(null)} className="text-slate-400 hover:text-white">
+          <div className="bg-slate-50 rounded-xl border border-slate-200 w-full max-w-lg" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-200">
+              <h2 className="text-xl font-semibold text-slate-900">Audit Log Details</h2>
+              <button onClick={() => setSelectedLog(null)} className="text-slate-600 hover:text-slate-900">
                 ×
               </button>
             </div>
             
             <div className="p-6 space-y-4">
               <div>
-                <label className="text-sm text-slate-400">Action</label>
-                <p className="text-white font-medium">{formatAction(selectedLog.action)}</p>
+                <label className="text-sm text-slate-600">Action</label>
+                <p className="text-slate-900 font-medium">{formatAction(selectedLog.action)}</p>
               </div>
               
               <div>
-                <label className="text-sm text-slate-400">Entity Type</label>
-                <p className="text-white font-mono">{selectedLog.entity_type}</p>
+                <label className="text-sm text-slate-600">Entity Type</label>
+                <p className="text-slate-900 font-mono">{selectedLog.entity_type}</p>
               </div>
               
               <div>
-                <label className="text-sm text-slate-400">Entity ID</label>
-                <p className="text-white font-mono text-sm break-all">{selectedLog.entity_id}</p>
+                <label className="text-sm text-slate-600">Entity ID</label>
+                <p className="text-slate-900 font-mono text-sm break-all">{selectedLog.entity_id}</p>
               </div>
               
               <div>
-                <label className="text-sm text-slate-400">Performed By</label>
-                <p className="text-white">{selectedLog.performed_by_name || 'Unknown'}</p>
-                <p className="text-slate-400 text-sm">{selectedLog.performed_by_email}</p>
+                <label className="text-sm text-slate-600">Performed By</label>
+                <p className="text-slate-900">{selectedLog.performed_by_name || 'Unknown'}</p>
+                <p className="text-slate-600 text-sm">{selectedLog.performed_by_email}</p>
               </div>
               
               <div>
-                <label className="text-sm text-slate-400">Timestamp</label>
-                <p className="text-white">{new Date(selectedLog.created_at).toLocaleString()}</p>
+                <label className="text-sm text-slate-600">Timestamp</label>
+                <p className="text-slate-900">{new Date(selectedLog.created_at).toLocaleString()}</p>
               </div>
               
               {selectedLog.ip_address && (
                 <div>
-                  <label className="text-sm text-slate-400">IP Address</label>
-                  <p className="text-white font-mono">{selectedLog.ip_address}</p>
+                  <label className="text-sm text-slate-600">IP Address</label>
+                  <p className="text-slate-900 font-mono">{selectedLog.ip_address}</p>
                 </div>
               )}
               
               {selectedLog.changes && Object.keys(selectedLog.changes).length > 0 && (
                 <div>
-                  <label className="text-sm text-slate-400">Changes</label>
-                  <pre className="mt-2 p-3 bg-slate-900 rounded-lg text-sm text-slate-300 overflow-auto max-h-48">
+                  <label className="text-sm text-slate-600">Changes</label>
+                  <pre className="mt-2 p-3 bg-white rounded-lg text-sm text-slate-700 overflow-auto max-h-48">
                     {JSON.stringify(selectedLog.changes, null, 2)}
                   </pre>
                 </div>

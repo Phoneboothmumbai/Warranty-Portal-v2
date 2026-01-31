@@ -79,7 +79,7 @@ export default function PlatformBilling() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
       </div>
     );
   }
@@ -88,10 +88,10 @@ export default function PlatformBilling() {
     <div className="space-y-6" data-testid="platform-billing">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Revenue & Billing</h1>
-          <p className="text-slate-400">Platform revenue analytics and subscription overview</p>
+          <h1 className="text-2xl font-bold text-slate-900">Revenue & Billing</h1>
+          <p className="text-slate-600">Platform revenue analytics and subscription overview</p>
         </div>
-        <Button onClick={fetchData} variant="outline" className="border-slate-600 text-slate-300">
+        <Button onClick={fetchData} variant="outline" className="border-slate-300 text-slate-700">
           <RefreshCw className="w-4 h-4 mr-2" />
           Refresh
         </Button>
@@ -107,7 +107,7 @@ export default function PlatformBilling() {
                 <DollarSign className="w-5 h-5 text-emerald-400" />
               </div>
             </div>
-            <p className="text-3xl font-bold text-white">₹{mrr.toLocaleString()}</p>
+            <p className="text-3xl font-bold text-slate-900">₹{mrr.toLocaleString()}</p>
             <div className="flex items-center gap-1 mt-2 text-emerald-400 text-sm">
               <TrendingUp className="w-4 h-4" />
               <span>Active subscriptions</span>
@@ -115,16 +115,16 @@ export default function PlatformBilling() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 border-purple-500/30">
+        <Card className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 border-blue-500/30">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-purple-400 text-sm font-medium">Annual Revenue (ARR)</span>
-              <div className="p-2 rounded-lg bg-purple-500/20">
-                <Calendar className="w-5 h-5 text-purple-400" />
+              <span className="text-blue-600 text-sm font-medium">Annual Revenue (ARR)</span>
+              <div className="p-2 rounded-lg bg-blue-100">
+                <Calendar className="w-5 h-5 text-blue-600" />
               </div>
             </div>
-            <p className="text-3xl font-bold text-white">₹{arr.toLocaleString()}</p>
-            <div className="flex items-center gap-1 mt-2 text-purple-400 text-sm">
+            <p className="text-3xl font-bold text-slate-900">₹{arr.toLocaleString()}</p>
+            <div className="flex items-center gap-1 mt-2 text-blue-600 text-sm">
               <span>Projected annual revenue</span>
             </div>
           </CardContent>
@@ -138,7 +138,7 @@ export default function PlatformBilling() {
                 <Building2 className="w-5 h-5 text-blue-400" />
               </div>
             </div>
-            <p className="text-3xl font-bold text-white">{paidOrgs}</p>
+            <p className="text-3xl font-bold text-slate-900">{paidOrgs}</p>
             <div className="flex items-center gap-1 mt-2 text-blue-400 text-sm">
               <span>Active paid subscriptions</span>
             </div>
@@ -153,7 +153,7 @@ export default function PlatformBilling() {
                 <CreditCard className="w-5 h-5 text-amber-400" />
               </div>
             </div>
-            <p className="text-3xl font-bold text-white">{trialOrgs}</p>
+            <p className="text-3xl font-bold text-slate-900">{trialOrgs}</p>
             <div className="flex items-center gap-1 mt-2 text-amber-400 text-sm">
               <span>Potential conversions</span>
             </div>
@@ -163,10 +163,10 @@ export default function PlatformBilling() {
 
       {/* Revenue Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-slate-800/50 border-slate-700">
+        <Card className="bg-slate-50/50 border-slate-200">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-purple-400" />
+            <CardTitle className="text-slate-900 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-blue-600" />
               Revenue by Plan
             </CardTitle>
           </CardHeader>
@@ -181,14 +181,14 @@ export default function PlatformBilling() {
                   <div key={plan} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-white capitalize font-medium">{plan}</span>
-                        <span className="text-slate-400 text-sm">({count} orgs)</span>
+                        <span className="text-slate-900 capitalize font-medium">{plan}</span>
+                        <span className="text-slate-600 text-sm">({count} orgs)</span>
                       </div>
-                      <span className="text-white font-semibold">₹{revenue.toLocaleString()}</span>
+                      <span className="text-slate-900 font-semibold">₹{revenue.toLocaleString()}</span>
                     </div>
-                    <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all duration-500"
+                        className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
                         style={{ width: `${percentage}%` }}
                       />
                     </div>
@@ -199,17 +199,17 @@ export default function PlatformBilling() {
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800/50 border-slate-700">
+        <Card className="bg-slate-50/50 border-slate-200">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-purple-400" />
+            <CardTitle className="text-slate-900 flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-blue-600" />
               Organization Status
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {Object.entries(stats?.organizations_by_status || {}).map(([status, count]) => (
-                <div key={status} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+                <div key={status} className="flex items-center justify-between p-3 bg-slate-100/30 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className={`w-2 h-2 rounded-full ${
                       status === 'active' ? 'bg-emerald-500' :
@@ -218,9 +218,9 @@ export default function PlatformBilling() {
                       status === 'past_due' ? 'bg-amber-500' :
                       'bg-slate-500'
                     }`} />
-                    <span className="text-white capitalize">{status.replace('_', ' ')}</span>
+                    <span className="text-slate-900 capitalize">{status.replace('_', ' ')}</span>
                   </div>
-                  <span className="text-xl font-bold text-white">{count}</span>
+                  <span className="text-xl font-bold text-slate-900">{count}</span>
                 </div>
               ))}
             </div>
@@ -229,10 +229,10 @@ export default function PlatformBilling() {
       </div>
 
       {/* Recent Subscriptions */}
-      <Card className="bg-slate-800/50 border-slate-700">
+      <Card className="bg-slate-50/50 border-slate-200">
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-purple-400" />
+          <CardTitle className="text-slate-900 flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-blue-600" />
             All Subscriptions
           </CardTitle>
         </CardHeader>
@@ -240,12 +240,12 @@ export default function PlatformBilling() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Organization</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Plan</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Monthly Value</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Created</th>
+                <tr className="border-b border-slate-200">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Organization</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Plan</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Status</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Monthly Value</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Created</th>
                 </tr>
               </thead>
               <tbody>
@@ -254,17 +254,17 @@ export default function PlatformBilling() {
                   const price = PLAN_PRICES[plan] || 0;
                   
                   return (
-                    <tr key={org.id} className="border-b border-slate-700/50 hover:bg-slate-700/30">
+                    <tr key={org.id} className="border-b border-slate-200/50 hover:bg-slate-100/30">
                       <td className="py-3 px-4">
-                        <p className="text-white font-medium">{org.name}</p>
-                        <p className="text-xs text-slate-400">{org.owner_email}</p>
+                        <p className="text-slate-900 font-medium">{org.name}</p>
+                        <p className="text-xs text-slate-600">{org.owner_email}</p>
                       </td>
                       <td className="py-3 px-4">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
                           plan === 'enterprise' ? 'bg-amber-500/20 text-amber-400' :
-                          plan === 'professional' ? 'bg-purple-500/20 text-purple-400' :
+                          plan === 'professional' ? 'bg-blue-100 text-blue-600' :
                           plan === 'starter' ? 'bg-blue-500/20 text-blue-400' :
-                          'bg-slate-500/20 text-slate-400'
+                          'bg-slate-500/20 text-slate-600'
                         }`}>
                           {plan.toUpperCase()}
                         </span>
@@ -274,15 +274,15 @@ export default function PlatformBilling() {
                           org.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' :
                           org.status === 'trial' ? 'bg-blue-500/20 text-blue-400' :
                           org.status === 'suspended' ? 'bg-red-500/20 text-red-400' :
-                          'bg-slate-500/20 text-slate-400'
+                          'bg-slate-500/20 text-slate-600'
                         }`}>
                           {org.status}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-white font-medium">
+                      <td className="py-3 px-4 text-slate-900 font-medium">
                         ₹{price.toLocaleString()}
                       </td>
-                      <td className="py-3 px-4 text-slate-400 text-sm">
+                      <td className="py-3 px-4 text-slate-600 text-sm">
                         {new Date(org.created_at).toLocaleDateString()}
                       </td>
                     </tr>

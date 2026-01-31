@@ -203,7 +203,7 @@ export default function PlatformPlans() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RefreshCw className="w-6 h-6 animate-spin text-slate-400" />
+        <RefreshCw className="w-6 h-6 animate-spin text-slate-600" />
       </div>
     );
   }
@@ -213,8 +213,8 @@ export default function PlatformPlans() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Subscription Plans</h1>
-          <p className="text-slate-400 mt-1">Manage pricing plans and features</p>
+          <h1 className="text-2xl font-bold text-slate-900">Subscription Plans</h1>
+          <p className="text-slate-600 mt-1">Manage pricing plans and features</p>
         </div>
         <div className="flex gap-2">
           {plans.length === 0 && (
@@ -232,11 +232,11 @@ export default function PlatformPlans() {
 
       {/* Plans Grid */}
       {plans.length === 0 ? (
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-slate-50 border-slate-200">
           <CardContent className="text-center py-12">
             <CreditCard className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-white">No plans configured</h3>
-            <p className="text-slate-400 mt-1 mb-4">
+            <h3 className="text-lg font-medium text-slate-900">No plans configured</h3>
+            <p className="text-slate-600 mt-1 mb-4">
               Create your first subscription plan or seed defaults
             </p>
             <div className="flex gap-2 justify-center">
@@ -254,12 +254,12 @@ export default function PlatformPlans() {
           {plans.map((plan) => (
             <Card 
               key={plan.id} 
-              className={`bg-slate-800 border-slate-700 relative overflow-hidden ${
-                plan.is_popular ? 'ring-2 ring-purple-500' : ''
+              className={`bg-slate-50 border-slate-200 relative overflow-hidden ${
+                plan.is_popular ? 'ring-2 ring-blue-500' : ''
               }`}
             >
               {plan.is_popular && (
-                <div className="absolute top-0 right-0 bg-purple-500 text-white text-xs px-2 py-1 rounded-bl">
+                <div className="absolute top-0 right-0 bg-blue-500 text-slate-900 text-xs px-2 py-1 rounded-bl">
                   <Star className="w-3 h-3 inline mr-1" />
                   Popular
                 </div>
@@ -268,14 +268,14 @@ export default function PlatformPlans() {
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div>
-                    <CardTitle className="text-white flex items-center gap-2">
+                    <CardTitle className="text-slate-900 flex items-center gap-2">
                       <div 
                         className="w-3 h-3 rounded-full" 
                         style={{ backgroundColor: plan.color }}
                       />
                       {plan.name}
                     </CardTitle>
-                    <CardDescription className="text-slate-400">
+                    <CardDescription className="text-slate-600">
                       {plan.tagline}
                     </CardDescription>
                   </div>
@@ -286,14 +286,14 @@ export default function PlatformPlans() {
               <CardContent className="space-y-4">
                 {/* Price */}
                 <div>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-2xl font-bold text-slate-900">
                     {formatPrice(plan.price_monthly)}
                     {plan.price_monthly > 0 && (
-                      <span className="text-sm font-normal text-slate-400">/mo</span>
+                      <span className="text-sm font-normal text-slate-600">/mo</span>
                     )}
                   </p>
                   {plan.price_yearly > 0 && (
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-slate-600">
                       or {formatPrice(plan.price_yearly)}/year
                     </p>
                   )}
@@ -309,11 +309,11 @@ export default function PlatformPlans() {
 
                 {/* Quick stats */}
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-slate-400">
+                  <div className="text-slate-600">
                     <Building2 className="w-3 h-3 inline mr-1" />
                     {plan.limits?.max_companies === -1 ? '∞' : plan.limits?.max_companies || 0} companies
                   </div>
-                  <div className="text-slate-400">
+                  <div className="text-slate-600">
                     <Users className="w-3 h-3 inline mr-1" />
                     {plan.limits?.max_users === -1 ? '∞' : plan.limits?.max_users || 0} users
                   </div>
@@ -361,9 +361,9 @@ export default function PlatformPlans() {
 
       {/* Plan Editor Modal */}
       <Dialog open={showEditor} onOpenChange={setShowEditor}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-900 border-slate-700">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white border-slate-200">
           <DialogHeader>
-            <DialogTitle className="text-white">
+            <DialogTitle className="text-slate-900">
               {editingPlan?.id ? 'Edit Plan' : 'Create Plan'}
             </DialogTitle>
             <DialogDescription>
@@ -378,7 +378,7 @@ export default function PlatformPlans() {
 
           {editingPlan && (
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-4 bg-slate-800">
+              <TabsList className="grid w-full grid-cols-4 bg-slate-50">
                 <TabsTrigger value="basic">Basic Info</TabsTrigger>
                 <TabsTrigger value="features">Features</TabsTrigger>
                 <TabsTrigger value="limits">Limits</TabsTrigger>
@@ -389,16 +389,16 @@ export default function PlatformPlans() {
               <TabsContent value="basic" className="space-y-4 mt-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label className="text-slate-300">Plan Name *</Label>
+                    <Label className="text-slate-700">Plan Name *</Label>
                     <Input
                       value={editingPlan.name}
                       onChange={(e) => setEditingPlan(prev => ({ ...prev, name: e.target.value }))}
                       placeholder="Professional"
-                      className="bg-slate-800 border-slate-600 text-white"
+                      className="bg-slate-50 border-slate-300 text-slate-900"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-slate-300">Slug *</Label>
+                    <Label className="text-slate-700">Slug *</Label>
                     <Input
                       value={editingPlan.slug}
                       onChange={(e) => setEditingPlan(prev => ({ 
@@ -406,56 +406,56 @@ export default function PlatformPlans() {
                         slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')
                       }))}
                       placeholder="professional"
-                      className="bg-slate-800 border-slate-600 text-white"
+                      className="bg-slate-50 border-slate-300 text-slate-900"
                       disabled={editingPlan.id && editingPlan.used_by_count > 0}
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-slate-300">Tagline</Label>
+                  <Label className="text-slate-700">Tagline</Label>
                   <Input
                     value={editingPlan.tagline}
                     onChange={(e) => setEditingPlan(prev => ({ ...prev, tagline: e.target.value }))}
                     placeholder="For growing businesses"
-                    className="bg-slate-800 border-slate-600 text-white"
+                    className="bg-slate-50 border-slate-300 text-slate-900"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-slate-300">Description</Label>
+                  <Label className="text-slate-700">Description</Label>
                   <Input
                     value={editingPlan.description}
                     onChange={(e) => setEditingPlan(prev => ({ ...prev, description: e.target.value }))}
                     placeholder="Full description of the plan"
-                    className="bg-slate-800 border-slate-600 text-white"
+                    className="bg-slate-50 border-slate-300 text-slate-900"
                   />
                 </div>
 
-                <Separator className="bg-slate-700" />
+                <Separator className="bg-slate-100" />
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label className="text-slate-300">Monthly Price (in paise)</Label>
+                    <Label className="text-slate-700">Monthly Price (in paise)</Label>
                     <Input
                       type="number"
                       value={editingPlan.price_monthly}
                       onChange={(e) => setEditingPlan(prev => ({ ...prev, price_monthly: parseInt(e.target.value) || 0 }))}
                       placeholder="299900 = ₹2,999"
-                      className="bg-slate-800 border-slate-600 text-white"
+                      className="bg-slate-50 border-slate-300 text-slate-900"
                     />
                     <p className="text-xs text-slate-500">
                       Display: {formatPrice(editingPlan.price_monthly)}
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-slate-300">Yearly Price (in paise)</Label>
+                    <Label className="text-slate-700">Yearly Price (in paise)</Label>
                     <Input
                       type="number"
                       value={editingPlan.price_yearly}
                       onChange={(e) => setEditingPlan(prev => ({ ...prev, price_yearly: parseInt(e.target.value) || 0 }))}
                       placeholder="2999000 = ₹29,990"
-                      className="bg-slate-800 border-slate-600 text-white"
+                      className="bg-slate-50 border-slate-300 text-slate-900"
                     />
                     <p className="text-xs text-slate-500">
                       Display: {formatPrice(editingPlan.price_yearly)}
@@ -465,12 +465,12 @@ export default function PlatformPlans() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label className="text-slate-300">Support Level</Label>
+                    <Label className="text-slate-700">Support Level</Label>
                     <Select 
                       value={editingPlan.support_level} 
                       onValueChange={(v) => setEditingPlan(prev => ({ ...prev, support_level: v }))}
                     >
-                      <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
+                      <SelectTrigger className="bg-slate-50 border-slate-300 text-slate-900">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -482,13 +482,13 @@ export default function PlatformPlans() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-slate-300">Response Time (hours)</Label>
+                    <Label className="text-slate-700">Response Time (hours)</Label>
                     <Input
                       type="number"
                       value={editingPlan.response_time_hours || ''}
                       onChange={(e) => setEditingPlan(prev => ({ ...prev, response_time_hours: parseInt(e.target.value) || null }))}
                       placeholder="24"
-                      className="bg-slate-800 border-slate-600 text-white"
+                      className="bg-slate-50 border-slate-300 text-slate-900"
                     />
                   </div>
                 </div>
@@ -499,7 +499,7 @@ export default function PlatformPlans() {
                       checked={editingPlan.is_trial}
                       onCheckedChange={(v) => setEditingPlan(prev => ({ ...prev, is_trial: v }))}
                     />
-                    <Label className="text-slate-300">Trial Plan</Label>
+                    <Label className="text-slate-700">Trial Plan</Label>
                   </div>
                   {editingPlan.is_trial && (
                     <div className="flex items-center gap-2">
@@ -507,9 +507,9 @@ export default function PlatformPlans() {
                         type="number"
                         value={editingPlan.trial_days}
                         onChange={(e) => setEditingPlan(prev => ({ ...prev, trial_days: parseInt(e.target.value) || 0 }))}
-                        className="w-20 bg-slate-800 border-slate-600 text-white"
+                        className="w-20 bg-slate-50 border-slate-300 text-slate-900"
                       />
-                      <Label className="text-slate-300">days</Label>
+                      <Label className="text-slate-700">days</Label>
                     </div>
                   )}
                 </div>
@@ -519,15 +519,15 @@ export default function PlatformPlans() {
               <TabsContent value="features" className="space-y-4 mt-4">
                 {Object.entries(groupedFeatures).map(([category, features]) => (
                   <div key={category}>
-                    <h3 className="text-sm font-medium text-slate-400 mb-2">{category}</h3>
+                    <h3 className="text-sm font-medium text-slate-600 mb-2">{category}</h3>
                     <div className="grid gap-2 sm:grid-cols-2">
                       {features.map(({ key, name, description }) => (
                         <div 
                           key={key}
-                          className="flex items-center justify-between p-2 rounded bg-slate-800"
+                          className="flex items-center justify-between p-2 rounded bg-slate-50"
                         >
                           <div>
-                            <p className="text-sm text-white">{name}</p>
+                            <p className="text-sm text-slate-900">{name}</p>
                             <p className="text-xs text-slate-500">{description}</p>
                           </div>
                           <Switch
@@ -543,16 +543,16 @@ export default function PlatformPlans() {
 
               {/* Limits Tab */}
               <TabsContent value="limits" className="space-y-4 mt-4">
-                <p className="text-sm text-slate-400">Set -1 for unlimited</p>
+                <p className="text-sm text-slate-600">Set -1 for unlimited</p>
                 <div className="grid gap-4 sm:grid-cols-2">
                   {Object.entries(metadata.limits).map(([key, meta]) => (
                     <div key={key} className="space-y-1">
-                      <Label className="text-slate-300">{meta.name}</Label>
+                      <Label className="text-slate-700">{meta.name}</Label>
                       <Input
                         type="number"
                         value={editingPlan.limits?.[key] ?? 0}
                         onChange={(e) => updateLimit(key, e.target.value)}
-                        className="bg-slate-800 border-slate-600 text-white"
+                        className="bg-slate-50 border-slate-300 text-slate-900"
                       />
                       <p className="text-xs text-slate-500">{meta.description}</p>
                     </div>
@@ -564,12 +564,12 @@ export default function PlatformPlans() {
               <TabsContent value="display" className="space-y-4 mt-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label className="text-slate-300">Status</Label>
+                    <Label className="text-slate-700">Status</Label>
                     <Select 
                       value={editingPlan.status} 
                       onValueChange={(v) => setEditingPlan(prev => ({ ...prev, status: v }))}
                     >
-                      <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
+                      <SelectTrigger className="bg-slate-50 border-slate-300 text-slate-900">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -580,37 +580,37 @@ export default function PlatformPlans() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-slate-300">Display Order</Label>
+                    <Label className="text-slate-700">Display Order</Label>
                     <Input
                       type="number"
                       value={editingPlan.display_order}
                       onChange={(e) => setEditingPlan(prev => ({ ...prev, display_order: parseInt(e.target.value) || 0 }))}
-                      className="bg-slate-800 border-slate-600 text-white"
+                      className="bg-slate-50 border-slate-300 text-slate-900"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-slate-300">Accent Color</Label>
+                  <Label className="text-slate-700">Accent Color</Label>
                   <div className="flex gap-2">
                     <Input
                       type="color"
                       value={editingPlan.color}
                       onChange={(e) => setEditingPlan(prev => ({ ...prev, color: e.target.value }))}
-                      className="w-16 h-10 p-1 cursor-pointer bg-slate-800 border-slate-600"
+                      className="w-16 h-10 p-1 cursor-pointer bg-slate-50 border-slate-300"
                     />
                     <Input
                       value={editingPlan.color}
                       onChange={(e) => setEditingPlan(prev => ({ ...prev, color: e.target.value }))}
-                      className="flex-1 bg-slate-800 border-slate-600 text-white"
+                      className="flex-1 bg-slate-50 border-slate-300 text-slate-900"
                     />
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between p-3 rounded bg-slate-800">
+                  <div className="flex items-center justify-between p-3 rounded bg-slate-50">
                     <div>
-                      <p className="text-white">Show on Pricing Page</p>
+                      <p className="text-slate-900">Show on Pricing Page</p>
                       <p className="text-xs text-slate-500">Make this plan visible to the public</p>
                     </div>
                     <Switch
@@ -618,9 +618,9 @@ export default function PlatformPlans() {
                       onCheckedChange={(v) => setEditingPlan(prev => ({ ...prev, is_public: v }))}
                     />
                   </div>
-                  <div className="flex items-center justify-between p-3 rounded bg-slate-800">
+                  <div className="flex items-center justify-between p-3 rounded bg-slate-50">
                     <div>
-                      <p className="text-white">Mark as Popular</p>
+                      <p className="text-slate-900">Mark as Popular</p>
                       <p className="text-xs text-slate-500">Highlight this plan with a badge</p>
                     </div>
                     <Switch

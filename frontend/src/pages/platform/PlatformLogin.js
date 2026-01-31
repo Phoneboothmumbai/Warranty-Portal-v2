@@ -68,7 +68,7 @@ export default function PlatformLogin() {
       <Card className="w-full max-w-md bg-white border border-slate-200 shadow-sm" data-testid="platform-login-card">
         <CardHeader className="text-center pb-2">
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/20">
-            <Shield className="w-8 h-8 text-white" />
+            <Shield className="w-8 h-8 text-slate-900" />
           </div>
           <CardTitle className="text-2xl text-slate-900">Platform Admin</CardTitle>
           <CardDescription className="text-slate-500">
@@ -121,7 +121,7 @@ export default function PlatformLogin() {
             
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition-all"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-slate-900 py-2.5 rounded-lg font-medium transition-all"
               disabled={loading}
               data-testid="login-button"
             >
