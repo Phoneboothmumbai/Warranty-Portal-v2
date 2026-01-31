@@ -17,6 +17,10 @@ from models.platform import (
     PlatformAuditLog
 )
 from models.organization import Organization, SUBSCRIPTION_PLANS, ORGANIZATION_STATUSES
+from models.plan import (
+    Plan, PlanCreate, PlanUpdate, PlanReorder,
+    DEFAULT_PLANS, FEATURE_METADATA, LIMIT_METADATA
+)
 from services.auth import get_password_hash, verify_password, create_access_token
 from config import SECRET_KEY, ALGORITHM
 from utils.helpers import get_ist_isoformat
