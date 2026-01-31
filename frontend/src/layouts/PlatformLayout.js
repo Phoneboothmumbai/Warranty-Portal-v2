@@ -69,42 +69,42 @@ export default function PlatformLayout() {
 
   if (!admin) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900" data-testid="platform-layout">
+    <div className="min-h-screen bg-slate-50" data-testid="platform-layout">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 z-50 h-full w-64 bg-slate-800 border-r border-slate-700
+        fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-slate-200
         transform transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
       `}>
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-700">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-bold text-white">Platform</span>
-              <span className="text-xs text-slate-400 block">Super Admin</span>
+              <span className="font-bold text-slate-900">Platform</span>
+              <span className="text-xs text-slate-500 block">Super Admin</span>
             </div>
           </div>
           <button 
-            className="lg:hidden text-slate-400 hover:text-white"
+            className="lg:hidden text-slate-400 hover:text-slate-900"
             onClick={() => setSidebarOpen(false)}
           >
             <X className="w-5 h-5" />
@@ -121,8 +121,8 @@ export default function PlatformLayout() {
               className={({ isActive }) => `
                 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all
                 ${isActive 
-                  ? 'bg-purple-500/20 text-purple-400' 
-                  : 'text-slate-400 hover:bg-slate-700/50 hover:text-white'
+                  ? 'bg-blue-50 text-blue-600' 
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }
               `}
             >
@@ -133,21 +133,21 @@ export default function PlatformLayout() {
         </nav>
 
         {/* Admin Info */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-700">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-200">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
-              <span className="text-purple-400 font-semibold">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-blue-600 font-semibold">
                 {admin.name?.charAt(0)?.toUpperCase() || 'A'}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{admin.name}</p>
-              <p className="text-xs text-slate-400 truncate">{admin.email}</p>
+              <p className="text-sm font-medium text-slate-900 truncate">{admin.name}</p>
+              <p className="text-xs text-slate-500 truncate">{admin.email}</p>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-700/50 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-lg text-sm transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 rounded-lg text-sm transition-colors"
           >
             <LogOut className="w-4 h-4" />
             Logout
@@ -158,9 +158,9 @@ export default function PlatformLayout() {
       {/* Main Content */}
       <div className="lg:pl-64">
         {/* Top Bar */}
-        <header className="h-16 bg-slate-800/80 backdrop-blur-sm border-b border-slate-700 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30">
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30">
           <button 
-            className="lg:hidden text-slate-400 hover:text-white"
+            className="lg:hidden text-slate-400 hover:text-slate-900"
             onClick={() => setSidebarOpen(true)}
           >
             <Menu className="w-6 h-6" />
@@ -169,7 +169,7 @@ export default function PlatformLayout() {
           <div className="flex-1 lg:flex-none" />
           
           <div className="flex items-center gap-4">
-            <span className="text-xs px-2 py-1 bg-purple-500/20 text-purple-400 rounded-full font-medium">
+            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded-full font-medium">
               {admin.role?.replace('_', ' ').toUpperCase()}
             </span>
           </div>
