@@ -66,6 +66,7 @@ import PlatformAdmins from "./pages/platform/PlatformAdmins";
 import PlatformSettings from "./pages/platform/PlatformSettings";
 import PlatformBilling from "./pages/platform/PlatformBilling";
 import PlatformAuditLogs from "./pages/platform/PlatformAuditLogs";
+import PlatformPlans from "./pages/platform/PlatformPlans";
 
 // Signup Page
 import SignupPage from "./pages/SignupPage";
