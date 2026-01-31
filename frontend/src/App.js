@@ -141,6 +141,7 @@ function App() {
                     <Route path="dashboard" element={<PlatformDashboard />} />
                     <Route path="organizations" element={<PlatformOrganizations />} />
                     <Route path="admins" element={<PlatformAdmins />} />
+                    <Route path="plans" element={<PlatformPlans />} />
                     <Route path="settings" element={<PlatformSettings />} />
                     <Route path="billing" element={<PlatformBilling />} />
                     <Route path="audit-logs" element={<PlatformAuditLogs />} />
