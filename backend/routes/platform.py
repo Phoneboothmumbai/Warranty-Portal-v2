@@ -772,3 +772,293 @@ async def get_platform_audit_logs(
         "page": page,
         "pages": (total + limit - 1) // limit
     }
+
+
+
+# ==================== PLAN MANAGEMENT ====================
+
+@router.get("/plans")
+async def list_plans(
+    status: Optional[str] = None,
+    include_deleted: bool = False,
+    admin: dict = Depends(require_platform_permission("manage_billing"))
+):
+    """List all plans with customer counts"""
+    query = {}
+    
+    if not include_deleted:
+        query["is_deleted"] = {"$ne": True}
+    
+    if status:
+        query["status"] = status
+    
+    plans = await _db.plans.find(query, {"_id": 0}).sort("display_order", 1).to_list(100)
+    
+    # Add customer counts
+    for plan in plans:
+        count = await _db.organizations.count_documents({
+            "subscription.plan": plan.get("slug"),
+            "is_deleted": {"$ne": True}
+        })
+        plan["used_by_count"] = count
+    
+    return plans
+
+
+@router.get("/plans/metadata")
+async def get_plan_metadata(
+    admin: dict = Depends(require_platform_permission("manage_billing"))
+):
+    """Get feature and limit metadata for plan editor"""
+    return {
+        "features": FEATURE_METADATA,
+        "limits": LIMIT_METADATA
+    }
+
+
+@router.get("/plans/{plan_id}")
+async def get_plan(
+    plan_id: str,
+    admin: dict = Depends(require_platform_permission("manage_billing"))
+):
+    """Get a single plan by ID"""
+    plan = await _db.plans.find_one(
+        {"id": plan_id, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    )
+    
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    # Add customer count
+    plan["used_by_count"] = await _db.organizations.count_documents({
+        "subscription.plan": plan.get("slug"),
+        "is_deleted": {"$ne": True}
+    })
+    
+    return plan
+
+
+@router.post("/plans")
+async def create_plan(
+    data: PlanCreate,
+    admin: dict = Depends(require_platform_permission("manage_billing"))
+):
+    """Create a new plan"""
+    # Check slug uniqueness
+    existing = await _db.plans.find_one({"slug": data.slug, "is_deleted": {"$ne": True}})
+    if existing:
+        raise HTTPException(status_code=400, detail="Plan slug already exists")
+    
+    plan = Plan(
+        **data.model_dump(),
+        created_by=admin.get("id"),
+        updated_by=admin.get("id")
+    )
+    
+    await _db.plans.insert_one(plan.model_dump())
+    
+    # Audit log
+    await _db.platform_audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "admin_id": admin.get("id"),
+        "admin_email": admin.get("email"),
+        "action": "create_plan",
+        "entity_type": "plan",
+        "entity_id": plan.id,
+        "details": {"plan_name": plan.name, "slug": plan.slug},
+        "created_at": get_ist_isoformat()
+    })
+    
+    return plan.model_dump()
+
+
+@router.put("/plans/{plan_id}")
+async def update_plan(
+    plan_id: str,
+    data: PlanUpdate,
+    admin: dict = Depends(require_platform_permission("manage_billing"))
+):
+    """
+    Update a plan. If the plan has active customers and price/features change,
+    create a new version to grandfather existing customers.
+    """
+    plan = await _db.plans.find_one(
+        {"id": plan_id, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    )
+    
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    # Check customer count
+    customer_count = await _db.organizations.count_documents({
+        "subscription.plan": plan.get("slug"),
+        "is_deleted": {"$ne": True}
+    })
+    
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    update_data["updated_at"] = get_ist_isoformat()
+    update_data["updated_by"] = admin.get("id")
+    
+    # If price or features changed and has customers, increment version
+    price_changed = (
+        (data.price_monthly is not None and data.price_monthly != plan.get("price_monthly")) or
+        (data.price_yearly is not None and data.price_yearly != plan.get("price_yearly"))
+    )
+    features_changed = data.features is not None and data.features != plan.get("features")
+    limits_changed = data.limits is not None and data.limits != plan.get("limits")
+    
+    if customer_count > 0 and (price_changed or features_changed or limits_changed):
+        update_data["version"] = plan.get("version", 1) + 1
+    
+    await _db.plans.update_one(
+        {"id": plan_id},
+        {"$set": update_data}
+    )
+    
+    # Audit log
+    await _db.platform_audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "admin_id": admin.get("id"),
+        "admin_email": admin.get("email"),
+        "action": "update_plan",
+        "entity_type": "plan",
+        "entity_id": plan_id,
+        "details": {
+            "plan_name": plan.get("name"),
+            "changes": list(update_data.keys()),
+            "had_customers": customer_count > 0
+        },
+        "created_at": get_ist_isoformat()
+    })
+    
+    return await _db.plans.find_one({"id": plan_id}, {"_id": 0})
+
+
+@router.post("/plans/reorder")
+async def reorder_plans(
+    data: PlanReorder,
+    admin: dict = Depends(require_platform_permission("manage_billing"))
+):
+    """Reorder plans for display"""
+    for idx, plan_id in enumerate(data.plan_ids):
+        await _db.plans.update_one(
+            {"id": plan_id},
+            {"$set": {"display_order": idx, "updated_at": get_ist_isoformat()}}
+        )
+    
+    # Audit log
+    await _db.platform_audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "admin_id": admin.get("id"),
+        "admin_email": admin.get("email"),
+        "action": "reorder_plans",
+        "entity_type": "plan",
+        "entity_id": None,
+        "details": {"new_order": data.plan_ids},
+        "created_at": get_ist_isoformat()
+    })
+    
+    return {"message": "Plans reordered successfully"}
+
+
+@router.delete("/plans/{plan_id}")
+async def delete_plan(
+    plan_id: str,
+    admin: dict = Depends(require_platform_permission("manage_billing"))
+):
+    """
+    Soft delete a plan. Cannot delete if customers are using it.
+    """
+    plan = await _db.plans.find_one(
+        {"id": plan_id, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    )
+    
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    # Check if any customers are using this plan
+    customer_count = await _db.organizations.count_documents({
+        "subscription.plan": plan.get("slug"),
+        "is_deleted": {"$ne": True}
+    })
+    
+    if customer_count > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot delete plan. {customer_count} organization(s) are using it. Archive instead."
+        )
+    
+    await _db.plans.update_one(
+        {"id": plan_id},
+        {"$set": {
+            "is_deleted": True,
+            "deleted_at": get_ist_isoformat(),
+            "deleted_by": admin.get("id")
+        }}
+    )
+    
+    # Audit log
+    await _db.platform_audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "admin_id": admin.get("id"),
+        "admin_email": admin.get("email"),
+        "action": "delete_plan",
+        "entity_type": "plan",
+        "entity_id": plan_id,
+        "details": {"plan_name": plan.get("name")},
+        "created_at": get_ist_isoformat()
+    })
+    
+    return {"message": "Plan deleted"}
+
+
+@router.post("/plans/seed")
+async def seed_default_plans(
+    admin: dict = Depends(require_platform_permission("manage_billing"))
+):
+    """Seed default plans if none exist"""
+    existing_count = await _db.plans.count_documents({"is_deleted": {"$ne": True}})
+    
+    if existing_count > 0:
+        return {"message": f"Plans already exist ({existing_count} found). Skipping seed."}
+    
+    for plan_data in DEFAULT_PLANS:
+        plan = Plan(**plan_data, created_by=admin.get("id"))
+        await _db.plans.insert_one(plan.model_dump())
+    
+    # Audit log
+    await _db.platform_audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "admin_id": admin.get("id"),
+        "admin_email": admin.get("email"),
+        "action": "seed_plans",
+        "entity_type": "plan",
+        "entity_id": None,
+        "details": {"count": len(DEFAULT_PLANS)},
+        "created_at": get_ist_isoformat()
+    })
+    
+    return {"message": f"Seeded {len(DEFAULT_PLANS)} default plans"}
+
+
+# ==================== PUBLIC PLAN API (No Auth) ====================
+
+@router.get("/public/plans")
+async def get_public_plans():
+    """
+    Public endpoint to get active, public plans for pricing page.
+    No authentication required.
+    """
+    plans = await _db.plans.find(
+        {
+            "status": "active",
+            "is_public": True,
+            "is_deleted": {"$ne": True}
+        },
+        {"_id": 0, "created_by": 0, "updated_by": 0, "deleted_by": 0}
+    ).sort("display_order", 1).to_list(20)
+    
+    return plans
