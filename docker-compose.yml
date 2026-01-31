@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: warranty_mongodb
+    restart: unless-stopped
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - warranty_network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: warranty_backend
+    restart: unless-stopped
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DB_NAME=warranty_portal
+      - JWT_SECRET=${JWT_SECRET:-your-super-secure-jwt-secret-change-me}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://aftersales.support,http://localhost:3000}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - warranty_network
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: warranty_frontend
+    restart: unless-stopped
+    environment:
+      - REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL:-https://aftersales.support}
+      - WDS_SOCKET_PORT=443
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - backend
+    networks:
+      - warranty_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: warranty_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - warranty_network
+
+networks:
+  warranty_network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
