@@ -226,6 +226,51 @@ async def verify_tenant_slug(slug: str):
     }
 
 
+@api_router.get("/public/plans")
+async def get_public_plans():
+    """
+    Public endpoint to get active, public plans for pricing page.
+    No authentication required. Plans are managed via Platform Admin.
+    """
+    from models.plan import DEFAULT_PLANS
+    
+    plans = await db.plans.find(
+        {
+            "status": "active",
+            "is_public": True,
+            "is_deleted": {"$ne": True}
+        },
+        {"_id": 0, "created_by": 0, "updated_by": 0, "deleted_by": 0, "deleted_at": 0}
+    ).sort("display_order", 1).to_list(20)
+    
+    # If no plans in DB, return defaults
+    if not plans:
+        return [
+            {
+                "id": f"default-{i}",
+                "name": p["name"],
+                "slug": p["slug"],
+                "tagline": p.get("tagline", ""),
+                "description": p.get("description", ""),
+                "price_monthly": p["price_monthly"],
+                "price_yearly": p["price_yearly"],
+                "currency": "INR",
+                "display_order": p["display_order"],
+                "is_popular": p.get("is_popular", False),
+                "is_trial": p.get("is_trial", False),
+                "trial_days": p.get("trial_days", 0),
+                "color": p.get("color", "#6366f1"),
+                "features": p.get("features", {}),
+                "limits": p.get("limits", {}),
+                "support_level": p.get("support_level", "community"),
+                "response_time_hours": p.get("response_time_hours")
+            }
+            for i, p in enumerate(DEFAULT_PLANS)
+        ]
+    
+    return plans
+
+
 @api_router.get("/masters/public")
 async def get_public_masters(
     master_type: Optional[str] = None,
