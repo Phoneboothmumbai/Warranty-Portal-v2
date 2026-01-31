@@ -1,22 +1,20 @@
-# Production-grade Dockerfile using Debian (no Alpine SSL issues)
+# Use Debian-slim (more stable than Alpine)
 FROM node:20-slim
 
 WORKDIR /app
 
-# Install yarn globally (more reliable than npm)
-RUN corepack enable && corepack prepare yarn@stable --activate
+# Fix OpenSSL issues
+ENV NODE_OPTIONS=--openssl-legacy-provider
 
 # Copy package files
-COPY package.json yarn.lock* ./
+COPY package.json package-lock.json* ./
 
-# Install dependencies with yarn (faster, more reliable)
-RUN yarn install --frozen-lockfile --network-timeout 600000 || yarn install --network-timeout 600000
+# Install with npm (more reliable without lockfile)
+RUN npm cache clean --force && \
+    npm install --legacy-peer-deps --no-audit --no-fund
 
-# Copy source code
+# Copy source
 COPY . .
 
-# Expose port
 EXPOSE 3000
-
-# Start the app
-CMD ["yarn", "start"]
+CMD ["npm", "start"]
