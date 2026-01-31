@@ -4,6 +4,7 @@ Platform Admin Routes - Super Admin API Endpoints
 Routes for platform-level administration (managing all tenants).
 Completely separate from organization/tenant routes.
 """
+import uuid
 import logging
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
