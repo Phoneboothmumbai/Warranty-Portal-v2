@@ -32,7 +32,6 @@ export default function PlatformLogin() {
       if (error.response?.status === 401) {
         toast.error('Invalid credentials');
       } else {
-        // Check if we need to setup
         toast.error(error.response?.data?.detail || 'Login failed');
       }
     } finally {
@@ -68,7 +67,7 @@ export default function PlatformLogin() {
       <Card className="w-full max-w-md bg-white border border-slate-200 shadow-sm" data-testid="platform-login-card">
         <CardHeader className="text-center pb-2">
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/20">
-            <Shield className="w-8 h-8 text-slate-900" />
+            <Shield className="w-8 h-8 text-white" />
           </div>
           <CardTitle className="text-2xl text-slate-900">Platform Admin</CardTitle>
           <CardDescription className="text-slate-500">
@@ -113,7 +112,7 @@ export default function PlatformLogin() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                placeholder="••••••••"
+                placeholder="Enter password"
                 required
                 data-testid="password-input"
               />
@@ -121,7 +120,7 @@ export default function PlatformLogin() {
             
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-slate-900 py-2.5 rounded-lg font-medium transition-all"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition-all"
               disabled={loading}
               data-testid="login-button"
             >
