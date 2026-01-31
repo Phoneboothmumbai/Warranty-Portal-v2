@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Shield, LayoutDashboard, Building2, Settings, LogOut, 
-  Menu, X, Users, CreditCard, FileText, ChevronDown, ScrollText
+  Menu, X, Users, CreditCard, FileText, ChevronDown, ScrollText, Package
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const navItems = [
   { path: '/platform/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/platform/organizations', label: 'Organizations', icon: Building2 },
+  { path: '/platform/plans', label: 'Subscription Plans', icon: Package },
   { path: '/platform/billing', label: 'Revenue & Billing', icon: CreditCard },
   { path: '/platform/admins', label: 'Platform Admins', icon: Users },
   { path: '/platform/audit-logs', label: 'Audit Logs', icon: ScrollText },
