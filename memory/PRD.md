@@ -5,6 +5,40 @@
 
 ## CHANGELOG
 
+### 2026-02-01: Public Pages UI Consistency & Platform Dashboard Fix (Complete)
+
+#### P0: Platform Dashboard Stats Fix
+- **Confirmed Working**: `/api/platform/dashboard/stats` endpoint returns correct data
+- Dashboard now displays:
+  - 6 total organizations
+  - 5 trial status organizations
+  - 23 companies, 35 devices, 7 users, 24 tickets
+  - Revenue metrics (MRR, ARR, conversion rate)
+  - Organizations by status and plan breakdown
+  - Recent organizations list
+
+#### P1: Shared Header/Footer Components
+- **Created**: `frontend/src/components/public/PublicHeader.js`
+  - Consistent navigation: Features, Pricing, Contact, Support Portal
+  - Sign In link and Get Started CTA button
+  - Mobile responsive with hamburger menu
+  - Uses company logo and name from settings context
+- **Created**: `frontend/src/components/public/PublicFooter.js`
+  - Full footer with Product, Company, Legal links
+  - Simple footer variant for signup/login pages
+  - Social media links and company branding
+
+#### P1: Public Pages Refactored
+- **LandingPage.js**: Now uses `PublicHeader` and `PublicFooter` components
+- **FeaturesPage.js**: Now uses `PublicHeader` and `PublicFooter` components
+- **PricingPage.js**: Now uses `PublicHeader` and `PublicFooter` components
+- **SignupPage.js**: Converted from dark purple theme to light white/slate theme
+  - Uses `PublicHeader` and `PublicFooter` (simple variant)
+  - All form inputs, cards, buttons now use light theme colors
+  - Plan cards with white backgrounds and slate borders
+
+**All tests passed**: 100% backend (10/10) and frontend success rate
+
 ### 2026-01-30: Full Multi-Tenant SaaS Features (Phases 1-3 Complete)
 
 #### Phase 1: Role System & Team Management
