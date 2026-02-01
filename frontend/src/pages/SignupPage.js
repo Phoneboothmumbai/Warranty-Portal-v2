@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { 
-  Building2, CheckCircle2, ArrowRight, Sparkles, Shield, 
-  Zap, Users, HardDrive, Ticket, ChevronRight
+  CheckCircle2, ArrowRight, Sparkles,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import PublicHeader from '../components/public/PublicHeader';
+import PublicFooter from '../components/public/PublicFooter';
 import axios from 'axios';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -87,7 +89,7 @@ const PLANS = [
 ];
 
 export default function SignupPage() {
-  const [step, setStep] = useState(1); // 1: Plan selection, 2: Account details, 3: Payment (if not trial)
+  const [step, setStep] = useState(1);
   const [selectedPlan, setSelectedPlan] = useState('trial');
   const [formData, setFormData] = useState({
     organization_name: '',
@@ -149,7 +151,6 @@ export default function SignupPage() {
         company_size: formData.company_size
       });
 
-      // Store auth data
       localStorage.setItem('token', response.data.access_token);
       localStorage.setItem('orgAdmin', JSON.stringify(response.data.user));
       localStorage.setItem('organization', JSON.stringify(response.data.organization));
@@ -161,7 +162,6 @@ export default function SignupPage() {
         toast.success('Account created! Our team will contact you shortly.');
         navigate('/admin/dashboard');
       } else {
-        // Redirect to payment
         setStep(3);
       }
     } catch (error) {
@@ -175,7 +175,6 @@ export default function SignupPage() {
     setLoading(true);
     
     try {
-      // Create Razorpay subscription order
       const token = localStorage.getItem('token');
       const response = await axios.post(`${API}/api/billing/create-subscription`, {
         plan: selectedPlan,
@@ -190,7 +189,6 @@ export default function SignupPage() {
         name: 'Warranty Portal',
         description: `${PLANS.find(p => p.id === selectedPlan)?.name} Plan`,
         handler: async (razorpayResponse) => {
-          // Verify payment on backend
           await axios.post(`${API}/api/billing/verify-payment`, {
             razorpay_payment_id: razorpayResponse.razorpay_payment_id,
             razorpay_subscription_id: razorpayResponse.razorpay_subscription_id,
@@ -208,7 +206,7 @@ export default function SignupPage() {
           contact: formData.phone
         },
         theme: {
-          color: '#7C3AED'
+          color: '#0F62FE'
         }
       };
 
@@ -222,28 +220,10 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
-      {/* Header */}
-      <header className="border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <Shield className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-white">Warranty Portal</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <span className="text-slate-400 text-sm">Already have an account?</span>
-            <Link to="/admin/login">
-              <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-800">
-                Sign In
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-slate-50" data-testid="signup-page">
+      <PublicHeader />
 
-      <main className="max-w-7xl mx-auto px-4 py-12">
+      <main className="max-w-7xl mx-auto px-4 pt-28 pb-12">
         {/* Progress Steps */}
         <div className="flex items-center justify-center gap-4 mb-12">
           {['Select Plan', 'Create Account', 'Payment'].map((label, idx) => (
@@ -251,16 +231,16 @@ export default function SignupPage() {
               <div className={`
                 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
                 ${step > idx + 1 ? 'bg-emerald-500 text-white' : 
-                  step === idx + 1 ? 'bg-purple-600 text-white' : 
-                  'bg-slate-700 text-slate-400'}
+                  step === idx + 1 ? 'bg-[#0F62FE] text-white' : 
+                  'bg-slate-200 text-slate-500'}
               `}>
                 {step > idx + 1 ? <CheckCircle2 className="w-5 h-5" /> : idx + 1}
               </div>
-              <span className={`ml-2 text-sm ${step >= idx + 1 ? 'text-white' : 'text-slate-500'}`}>
+              <span className={`ml-2 text-sm ${step >= idx + 1 ? 'text-slate-900' : 'text-slate-500'}`}>
                 {label}
               </span>
               {idx < 2 && (
-                <ChevronRight className="w-5 h-5 text-slate-600 mx-4" />
+                <ChevronRight className="w-5 h-5 text-slate-400 mx-4" />
               )}
             </div>
           ))}
@@ -270,8 +250,8 @@ export default function SignupPage() {
         {step === 1 && (
           <div data-testid="plan-selection">
             <div className="text-center mb-12">
-              <h1 className="text-4xl font-bold text-white mb-4">Choose Your Plan</h1>
-              <p className="text-slate-400 text-lg">Start with a free trial, upgrade anytime</p>
+              <h1 className="text-4xl font-bold text-slate-900 mb-4">Choose Your Plan</h1>
+              <p className="text-slate-600 text-lg">Start with a free trial, upgrade anytime</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -282,37 +262,38 @@ export default function SignupPage() {
                   className={`
                     relative p-6 rounded-2xl cursor-pointer transition-all duration-300
                     ${selectedPlan === plan.id 
-                      ? 'bg-purple-600/20 border-2 border-purple-500 scale-105' 
-                      : 'bg-slate-800/50 border border-slate-700 hover:border-slate-600'}
-                    ${plan.highlighted ? 'ring-2 ring-purple-500/50' : ''}
+                      ? 'bg-white border-2 border-[#0F62FE] shadow-xl scale-105' 
+                      : 'bg-white border border-slate-200 hover:border-slate-300 hover:shadow-lg'}
+                    ${plan.highlighted ? 'ring-2 ring-[#0F62FE]/30' : ''}
                   `}
+                  data-testid={`plan-card-${plan.id}`}
                 >
                   {plan.highlighted && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className="px-3 py-1 bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-semibold rounded-full">
+                      <span className="px-3 py-1 bg-[#0F62FE] text-white text-xs font-semibold rounded-full">
                         MOST POPULAR
                       </span>
                     </div>
                   )}
                   
-                  <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
-                  <p className="text-slate-400 text-sm mb-4">{plan.description}</p>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">{plan.name}</h3>
+                  <p className="text-slate-500 text-sm mb-4">{plan.description}</p>
                   
                   <div className="mb-6">
                     {plan.price !== null ? (
                       <>
-                        <span className="text-3xl font-bold text-white">₹{plan.price.toLocaleString()}</span>
-                        <span className="text-slate-400">{plan.period}</span>
+                        <span className="text-3xl font-bold text-slate-900">₹{plan.price.toLocaleString()}</span>
+                        <span className="text-slate-500">{plan.period}</span>
                       </>
                     ) : (
-                      <span className="text-2xl font-bold text-white">Custom Pricing</span>
+                      <span className="text-2xl font-bold text-slate-900">Custom Pricing</span>
                     )}
                   </div>
 
                   <ul className="space-y-2 mb-6">
                     {plan.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-center gap-2 text-sm text-slate-300">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                      <li key={idx} className="flex items-center gap-2 text-sm text-slate-600">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                         {feature}
                       </li>
                     ))}
@@ -321,8 +302,8 @@ export default function SignupPage() {
                   <div className={`
                     w-full py-2 rounded-lg text-center text-sm font-medium transition-colors
                     ${selectedPlan === plan.id 
-                      ? 'bg-purple-600 text-white' 
-                      : 'bg-slate-700 text-slate-300'}
+                      ? 'bg-[#0F62FE] text-white' 
+                      : 'bg-slate-100 text-slate-600'}
                   `}>
                     {selectedPlan === plan.id ? 'Selected' : 'Select'}
                   </div>
@@ -333,8 +314,9 @@ export default function SignupPage() {
             <div className="text-center">
               <Button
                 onClick={() => setStep(2)}
-                className="px-8 py-3 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white rounded-xl"
+                className="px-8 py-3 bg-[#0F62FE] hover:bg-[#0043CE] text-white rounded-xl"
                 size="lg"
+                data-testid="continue-to-account-btn"
               >
                 Continue with {PLANS.find(p => p.id === selectedPlan)?.name}
                 <ArrowRight className="w-5 h-5 ml-2" />
@@ -347,116 +329,123 @@ export default function SignupPage() {
         {step === 2 && (
           <div className="max-w-xl mx-auto" data-testid="account-form">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-white mb-2">Create Your Account</h1>
-              <p className="text-slate-400">Set up your organization on Warranty Portal</p>
+              <h1 className="text-3xl font-bold text-slate-900 mb-2">Create Your Account</h1>
+              <p className="text-slate-600">Set up your organization on Warranty Portal</p>
             </div>
 
-            <form onSubmit={handleSignup} className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700">
+            <form onSubmit={handleSignup} className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
               <div className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
                     Organization Name *
                   </label>
                   <input
                     type="text"
                     value={formData.organization_name}
                     onChange={(e) => setFormData({ ...formData, organization_name: e.target.value })}
-                    className={`w-full px-4 py-3 bg-slate-700/50 border ${errors.organization_name ? 'border-red-500' : 'border-slate-600'} rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+                    className={`w-full px-4 py-3 bg-white border ${errors.organization_name ? 'border-red-500' : 'border-slate-300'} rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-[#0F62FE] focus:border-transparent`}
                     placeholder="Acme Corporation"
+                    data-testid="input-org-name"
                   />
                   {errors.organization_name && (
-                    <p className="text-red-400 text-sm mt-1">{errors.organization_name}</p>
+                    <p className="text-red-500 text-sm mt-1">{errors.organization_name}</p>
                   )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
                       Your Name *
                     </label>
                     <input
                       type="text"
                       value={formData.owner_name}
                       onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
-                      className={`w-full px-4 py-3 bg-slate-700/50 border ${errors.owner_name ? 'border-red-500' : 'border-slate-600'} rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+                      className={`w-full px-4 py-3 bg-white border ${errors.owner_name ? 'border-red-500' : 'border-slate-300'} rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-[#0F62FE] focus:border-transparent`}
                       placeholder="John Doe"
+                      data-testid="input-owner-name"
                     />
                     {errors.owner_name && (
-                      <p className="text-red-400 text-sm mt-1">{errors.owner_name}</p>
+                      <p className="text-red-500 text-sm mt-1">{errors.owner_name}</p>
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
                       Phone
                     </label>
                     <input
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-[#0F62FE] focus:border-transparent"
                       placeholder="+91 98765 43210"
+                      data-testid="input-phone"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
                     Work Email *
                   </label>
                   <input
                     type="email"
                     value={formData.owner_email}
                     onChange={(e) => setFormData({ ...formData, owner_email: e.target.value })}
-                    className={`w-full px-4 py-3 bg-slate-700/50 border ${errors.owner_email ? 'border-red-500' : 'border-slate-600'} rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+                    className={`w-full px-4 py-3 bg-white border ${errors.owner_email ? 'border-red-500' : 'border-slate-300'} rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-[#0F62FE] focus:border-transparent`}
                     placeholder="john@acme.com"
+                    data-testid="input-email"
                   />
                   {errors.owner_email && (
-                    <p className="text-red-400 text-sm mt-1">{errors.owner_email}</p>
+                    <p className="text-red-500 text-sm mt-1">{errors.owner_email}</p>
                   )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
                       Password *
                     </label>
                     <input
                       type="password"
                       value={formData.owner_password}
                       onChange={(e) => setFormData({ ...formData, owner_password: e.target.value })}
-                      className={`w-full px-4 py-3 bg-slate-700/50 border ${errors.owner_password ? 'border-red-500' : 'border-slate-600'} rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+                      className={`w-full px-4 py-3 bg-white border ${errors.owner_password ? 'border-red-500' : 'border-slate-300'} rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-[#0F62FE] focus:border-transparent`}
                       placeholder="••••••••"
+                      data-testid="input-password"
                     />
                     {errors.owner_password && (
-                      <p className="text-red-400 text-sm mt-1">{errors.owner_password}</p>
+                      <p className="text-red-500 text-sm mt-1">{errors.owner_password}</p>
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
                       Confirm Password *
                     </label>
                     <input
                       type="password"
                       value={formData.confirm_password}
                       onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
-                      className={`w-full px-4 py-3 bg-slate-700/50 border ${errors.confirm_password ? 'border-red-500' : 'border-slate-600'} rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+                      className={`w-full px-4 py-3 bg-white border ${errors.confirm_password ? 'border-red-500' : 'border-slate-300'} rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-[#0F62FE] focus:border-transparent`}
                       placeholder="••••••••"
+                      data-testid="input-confirm-password"
                     />
                     {errors.confirm_password && (
-                      <p className="text-red-400 text-sm mt-1">{errors.confirm_password}</p>
+                      <p className="text-red-500 text-sm mt-1">{errors.confirm_password}</p>
                     )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
                       Industry
                     </label>
                     <select
                       value={formData.industry}
                       onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-[#0F62FE] focus:border-transparent"
+                      data-testid="select-industry"
                     >
                       <option value="">Select industry</option>
                       <option value="IT Services">IT Services</option>
@@ -469,13 +458,14 @@ export default function SignupPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
                       Company Size
                     </label>
                     <select
                       value={formData.company_size}
                       onChange={(e) => setFormData({ ...formData, company_size: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-[#0F62FE] focus:border-transparent"
+                      data-testid="select-company-size"
                     >
                       <option value="">Select size</option>
                       <option value="1-10">1-10 employees</option>
@@ -493,14 +483,16 @@ export default function SignupPage() {
                   type="button"
                   variant="outline"
                   onClick={() => setStep(1)}
-                  className="flex-1 border-slate-600 text-slate-300"
+                  className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-50"
+                  data-testid="back-btn"
                 >
                   Back
                 </Button>
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700"
+                  className="flex-1 bg-[#0F62FE] hover:bg-[#0043CE]"
+                  data-testid="submit-btn"
                 >
                   {loading ? (
                     <span className="flex items-center gap-2">
@@ -520,9 +512,9 @@ export default function SignupPage() {
 
               <p className="text-center text-sm text-slate-500 mt-6">
                 By signing up, you agree to our{' '}
-                <a href="#" className="text-purple-400 hover:text-purple-300">Terms of Service</a>
+                <Link to="/page/terms-of-service" className="text-[#0F62FE] hover:underline">Terms of Service</Link>
                 {' '}and{' '}
-                <a href="#" className="text-purple-400 hover:text-purple-300">Privacy Policy</a>
+                <Link to="/page/privacy-policy" className="text-[#0F62FE] hover:underline">Privacy Policy</Link>
               </p>
             </form>
           </div>
@@ -531,20 +523,20 @@ export default function SignupPage() {
         {/* Step 3: Payment */}
         {step === 3 && (
           <div className="max-w-md mx-auto text-center" data-testid="payment-step">
-            <div className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700">
-              <div className="w-16 h-16 bg-purple-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Sparkles className="w-8 h-8 text-purple-400" />
+            <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
+              <div className="w-16 h-16 bg-[#0F62FE]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Sparkles className="w-8 h-8 text-[#0F62FE]" />
               </div>
               
-              <h2 className="text-2xl font-bold text-white mb-2">Complete Your Purchase</h2>
-              <p className="text-slate-400 mb-6">
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">Complete Your Purchase</h2>
+              <p className="text-slate-600 mb-6">
                 You're subscribing to the {PLANS.find(p => p.id === selectedPlan)?.name} plan
               </p>
 
-              <div className="bg-slate-700/50 rounded-lg p-4 mb-6">
+              <div className="bg-slate-50 rounded-lg p-4 mb-6">
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-300">{PLANS.find(p => p.id === selectedPlan)?.name} (Monthly)</span>
-                  <span className="text-white font-bold">
+                  <span className="text-slate-600">{PLANS.find(p => p.id === selectedPlan)?.name} (Monthly)</span>
+                  <span className="text-slate-900 font-bold">
                     ₹{PLANS.find(p => p.id === selectedPlan)?.price?.toLocaleString()}
                   </span>
                 </div>
@@ -553,7 +545,8 @@ export default function SignupPage() {
               <Button
                 onClick={handlePayment}
                 disabled={loading}
-                className="w-full py-3 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700"
+                className="w-full py-3 bg-[#0F62FE] hover:bg-[#0043CE]"
+                data-testid="pay-btn"
               >
                 {loading ? 'Processing...' : 'Pay with Razorpay'}
               </Button>
@@ -565,6 +558,8 @@ export default function SignupPage() {
           </div>
         )}
       </main>
+
+      <PublicFooter variant="simple" />
     </div>
   );
 }
