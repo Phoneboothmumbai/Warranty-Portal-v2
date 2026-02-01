@@ -1,16 +1,15 @@
 import { Link } from 'react-router-dom';
 import { 
-  Shield, ArrowRight, HardDrive, Ticket, FileText, 
+  ArrowRight, HardDrive, Ticket, FileText, 
   BarChart3, QrCode, Bell, Wrench, Users, Building2,
-  Lock, Zap, Globe, Mail, Clock, CheckCircle,
-  Smartphone, Database, Cloud, Settings, Layers
+  Lock, Globe, Mail, Clock, CheckCircle,
+  Database, Cloud, Layers
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
-import { useSettings } from '../../context/SettingsContext';
+import PublicHeader from '../../components/public/PublicHeader';
+import PublicFooter from '../../components/public/PublicFooter';
 
 const FeaturesPage = () => {
-  const { settings } = useSettings();
-
   const mainFeatures = [
     {
       icon: Layers,
@@ -20,7 +19,7 @@ const FeaturesPage = () => {
       color: 'bg-blue-500'
     },
     {
-      icon: Shield,
+      icon: HardDrive,
       title: 'Warranty Intelligence',
       description: 'Never miss a warranty claim across any client. Our system tracks expiry dates, sends automated alerts, and helps you maximize warranty ROI for your entire client base.',
       highlights: ['Cross-client alerts', 'Coverage verification', 'AMC override logic', 'Client-ready reports'],
@@ -58,38 +57,8 @@ const FeaturesPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/50">
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link to="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-xl bg-[#0F62FE] flex items-center justify-center">
-                <Shield className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-lg font-semibold text-slate-900 font-display">
-                {settings.company_name || 'AssetVault'}
-              </span>
-            </Link>
-
-            <div className="hidden md:flex items-center gap-8">
-              <Link to="/features" className="text-sm font-medium text-[#0F62FE]">Features</Link>
-              <Link to="/pricing" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">Pricing</Link>
-              <Link to="/page/contact-us" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">Contact</Link>
-            </div>
-
-            <div className="hidden md:flex items-center gap-4">
-              <Link to="/company/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">Sign In</Link>
-              <Link to="/signup">
-                <Button className="bg-[#0F62FE] hover:bg-[#0043CE] text-white px-5 py-2 rounded-lg font-medium">
-                  Get Started
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </nav>
-      </header>
+    <div className="min-h-screen bg-white" data-testid="features-page">
+      <PublicHeader />
 
       {/* Hero */}
       <section className="pt-32 pb-20 md:pt-40 md:pb-24 relative overflow-hidden">
@@ -202,28 +171,7 @@ const FeaturesPage = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-slate-900 text-white py-12 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[#0F62FE] flex items-center justify-center">
-                <Shield className="h-4 w-4 text-white" />
-              </div>
-              <span className="font-semibold font-display">{settings.company_name || 'AssetVault'}</span>
-            </div>
-            <div className="flex gap-8 text-sm text-slate-400">
-              <Link to="/" className="hover:text-white transition-colors">Home</Link>
-              <Link to="/pricing" className="hover:text-white transition-colors">Pricing</Link>
-              <Link to="/page/contact-us" className="hover:text-white transition-colors">Contact</Link>
-              <Link to="/page/privacy-policy" className="hover:text-white transition-colors">Privacy</Link>
-            </div>
-            <p className="text-sm text-slate-500">
-              © {new Date().getFullYear()} {settings.company_name || 'AssetVault'}
-            </p>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 };

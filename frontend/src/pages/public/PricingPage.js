@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, X, ArrowRight, Sparkles } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import PublicHeader from '../../components/public/PublicHeader';
+import PublicFooter from '../../components/public/PublicFooter';
 import axios from 'axios';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-// Format price for display
 const formatPrice = (paise, currency = 'INR') => {
   if (!paise || paise === 0) return 'Free';
   if (paise < 0) return 'Custom';
@@ -18,7 +19,6 @@ const formatPrice = (paise, currency = 'INR') => {
   }).format(amount);
 };
 
-// Feature display names
 const FEATURE_LABELS = {
   ticketing: 'Support Ticketing',
   device_management: 'Device Management',
@@ -44,7 +44,6 @@ const FEATURE_LABELS = {
   custom_workflows: 'Custom Workflows'
 };
 
-// Key features to show on cards
 const KEY_FEATURES = [
   'ticketing',
   'device_management',
@@ -90,43 +89,32 @@ const PricingPage = () => {
     return billingPeriod === 'yearly' ? '/year' : '/month';
   };
 
-  const getLimitDisplay = (value, unit) => {
+  const getLimitDisplay = (value) => {
     if (value === -1) return 'Unlimited';
-    return `${value} ${unit}`;
+    return value;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+      <div className="min-h-screen bg-white">
+        <PublicHeader />
+        <div className="flex items-center justify-center h-96 pt-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-white" data-testid="pricing-page">
-      {/* Header */}
-      <header className="border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="text-xl font-bold text-slate-900">
-              AfterSales
-            </Link>
-            <div className="flex items-center gap-4">
-              <Link to="/features" className="text-slate-600 hover:text-slate-900 text-sm">
-                Features
-              </Link>
-              <Link to="/signup">
-                <Button size="sm">Get Started</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PublicHeader />
 
       {/* Hero */}
-      <section className="py-16 sm:py-24">
+      <section className="pt-32 pb-16 sm:pt-40 sm:pb-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <span className="text-sm font-mono uppercase tracking-widest text-[#0F62FE] mb-4 block">
+            Pricing
+          </span>
           <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 tracking-tight">
             Simple, transparent pricing
           </h1>
@@ -144,6 +132,7 @@ const PricingPage = () => {
                   ? 'bg-white text-slate-900 shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
+              data-testid="billing-monthly"
             >
               Monthly
             </button>
@@ -154,6 +143,7 @@ const PricingPage = () => {
                   ? 'bg-white text-slate-900 shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
+              data-testid="billing-yearly"
             >
               Yearly
               <span className="ml-1 text-xs text-green-600 font-semibold">Save 17%</span>
@@ -171,13 +161,14 @@ const PricingPage = () => {
                 key={plan.id}
                 className={`relative rounded-2xl border ${
                   plan.is_popular
-                    ? 'border-slate-900 shadow-xl'
+                    ? 'border-[#0F62FE] shadow-xl'
                     : 'border-slate-200'
                 } bg-white p-6 flex flex-col`}
+                data-testid={`plan-card-${plan.slug}`}
               >
                 {plan.is_popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="bg-slate-900 text-white text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1">
+                    <span className="bg-[#0F62FE] text-white text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1">
                       <Sparkles className="w-3 h-3" />
                       Most Popular
                     </span>
@@ -207,7 +198,7 @@ const PricingPage = () => {
                   <Button 
                     className={`w-full ${
                       plan.is_popular 
-                        ? 'bg-slate-900 hover:bg-slate-800' 
+                        ? 'bg-[#0F62FE] hover:bg-[#0043CE]' 
                         : 'bg-white text-slate-900 border border-slate-200 hover:bg-slate-50'
                     }`}
                     variant={plan.is_popular ? 'default' : 'outline'}
@@ -222,25 +213,25 @@ const PricingPage = () => {
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600">Companies</span>
                     <span className="font-medium text-slate-900">
-                      {getLimitDisplay(plan.limits?.max_companies, '')}
+                      {getLimitDisplay(plan.limits?.max_companies)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600">Devices</span>
                     <span className="font-medium text-slate-900">
-                      {getLimitDisplay(plan.limits?.max_devices, '')}
+                      {getLimitDisplay(plan.limits?.max_devices)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600">Team Members</span>
                     <span className="font-medium text-slate-900">
-                      {getLimitDisplay(plan.limits?.max_users, '')}
+                      {getLimitDisplay(plan.limits?.max_users)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600">Tickets/month</span>
                     <span className="font-medium text-slate-900">
-                      {getLimitDisplay(plan.limits?.max_tickets_per_month, '')}
+                      {getLimitDisplay(plan.limits?.max_tickets_per_month)}
                     </span>
                   </div>
                 </div>
@@ -295,7 +286,7 @@ const PricingPage = () => {
           </p>
           <div className="mt-6 flex gap-4 justify-center">
             <Link to="/signup">
-              <Button>Start Free Trial</Button>
+              <Button className="bg-[#0F62FE] hover:bg-[#0043CE]">Start Free Trial</Button>
             </Link>
             <a href="mailto:sales@aftersales.support">
               <Button variant="outline">Contact Sales</Button>
@@ -304,14 +295,7 @@ const PricingPage = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-8 border-t border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-sm text-slate-500">
-            © {new Date().getFullYear()} AfterSales. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 };
