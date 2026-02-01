@@ -1,16 +1,16 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  Shield, ArrowRight, Check, 
-  HardDrive, Ticket, FileText, BarChart3, 
-  QrCode, Building2, Users, Layers,
-  Menu, X, Play, ArrowUpRight
+  ArrowRight, Check, 
+  Ticket, FileText, BarChart3, 
+  QrCode, Building2, Layers,
+  Play, ArrowUpRight, Shield
 } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { Button } from '../../components/ui/button';
+import PublicHeader from '../../components/public/PublicHeader';
+import PublicFooter from '../../components/public/PublicFooter';
 
 const LandingPage = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { settings } = useSettings();
 
   const features = [
