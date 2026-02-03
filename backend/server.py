@@ -9903,6 +9903,10 @@ from routes.knowledge_base import router as kb_router, init_kb_router
 init_kb_router(db)
 app.include_router(kb_router, prefix="/api", tags=["Knowledge Base"])
 
+# Include Staff Module router
+from routes.staff import router as staff_router
+app.include_router(staff_router, tags=["Staff Module"])
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
