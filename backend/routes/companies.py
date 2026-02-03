@@ -24,8 +24,13 @@ async def list_companies(
     page: int = Query(default=1, ge=1),
     admin: dict = Depends(get_current_admin)
 ):
-    """List companies with optional search support"""
+    """List companies with optional search support - tenant scoped"""
+    # Tenant scoping - only show companies for this organization
+    organization_id = admin.get("organization_id")
     query = {"is_deleted": {"$ne": True}}
+    
+    if organization_id:
+        query["organization_id"] = organization_id
     
     if q and q.strip():
         search_regex = {"$regex": q.strip(), "$options": "i"}
