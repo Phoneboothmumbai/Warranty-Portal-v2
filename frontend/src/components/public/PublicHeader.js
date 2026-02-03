@@ -32,7 +32,7 @@ const PublicHeader = () => {
               )}
             </div>
             <span className="text-lg font-semibold text-slate-900 font-display">
-              {settings?.company_name || 'AssetVault'}
+              {settings?.company_name || 'MSP Portal'}
             </span>
           </Link>
 
@@ -57,11 +57,11 @@ const PublicHeader = () => {
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-4">
             <Link 
-              to="/company/login" 
+              to="/admin/login" 
               className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
               data-testid="nav-signin"
             >
-              Sign In
+              MSP Login
             </Link>
             <Link to="/signup">
               <Button 
@@ -103,8 +103,8 @@ const PublicHeader = () => {
                 </Link>
               ))}
               <div className="flex flex-col gap-3 pt-4 border-t border-slate-100">
-                <Link to="/company/login" onClick={() => setMobileMenuOpen(false)}>
-                  <Button variant="outline" className="w-full">Sign In</Button>
+                <Link to="/admin/login" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="outline" className="w-full">MSP Login</Button>
                 </Link>
                 <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
                   <Button className="w-full bg-[#0F62FE] hover:bg-[#0043CE] text-white">
