@@ -34,6 +34,7 @@ const navGroups = [
       { path: '/admin/users', label: 'Users', icon: Users },
       { path: '/admin/employees', label: 'Employees', icon: UserCircle },
       { path: '/admin/team', label: 'Team Members', icon: UserCog },
+      { path: '/admin/staff', label: 'Staff Management', icon: Shield },
     ]
   },
   {
