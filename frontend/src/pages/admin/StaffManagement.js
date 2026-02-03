@@ -97,7 +97,7 @@ export default function StaffManagement() {
   });
 
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('adminToken');
+    const token = localStorage.getItem('admin_token');
     return { Authorization: `Bearer ${token}` };
   };
 
