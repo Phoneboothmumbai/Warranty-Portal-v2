@@ -52,7 +52,13 @@ async def list_companies(
 
 @router.post("/admin/companies")
 async def create_company(company_data: CompanyCreate, admin: dict = Depends(get_current_admin)):
+    """Create a new company - tenant scoped"""
     company_dict = {k: v for k, v in company_data.model_dump().items() if v is not None}
+    # Add organization_id from admin context for tenant scoping
+    organization_id = admin.get("organization_id")
+    if organization_id:
+        company_dict["organization_id"] = organization_id
+    
     company = Company(**company_dict)
     await db.companies.insert_one(company.model_dump())
     await log_audit("company", company.id, "create", {"data": company_data.model_dump()}, admin)
