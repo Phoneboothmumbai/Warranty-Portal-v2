@@ -1,0 +1,78 @@
+{
+  "summary": "Fixed critical tenant scoping bug - Devices and AMC contracts were not visible after creation due to missing organization_id field in models. Added organization_id field to Device and AMCContract models, and added organization_id assignment in AMC contract creation endpoint.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "Admin1 login works correctly",
+    "Admin2 login works correctly",
+    "Invalid credentials rejected with 401",
+    "Create company - company gets organization_id and is visible in list",
+    "List companies - only shows companies for logged-in admin's organization",
+    "Tenant isolation - admin from org A cannot see companies from org B",
+    "Create device - device gets organization_id and is visible in list",
+    "List devices - only shows devices for logged-in admin's organization",
+    "Tenant isolation - admin from org A cannot see devices from org B",
+    "Create AMC contract - contract gets organization_id and is visible",
+    "List AMC contracts - only shows contracts for logged-in admin's organization",
+    "Tenant isolation - admin from org A cannot see AMC contracts from org B",
+    "Dashboard stats endpoint returns correct data",
+    "Company dropdown in forms shows organization's companies"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_tenant_scoping.py",
+    "/app/test_reports/pytest/tenant_scoping_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/models/device.py - Added organization_id field to Device model",
+    "/app/backend/models/amc.py - Added organization_id field to AMCContract model",
+    "/app/backend/server.py - Added organization_id assignment in create_amc_contract endpoint"
+  ],
+  "success_rate": {
+    "backend": "100% (14/14 tests passed)",
+    "frontend": "100% (UI verified working)"
+  },
+  "test_credentials": {
+    "admin1": {
+      "email": "admin@demo.com",
+      "password": "admin123",
+      "organization_id": "112068e7-d4ec-4516-beff-8d3087c51868"
+    },
+    "admin2": {
+      "email": "m@gmail.com",
+      "password": "admin123",
+      "organization_id": "edacd0fa-ce92-47a1-a5ef-856b7f7fcd1c"
+    }
+  },
+  "seed_data_creation": "Test data created with TEST_ prefix for companies, devices, and AMC contracts",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Tenant scoping bug has been fixed. The root cause was that Device and AMCContract models were missing the organization_id field. Since models had extra='ignore', the organization_id was silently dropped when creating records. Fix: Added organization_id: Optional[str] = None to both models. Also added organization_id assignment in create_amc_contract endpoint.",
+  "rca_of_the_issue": {
+    "root_cause": "Device and AMCContract Pydantic models were missing the organization_id field. Both models had ConfigDict(extra='ignore') which silently dropped any extra fields not defined in the model. The create_device endpoint was correctly adding organization_id to the dict, but it was being ignored when creating the Device model instance.",
+    "reproduction_steps": [
+      "1. Login as admin@demo.com",
+      "2. Create a new device via POST /api/admin/devices",
+      "3. List devices via GET /api/admin/devices",
+      "4. The newly created device would NOT appear in the list because it had no organization_id stored"
+    ],
+    "fix_applied": [
+      "1. Added 'organization_id: Optional[str] = None' to Device model in /app/backend/models/device.py",
+      "2. Added 'organization_id: Optional[str] = None' to AMCContract model in /app/backend/models/amc.py",
+      "3. Added organization_id assignment in create_amc_contract endpoint in /app/backend/server.py"
+    ],
+    "verification": "All 14 tenant scoping tests now pass. Created devices and AMC contracts are visible in their respective lists."
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "mocked_apis_list": []
+  }
+}
