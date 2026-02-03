@@ -12,7 +12,7 @@ import requests
 import os
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://warranty-track-2.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://asset-nexus-4.preview.emergentagent.com').rstrip('/')
 
 # Platform admin credentials
 PLATFORM_ADMIN_EMAIL = "superadmin@platform.com"
