@@ -5,6 +5,34 @@
 
 ## CHANGELOG
 
+### 2026-02-03: Critical Tenant Scoping Bug Fix (Complete)
+
+#### Root Cause Analysis
+- **Issue**: Companies, Devices, and other entities created by users were not visible after creation
+- **Root Cause**: Pydantic models had `ConfigDict(extra="ignore")` which silently dropped the `organization_id` field when creating records. The create endpoints were adding `organization_id` to the dict, but it was being ignored by the model.
+- **Fix Applied**: Added `organization_id: Optional[str] = None` field to all tenant-scoped models
+
+#### Models Fixed
+- `Device` model - Added organization_id field
+- `AMCContract` model - Added organization_id field
+- `Company` model - Already had organization_id
+- `User` model - Added organization_id field
+- `Site` model - Added organization_id field
+- `License` model - Added organization_id field
+- `Engineer` model - Added organization_id field
+- `Ticket` model - Added organization_id field
+
+#### Endpoints Fixed
+- `create_user` - Now adds organization_id
+- `create_site` - Now adds organization_id
+- `create_license` - Now adds organization_id
+- `get_current_admin()` - Now fetches organization_id from organization_members
+
+#### Test Results
+- **Backend**: 27/27 tests passed (100%)
+- **Frontend**: All UI pages verified working (100%)
+- **Tenant Isolation**: Verified - Admin A cannot see Admin B's data
+
 ### 2026-02-01: Public Pages UI Consistency & Platform Dashboard Fix (Complete)
 
 #### P0: Platform Dashboard Stats Fix
