@@ -69,16 +69,24 @@ async def create_company(company_data: CompanyCreate, admin: dict = Depends(get_
 
 @router.post("/admin/companies/quick-create")
 async def quick_create_company(company_data: CompanyCreate, admin: dict = Depends(get_current_admin)):
-    """Quick create company (for inline creation from dropdowns)"""
-    existing = await db.companies.find_one(
-        {"name": {"$regex": f"^{company_data.name}$", "$options": "i"}, "is_deleted": {"$ne": True}},
-        {"_id": 0}
-    )
+    """Quick create company (for inline creation from dropdowns) - tenant scoped"""
+    organization_id = admin.get("organization_id")
+    
+    # Check for existing company within the same organization
+    existing_query = {"name": {"$regex": f"^{company_data.name}$", "$options": "i"}, "is_deleted": {"$ne": True}}
+    if organization_id:
+        existing_query["organization_id"] = organization_id
+    
+    existing = await db.companies.find_one(existing_query, {"_id": 0})
     if existing:
         existing["label"] = existing["name"]
         return existing
     
     company_dict = {k: v for k, v in company_data.model_dump().items() if v is not None}
+    # Add organization_id for tenant scoping
+    if organization_id:
+        company_dict["organization_id"] = organization_id
+    
     company = Company(**company_dict)
     await db.companies.insert_one(company.model_dump())
     await log_audit("company", company.id, "quick_create", {"data": company_data.model_dump()}, admin)
