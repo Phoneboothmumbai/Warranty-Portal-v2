@@ -462,9 +462,10 @@ class StaffService:
             performed_by=performed_by
         )
         
-        # Remove sensitive fields before returning
+        # Remove sensitive fields and MongoDB _id before returning
         user_dict.pop("password_hash", None)
         user_dict.pop("invite_token", None)
+        user_dict.pop("_id", None)
         return user_dict
     
     @staticmethod
