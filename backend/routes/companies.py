@@ -155,8 +155,13 @@ async def delete_company(company_id: str, admin: dict = Depends(get_current_admi
 
 @router.get("/admin/companies/{company_id}/overview")
 async def get_company_overview(company_id: str, admin: dict = Depends(get_current_admin)):
-    """Get comprehensive company 360° view with all related data"""
-    company = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    """Get comprehensive company 360° view with all related data - tenant scoped"""
+    organization_id = admin.get("organization_id")
+    query = {"id": company_id, "is_deleted": {"$ne": True}}
+    if organization_id:
+        query["organization_id"] = organization_id
+    
+    company = await db.companies.find_one(query, {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
