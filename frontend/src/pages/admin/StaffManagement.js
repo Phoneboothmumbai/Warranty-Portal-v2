@@ -1188,6 +1188,81 @@ export default function StaffManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* PERMISSION MATRIX MODAL */}
+      <Dialog open={showPermissionMatrixModal} onOpenChange={setShowPermissionMatrixModal}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-purple-600" />
+              Manage Permissions: {selectedRole?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Select permissions to assign to this role. Changes will affect all users with this role.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto py-4">
+            {Object.entries(permissionsGrouped).map(([category, perms]) => (
+              <div key={category} className="mb-6">
+                <h3 className="font-semibold text-sm text-slate-700 mb-3 flex items-center gap-2 sticky top-0 bg-white py-1">
+                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                  {category}
+                  <Badge variant="outline" className="text-xs ml-auto">
+                    {perms.filter(p => selectedRolePermissions.includes(p.id)).length}/{perms.length}
+                  </Badge>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {perms.map(perm => {
+                    const isSelected = selectedRolePermissions.includes(perm.id);
+                    return (
+                      <label 
+                        key={perm.id}
+                        className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-all ${
+                          isSelected 
+                            ? 'border-blue-300 bg-blue-50' 
+                            : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                        }`}
+                        data-testid={`perm-${perm.id}`}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => handlePermissionToggle(perm.id, checked)}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm text-slate-900">{perm.name}</div>
+                          <div className="text-xs text-slate-500 font-mono truncate">
+                            {perm.module}.{perm.resource}.{perm.action}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter className="border-t pt-4">
+            <div className="flex items-center gap-2 mr-auto text-sm text-slate-500">
+              <Badge variant="secondary">{selectedRolePermissions.length}</Badge>
+              permissions selected
+            </div>
+            <Button variant="outline" onClick={() => setShowPermissionMatrixModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSavePermissions} disabled={saving} className="gap-2">
+              {saving ? 'Saving...' : (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  Save Permissions
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
