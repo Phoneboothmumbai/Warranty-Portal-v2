@@ -164,7 +164,10 @@ class TestStaffUsers:
             "password": "TestPass123!",
             "phone": "+91-9876543210",
             "employee_id": f"EMP-{unique_id}",
-            "job_title": "Test Engineer"
+            "job_title": "Test Engineer",
+            "department_ids": [],
+            "role_ids": [],
+            "assigned_company_ids": []
         }
         
         response = requests.post(
@@ -173,8 +176,9 @@ class TestStaffUsers:
             json=user_data
         )
         
-        if response.status_code == 201:
-            user = response.json()
+        if response.status_code == 200:
+            data = response.json()
+            user = data.get("user", data)
             return user.get("id")
         return None
     
@@ -188,7 +192,9 @@ class TestStaffUsers:
         
         data = response.json()
         assert "users" in data, "Response should contain 'users' key"
-        assert "pagination" in data, "Response should contain 'pagination' key"
+        # Pagination fields are at root level
+        assert "total" in data, "Response should contain 'total' key"
+        assert "page" in data, "Response should contain 'page' key"
         
         print(f"✓ Listed {len(data['users'])} users")
     
@@ -201,7 +207,10 @@ class TestStaffUsers:
             "password": "TestPass123!",
             "phone": "+91-9876543210",
             "employee_id": f"EMP-{unique_id}",
-            "job_title": "Test Engineer"
+            "job_title": "Test Engineer",
+            "department_ids": [],
+            "role_ids": [],
+            "assigned_company_ids": []
         }
         
         response = requests.post(
@@ -209,9 +218,10 @@ class TestStaffUsers:
             headers=headers,
             json=user_data
         )
-        assert response.status_code == 201, f"Create user failed: {response.text}"
+        assert response.status_code == 200, f"Create user failed: {response.text}"
         
-        user = response.json()
+        data = response.json()
+        user = data.get("user", data)
         assert user.get("email") == user_data["email"].lower() or user.get("email") == user_data["email"]
         assert user.get("name") == user_data["name"]
         assert "id" in user
@@ -226,7 +236,10 @@ class TestStaffUsers:
         unique_id = str(uuid.uuid4())[:8]
         user_data = {
             "email": f"TEST_invite_{unique_id}@example.com",
-            "name": f"TEST Invite User {unique_id}"
+            "name": f"TEST Invite User {unique_id}",
+            "department_ids": [],
+            "role_ids": [],
+            "assigned_company_ids": []
         }
         
         response = requests.post(
@@ -234,9 +247,10 @@ class TestStaffUsers:
             headers=headers,
             json=user_data
         )
-        assert response.status_code == 201, f"Create invite user failed: {response.text}"
+        assert response.status_code == 200, f"Create invite user failed: {response.text}"
         
-        user = response.json()
+        data = response.json()
+        user = data.get("user", data)
         # User without password should be in created state
         assert user.get("state") == "created"
         
@@ -259,7 +273,8 @@ class TestStaffUsers:
         )
         assert response.status_code == 200, f"Update user failed: {response.text}"
         
-        user = response.json()
+        data = response.json()
+        user = data.get("user", data)
         assert user.get("name") == update_data["name"]
         assert user.get("job_title") == update_data["job_title"]
         
@@ -287,7 +302,10 @@ class TestStaffUsers:
         unique_id = str(uuid.uuid4())[:8]
         user_data = {
             "email": f"TEST_activate_{unique_id}@example.com",
-            "name": f"TEST Activate User {unique_id}"
+            "name": f"TEST Activate User {unique_id}",
+            "department_ids": [],
+            "role_ids": [],
+            "assigned_company_ids": []
         }
         
         create_response = requests.post(
@@ -296,10 +314,11 @@ class TestStaffUsers:
             json=user_data
         )
         
-        if create_response.status_code != 201:
+        if create_response.status_code != 200:
             pytest.skip("Could not create test user")
         
-        user = create_response.json()
+        data = create_response.json()
+        user = data.get("user", data)
         user_id = user.get("id")
         
         # Now activate the user
@@ -315,7 +334,8 @@ class TestStaffUsers:
         )
         assert response.status_code == 200, f"Activate user failed: {response.text}"
         
-        updated_user = response.json()
+        updated_data = response.json()
+        updated_user = updated_data.get("user", updated_data)
         assert updated_user.get("state") == "active"
         
         print(f"✓ Activated user: {updated_user.get('name')}")
@@ -327,7 +347,10 @@ class TestStaffUsers:
         user_data = {
             "email": f"TEST_suspend_{unique_id}@example.com",
             "name": f"TEST Suspend User {unique_id}",
-            "password": "TestPass123!"
+            "password": "TestPass123!",
+            "department_ids": [],
+            "role_ids": [],
+            "assigned_company_ids": []
         }
         
         create_response = requests.post(
@@ -336,10 +359,11 @@ class TestStaffUsers:
             json=user_data
         )
         
-        if create_response.status_code != 201:
+        if create_response.status_code != 200:
             pytest.skip("Could not create test user")
         
-        user = create_response.json()
+        data = create_response.json()
+        user = data.get("user", data)
         user_id = user.get("id")
         
         # Now suspend the user
@@ -355,7 +379,8 @@ class TestStaffUsers:
         )
         assert response.status_code == 200, f"Suspend user failed: {response.text}"
         
-        updated_user = response.json()
+        updated_data = response.json()
+        updated_user = updated_data.get("user", updated_data)
         assert updated_user.get("state") == "suspended"
         
         print(f"✓ Suspended user: {updated_user.get('name')}")
@@ -367,7 +392,10 @@ class TestStaffUsers:
         user_data = {
             "email": f"TEST_reactivate_{unique_id}@example.com",
             "name": f"TEST Reactivate User {unique_id}",
-            "password": "TestPass123!"
+            "password": "TestPass123!",
+            "department_ids": [],
+            "role_ids": [],
+            "assigned_company_ids": []
         }
         
         create_response = requests.post(
@@ -376,10 +404,11 @@ class TestStaffUsers:
             json=user_data
         )
         
-        if create_response.status_code != 201:
+        if create_response.status_code != 200:
             pytest.skip("Could not create test user")
         
-        user = create_response.json()
+        data = create_response.json()
+        user = data.get("user", data)
         user_id = user.get("id")
         
         # Suspend first
@@ -402,7 +431,8 @@ class TestStaffUsers:
         )
         assert response.status_code == 200, f"Reactivate user failed: {response.text}"
         
-        updated_user = response.json()
+        updated_data = response.json()
+        updated_user = updated_data.get("user", updated_data)
         assert updated_user.get("state") == "active"
         
         print(f"✓ Reactivated user: {updated_user.get('name')}")
@@ -414,7 +444,10 @@ class TestStaffUsers:
         user_data = {
             "email": f"TEST_archive_{unique_id}@example.com",
             "name": f"TEST Archive User {unique_id}",
-            "password": "TestPass123!"
+            "password": "TestPass123!",
+            "department_ids": [],
+            "role_ids": [],
+            "assigned_company_ids": []
         }
         
         create_response = requests.post(
@@ -423,10 +456,11 @@ class TestStaffUsers:
             json=user_data
         )
         
-        if create_response.status_code != 201:
+        if create_response.status_code != 200:
             pytest.skip("Could not create test user")
         
-        user = create_response.json()
+        data = create_response.json()
+        user = data.get("user", data)
         user_id = user.get("id")
         
         # Now archive the user
@@ -442,7 +476,8 @@ class TestStaffUsers:
         )
         assert response.status_code == 200, f"Archive user failed: {response.text}"
         
-        updated_user = response.json()
+        updated_data = response.json()
+        updated_user = updated_data.get("user", updated_data)
         assert updated_user.get("state") == "archived"
         
         print(f"✓ Archived user: {updated_user.get('name')}")
@@ -454,7 +489,10 @@ class TestStaffUsers:
         user_data = {
             "email": f"TEST_invalid_{unique_id}@example.com",
             "name": f"TEST Invalid Transition {unique_id}",
-            "password": "TestPass123!"
+            "password": "TestPass123!",
+            "department_ids": [],
+            "role_ids": [],
+            "assigned_company_ids": []
         }
         
         create_response = requests.post(
@@ -463,10 +501,11 @@ class TestStaffUsers:
             json=user_data
         )
         
-        if create_response.status_code != 201:
+        if create_response.status_code != 200:
             pytest.skip("Could not create test user")
         
-        user = create_response.json()
+        data = create_response.json()
+        user = data.get("user", data)
         user_id = user.get("id")
         
         # Archive the user
@@ -530,8 +569,9 @@ class TestDepartments:
             json=dept_data
         )
         
-        if response.status_code == 201:
-            dept = response.json()
+        if response.status_code == 200:
+            data = response.json()
+            dept = data.get("department", data)
             return dept.get("id")
         return None
     
@@ -562,9 +602,10 @@ class TestDepartments:
             headers=headers,
             json=dept_data
         )
-        assert response.status_code == 201, f"Create department failed: {response.text}"
+        assert response.status_code == 200, f"Create department failed: {response.text}"
         
-        dept = response.json()
+        data = response.json()
+        dept = data.get("department", data)
         assert dept.get("name") == dept_data["name"]
         assert dept.get("code") == dept_data["code"]
         assert "id" in dept
@@ -589,7 +630,8 @@ class TestDepartments:
         )
         assert response.status_code == 200, f"Update department failed: {response.text}"
         
-        dept = response.json()
+        data = response.json()
+        dept = data.get("department", data)
         assert dept.get("name") == update_data["name"]
         
         print(f"✓ Updated department: {dept.get('name')}")
@@ -609,10 +651,12 @@ class TestDepartments:
             json=dept_data
         )
         
-        if create_response.status_code != 201:
+        if create_response.status_code != 200:
             pytest.skip("Could not create test department")
         
-        dept_id = create_response.json().get("id")
+        data = create_response.json()
+        dept = data.get("department", data)
+        dept_id = dept.get("id")
         
         # Now delete it
         response = requests.delete(
@@ -661,8 +705,9 @@ class TestRoles:
             json=role_data
         )
         
-        if response.status_code == 201:
-            role = response.json()
+        if response.status_code == 200:
+            data = response.json()
+            role = data.get("role", data)
             return role.get("id")
         return None
     
@@ -694,9 +739,10 @@ class TestRoles:
             headers=headers,
             json=role_data
         )
-        assert response.status_code == 201, f"Create role failed: {response.text}"
+        assert response.status_code == 200, f"Create role failed: {response.text}"
         
-        role = response.json()
+        data = response.json()
+        role = data.get("role", data)
         assert role.get("name") == role_data["name"]
         assert role.get("level") == role_data["level"]
         assert "id" in role
@@ -722,7 +768,8 @@ class TestRoles:
         )
         assert response.status_code == 200, f"Update role failed: {response.text}"
         
-        role = response.json()
+        data = response.json()
+        role = data.get("role", data)
         assert role.get("name") == update_data["name"]
         
         print(f"✓ Updated role: {role.get('name')}")
@@ -743,10 +790,12 @@ class TestRoles:
             json=role_data
         )
         
-        if create_response.status_code != 201:
+        if create_response.status_code != 200:
             pytest.skip("Could not create test role")
         
-        role_id = create_response.json().get("id")
+        data = create_response.json()
+        role = data.get("role", data)
+        role_id = role.get("id")
         
         # Now delete it
         response = requests.delete(
@@ -846,10 +895,12 @@ class TestPermissionMatrix:
             json=role_data
         )
         
-        if create_response.status_code != 201:
+        if create_response.status_code != 200:
             pytest.skip("Could not create test role")
         
-        role_id = create_response.json().get("id")
+        data = create_response.json()
+        role = data.get("role", data)
+        role_id = role.get("id")
         
         # Get some permissions to assign
         perm_response = requests.get(
@@ -908,10 +959,12 @@ class TestPermissionMatrix:
             json=role_data
         )
         
-        if create_response.status_code != 201:
+        if create_response.status_code != 200:
             pytest.skip("Could not create test role")
         
-        role_id = create_response.json().get("id")
+        data = create_response.json()
+        role = data.get("role", data)
+        role_id = role.get("id")
         
         # Get some permissions
         perm_response = requests.get(
@@ -988,7 +1041,10 @@ class TestAuditLogs:
         user_data = {
             "email": f"TEST_audit_{unique_id}@example.com",
             "name": f"TEST Audit User {unique_id}",
-            "password": "TestPass123!"
+            "password": "TestPass123!",
+            "department_ids": [],
+            "role_ids": [],
+            "assigned_company_ids": []
         }
         
         requests.post(
@@ -1099,17 +1155,15 @@ class TestUserFilters:
         assert response.status_code == 200, f"Pagination failed: {response.text}"
         
         data = response.json()
-        assert "pagination" in data
-        
-        pagination = data["pagination"]
-        assert "page" in pagination
-        assert "limit" in pagination
-        assert "total" in pagination
+        # Pagination fields are at root level
+        assert "page" in data
+        assert "limit" in data
+        assert "total" in data
         
         users = data.get("users", [])
         assert len(users) <= 5, f"Expected max 5 users, got {len(users)}"
         
-        print(f"✓ Pagination working: page {pagination.get('page')}, {len(users)} users")
+        print(f"✓ Pagination working: page {data.get('page')}, {len(users)} users")
 
 
 if __name__ == "__main__":
