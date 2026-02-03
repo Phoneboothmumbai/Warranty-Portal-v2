@@ -71,10 +71,12 @@ export default function StaffManagement() {
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [showStateModal, setShowStateModal] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [showPermissionMatrixModal, setShowPermissionMatrixModal] = useState(false);
   
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedDept, setSelectedDept] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
+  const [selectedRolePermissions, setSelectedRolePermissions] = useState([]);
   const [saving, setSaving] = useState(false);
 
   // Form states
