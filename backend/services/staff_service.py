@@ -422,7 +422,7 @@ class StaffService:
             # If password provided, can activate immediately
             initial_state = UserState.ACTIVE
         
-        # Create user
+        # Create user - handle None values for list fields
         user = StaffUser(
             organization_id=organization_id,
             email=user_data["email"],
@@ -434,10 +434,10 @@ class StaffService:
             employee_id=user_data.get("employee_id"),
             job_title=user_data.get("job_title"),
             state=initial_state.value,
-            department_ids=user_data.get("department_ids", []),
+            department_ids=user_data.get("department_ids") or [],
             primary_department_id=user_data.get("primary_department_id"),
-            role_ids=user_data.get("role_ids", []),
-            assigned_company_ids=user_data.get("assigned_company_ids", []),
+            role_ids=user_data.get("role_ids") or [],
+            assigned_company_ids=user_data.get("assigned_company_ids") or [],
             created_by=performed_by.get("id")
         )
         
