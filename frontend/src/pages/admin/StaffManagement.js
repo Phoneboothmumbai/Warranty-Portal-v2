@@ -303,6 +303,65 @@ export default function StaffManagement() {
     }
   };
 
+  // Permission Matrix functions
+  const openPermissionMatrix = async (role) => {
+    setSelectedRole(role);
+    // Extract current permission IDs from role
+    const currentPermIds = (role.permissions || []).map(p => p.permission_id);
+    setSelectedRolePermissions(currentPermIds);
+    setShowPermissionMatrixModal(true);
+  };
+
+  const handlePermissionToggle = (permissionId, isChecked) => {
+    setSelectedRolePermissions(prev => {
+      if (isChecked) {
+        return [...prev, permissionId];
+      } else {
+        return prev.filter(id => id !== permissionId);
+      }
+    });
+  };
+
+  const handleSavePermissions = async () => {
+    if (!selectedRole) return;
+    setSaving(true);
+    
+    try {
+      // Get current permission IDs from the role
+      const currentPermIds = (selectedRole.permissions || []).map(p => p.permission_id);
+      
+      // Find permissions to add
+      const toAdd = selectedRolePermissions.filter(id => !currentPermIds.includes(id));
+      
+      // Find permissions to remove
+      const toRemove = currentPermIds.filter(id => !selectedRolePermissions.includes(id));
+      
+      // Add new permissions
+      if (toAdd.length > 0) {
+        await axios.post(
+          `${API}/api/admin/staff/roles/${selectedRole.id}/permissions`,
+          { permission_ids: toAdd, visibility_scope: 'global' },
+          { headers: getAuthHeaders() }
+        );
+      }
+      
+      // Remove permissions
+      if (toRemove.length > 0) {
+        await axios.delete(
+          `${API}/api/admin/staff/roles/${selectedRole.id}/permissions?${toRemove.map(id => `permission_ids=${id}`).join('&')}`,
+          { headers: getAuthHeaders() }
+        );
+      }
+      
+      toast.success('Permissions updated successfully');
+      setShowPermissionMatrixModal(false);
+      fetchRoles();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update permissions');
+    }
+    setSaving(false);
+  };
+
   // Open modals
   const openUserModal = (user = null) => {
     setSelectedUser(user);
