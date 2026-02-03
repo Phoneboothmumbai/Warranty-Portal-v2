@@ -72,8 +72,7 @@ const PublicFooter = ({ variant = 'full' }) => {
             <ul className="space-y-3 text-slate-400">
               <li><Link to="/page/about" className="hover:text-white transition-colors">About</Link></li>
               <li><Link to="/page/contact-us" className="hover:text-white transition-colors">Contact</Link></li>
-              <li><Link to="/admin/login" className="hover:text-white transition-colors">Admin Portal</Link></li>
-              <li><Link to="/company/login" className="hover:text-white transition-colors">Company Login</Link></li>
+              <li><Link to="/admin/login" className="hover:text-white transition-colors">MSP Login</Link></li>
             </ul>
           </div>
 

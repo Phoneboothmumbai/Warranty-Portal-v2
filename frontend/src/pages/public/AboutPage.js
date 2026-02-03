@@ -58,7 +58,7 @@ const AboutPage = () => {
             </div>
 
             <div className="hidden md:flex items-center gap-4">
-              <Link to="/company/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">Sign In</Link>
+              <Link to="/admin/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">MSP Login</Link>
               <Link to="/signup">
                 <Button className="bg-[#0F62FE] hover:bg-[#0043CE] text-white px-5 py-2 rounded-lg font-medium">
                   Get Started
