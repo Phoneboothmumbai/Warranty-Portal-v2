@@ -4212,6 +4212,10 @@ async def create_amc_contract(data: AMCContractCreate, admin: dict = Depends(get
         "internal_notes": data.internal_notes,
     }
     
+    # Add organization_id for multi-tenancy
+    if org_id:
+        contract_data["organization_id"] = org_id
+    
     contract = AMCContract(**contract_data)
     await db.amc_contracts.insert_one(contract.model_dump())
     await log_audit("amc_contract", contract.id, "create", {"data": contract_data}, admin)
