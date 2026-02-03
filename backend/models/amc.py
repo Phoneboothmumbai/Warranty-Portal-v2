@@ -74,6 +74,7 @@ class AMCDocument(BaseModel):
 class AMCContract(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    organization_id: Optional[str] = None  # Tenant scoping - links to organization
     company_id: str
     name: str
     amc_type: str = "comprehensive"

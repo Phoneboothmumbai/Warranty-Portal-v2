@@ -21,6 +21,7 @@ class ConsumableItem(BaseModel):
 class Device(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    organization_id: Optional[str] = None  # Tenant scoping - links to organization
     company_id: str
     assigned_user_id: Optional[str] = None
     assigned_employee_id: Optional[str] = None  # NEW: Employee from company_employees
