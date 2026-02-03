@@ -97,7 +97,9 @@ class TestCompanyTenantScoping:
             headers={"Authorization": f"Bearer {admin1_token}"},
             json={
                 "name": unique_name,
-                "contact_email": f"test_{uuid.uuid4().hex[:6]}@test.com"
+                "contact_name": "Test Contact",
+                "contact_email": f"test_{uuid.uuid4().hex[:6]}@test.com",
+                "contact_phone": "1234567890"
             }
         )
         print(f"Create company response: {response.status_code}")
@@ -115,8 +117,6 @@ class TestCompanyTenantScoping:
         if "organization_id" in data:
             print(f"Company organization_id: {data['organization_id']}")
             assert data["organization_id"] == ADMIN1_ORG_ID, "Wrong organization_id"
-        
-        return company_id
     
     def test_list_companies_shows_created_company(self, admin1_token):
         """Test that created company appears in list"""
@@ -128,7 +128,9 @@ class TestCompanyTenantScoping:
             headers={"Authorization": f"Bearer {admin1_token}"},
             json={
                 "name": unique_name,
-                "contact_email": f"test_{uuid.uuid4().hex[:6]}@test.com"
+                "contact_name": "Test Contact",
+                "contact_email": f"test_{uuid.uuid4().hex[:6]}@test.com",
+                "contact_phone": "1234567890"
             }
         )
         assert create_response.status_code == 200, f"Create failed: {create_response.text}"
@@ -148,7 +150,10 @@ class TestCompanyTenantScoping:
         
         # Find our created company
         found = any(c["id"] == company_id for c in companies)
-        assert found, f"Created company {company_id} not found in list!"
+        if not found:
+            print(f"CRITICAL BUG: Created company {company_id} not found in list!")
+            print(f"Company IDs in list: {[c['id'] for c in companies[:10]]}")
+        assert found, f"Created company {company_id} not found in list! This is the tenant scoping bug."
         print(f"SUCCESS: Company {unique_name} is visible in list")
     
     def test_tenant_isolation_companies(self, admin1_token, admin2_token):
@@ -161,7 +166,9 @@ class TestCompanyTenantScoping:
             headers={"Authorization": f"Bearer {admin1_token}"},
             json={
                 "name": unique_name,
-                "contact_email": f"test_{uuid.uuid4().hex[:6]}@test.com"
+                "contact_name": "Test Contact",
+                "contact_email": f"test_{uuid.uuid4().hex[:6]}@test.com",
+                "contact_phone": "1234567890"
             }
         )
         assert create_response.status_code == 200
@@ -227,7 +234,9 @@ class TestDeviceTenantScoping:
             headers={"Authorization": f"Bearer {admin1_token}"},
             json={
                 "name": unique_name,
-                "contact_email": f"test_{uuid.uuid4().hex[:6]}@test.com"
+                "contact_name": "Test Contact",
+                "contact_email": f"test_{uuid.uuid4().hex[:6]}@test.com",
+                "contact_phone": "1234567890"
             }
         )
         if create_response.status_code != 200:
@@ -263,11 +272,9 @@ class TestDeviceTenantScoping:
         # Check if organization_id is set
         if "organization_id" in data:
             print(f"Device organization_id: {data['organization_id']}")
-        
-        return device_id
     
     def test_list_devices_shows_created_device(self, admin1_token, admin1_company):
-        """Test that created device appears in list"""
+        """Test that created device appears in list - CRITICAL BUG TEST"""
         unique_serial = f"TEST_ListDev_{uuid.uuid4().hex[:8]}"
         
         # Create device
@@ -299,7 +306,12 @@ class TestDeviceTenantScoping:
         
         # Find our created device
         found = any(d["id"] == device_id for d in devices)
-        assert found, f"Created device {device_id} not found in list!"
+        if not found:
+            print(f"CRITICAL BUG: Created device {device_id} not found in list!")
+            print(f"Device IDs in list (first 10): {[d['id'] for d in devices[:10]]}")
+            # Check if device exists in DB without org filter
+            print(f"This indicates the device was created but organization_id scoping is filtering it out")
+        assert found, f"Created device {device_id} not found in list! This is the tenant scoping bug."
         print(f"SUCCESS: Device {unique_serial} is visible in list")
     
     def test_tenant_isolation_devices(self, admin1_token, admin2_token, admin1_company):
@@ -380,7 +392,9 @@ class TestAMCContractTenantScoping:
             headers={"Authorization": f"Bearer {admin1_token}"},
             json={
                 "name": unique_name,
-                "contact_email": f"test_{uuid.uuid4().hex[:6]}@test.com"
+                "contact_name": "Test Contact",
+                "contact_email": f"test_{uuid.uuid4().hex[:6]}@test.com",
+                "contact_phone": "1234567890"
             }
         )
         if create_response.status_code != 200:
@@ -411,11 +425,9 @@ class TestAMCContractTenantScoping:
         assert "id" in data, "No AMC ID in response"
         amc_id = data["id"]
         print(f"Created AMC contract ID: {amc_id}")
-        
-        return amc_id
     
     def test_list_amc_contracts_shows_created(self, admin1_token, admin1_company):
-        """Test that created AMC contract appears in list"""
+        """Test that created AMC contract appears in list - CRITICAL BUG TEST"""
         unique_name = f"TEST_ListAMC_{uuid.uuid4().hex[:8]}"
         
         # Create AMC contract
@@ -446,7 +458,10 @@ class TestAMCContractTenantScoping:
         
         # Find our created contract
         found = any(c["id"] == amc_id for c in contracts)
-        assert found, f"Created AMC contract {amc_id} not found in list!"
+        if not found:
+            print(f"CRITICAL BUG: Created AMC contract {amc_id} not found in list!")
+            print(f"AMC IDs in list: {[c['id'] for c in contracts[:10]]}")
+        assert found, f"Created AMC contract {amc_id} not found in list! This is the tenant scoping bug."
         print(f"SUCCESS: AMC contract {unique_name} is visible in list")
     
     def test_tenant_isolation_amc_contracts(self, admin1_token, admin2_token, admin1_company):
@@ -499,8 +514,9 @@ class TestDashboardTenantScoping:
     
     def test_dashboard_stats_endpoint(self, admin1_token):
         """Test dashboard stats endpoint returns data"""
+        # Correct endpoint is /api/admin/dashboard (not /api/admin/dashboard/stats)
         response = requests.get(
-            f"{BASE_URL}/api/admin/dashboard/stats",
+            f"{BASE_URL}/api/admin/dashboard",
             headers={"Authorization": f"Bearer {admin1_token}"}
         )
         print(f"Dashboard stats response: {response.status_code}")
