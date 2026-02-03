@@ -108,8 +108,8 @@ export default function PublicTicketPortal() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <a href="/company/login" className="text-sm text-blue-600 hover:text-blue-700">
-              Company Login →
+            <a href="/admin/login" className="text-sm text-blue-600 hover:text-blue-700">
+              MSP Login →
             </a>
           </div>
         </div>
@@ -152,12 +152,12 @@ export default function PublicTicketPortal() {
 
             {/* Info Section */}
             <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
-              <h4 className="font-medium text-blue-900 mb-2">Are you a registered company user?</h4>
+              <h4 className="font-medium text-blue-900 mb-2">Are you an MSP administrator?</h4>
               <p className="text-sm text-blue-700 mb-3">
-                If your company is registered with us, you can log in to the Company Portal for a better experience with full ticket history and faster support.
+                If you're a registered MSP, log in to your admin portal for full ticket management and faster support.
               </p>
-              <a href="/company/login" className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700">
-                Go to Company Portal →
+              <a href="/admin/login" className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700">
+                Go to MSP Portal →
               </a>
             </div>
           </div>
@@ -360,9 +360,9 @@ export default function PublicTicketPortal() {
                 
                 {/* Thread would go here */}
                 <div className="bg-slate-50 rounded-lg p-4 text-center text-slate-500">
-                  <p>To view full ticket details and reply, please log in to the Company Portal.</p>
-                  <a href="/company/login" className="text-blue-600 hover:text-blue-700 font-medium mt-2 inline-block">
-                    Log in to Company Portal →
+                  <p>To view full ticket details and reply, please log in to the MSP Portal.</p>
+                  <a href="/admin/login" className="text-blue-600 hover:text-blue-700 font-medium mt-2 inline-block">
+                    Log in to MSP Portal →
                   </a>
                 </div>
               </div>
