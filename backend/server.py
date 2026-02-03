@@ -2536,11 +2536,20 @@ async def list_users(
 
 @api_router.post("/admin/users")
 async def create_user(user_data: UserCreate, admin: dict = Depends(get_current_admin)):
-    company = await db.companies.find_one({"id": user_data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    company_query = {"id": user_data.company_id, "is_deleted": {"$ne": True}}
+    company_query = scope_query(company_query, org_id)
+    
+    company = await db.companies.find_one(company_query, {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
-    user = User(**user_data.model_dump())
+    user_dict = user_data.model_dump()
+    if org_id:
+        user_dict["organization_id"] = org_id
+    
+    user = User(**user_dict)
     await db.users.insert_one(user.model_dump())
     await log_audit("user", user.id, "create", {"data": user_data.model_dump()}, admin)
     result = user.model_dump()
@@ -4473,12 +4482,20 @@ async def list_sites(
 @api_router.post("/admin/sites")
 async def create_site(data: SiteCreate, admin: dict = Depends(get_current_admin)):
     """Create new site"""
-    # Validate company exists
-    company = await db.companies.find_one({"id": data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    company_query = {"id": data.company_id, "is_deleted": {"$ne": True}}
+    company_query = scope_query(company_query, org_id)
+    
+    company = await db.companies.find_one(company_query, {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
-    site = Site(**data.model_dump())
+    site_dict = data.model_dump()
+    if org_id:
+        site_dict["organization_id"] = org_id
+    
+    site = Site(**site_dict)
     await db.sites.insert_one(site.model_dump())
     await log_audit("site", site.id, "create", {"data": data.model_dump()}, admin)
     
@@ -5383,13 +5400,19 @@ async def list_licenses(
 @api_router.post("/admin/licenses")
 async def create_license(data: LicenseCreate, admin: dict = Depends(get_current_admin)):
     """Create new license"""
-    # Validate company exists
-    company = await db.companies.find_one({"id": data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    # Apply tenant scoping
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    company_query = {"id": data.company_id, "is_deleted": {"$ne": True}}
+    company_query = scope_query(company_query, org_id)
+    
+    company = await db.companies.find_one(company_query, {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
     license_data = data.model_dump()
     license_data["status"] = calculate_license_status(data.end_date, data.renewal_reminder_days)
+    if org_id:
+        license_data["organization_id"] = org_id
     
     lic = License(**license_data)
     await db.licenses.insert_one(lic.model_dump())
