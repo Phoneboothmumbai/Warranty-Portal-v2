@@ -10,6 +10,7 @@ from utils.helpers import get_ist_isoformat
 class Company(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    organization_id: Optional[str] = None  # Tenant scoping - links to organization
     name: str
     code: str = Field(default_factory=lambda: str(uuid.uuid4())[:8].upper())
     gst_number: Optional[str] = None
