@@ -797,7 +797,7 @@ export default function StaffManagement() {
                   {role.description && (
                     <p className="text-sm text-slate-600 mb-3">{role.description}</p>
                   )}
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-sm mb-3">
                     <span className="text-slate-500 flex items-center gap-1">
                       <Key className="h-4 w-4" />
                       {(role.permissions || []).length} permissions
@@ -807,6 +807,16 @@ export default function StaffManagement() {
                       {role.user_count || 0} users
                     </span>
                   </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full gap-2"
+                    onClick={() => openPermissionMatrix(role)}
+                    data-testid={`manage-perms-${role.id}`}
+                  >
+                    <Key className="h-4 w-4" />
+                    Manage Permissions
+                  </Button>
                 </CardContent>
               </Card>
             ))}
