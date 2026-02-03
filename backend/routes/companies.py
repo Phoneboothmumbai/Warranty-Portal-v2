@@ -98,7 +98,13 @@ async def quick_create_company(company_data: CompanyCreate, admin: dict = Depend
 
 @router.get("/admin/companies/{company_id}")
 async def get_company(company_id: str, admin: dict = Depends(get_current_admin)):
-    company = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    """Get a single company - tenant scoped"""
+    organization_id = admin.get("organization_id")
+    query = {"id": company_id, "is_deleted": {"$ne": True}}
+    if organization_id:
+        query["organization_id"] = organization_id
+    
+    company = await db.companies.find_one(query, {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     return company
@@ -106,7 +112,13 @@ async def get_company(company_id: str, admin: dict = Depends(get_current_admin))
 
 @router.put("/admin/companies/{company_id}")
 async def update_company(company_id: str, updates: CompanyUpdate, admin: dict = Depends(get_current_admin)):
-    existing = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    """Update a company - tenant scoped"""
+    organization_id = admin.get("organization_id")
+    query = {"id": company_id, "is_deleted": {"$ne": True}}
+    if organization_id:
+        query["organization_id"] = organization_id
+    
+    existing = await db.companies.find_one(query, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Company not found")
     
@@ -126,7 +138,13 @@ async def update_company(company_id: str, updates: CompanyUpdate, admin: dict = 
 
 @router.delete("/admin/companies/{company_id}")
 async def delete_company(company_id: str, admin: dict = Depends(get_current_admin)):
-    result = await db.companies.update_one({"id": company_id}, {"$set": {"is_deleted": True}})
+    """Delete a company - tenant scoped"""
+    organization_id = admin.get("organization_id")
+    query = {"id": company_id}
+    if organization_id:
+        query["organization_id"] = organization_id
+    
+    result = await db.companies.update_one(query, {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Company not found")
     
