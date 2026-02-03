@@ -53,6 +53,15 @@ async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(
     admin = await db.admins.find_one({"email": email}, {"_id": 0})
     if admin is None:
         raise credentials_exception
+    
+    # Fetch organization_id from organization_members for multi-tenancy
+    org_member = await db.organization_members.find_one(
+        {"email": email, "is_active": True, "is_deleted": {"$ne": True}},
+        {"_id": 0, "organization_id": 1}
+    )
+    if org_member and org_member.get("organization_id"):
+        admin["organization_id"] = org_member["organization_id"]
+    
     return admin
 
 
