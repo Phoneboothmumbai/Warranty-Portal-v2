@@ -254,6 +254,7 @@ class Ticket(BaseModel):
     
     # Identity
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    organization_id: Optional[str] = None  # Tenant scoping - links to organization
     ticket_number: str = Field(default_factory=lambda: f"TKT-{str(uuid.uuid4())[:6].upper()}")
     
     # Multi-tenant

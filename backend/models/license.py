@@ -11,6 +11,7 @@ class License(BaseModel):
     """Software License entity for tracking software assets and renewals"""
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    organization_id: Optional[str] = None  # Tenant scoping - links to organization
     company_id: str
     software_name: str
     vendor: Optional[str] = None

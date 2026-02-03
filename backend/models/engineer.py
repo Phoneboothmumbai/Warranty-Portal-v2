@@ -11,6 +11,7 @@ class Engineer(BaseModel):
     """Service Engineer account"""
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    organization_id: Optional[str] = None  # Tenant scoping - links to organization
     name: str
     email: str
     phone: str
