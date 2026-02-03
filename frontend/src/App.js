@@ -54,6 +54,7 @@ import OrganizationSettings from "./pages/admin/OrganizationSettings";
 import TacticalRMMIntegration from "./pages/admin/TacticalRMMIntegration";
 import KnowledgeBase from "./pages/admin/KnowledgeBase";
 import TeamMembers from "./pages/admin/TeamMembers";
+import StaffManagement from "./pages/admin/StaffManagement";
 import CustomDomains from "./pages/admin/CustomDomains";
 import EmailWhitelabel from "./pages/admin/EmailWhitelabel";
 
