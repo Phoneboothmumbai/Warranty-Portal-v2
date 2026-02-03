@@ -430,24 +430,24 @@ export default function StaffManagement() {
                     />
                   </div>
                 </div>
-                <Select value={userFilters.state} onValueChange={(v) => setUserFilters(f => ({ ...f, state: v }))}>
+                <Select value={userFilters.state || "all"} onValueChange={(v) => setUserFilters(f => ({ ...f, state: v === "all" ? "" : v }))}>
                   <SelectTrigger className="w-[150px]">
                     <SelectValue placeholder="All States" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All States</SelectItem>
+                    <SelectItem value="all">All States</SelectItem>
                     <SelectItem value="created">Pending</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="suspended">Suspended</SelectItem>
                     <SelectItem value="archived">Archived</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={userFilters.role_id} onValueChange={(v) => setUserFilters(f => ({ ...f, role_id: v }))}>
+                <Select value={userFilters.role_id || "all"} onValueChange={(v) => setUserFilters(f => ({ ...f, role_id: v === "all" ? "" : v }))}>
                   <SelectTrigger className="w-[150px]">
                     <SelectValue placeholder="All Roles" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Roles</SelectItem>
+                    <SelectItem value="all">All Roles</SelectItem>
                     {roles.map(role => (
                       <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
                     ))}
