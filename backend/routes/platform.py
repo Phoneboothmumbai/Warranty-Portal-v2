@@ -516,6 +516,107 @@ async def reactivate_organization(
     return {"message": "Organization reactivated", "organization_id": org_id}
 
 
+@router.put("/organizations/{org_id}/feature-flags")
+async def update_organization_feature_flags(
+    org_id: str,
+    feature_flags: dict,
+    request: Request = None,
+    admin: dict = Depends(require_platform_permission("manage_organizations"))
+):
+    """
+    Update feature flags for an organization.
+    Controls which features are visible/enabled for the tenant.
+    
+    Available flags:
+    - tactical_rmm: Tactical RMM integration (default: False)
+    - white_labeling: Custom branding/white-label (default: False)
+    - api_access: API access for integrations (default: False)
+    - advanced_reports: Advanced reporting module (default: False)
+    - sla_management: SLA management features (default: False)
+    - custom_domains: Custom domain support (default: False)
+    - email_integration: Email-to-ticket integration (default: False)
+    - knowledge_base: Knowledge base module (default: False)
+    - staff_module: Staff management module (default: True)
+    """
+    org = await _db.organizations.find_one({"id": org_id, "is_deleted": {"$ne": True}})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    # Get current feature flags
+    current_flags = org.get("feature_flags", {})
+    
+    # Valid flag names
+    valid_flags = [
+        "tactical_rmm", "white_labeling", "api_access", "advanced_reports",
+        "sla_management", "custom_domains", "email_integration", "knowledge_base", "staff_module"
+    ]
+    
+    # Filter and validate flags
+    update_flags = {}
+    changes = {}
+    for flag, value in feature_flags.items():
+        if flag in valid_flags and isinstance(value, bool):
+            update_flags[f"feature_flags.{flag}"] = value
+            if current_flags.get(flag) != value:
+                changes[flag] = {"old": current_flags.get(flag, False), "new": value}
+    
+    if update_flags:
+        update_flags["updated_at"] = get_ist_isoformat()
+        await _db.organizations.update_one({"id": org_id}, {"$set": update_flags})
+    
+    # Audit log
+    if changes:
+        await log_platform_audit(
+            action="update_feature_flags",
+            entity_type="organization",
+            entity_id=org_id,
+            changes=changes,
+            admin=admin,
+            request=request
+        )
+    
+    updated_org = await _db.organizations.find_one({"id": org_id}, {"_id": 0})
+    return {
+        "message": "Feature flags updated",
+        "organization_id": org_id,
+        "feature_flags": updated_org.get("feature_flags", {})
+    }
+
+
+@router.get("/organizations/{org_id}/feature-flags")
+async def get_organization_feature_flags(
+    org_id: str,
+    admin: dict = Depends(require_platform_permission("view_organizations"))
+):
+    """Get feature flags for an organization"""
+    org = await _db.organizations.find_one({"id": org_id, "is_deleted": {"$ne": True}})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    # Default flags if not set
+    default_flags = {
+        "tactical_rmm": False,
+        "white_labeling": False,
+        "api_access": False,
+        "advanced_reports": False,
+        "sla_management": False,
+        "custom_domains": False,
+        "email_integration": False,
+        "knowledge_base": False,
+        "staff_module": True
+    }
+    
+    current_flags = org.get("feature_flags", {})
+    # Merge with defaults
+    merged_flags = {**default_flags, **current_flags}
+    
+    return {
+        "organization_id": org_id,
+        "organization_name": org.get("name"),
+        "feature_flags": merged_flags
+    }
+
+
 @router.delete("/organizations/{org_id}")
 async def delete_organization(
     org_id: str,
