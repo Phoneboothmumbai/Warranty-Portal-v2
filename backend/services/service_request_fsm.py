@@ -297,7 +297,9 @@ class ServiceRequestFSM:
             updates["decline_reason"] = transition_data.get("decline_reason", "No reason provided")
         
         elif target_state == ServiceState.VISIT_IN_PROGRESS.value:
-            # Update current visit start time
+            # Auto-populate visit_start_time when starting a visit
+            updates["visit_start_time"] = transition_data.get("visit_start_time", timestamp)
+            # Update current visit start time if visit_id provided
             if transition_data.get("visit_id"):
                 # This would update the specific visit - handled separately
                 pass
