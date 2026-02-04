@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { 
   CheckCircle2, ArrowRight, Sparkles,
-  ChevronRight
+  ChevronRight, RefreshCw, Loader2
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import PublicHeader from '../components/public/PublicHeader';
@@ -12,85 +12,77 @@ import axios from 'axios';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-const PLANS = [
+// Fallback plans if API fails
+const FALLBACK_PLANS = [
   {
     id: 'trial',
     name: 'Free Trial',
-    price: 0,
-    period: '14 days',
+    slug: 'trial',
+    price_monthly: 0,
     description: 'Try all features free for 14 days',
-    features: [
-      '2 Companies',
-      '50 Devices',
-      '5 Users',
-      'Basic Ticketing',
-      'Device Management',
-      'Warranty Tracking'
-    ],
-    highlighted: false,
-    cta: 'Start Free Trial'
+    is_trial: true,
+    trial_days: 14,
+    limits: { companies: 2, devices: 50, users: 5 },
+    features: { ticketing: true, device_management: true, warranty_tracking: true },
+    highlighted: false
   },
   {
     id: 'starter',
     name: 'Starter',
-    price: 2999,
-    period: '/month',
+    slug: 'starter',
+    price_monthly: 299900,
     description: 'For small IT teams',
-    features: [
-      '5 Companies',
-      '100 Devices',
-      '10 Users',
-      'Everything in Trial',
-      'AMC Management',
-      'Basic Reports'
-    ],
-    highlighted: false,
-    cta: 'Get Started'
+    limits: { companies: 5, devices: 100, users: 10 },
+    features: { ticketing: true, device_management: true, warranty_tracking: true, amc_management: true, reports_basic: true },
+    highlighted: false
   },
   {
     id: 'professional',
     name: 'Professional',
-    price: 7999,
-    period: '/month',
+    slug: 'professional',
+    price_monthly: 799900,
     description: 'For growing businesses',
-    features: [
-      '25 Companies',
-      '500 Devices',
-      '50 Users',
-      'Everything in Starter',
-      'SLA Management',
-      'Email Integration',
-      'Custom Forms',
-      'Advanced Reports',
-      'API Access'
-    ],
-    highlighted: true,
-    cta: 'Get Professional'
+    is_popular: true,
+    limits: { companies: 25, devices: 500, users: 50 },
+    features: { ticketing: true, device_management: true, warranty_tracking: true, amc_management: true, sla_management: true, email_integration: true, custom_forms: true, reports_advanced: true, api_access: true },
+    highlighted: true
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
-    price: null,
-    period: 'Custom',
+    slug: 'enterprise',
+    price_monthly: -1,
     description: 'For large organizations',
-    features: [
-      'Unlimited Companies',
-      'Unlimited Devices',
-      'Unlimited Users',
-      'Everything in Pro',
-      'Custom Branding',
-      'Dedicated Support',
-      'SLA Guarantee',
-      'Custom Integrations'
-    ],
-    highlighted: false,
-    cta: 'Contact Sales'
+    limits: { companies: -1, devices: -1, users: -1 },
+    features: { ticketing: true, device_management: true, warranty_tracking: true, amc_management: true, sla_management: true, email_integration: true, custom_forms: true, reports_advanced: true, api_access: true, white_labeling: true, dedicated_support: true },
+    highlighted: false
   }
 ];
+
+const formatPrice = (paise) => {
+  if (!paise || paise === 0) return { amount: 'Free', period: '' };
+  if (paise < 0) return { amount: 'Custom', period: '' };
+  const amount = paise / 100;
+  return {
+    amount: new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0
+    }).format(amount),
+    period: '/month'
+  };
+};
+
+const formatLimit = (value) => {
+  if (value === -1 || value === null || value === undefined) return 'Unlimited';
+  return value.toLocaleString();
+};
 
 export default function SignupPage() {
   const [step, setStep] = useState(1);
   const [selectedPlan, setSelectedPlan] = useState('trial');
+  const [plans, setPlans] = useState([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
   const [formData, setFormData] = useState({
     organization_name: '',
     owner_name: '',
@@ -104,6 +96,70 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchPlans();
+  }, []);
+
+  const fetchPlans = async () => {
+    setLoadingPlans(true);
+    try {
+      const response = await axios.get(`${API}/api/public/plans`);
+      const fetchedPlans = response.data || [];
+      
+      // Transform plans for display
+      const transformedPlans = fetchedPlans.map(plan => ({
+        ...plan,
+        highlighted: plan.is_popular || false
+      }));
+      
+      setPlans(transformedPlans.length > 0 ? transformedPlans : FALLBACK_PLANS);
+    } catch (error) {
+      console.error('Failed to fetch plans:', error);
+      setPlans(FALLBACK_PLANS);
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
+
+  const getSelectedPlanData = () => {
+    return plans.find(p => p.slug === selectedPlan || p.id === selectedPlan) || plans[0];
+  };
+
+  const getPlanFeatures = (plan) => {
+    const features = [];
+    const limits = plan.limits || {};
+    
+    // Add limits as features
+    if (limits.companies) features.push(`${formatLimit(limits.companies)} Companies`);
+    if (limits.devices) features.push(`${formatLimit(limits.devices)} Devices`);
+    if (limits.users) features.push(`${formatLimit(limits.users)} Users`);
+    
+    // Add enabled features
+    const featureMap = plan.features || {};
+    const featureLabels = {
+      ticketing: 'Support Ticketing',
+      device_management: 'Device Management',
+      warranty_tracking: 'Warranty Tracking',
+      amc_management: 'AMC Management',
+      sla_management: 'SLA Management',
+      email_integration: 'Email Integration',
+      api_access: 'API Access',
+      reports_basic: 'Basic Reports',
+      reports_advanced: 'Advanced Reports',
+      white_labeling: 'White Labeling',
+      dedicated_support: 'Dedicated Support',
+      ai_features: 'AI Features'
+    };
+    
+    Object.entries(featureMap).forEach(([key, enabled]) => {
+      if (enabled && featureLabels[key]) {
+        features.push(featureLabels[key]);
+      }
+    });
+    
+    return features.slice(0, 8); // Limit to 8 features for display
+  };
 
   const validateForm = () => {
     const newErrors = {};
