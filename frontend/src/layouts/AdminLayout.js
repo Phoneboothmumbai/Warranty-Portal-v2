@@ -290,7 +290,7 @@ const AdminLayout = () => {
 
           {/* Navigation */}
           <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-            {navGroups.map((group) => (
+            {filteredNavGroups.map((group) => (
               <div key={group.id}>
                 {/* Main items without group header */}
                 {group.id === 'main' ? (
