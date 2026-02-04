@@ -16,28 +16,32 @@ const FeaturesPage = () => {
       title: 'Multi-Client Management',
       description: 'Manage all your clients from one dashboard. Each client gets their own isolated environment with separate assets, tickets, and contracts. Perfect for MSPs handling dozens of organizations.',
       highlights: ['Isolated client data', 'Bulk client onboarding', 'Per-client reporting', 'White-label options'],
-      color: 'bg-blue-500'
+      color: 'bg-blue-500',
+      image: 'https://static.prod-images.emergentagent.com/jobs/77de96b7-114e-4ef9-99d0-a0515c928a97/images/feab4534cce1f2362b32a777d41ce1afede48e8892fed8c6d89bd57d67614a1c.png'
     },
     {
       icon: HardDrive,
       title: 'Warranty Intelligence',
       description: 'Never miss a warranty claim across any client. Our system tracks expiry dates, sends automated alerts, and helps you maximize warranty ROI for your entire client base.',
       highlights: ['Cross-client alerts', 'Coverage verification', 'AMC override logic', 'Client-ready reports'],
-      color: 'bg-emerald-500'
+      color: 'bg-emerald-500',
+      image: 'https://static.prod-images.emergentagent.com/jobs/77de96b7-114e-4ef9-99d0-a0515c928a97/images/af88f29c05f7ccd022a71f991cc3f2793c4c264af2d668422d01cd75c1dbbb70.png'
     },
     {
       icon: Ticket,
       title: 'Service Desk & Ticketing',
       description: 'Professional service desk for MSPs. Handle tickets across all clients with SLA management, auto-routing based on client contracts, email-to-ticket, and client portals.',
       highlights: ['Per-client SLAs', 'Auto-assignment', 'Email integration', 'Client self-service'],
-      color: 'bg-purple-500'
+      color: 'bg-purple-500',
+      image: 'https://static.prod-images.emergentagent.com/jobs/77de96b7-114e-4ef9-99d0-a0515c928a97/images/50861e39048d86cff8fe8b92af2c02c17139d3e9e3ab60a77fbfb14da4abb22c.png'
     },
     {
       icon: FileText,
       title: 'AMC & Contract Management',
       description: 'Track service contracts across all clients. Monitor usage limits, renewal dates, and automatically link contracts to devices for comprehensive coverage tracking.',
       highlights: ['Multi-client contracts', 'Usage tracking', 'Renewal automation', 'Billing integration'],
-      color: 'bg-amber-500'
+      color: 'bg-amber-500',
+      image: 'https://static.prod-images.emergentagent.com/jobs/77de96b7-114e-4ef9-99d0-a0515c928a97/images/bf7e05c2cbb18cd6b864ecb97a35e1f303c26a4642e9afec35c8eba67eb87b2d.png'
     }
   ];
 
