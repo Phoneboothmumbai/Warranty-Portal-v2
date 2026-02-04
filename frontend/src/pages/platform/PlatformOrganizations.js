@@ -606,6 +606,35 @@ function OrganizationDetailModal({ org, onClose, token }) {
                 </div>
               </div>
 
+              {/* Feature Flags */}
+              <div>
+                <h3 className="text-sm font-medium text-slate-600 mb-2">Feature Access</h3>
+                <div className="bg-slate-100/50 rounded-lg divide-y divide-slate-200">
+                  {Object.entries(FEATURE_LABELS).map(([key, { label, description }]) => (
+                    <div key={key} className="p-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-slate-900 font-medium text-sm">{label}</p>
+                        <p className="text-xs text-slate-500">{description}</p>
+                      </div>
+                      <button
+                        onClick={() => handleToggleFeature(key, !featureFlags[key])}
+                        disabled={savingFlags}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          featureFlags[key] ? 'bg-green-500' : 'bg-slate-300'
+                        }`}
+                        data-testid={`toggle-${key}`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            featureFlags[key] ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Usage Stats */}
               <div>
                 <h3 className="text-sm font-medium text-slate-600 mb-2">Usage</h3>
