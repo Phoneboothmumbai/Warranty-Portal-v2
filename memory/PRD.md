@@ -5,6 +5,51 @@
 
 ## CHANGELOG
 
+### 2026-02-04: Service Request FSM Module (Complete)
+
+#### New Module: Service/Repair Management FSM
+A complete Finite State Machine-driven service request management system replacing the old job system.
+
+#### Backend Implementation
+- **Model**: `/app/backend/models/service_request.py`
+  - 13-state FSM: CREATED, ASSIGNED, DECLINED, ACCEPTED, VISIT_IN_PROGRESS, VISIT_COMPLETED, PENDING_PART, PENDING_APPROVAL, REPAIR_IN_PROGRESS, QC_PENDING, READY_FOR_RETURN, RESOLVED, CANCELLED
+  - 6-character alphanumeric ticket numbers (collision-safe)
+  - Customer & Location snapshots for historical accuracy
+  - First-class visit tracking with multi-visit support
+  - Immutable state history for audit
+  - Approval workflow support
+
+- **FSM Engine**: `/app/backend/services/service_request_fsm.py`
+  - Server-side validation ONLY (no force flags, no bypasses)
+  - Validates: module enabled, tenant active, valid transition, required data
+  - Convenience methods: assign(), accept(), decline(), start_visit(), complete_visit(), resolve(), cancel()
+
+- **API Routes**: `/app/backend/routes/service_requests.py`
+  - CRUD: POST/GET/PUT/DELETE /api/admin/service-requests
+  - Stats: GET /api/admin/service-requests/stats
+  - States: GET /api/admin/service-requests/states
+  - Transitions: POST /api/admin/service-requests/{id}/transition
+  - Convenience: /assign, /accept, /decline, /start-visit, /complete-visit, /resolve, /cancel
+  - Visits: POST/PUT /api/admin/service-requests/{id}/visits
+
+#### Frontend Implementation
+- **Page**: `/app/frontend/src/pages/admin/ServiceRequests.js`
+  - Stats cards: Total, Open, Resolved, Cancelled
+  - Search by ticket/title/customer
+  - Filter by state and priority
+  - Create modal with 3 tabs: Basic Info, Customer, Device
+  - Detail modal with state history and available transitions
+  - Transition buttons based on FSM rules
+
+- **Route**: `/admin/service-requests` added to App.js
+- **Sidebar**: Link added to AdminLayout.js under main navigation
+
+#### Test Results
+- **Backend**: 27/27 tests passed (100%)
+- **Frontend**: UI verified working (100%)
+- **Test file**: `/app/backend/tests/test_service_request_fsm.py`
+- **Report**: `/app/test_reports/iteration_30.json`
+
 ### 2026-02-03: Critical Tenant Scoping Bug Fix (Complete)
 
 #### Root Cause Analysis
