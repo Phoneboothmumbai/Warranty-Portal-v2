@@ -334,6 +334,22 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with:
 
 ## Key API Endpoints
 
+### Service Request FSM API (NEW)
+- `POST /api/admin/service-requests` - Create service request (returns ticket_number, state=CREATED)
+- `GET /api/admin/service-requests` - List with pagination, filter by state/priority, search
+- `GET /api/admin/service-requests/stats` - Statistics by state
+- `GET /api/admin/service-requests/states` - All 13 FSM states with metadata
+- `GET /api/admin/service-requests/{id}` - Get with available_transitions
+- `GET /api/admin/service-requests/{id}/history` - State transition history
+- `POST /api/admin/service-requests/{id}/transition` - FSM state transition
+- `POST /api/admin/service-requests/{id}/assign` - Assign to technician
+- `POST /api/admin/service-requests/{id}/accept` - Accept assignment
+- `POST /api/admin/service-requests/{id}/decline` - Decline assignment
+- `POST /api/admin/service-requests/{id}/start-visit` - Start visit
+- `POST /api/admin/service-requests/{id}/complete-visit` - Complete visit
+- `POST /api/admin/service-requests/{id}/resolve` - Resolve request
+- `POST /api/admin/service-requests/{id}/cancel` - Cancel request
+
 ### Tenant-Scoped Endpoints (All filtered by organization_id)
 - `/api/admin/companies` - Company management
 - `/api/admin/users` - User management
