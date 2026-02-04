@@ -100,11 +100,64 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [featureFlags, setFeatureFlags] = useState({});
   const [expandedGroups, setExpandedGroups] = useState(() => {
     // Auto-expand group containing current path
     const currentGroup = navGroups.find(g => g.items.some(i => location.pathname.startsWith(i.path)));
     return currentGroup ? { [currentGroup.id]: true } : { main: true };
   });
+
+  // Fetch feature flags
+  useEffect(() => {
+    const fetchFeatureFlags = async () => {
+      try {
+        const token = localStorage.getItem('admin_token');
+        if (!token) return;
+        
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/feature-flags`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setFeatureFlags(data.feature_flags || {});
+        }
+      } catch (error) {
+        console.error('Failed to fetch feature flags:', error);
+      }
+    };
+    
+    if (isAuthenticated) {
+      fetchFeatureFlags();
+    }
+  }, [isAuthenticated]);
+
+  // Filter nav items based on feature flags
+  const getFilteredNavGroups = () => {
+    return navGroups.map(group => ({
+      ...group,
+      items: group.items.filter(item => {
+        // Hide Tactical RMM if feature flag is disabled
+        if (item.path === '/admin/integrations/tactical-rmm' && !featureFlags.tactical_rmm) {
+          return false;
+        }
+        // Hide Staff Management if feature flag is disabled
+        if (item.path === '/admin/staff' && featureFlags.staff_module === false) {
+          return false;
+        }
+        // Hide Knowledge Base if feature flag is disabled
+        if (item.path === '/admin/knowledge-base' && featureFlags.knowledge_base === false) {
+          return false;
+        }
+        // Hide Custom Domains if feature flag is disabled
+        if (item.path === '/admin/custom-domains' && featureFlags.custom_domains === false) {
+          return false;
+        }
+        return true;
+      })
+    }));
+  };
+
+  const filteredNavGroups = getFilteredNavGroups();
 
   // Auto-expand group when navigating - must be before any early returns
   useEffect(() => {
