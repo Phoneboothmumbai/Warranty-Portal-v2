@@ -214,9 +214,22 @@ export default function PlatformPlans() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Subscription Plans</h1>
-          <p className="text-slate-600 mt-1">Manage pricing plans and features</p>
+          <p className="text-slate-600 mt-1">
+            Manage pricing plans and features. 
+            <span className="text-emerald-600 ml-1">Changes sync automatically to public pages.</span>
+          </p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              fetchPlans();
+              toast.success('Plans refreshed');
+            }}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
           {plans.length === 0 && (
             <Button variant="outline" onClick={handleSeedPlans}>
               <Package className="w-4 h-4 mr-2" />
