@@ -308,76 +308,94 @@ export default function SignupPage() {
             <div className="text-center mb-12">
               <h1 className="text-4xl font-bold text-slate-900 mb-4">Choose Your Plan</h1>
               <p className="text-slate-600 text-lg">Start with a free trial, upgrade anytime</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {PLANS.map(plan => (
-                <div
-                  key={plan.id}
-                  onClick={() => setSelectedPlan(plan.id)}
-                  className={`
-                    relative p-6 rounded-2xl cursor-pointer transition-all duration-300
-                    ${selectedPlan === plan.id 
-                      ? 'bg-white border-2 border-[#0F62FE] shadow-xl scale-105' 
-                      : 'bg-white border border-slate-200 hover:border-slate-300 hover:shadow-lg'}
-                    ${plan.highlighted ? 'ring-2 ring-[#0F62FE]/30' : ''}
-                  `}
-                  data-testid={`plan-card-${plan.id}`}
-                >
-                  {plan.highlighted && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className="px-3 py-1 bg-[#0F62FE] text-white text-xs font-semibold rounded-full">
-                        MOST POPULAR
-                      </span>
-                    </div>
-                  )}
-                  
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">{plan.name}</h3>
-                  <p className="text-slate-500 text-sm mb-4">{plan.description}</p>
-                  
-                  <div className="mb-6">
-                    {plan.price !== null ? (
-                      <>
-                        <span className="text-3xl font-bold text-slate-900">₹{plan.price.toLocaleString()}</span>
-                        <span className="text-slate-500">{plan.period}</span>
-                      </>
-                    ) : (
-                      <span className="text-2xl font-bold text-slate-900">Custom Pricing</span>
-                    )}
-                  </div>
-
-                  <ul className="space-y-2 mb-6">
-                    {plan.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-center gap-2 text-sm text-slate-600">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className={`
-                    w-full py-2 rounded-lg text-center text-sm font-medium transition-colors
-                    ${selectedPlan === plan.id 
-                      ? 'bg-[#0F62FE] text-white' 
-                      : 'bg-slate-100 text-slate-600'}
-                  `}>
-                    {selectedPlan === plan.id ? 'Selected' : 'Select'}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="text-center">
               <Button
-                onClick={() => setStep(2)}
-                className="px-8 py-3 bg-[#0F62FE] hover:bg-[#0043CE] text-white rounded-xl"
-                size="lg"
-                data-testid="continue-to-account-btn"
+                variant="ghost"
+                size="sm"
+                onClick={fetchPlans}
+                disabled={loadingPlans}
+                className="mt-4 text-slate-500 hover:text-slate-700"
               >
-                Continue with {PLANS.find(p => p.id === selectedPlan)?.name}
-                <ArrowRight className="w-5 h-5 ml-2" />
+                <RefreshCw className={`w-4 h-4 mr-2 ${loadingPlans ? 'animate-spin' : ''}`} />
+                Refresh Plans
               </Button>
             </div>
+
+            {loadingPlans ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 animate-spin text-[#0F62FE]" />
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                  {plans.map(plan => {
+                    const price = formatPrice(plan.price_monthly);
+                    const features = getPlanFeatures(plan);
+                    const planId = plan.slug || plan.id;
+                    
+                    return (
+                      <div
+                        key={planId}
+                        onClick={() => setSelectedPlan(planId)}
+                        className={`
+                          relative p-6 rounded-2xl cursor-pointer transition-all duration-300
+                          ${selectedPlan === planId 
+                            ? 'bg-white border-2 border-[#0F62FE] shadow-xl scale-105' 
+                            : 'bg-white border border-slate-200 hover:border-slate-300 hover:shadow-lg'}
+                          ${plan.is_popular ? 'ring-2 ring-[#0F62FE]/30' : ''}
+                        `}
+                        data-testid={`plan-card-${planId}`}
+                      >
+                        {plan.is_popular && (
+                          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                            <span className="px-3 py-1 bg-[#0F62FE] text-white text-xs font-semibold rounded-full">
+                              MOST POPULAR
+                            </span>
+                          </div>
+                        )}
+                        
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">{plan.name}</h3>
+                        <p className="text-slate-500 text-sm mb-4">{plan.description || plan.tagline}</p>
+                        
+                        <div className="mb-6">
+                          <span className="text-3xl font-bold text-slate-900">{price.amount}</span>
+                          {price.period && <span className="text-slate-500">{price.period}</span>}
+                        </div>
+
+                        <ul className="space-y-2 mb-6">
+                          {features.map((feature, idx) => (
+                            <li key={idx} className="flex items-center gap-2 text-sm text-slate-600">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                              {feature}
+                            </li>
+                          ))}
+                        </ul>
+
+                        <div className={`
+                          w-full py-2 rounded-lg text-center text-sm font-medium transition-colors
+                          ${selectedPlan === planId 
+                            ? 'bg-[#0F62FE] text-white' 
+                            : 'bg-slate-100 text-slate-600'}
+                        `}>
+                          {selectedPlan === planId ? 'Selected' : 'Select'}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="text-center">
+                  <Button
+                    onClick={() => setStep(2)}
+                    className="px-8 py-3 bg-[#0F62FE] hover:bg-[#0043CE] text-white rounded-xl"
+                    size="lg"
+                    data-testid="continue-to-account-btn"
+                  >
+                    Continue with {getSelectedPlanData()?.name || 'Selected Plan'}
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
