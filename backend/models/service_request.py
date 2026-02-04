@@ -102,7 +102,7 @@ STATE_METADATA = {
         "description": "Technician on-site",
         "color": "amber",
         "is_terminal": False,
-        "requires_data": ["visit_start_time"]
+        "requires_data": []  # visit_start_time is auto-populated
     },
     ServiceState.VISIT_COMPLETED: {
         "label": "Visit Completed",
