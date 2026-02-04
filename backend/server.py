@@ -1675,8 +1675,61 @@ async def get_current_admin_info(request: Request, admin: dict = Depends(get_cur
             "accent_color": branding.get("accent_color", "#0F62FE"),
             "company_name": branding.get("company_name") or organization.get("name")
         }
+        
+        # Include feature flags
+        default_flags = {
+            "tactical_rmm": False,
+            "white_labeling": False,
+            "api_access": False,
+            "advanced_reports": False,
+            "sla_management": False,
+            "custom_domains": False,
+            "email_integration": False,
+            "knowledge_base": False,
+            "staff_module": True
+        }
+        current_flags = organization.get("feature_flags", {})
+        response["feature_flags"] = {**default_flags, **current_flags}
     
     return response
+
+
+@api_router.get("/admin/feature-flags")
+async def get_tenant_feature_flags(admin: dict = Depends(get_current_admin)):
+    """Get feature flags for the current tenant organization"""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    
+    organization = await db.organizations.find_one(
+        {"id": org_id, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    )
+    
+    if not organization:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    # Default flags
+    default_flags = {
+        "tactical_rmm": False,
+        "white_labeling": False,
+        "api_access": False,
+        "advanced_reports": False,
+        "sla_management": False,
+        "custom_domains": False,
+        "email_integration": False,
+        "knowledge_base": False,
+        "staff_module": True
+    }
+    
+    current_flags = organization.get("feature_flags", {})
+    merged_flags = {**default_flags, **current_flags}
+    
+    return {
+        "organization_id": org_id,
+        "organization_name": organization.get("name"),
+        "feature_flags": merged_flags
+    }
 
 
 @api_router.post("/auth/setup")
