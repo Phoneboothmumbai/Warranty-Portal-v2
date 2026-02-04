@@ -67,6 +67,7 @@ const PricingPage = () => {
   }, []);
 
   const fetchPlans = async () => {
+    setLoading(true);
     try {
       const response = await axios.get(`${API}/api/public/plans`);
       setPlans(response.data || []);
