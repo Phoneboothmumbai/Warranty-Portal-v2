@@ -119,6 +119,19 @@ const PricingPage = () => {
           <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 tracking-tight">
             Simple, transparent pricing
           </h1>
+          <p className="mt-6 text-lg text-slate-600 max-w-2xl mx-auto">
+            Choose the plan that fits your business. All plans include a 14-day free trial.
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={fetchPlans}
+            disabled={loading}
+            className="mt-4 text-slate-500 hover:text-slate-700"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh Plans
+          </Button>
           <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
             Choose the plan that fits your needs. All plans include core features.
             Upgrade or downgrade anytime.
