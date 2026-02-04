@@ -127,6 +127,19 @@ class OrganizationSettings(BaseModel):
     enable_email_ticketing: bool = False
 
 
+class OrganizationFeatureFlags(BaseModel):
+    """Feature flags controlled by Platform Admin - controls what features are visible to tenant"""
+    tactical_rmm: bool = False  # Tactical RMM integration - OFF by default
+    white_labeling: bool = False  # Custom branding/white-label
+    api_access: bool = False  # API access for integrations
+    advanced_reports: bool = False  # Advanced reporting module
+    sla_management: bool = False  # SLA management features
+    custom_domains: bool = False  # Custom domain support
+    email_integration: bool = False  # Email-to-ticket integration
+    knowledge_base: bool = False  # Knowledge base module
+    staff_module: bool = True  # Staff management module - ON by default
+
+
 class OrganizationSubscription(BaseModel):
     """Subscription details for the organization"""
     plan: str = "trial"  # trial, starter, professional, enterprise
