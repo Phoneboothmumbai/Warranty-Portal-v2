@@ -243,7 +243,7 @@ export default function SignupPage() {
         key: response.data.razorpay_key,
         subscription_id: response.data.subscription_id,
         name: 'Warranty Portal',
-        description: `${PLANS.find(p => p.id === selectedPlan)?.name} Plan`,
+        description: `${getSelectedPlanData()?.name || 'Selected'} Plan`,
         handler: async (razorpayResponse) => {
           await axios.post(`${API}/api/billing/verify-payment`, {
             razorpay_payment_id: razorpayResponse.razorpay_payment_id,
