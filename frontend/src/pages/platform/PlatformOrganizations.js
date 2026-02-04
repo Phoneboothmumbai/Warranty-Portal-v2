@@ -444,9 +444,12 @@ function OrganizationDetailModal({ org, onClose, token }) {
   const [loading, setLoading] = useState(true);
   const [changingPlan, setChangingPlan] = useState(false);
   const [newPlan, setNewPlan] = useState('');
+  const [featureFlags, setFeatureFlags] = useState({});
+  const [savingFlags, setSavingFlags] = useState(false);
 
   useEffect(() => {
     fetchDetails();
+    fetchFeatureFlags();
   }, [org.id]);
 
   const fetchDetails = async () => {
@@ -460,6 +463,17 @@ function OrganizationDetailModal({ org, onClose, token }) {
       toast.error('Failed to fetch details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFeatureFlags = async () => {
+    try {
+      const response = await axios.get(`${API}/api/platform/organizations/${org.id}/feature-flags`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setFeatureFlags(response.data.feature_flags || {});
+    } catch (error) {
+      console.error('Failed to fetch feature flags:', error);
     }
   };
 
@@ -477,6 +491,39 @@ function OrganizationDetailModal({ org, onClose, token }) {
     } finally {
       setChangingPlan(false);
     }
+  };
+
+  const handleToggleFeature = async (feature, enabled) => {
+    // Optimistic update
+    setFeatureFlags(prev => ({ ...prev, [feature]: enabled }));
+    
+    try {
+      setSavingFlags(true);
+      await axios.put(
+        `${API}/api/platform/organizations/${org.id}/feature-flags`,
+        { [feature]: enabled },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(`${feature.replace(/_/g, ' ')} ${enabled ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      // Revert on error
+      setFeatureFlags(prev => ({ ...prev, [feature]: !enabled }));
+      toast.error('Failed to update feature');
+    } finally {
+      setSavingFlags(false);
+    }
+  };
+
+  const FEATURE_LABELS = {
+    tactical_rmm: { label: 'Tactical RMM Integration', description: 'Allow tenant to connect Tactical RMM' },
+    white_labeling: { label: 'White Labeling', description: 'Custom branding and domain' },
+    api_access: { label: 'API Access', description: 'External API integration access' },
+    advanced_reports: { label: 'Advanced Reports', description: 'Advanced reporting module' },
+    sla_management: { label: 'SLA Management', description: 'SLA tracking and breach alerts' },
+    custom_domains: { label: 'Custom Domains', description: 'Use custom domain for portal' },
+    email_integration: { label: 'Email Integration', description: 'Email-to-ticket conversion' },
+    knowledge_base: { label: 'Knowledge Base', description: 'Self-service knowledge base' },
+    staff_module: { label: 'Staff Management', description: 'Advanced staff & RBAC module' }
   };
 
   return (
