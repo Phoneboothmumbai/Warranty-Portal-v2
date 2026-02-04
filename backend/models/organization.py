@@ -198,6 +198,9 @@ class Organization(BaseModel):
     # Settings
     settings: OrganizationSettings = Field(default_factory=OrganizationSettings)
     
+    # Feature Flags (controlled by Platform Admin)
+    feature_flags: OrganizationFeatureFlags = Field(default_factory=OrganizationFeatureFlags)
+    
     # Contact
     billing_email: Optional[str] = None
     billing_address: Optional[str] = None
