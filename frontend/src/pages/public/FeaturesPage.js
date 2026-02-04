@@ -109,11 +109,12 @@ const FeaturesPage = () => {
                     ))}
                   </ul>
                 </div>
-                <div className={`bg-slate-100 rounded-3xl aspect-video flex items-center justify-center ${index % 2 === 1 ? 'lg:order-1' : ''}`}>
-                  <div className="text-center p-8">
-                    <feature.icon className="h-20 w-20 text-slate-300 mx-auto mb-4" />
-                    <p className="text-slate-400 text-sm">Feature Preview</p>
-                  </div>
+                <div className={`rounded-3xl overflow-hidden shadow-2xl border border-slate-200 ${index % 2 === 1 ? 'lg:order-1' : ''}`}>
+                  <img 
+                    src={feature.image} 
+                    alt={feature.title}
+                    className="w-full h-full object-cover aspect-video"
+                  />
                 </div>
               </div>
             ))}
