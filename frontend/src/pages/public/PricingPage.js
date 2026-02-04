@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, X, ArrowRight, Sparkles } from 'lucide-react';
+import { Check, X, ArrowRight, Sparkles, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import PublicHeader from '../../components/public/PublicHeader';
 import PublicFooter from '../../components/public/PublicFooter';
