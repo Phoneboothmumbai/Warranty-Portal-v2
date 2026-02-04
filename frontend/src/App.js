@@ -57,6 +57,7 @@ import TeamMembers from "./pages/admin/TeamMembers";
 import StaffManagement from "./pages/admin/StaffManagement";
 import CustomDomains from "./pages/admin/CustomDomains";
 import EmailWhitelabel from "./pages/admin/EmailWhitelabel";
+import ServiceRequests from "./pages/admin/ServiceRequests";
 
 // Platform Super Admin Pages
 import PlatformLogin from "./pages/platform/PlatformLogin";
