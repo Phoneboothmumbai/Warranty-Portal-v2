@@ -190,6 +190,7 @@ function App() {
                     <Route path="usage" element={<UsageDashboard />} />
                     <Route path="company-domains" element={<CompanyDomains />} />
                     <Route path="integrations/tactical-rmm" element={<TacticalRMMIntegration />} />
+                    <Route path="integrations/meshcentral" element={<MeshCentralIntegration />} />
                     <Route path="knowledge-base" element={<KnowledgeBase />} />
                     <Route path="team" element={<TeamMembers />} />
                     <Route path="staff" element={<StaffManagement />} />
