@@ -516,6 +516,7 @@ function OrganizationDetailModal({ org, onClose, token }) {
 
   const FEATURE_LABELS = {
     tactical_rmm: { label: 'Tactical RMM Integration', description: 'Allow tenant to connect Tactical RMM' },
+    meshcentral: { label: 'MeshCentral RMM', description: 'Remote device management with MeshCentral' },
     white_labeling: { label: 'White Labeling', description: 'Custom branding and domain' },
     api_access: { label: 'API Access', description: 'External API integration access' },
     advanced_reports: { label: 'Advanced Reports', description: 'Advanced reporting module' },
@@ -523,7 +524,8 @@ function OrganizationDetailModal({ org, onClose, token }) {
     custom_domains: { label: 'Custom Domains', description: 'Use custom domain for portal' },
     email_integration: { label: 'Email Integration', description: 'Email-to-ticket conversion' },
     knowledge_base: { label: 'Knowledge Base', description: 'Self-service knowledge base' },
-    staff_module: { label: 'Staff Management', description: 'Advanced staff & RBAC module' }
+    staff_module: { label: 'Staff Management', description: 'Advanced staff & RBAC module' },
+    service_management: { label: 'Service Request FSM', description: 'FSM-driven service request management' }
   };
 
   return (
