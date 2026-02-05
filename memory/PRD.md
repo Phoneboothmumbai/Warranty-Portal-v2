@@ -5,38 +5,38 @@
 
 ## CHANGELOG
 
-### 2026-02-05: MeshCentral RMM Integration (Complete)
+### 2026-02-05: TGMS RMM Integration (Complete)
 
-#### New Module: Remote Device Management with MeshCentral
-Full white-label integration with MeshCentral for remote device management (desktop, terminal, file transfer).
+#### New Module: Remote Device Management with TGMS
+Full white-label integration with TGMS for remote device management (desktop, terminal, file transfer).
 
 #### Backend Implementation
-- **Models**: `/app/backend/models/meshcentral.py`
-  - MeshCentralConfig - Per-tenant connection settings
-  - MeshCentralBranding - White-label customization
-  - MeshCentralDevice - Device representation
+- **Models**: `/app/backend/models/tgms.py`
+  - TGMSConfig - Per-tenant connection settings
+  - TGMSBranding - White-label customization
+  - TGMSDevice - Device representation
   - AgentDownloadInfo - Cross-platform agent downloads
 
-- **Service**: `/app/backend/services/meshcentral_service.py`
-  - Connection management with MeshCentral API
+- **Service**: `/app/backend/services/tgms_service.py`
+  - Connection management with TGMS API
   - Device sync and management
   - Remote session URL generation
-  - White-label branding export for MeshCentral config.json
+  - White-label branding export for TGMS config.json
   - Agent download links for Windows/Linux/macOS (x64/ARM)
 
-- **API Routes**: `/app/backend/routes/meshcentral.py`
-  - GET/POST/PUT/DELETE /api/admin/meshcentral/config
-  - POST /api/admin/meshcentral/test-connection
-  - GET /api/admin/meshcentral/devices
-  - GET /api/admin/meshcentral/devices/{id}/remote-desktop
-  - GET /api/admin/meshcentral/devices/{id}/remote-terminal
-  - GET /api/admin/meshcentral/devices/{id}/file-transfer
-  - GET /api/admin/meshcentral/agents
-  - GET/PUT /api/admin/meshcentral/branding
-  - GET /api/admin/meshcentral/config-export
+- **API Routes**: `/app/backend/routes/tgms.py`
+  - GET/POST/PUT/DELETE /api/admin/tgms/config
+  - POST /api/admin/tgms/test-connection
+  - GET /api/admin/tgms/devices
+  - GET /api/admin/tgms/devices/{id}/remote-desktop
+  - GET /api/admin/tgms/devices/{id}/remote-terminal
+  - GET /api/admin/tgms/devices/{id}/file-transfer
+  - GET /api/admin/tgms/agents
+  - GET/PUT /api/admin/tgms/branding
+  - GET /api/admin/tgms/config-export
 
 #### Frontend Implementation
-- **Page**: `/app/frontend/src/pages/admin/MeshCentralIntegration.js`
+- **Page**: `/app/frontend/src/pages/admin/TGMSIntegration.js`
   - Connection status card with enable/disable toggle
   - Devices tab with online/offline status
   - Remote Desktop/Terminal/Files buttons per device
@@ -44,20 +44,20 @@ Full white-label integration with MeshCentral for remote device management (desk
   - Features tab showing enabled capabilities
   - Full white-label branding modal (portal + agent customization)
 
-- **Route**: `/admin/integrations/meshcentral`
+- **Route**: `/admin/integrations/tgms`
 - **Sidebar**: "Remote Management" link (hidden when feature flag disabled)
 
 #### Platform Admin Features
-- `meshcentral` feature flag added to toggle per tenant
+- `tgms` feature flag added to toggle per tenant
 - Service Request FSM (`service_management`) flag added
 
 #### White-Label Capabilities
 - Portal: Title, subtitle, logo, login background, colors, night mode
 - Agent: Display name, description, company name, service name, colors
-- Export: Generates MeshCentral config.json snippet for server setup
+- Export: Generates TGMS config.json snippet for server setup
 
 #### Installation Script
-- `/app/docs/install_meshcentral.sh` - One-click MeshCentral server setup
+- `/app/docs/install_tgms.sh` - One-click TGMS server setup
 
 ### 2026-02-04: Service Request FSM Module (Complete)
 
