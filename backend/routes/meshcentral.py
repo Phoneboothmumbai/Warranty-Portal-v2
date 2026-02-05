@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional, Dict, Any
 from services.meshcentral_service import MeshCentralService
 from models.meshcentral import MeshCentralConfigCreate, MeshCentralConfigUpdate
-from utils.auth import get_current_admin
+from services.auth import get_current_admin
 
 router = APIRouter(prefix="/api/admin/meshcentral", tags=["MeshCentral"])
 
