@@ -142,8 +142,8 @@ const AdminLayout = () => {
         if (item.path === '/admin/integrations/tactical-rmm' && !featureFlags.tactical_rmm) {
           return false;
         }
-        // Hide MeshCentral if feature flag is disabled
-        if (item.path === '/admin/integrations/meshcentral' && featureFlags.meshcentral === false) {
+        // Hide TGMS if feature flag is disabled
+        if (item.path === '/admin/integrations/tgms' && featureFlags.tgms === false) {
           return false;
         }
         // Hide Staff Management if feature flag is disabled
