@@ -1,7 +1,7 @@
 """
-MeshCentral Integration Models
+TGMS Integration Models
 ==============================
-Multi-tenant MeshCentral configuration with white-label support.
+Multi-tenant TGMS configuration with white-label support.
 """
 import uuid
 from datetime import datetime, timezone
@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field, ConfigDict
 from utils.helpers import get_ist_isoformat
 
 
-class MeshCentralBranding(BaseModel):
-    """White-label branding configuration for MeshCentral"""
+class TGMSBranding(BaseModel):
+    """White-label branding configuration for TGMS"""
     title: str = "Remote Management"
     title2: str = "IT Support Portal"
     welcome_text: str = "Welcome to Remote Support"
@@ -32,8 +32,8 @@ class MeshCentralBranding(BaseModel):
     agent_background_color: str = "#0F62FE"
 
 
-class MeshCentralConfig(BaseModel):
-    """MeshCentral configuration for a tenant"""
+class TGMSConfig(BaseModel):
+    """TGMS configuration for a tenant"""
     model_config = ConfigDict(extra="ignore")
     
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -53,11 +53,11 @@ class MeshCentralConfig(BaseModel):
     allow_file_transfer: bool = True
     
     # Domain/Group mapping
-    mesh_domain: str = ""  # MeshCentral domain for this tenant
-    device_group_id: Optional[str] = None  # MeshCentral device group
+    mesh_domain: str = ""  # TGMS domain for this tenant
+    device_group_id: Optional[str] = None  # TGMS device group
     
     # White-label branding
-    branding: MeshCentralBranding = Field(default_factory=MeshCentralBranding)
+    branding: TGMSBranding = Field(default_factory=TGMSBranding)
     
     # Sync status
     last_sync_at: Optional[str] = None
@@ -72,8 +72,8 @@ class MeshCentralConfig(BaseModel):
     updated_by_id: Optional[str] = None
 
 
-class MeshCentralConfigCreate(BaseModel):
-    """Create MeshCentral configuration"""
+class TGMSConfigCreate(BaseModel):
+    """Create TGMS configuration"""
     server_url: str
     username: Optional[str] = None
     password: Optional[str] = None
@@ -81,8 +81,8 @@ class MeshCentralConfigCreate(BaseModel):
     mesh_domain: Optional[str] = None
 
 
-class MeshCentralConfigUpdate(BaseModel):
-    """Update MeshCentral configuration"""
+class TGMSConfigUpdate(BaseModel):
+    """Update TGMS configuration"""
     server_url: Optional[str] = None
     username: Optional[str] = None
     password: Optional[str] = None
@@ -97,9 +97,9 @@ class MeshCentralConfigUpdate(BaseModel):
     branding: Optional[Dict[str, Any]] = None
 
 
-class MeshCentralDevice(BaseModel):
-    """Device from MeshCentral"""
-    id: str  # MeshCentral node ID
+class TGMSDevice(BaseModel):
+    """Device from TGMS"""
+    id: str  # TGMS node ID
     name: str
     host: Optional[str] = None
     os: Optional[str] = None
@@ -113,7 +113,7 @@ class MeshCentralDevice(BaseModel):
     organization_id: Optional[str] = None
 
 
-class MeshCentralSession(BaseModel):
+class TGMSSession(BaseModel):
     """Active remote session"""
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     organization_id: str

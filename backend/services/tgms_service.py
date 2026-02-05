@@ -1,7 +1,7 @@
 """
-MeshCentral Service
+TGMS Service
 ===================
-API integration with MeshCentral server for remote device management.
+API integration with TGMS server for remote device management.
 """
 import httpx
 import logging
@@ -10,59 +10,59 @@ import base64
 from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime, timezone
 from database import db
-from models.meshcentral import (
-    MeshCentralConfig, MeshCentralConfigCreate, MeshCentralConfigUpdate,
-    MeshCentralDevice, MeshCentralBranding, AgentDownloadInfo
+from models.tgms import (
+    TGMSConfig, TGMSConfigCreate, TGMSConfigUpdate,
+    TGMSDevice, TGMSBranding, AgentDownloadInfo
 )
 from utils.helpers import get_ist_isoformat
 
 logger = logging.getLogger(__name__)
 
 
-class MeshCentralService:
-    """Service for interacting with MeshCentral API"""
+class TGMSService:
+    """Service for interacting with TGMS API"""
     
-    COLLECTION = "meshcentral_configs"
+    COLLECTION = "tgms_configs"
     
     # ==================== CONFIG CRUD ====================
     
     @staticmethod
     async def get_config(organization_id: str) -> Optional[Dict]:
-        """Get MeshCentral config for an organization"""
-        config = await db[MeshCentralService.COLLECTION].find_one(
+        """Get TGMS config for an organization"""
+        config = await db[TGMSService.COLLECTION].find_one(
             {"organization_id": organization_id},
             {"_id": 0}
         )
         return config
     
     @staticmethod
-    async def create_config(organization_id: str, data: MeshCentralConfigCreate, user_id: str) -> Dict:
-        """Create MeshCentral config for an organization"""
+    async def create_config(organization_id: str, data: TGMSConfigCreate, user_id: str) -> Dict:
+        """Create TGMS config for an organization"""
         # Check if config already exists
-        existing = await MeshCentralService.get_config(organization_id)
+        existing = await TGMSService.get_config(organization_id)
         if existing:
-            raise ValueError("MeshCentral config already exists for this organization")
+            raise ValueError("TGMS config already exists for this organization")
         
-        config = MeshCentralConfig(
+        config = TGMSConfig(
             organization_id=organization_id,
             server_url=data.server_url.rstrip('/'),
             username=data.username or "",
-            password_encrypted=MeshCentralService._encrypt_password(data.password) if data.password else "",
+            password_encrypted=TGMSService._encrypt_password(data.password) if data.password else "",
             api_token=data.api_token,
             mesh_domain=data.mesh_domain or "",
             created_by_id=user_id,
             updated_by_id=user_id
         )
         
-        await db[MeshCentralService.COLLECTION].insert_one(config.model_dump())
+        await db[TGMSService.COLLECTION].insert_one(config.model_dump())
         return config.model_dump()
     
     @staticmethod
-    async def update_config(organization_id: str, data: MeshCentralConfigUpdate, user_id: str) -> Dict:
-        """Update MeshCentral config"""
-        config = await MeshCentralService.get_config(organization_id)
+    async def update_config(organization_id: str, data: TGMSConfigUpdate, user_id: str) -> Dict:
+        """Update TGMS config"""
+        config = await TGMSService.get_config(organization_id)
         if not config:
-            raise ValueError("MeshCentral config not found")
+            raise ValueError("TGMS config not found")
         
         update_data = {"updated_at": get_ist_isoformat(), "updated_by_id": user_id}
         
@@ -71,7 +71,7 @@ class MeshCentralService:
         if data.username is not None:
             update_data["username"] = data.username
         if data.password is not None:
-            update_data["password_encrypted"] = MeshCentralService._encrypt_password(data.password)
+            update_data["password_encrypted"] = TGMSService._encrypt_password(data.password)
         if data.api_token is not None:
             update_data["api_token"] = data.api_token
         if data.is_enabled is not None:
@@ -94,17 +94,17 @@ class MeshCentralService:
             current_branding.update(data.branding)
             update_data["branding"] = current_branding
         
-        await db[MeshCentralService.COLLECTION].update_one(
+        await db[TGMSService.COLLECTION].update_one(
             {"organization_id": organization_id},
             {"$set": update_data}
         )
         
-        return await MeshCentralService.get_config(organization_id)
+        return await TGMSService.get_config(organization_id)
     
     @staticmethod
     async def delete_config(organization_id: str) -> bool:
-        """Delete MeshCentral config"""
-        result = await db[MeshCentralService.COLLECTION].delete_one(
+        """Delete TGMS config"""
+        result = await db[TGMSService.COLLECTION].delete_one(
             {"organization_id": organization_id}
         )
         return result.deleted_count > 0
@@ -113,13 +113,13 @@ class MeshCentralService:
     
     @staticmethod
     async def _get_auth_headers(config: Dict) -> Dict[str, str]:
-        """Get authentication headers for MeshCentral API"""
+        """Get authentication headers for TGMS API"""
         headers = {"Content-Type": "application/json"}
         
         if config.get("api_token"):
-            headers["x-meshcentral-logintoken"] = config["api_token"]
+            headers["x-tgms-logintoken"] = config["api_token"]
         elif config.get("username") and config.get("password_encrypted"):
-            password = MeshCentralService._decrypt_password(config["password_encrypted"])
+            password = TGMSService._decrypt_password(config["password_encrypted"])
             # Basic auth
             credentials = base64.b64encode(f"{config['username']}:{password}".encode()).decode()
             headers["Authorization"] = f"Basic {credentials}"
@@ -128,16 +128,16 @@ class MeshCentralService:
     
     @staticmethod
     async def test_connection(organization_id: str) -> Tuple[bool, str]:
-        """Test connection to MeshCentral server"""
-        config = await MeshCentralService.get_config(organization_id)
+        """Test connection to TGMS server"""
+        config = await TGMSService.get_config(organization_id)
         if not config:
-            return False, "MeshCentral not configured"
+            return False, "TGMS not configured"
         
         if not config.get("server_url"):
             return False, "Server URL not configured"
         
         try:
-            headers = await MeshCentralService._get_auth_headers(config)
+            headers = await TGMSService._get_auth_headers(config)
             async with httpx.AsyncClient(verify=False, timeout=10.0) as client:
                 # Test server info endpoint
                 response = await client.get(
@@ -157,20 +157,20 @@ class MeshCentralService:
         except httpx.TimeoutException:
             return False, "Connection timeout - server not responding"
         except Exception as e:
-            logger.error(f"MeshCentral connection test failed: {e}")
+            logger.error(f"TGMS connection test failed: {e}")
             return False, f"Connection error: {str(e)}"
     
     # ==================== DEVICE OPERATIONS ====================
     
     @staticmethod
     async def get_devices(organization_id: str) -> List[Dict]:
-        """Get all devices from MeshCentral for this organization"""
-        config = await MeshCentralService.get_config(organization_id)
+        """Get all devices from TGMS for this organization"""
+        config = await TGMSService.get_config(organization_id)
         if not config or not config.get("is_enabled"):
             return []
         
         try:
-            headers = await MeshCentralService._get_auth_headers(config)
+            headers = await TGMSService._get_auth_headers(config)
             async with httpx.AsyncClient(verify=False, timeout=30.0) as client:
                 response = await client.get(
                     f"{config['server_url']}/api/meshes",
@@ -194,7 +194,7 @@ class MeshCentralService:
                     nodes_data = response.json()
                     for mesh_id, nodes in nodes_data.items():
                         for node in nodes:
-                            devices.append(MeshCentralDevice(
+                            devices.append(TGMSDevice(
                                 id=node.get("_id", ""),
                                 name=node.get("name", "Unknown"),
                                 host=node.get("host", ""),
@@ -207,7 +207,7 @@ class MeshCentralService:
                             ).model_dump())
                 
                 # Update sync status
-                await db[MeshCentralService.COLLECTION].update_one(
+                await db[TGMSService.COLLECTION].update_one(
                     {"organization_id": organization_id},
                     {"$set": {
                         "last_sync_at": get_ist_isoformat(),
@@ -220,8 +220,8 @@ class MeshCentralService:
                 return devices
                 
         except Exception as e:
-            logger.error(f"Failed to get MeshCentral devices: {e}")
-            await db[MeshCentralService.COLLECTION].update_one(
+            logger.error(f"Failed to get TGMS devices: {e}")
+            await db[TGMSService.COLLECTION].update_one(
                 {"organization_id": organization_id},
                 {"$set": {
                     "last_sync_at": get_ist_isoformat(),
@@ -233,8 +233,8 @@ class MeshCentralService:
     
     @staticmethod
     async def get_device(organization_id: str, device_id: str) -> Optional[Dict]:
-        """Get a specific device from MeshCentral"""
-        devices = await MeshCentralService.get_devices(organization_id)
+        """Get a specific device from TGMS"""
+        devices = await TGMSService.get_devices(organization_id)
         for device in devices:
             if device.get("id") == device_id:
                 return device
@@ -245,7 +245,7 @@ class MeshCentralService:
     @staticmethod
     async def get_remote_desktop_url(organization_id: str, device_id: str) -> Optional[str]:
         """Get remote desktop URL for a device"""
-        config = await MeshCentralService.get_config(organization_id)
+        config = await TGMSService.get_config(organization_id)
         if not config or not config.get("is_enabled") or not config.get("allow_remote_desktop"):
             return None
         
@@ -256,7 +256,7 @@ class MeshCentralService:
     @staticmethod
     async def get_remote_terminal_url(organization_id: str, device_id: str) -> Optional[str]:
         """Get remote terminal URL for a device"""
-        config = await MeshCentralService.get_config(organization_id)
+        config = await TGMSService.get_config(organization_id)
         if not config or not config.get("is_enabled") or not config.get("allow_remote_terminal"):
             return None
         
@@ -266,7 +266,7 @@ class MeshCentralService:
     @staticmethod
     async def get_file_transfer_url(organization_id: str, device_id: str) -> Optional[str]:
         """Get file transfer URL for a device"""
-        config = await MeshCentralService.get_config(organization_id)
+        config = await TGMSService.get_config(organization_id)
         if not config or not config.get("is_enabled") or not config.get("allow_file_transfer"):
             return None
         
@@ -278,14 +278,14 @@ class MeshCentralService:
     @staticmethod
     async def get_agent_downloads(organization_id: str) -> List[Dict]:
         """Get agent download links for all platforms"""
-        config = await MeshCentralService.get_config(organization_id)
+        config = await TGMSService.get_config(organization_id)
         if not config or not config.get("server_url"):
             return []
         
         server_url = config.get("server_url", "").rstrip('/')
         mesh_domain = config.get("mesh_domain", "")
         
-        # MeshCentral agent download URLs
+        # TGMS agent download URLs
         agents = [
             AgentDownloadInfo(
                 platform="windows",
@@ -337,15 +337,15 @@ class MeshCentralService:
     
     @staticmethod
     async def update_branding(organization_id: str, branding: Dict, user_id: str) -> Dict:
-        """Update white-label branding for MeshCentral"""
-        config = await MeshCentralService.get_config(organization_id)
+        """Update white-label branding for TGMS"""
+        config = await TGMSService.get_config(organization_id)
         if not config:
-            raise ValueError("MeshCentral config not found")
+            raise ValueError("TGMS config not found")
         
         current_branding = config.get("branding", {})
         current_branding.update(branding)
         
-        await db[MeshCentralService.COLLECTION].update_one(
+        await db[TGMSService.COLLECTION].update_one(
             {"organization_id": organization_id},
             {"$set": {
                 "branding": current_branding,
@@ -354,19 +354,19 @@ class MeshCentralService:
             }}
         )
         
-        return await MeshCentralService.get_config(organization_id)
+        return await TGMSService.get_config(organization_id)
     
     @staticmethod
-    async def generate_meshcentral_config(organization_id: str) -> Dict:
-        """Generate MeshCentral config.json snippet for this tenant's branding"""
-        config = await MeshCentralService.get_config(organization_id)
+    async def generate_tgms_config(organization_id: str) -> Dict:
+        """Generate TGMS config.json snippet for this tenant's branding"""
+        config = await TGMSService.get_config(organization_id)
         if not config:
             return {}
         
         branding = config.get("branding", {})
         domain = config.get("mesh_domain", "")
         
-        # Generate MeshCentral domain config
+        # Generate TGMS domain config
         mesh_config = {
             "title": branding.get("title", "Remote Management"),
             "title2": branding.get("title2", "IT Support"),
@@ -413,4 +413,4 @@ class MeshCentralService:
 
 
 # Export service instance
-meshcentral_service = MeshCentralService()
+tgms_service = TGMSService()
