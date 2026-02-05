@@ -16,7 +16,7 @@ import {
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-export default function MeshCentralIntegration() {
+export default function TGMSIntegration() {
   const [config, setConfig] = useState(null);
   const [configured, setConfigured] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -58,7 +58,7 @@ export default function MeshCentralIntegration() {
   const fetchConfig = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/admin/meshcentral/config`, {
+      const response = await fetch(`${API_URL}/api/admin/tgms/config`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -77,7 +77,7 @@ export default function MeshCentralIntegration() {
           setBranding(data.config.branding || branding);
         }
       } else if (response.status === 403) {
-        toast.error('MeshCentral integration is not enabled for your organization');
+        toast.error('TGMS integration is not enabled for your organization');
       }
     } catch (error) {
       console.error('Failed to fetch config:', error);
@@ -92,7 +92,7 @@ export default function MeshCentralIntegration() {
     setDevicesLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/admin/meshcentral/devices`, {
+      const response = await fetch(`${API_URL}/api/admin/tgms/devices`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -112,7 +112,7 @@ export default function MeshCentralIntegration() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/admin/meshcentral/agents`, {
+      const response = await fetch(`${API_URL}/api/admin/tgms/agents`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -143,7 +143,7 @@ export default function MeshCentralIntegration() {
       const token = localStorage.getItem('token');
       const method = configured ? 'PUT' : 'POST';
       
-      const response = await fetch(`${API_URL}/api/admin/meshcentral/config`, {
+      const response = await fetch(`${API_URL}/api/admin/tgms/config`, {
         method,
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -170,7 +170,7 @@ export default function MeshCentralIntegration() {
     setTesting(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/admin/meshcentral/test-connection`, {
+      const response = await fetch(`${API_URL}/api/admin/tgms/test-connection`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -191,7 +191,7 @@ export default function MeshCentralIntegration() {
   const handleToggleEnabled = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/admin/meshcentral/config`, {
+      const response = await fetch(`${API_URL}/api/admin/tgms/config`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -212,7 +212,7 @@ export default function MeshCentralIntegration() {
   const handleSaveBranding = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/admin/meshcentral/branding`, {
+      const response = await fetch(`${API_URL}/api/admin/tgms/branding`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -239,7 +239,7 @@ export default function MeshCentralIntegration() {
       const endpoint = type === 'desktop' ? 'remote-desktop' : 
                        type === 'terminal' ? 'remote-terminal' : 'file-transfer';
       
-      const response = await fetch(`${API_URL}/api/admin/meshcentral/devices/${deviceId}/${endpoint}`, {
+      const response = await fetch(`${API_URL}/api/admin/tgms/devices/${deviceId}/${endpoint}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -277,7 +277,7 @@ export default function MeshCentralIntegration() {
   }
 
   return (
-    <div className="space-y-6" data-testid="meshcentral-integration-page">
+    <div className="space-y-6" data-testid="tgms-integration-page">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -305,11 +305,11 @@ export default function MeshCentralIntegration() {
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Server className="h-16 w-16 text-slate-300 mb-4" />
-            <h3 className="text-lg font-medium text-slate-900 mb-2">Connect to MeshCentral Server</h3>
+            <h3 className="text-lg font-medium text-slate-900 mb-2">Connect to TGMS Server</h3>
             <p className="text-slate-500 text-center mb-4 max-w-md">
-              Configure your MeshCentral server connection to enable remote device management with full white-label branding.
+              Configure your TGMS server connection to enable remote device management with full white-label branding.
             </p>
-            <Button onClick={() => setShowConfigModal(true)} data-testid="setup-meshcentral-btn">
+            <Button onClick={() => setShowConfigModal(true)} data-testid="setup-tgms-btn">
               <Settings className="h-4 w-4 mr-2" />
               Configure Connection
             </Button>
@@ -570,8 +570,8 @@ export default function MeshCentralIntegration() {
       <Dialog open={showConfigModal} onOpenChange={setShowConfigModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>MeshCentral Configuration</DialogTitle>
-            <DialogDescription>Connect to your MeshCentral server</DialogDescription>
+            <DialogTitle>TGMS Configuration</DialogTitle>
+            <DialogDescription>Connect to your TGMS server</DialogDescription>
           </DialogHeader>
           
           <form onSubmit={handleSaveConfig} className="space-y-4">
@@ -637,7 +637,7 @@ export default function MeshCentralIntegration() {
                     id="api_token"
                     value={formData.api_token}
                     onChange={(e) => setFormData({...formData, api_token: e.target.value})}
-                    placeholder="Login token from MeshCentral"
+                    placeholder="Login token from TGMS"
                   />
                 </div>
               </div>
