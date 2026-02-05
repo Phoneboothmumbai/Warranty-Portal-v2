@@ -5,6 +5,60 @@
 
 ## CHANGELOG
 
+### 2026-02-05: MeshCentral RMM Integration (Complete)
+
+#### New Module: Remote Device Management with MeshCentral
+Full white-label integration with MeshCentral for remote device management (desktop, terminal, file transfer).
+
+#### Backend Implementation
+- **Models**: `/app/backend/models/meshcentral.py`
+  - MeshCentralConfig - Per-tenant connection settings
+  - MeshCentralBranding - White-label customization
+  - MeshCentralDevice - Device representation
+  - AgentDownloadInfo - Cross-platform agent downloads
+
+- **Service**: `/app/backend/services/meshcentral_service.py`
+  - Connection management with MeshCentral API
+  - Device sync and management
+  - Remote session URL generation
+  - White-label branding export for MeshCentral config.json
+  - Agent download links for Windows/Linux/macOS (x64/ARM)
+
+- **API Routes**: `/app/backend/routes/meshcentral.py`
+  - GET/POST/PUT/DELETE /api/admin/meshcentral/config
+  - POST /api/admin/meshcentral/test-connection
+  - GET /api/admin/meshcentral/devices
+  - GET /api/admin/meshcentral/devices/{id}/remote-desktop
+  - GET /api/admin/meshcentral/devices/{id}/remote-terminal
+  - GET /api/admin/meshcentral/devices/{id}/file-transfer
+  - GET /api/admin/meshcentral/agents
+  - GET/PUT /api/admin/meshcentral/branding
+  - GET /api/admin/meshcentral/config-export
+
+#### Frontend Implementation
+- **Page**: `/app/frontend/src/pages/admin/MeshCentralIntegration.js`
+  - Connection status card with enable/disable toggle
+  - Devices tab with online/offline status
+  - Remote Desktop/Terminal/Files buttons per device
+  - Agent Downloads tab with all platforms
+  - Features tab showing enabled capabilities
+  - Full white-label branding modal (portal + agent customization)
+
+- **Route**: `/admin/integrations/meshcentral`
+- **Sidebar**: "Remote Management" link (hidden when feature flag disabled)
+
+#### Platform Admin Features
+- `meshcentral` feature flag added to toggle per tenant
+- Service Request FSM (`service_management`) flag added
+
+#### White-Label Capabilities
+- Portal: Title, subtitle, logo, login background, colors, night mode
+- Agent: Display name, description, company name, service name, colors
+- Export: Generates MeshCentral config.json snippet for server setup
+
+#### Installation Script
+- `/app/docs/install_meshcentral.sh` - One-click MeshCentral server setup
+
 ### 2026-02-04: Service Request FSM Module (Complete)
 
 #### New Module: Service/Repair Management FSM
