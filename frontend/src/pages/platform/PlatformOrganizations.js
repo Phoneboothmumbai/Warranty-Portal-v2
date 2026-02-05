@@ -516,7 +516,7 @@ function OrganizationDetailModal({ org, onClose, token }) {
 
   const FEATURE_LABELS = {
     tactical_rmm: { label: 'Tactical RMM Integration', description: 'Allow tenant to connect Tactical RMM' },
-    meshcentral: { label: 'MeshCentral RMM', description: 'Remote device management with MeshCentral' },
+    tgms: { label: 'TGMS Remote Management', description: 'Remote device management system' },
     white_labeling: { label: 'White Labeling', description: 'Custom branding and domain' },
     api_access: { label: 'API Access', description: 'External API integration access' },
     advanced_reports: { label: 'Advanced Reports', description: 'Advanced reporting module' },
