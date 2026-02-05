@@ -58,7 +58,7 @@ import StaffManagement from "./pages/admin/StaffManagement";
 import CustomDomains from "./pages/admin/CustomDomains";
 import EmailWhitelabel from "./pages/admin/EmailWhitelabel";
 import ServiceRequests from "./pages/admin/ServiceRequests";
-import MeshCentralIntegration from "./pages/admin/MeshCentralIntegration";
+import TGMSIntegration from "./pages/admin/TGMSIntegration";
 
 // Platform Super Admin Pages
 import PlatformLogin from "./pages/platform/PlatformLogin";
