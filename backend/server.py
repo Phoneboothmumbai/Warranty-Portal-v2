@@ -9988,6 +9988,13 @@ app.include_router(visits_router, tags=["Service Visits"])
 from routes.ticket_parts import router as ticket_parts_router
 app.include_router(ticket_parts_router, tags=["Ticket Parts"])
 
+from routes.ticketing_config import router as ticketing_config_router
+ticketing_config_router.dependencies = [Depends(get_current_admin)]
+for route in ticketing_config_router.routes:
+    if hasattr(route, 'dependant'):
+        route.dependant.dependencies = [Depends(get_current_admin)]
+app.include_router(ticketing_config_router, prefix="/api/admin", tags=["Ticketing Config"])
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
