@@ -18,7 +18,7 @@ from database import db
 from utils.helpers import get_ist_isoformat
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/admin/tickets", tags=["Service Tickets (New)"])
+router = APIRouter(prefix="/api/admin/service-tickets", tags=["Service Tickets (New)"])
 
 
 # ==================== LIST & STATS ====================
