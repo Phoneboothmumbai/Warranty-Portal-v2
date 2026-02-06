@@ -9968,6 +9968,35 @@ app.include_router(service_requests_router, tags=["Service Requests FSM"])
 from routes.tgms import router as tgms_router
 app.include_router(tgms_router, tags=["TGMS"])
 
+# ==================== NEW SERVICE MODULE ROUTES ====================
+# Problem Master
+from routes.problem_master import router as problem_master_router
+app.include_router(problem_master_router, tags=["Problem Master"])
+
+# Item Master
+from routes.item_master import router as item_master_router
+app.include_router(item_master_router, tags=["Item Master"])
+
+# Inventory (Locations & Stock)
+from routes.inventory_new import router as inventory_router
+app.include_router(inventory_router, tags=["Inventory"])
+
+# Vendor Master
+from routes.vendor_master import router as vendor_router
+app.include_router(vendor_router, tags=["Vendor Master"])
+
+# Service Tickets (New)
+from routes.service_tickets_new import router as tickets_new_router
+app.include_router(tickets_new_router, tags=["Service Tickets (New)"])
+
+# Service Visits
+from routes.service_visits import router as visits_router
+app.include_router(visits_router, tags=["Service Visits"])
+
+# Ticket Parts (Requests & Issues)
+from routes.ticket_parts import router as ticket_parts_router
+app.include_router(ticket_parts_router, tags=["Ticket Parts"])
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
