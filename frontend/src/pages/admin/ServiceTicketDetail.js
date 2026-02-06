@@ -122,9 +122,10 @@ export default function ServiceTicketDetail() {
         axios.get(`${API_URL}/api/admin/items?limit=500`, { headers }),
         axios.get(`${API_URL}/api/admin/inventory/locations`, { headers })
       ]);
-      setStaff(staffRes.data.users || []);
-      setItems(itemsRes.data.items || []);
-      setLocations(locationsRes.data.locations || []);
+      // Handle both array and object response formats
+      setStaff(Array.isArray(staffRes.data) ? staffRes.data : (staffRes.data.users || []));
+      setItems(Array.isArray(itemsRes.data) ? itemsRes.data : (itemsRes.data.items || []));
+      setLocations(Array.isArray(locationsRes.data) ? locationsRes.data : (locationsRes.data.locations || []));
     } catch (error) {
       console.error('Failed to fetch supporting data:', error);
     }
