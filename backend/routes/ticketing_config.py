@@ -137,7 +137,8 @@ async def create_service_master(
     
     await db.service_masters.insert_one(master)
     
-    return {"id": master_id, "message": "Service master created", **master}
+    # Return clean response without datetime objects
+    return {"id": master_id, "message": "Service master created"}
 
 
 @router.put("/masters/{master_id}")
