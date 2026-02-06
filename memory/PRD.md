@@ -1,487 +1,158 @@
 # Warranty & Asset Tracking Portal - PRD
 
-## Target Market
-**MSPs (Managed Service Providers) and IT Support Companies** - Organizations that manage IT assets, warranties, and service tickets across multiple client organizations.
+## Project Overview
+Multi-tenant SaaS platform for warranty management, asset tracking, and service operations.
 
-## CHANGELOG
+## User Personas
+- **Platform Admin**: Full system access, manages organizations
+- **Company Admin**: Manages their organization's assets, tickets, and staff
+- **Technician/Engineer**: Handles service visits, ticket resolution
 
-### 2026-02-05: TGMS RMM Integration (Complete)
+## Core Requirements
 
-#### New Module: Remote Device Management with TGMS
-Full white-label integration with TGMS for remote device management (desktop, terminal, file transfer).
+### 1. Company & Contact Management ✅
+- Multi-tenant company management
+- Contact persons per company
+- Site/location management
 
-#### Backend Implementation
-- **Models**: `/app/backend/models/tgms.py`
-  - TGMSConfig - Per-tenant connection settings
-  - TGMSBranding - White-label customization
-  - TGMSDevice - Device representation
-  - AgentDownloadInfo - Cross-platform agent downloads
+### 2. Device & Asset Management ✅
+- Device catalog and tracking
+- Asset tagging and grouping
+- Device model catalog
 
-- **Service**: `/app/backend/services/tgms_service.py`
-  - Connection management with TGMS API
-  - Device sync and management
-  - Remote session URL generation
-  - White-label branding export for TGMS config.json
-  - Agent download links for Windows/Linux/macOS (x64/ARM)
+### 3. Service & Inventory Module (NEW - PHASE 1 COMPLETE) ✅
+**Backend APIs Complete:**
+- Problem Master - Problem types/categories (8 default types seeded)
+- Item Master - Parts/items catalog with pricing
+- Inventory Location - Warehouses, vans, offices, etc.
+- Stock Ledger - Immutable ledger for all stock movements
+- Vendor Master - Vendor management with item-price mappings
+- Service Tickets (New) - 7-state lifecycle (NEW → ASSIGNED → IN_PROGRESS → PENDING_PARTS → COMPLETED → CLOSED, CANCELLED)
+- Service Visits - Multi-visit per ticket with timer functionality
+- Ticket Parts - Parts request, approval, and issuance workflow
 
-- **API Routes**: `/app/backend/routes/tgms.py`
-  - GET/POST/PUT/DELETE /api/admin/tgms/config
-  - POST /api/admin/tgms/test-connection
-  - GET /api/admin/tgms/devices
-  - GET /api/admin/tgms/devices/{id}/remote-desktop
-  - GET /api/admin/tgms/devices/{id}/remote-terminal
-  - GET /api/admin/tgms/devices/{id}/file-transfer
-  - GET /api/admin/tgms/agents
-  - GET/PUT /api/admin/tgms/branding
-  - GET /api/admin/tgms/config-export
+**Test Results:** 65/65 tests passed (100%)
 
-#### Frontend Implementation
-- **Page**: `/app/frontend/src/pages/admin/TGMSIntegration.js`
-  - Connection status card with enable/disable toggle
-  - Devices tab with online/offline status
-  - Remote Desktop/Terminal/Files buttons per device
-  - Agent Downloads tab with all platforms
-  - Features tab showing enabled capabilities
-  - Full white-label branding modal (portal + agent customization)
+### 4. AMC Contracts ✅
+- Annual maintenance contract management
+- Renewal tracking and alerts
 
-- **Route**: `/admin/integrations/tgms`
-- **Sidebar**: "Remote Management" link (hidden when feature flag disabled)
-
-#### Platform Admin Features
-- `tgms` feature flag added to toggle per tenant
-- Service Request FSM (`service_management`) flag added
-
-#### White-Label Capabilities
-- Portal: Title, subtitle, logo, login background, colors, night mode
-- Agent: Display name, description, company name, service name, colors
-- Export: Generates TGMS config.json snippet for server setup
-
-#### Installation Script
-- `/app/docs/install_tgms.sh` - One-click TGMS server setup
-
-### 2026-02-04: Service Request FSM Module (Complete)
-
-#### New Module: Service/Repair Management FSM
-A complete Finite State Machine-driven service request management system replacing the old job system.
-
-#### Backend Implementation
-- **Model**: `/app/backend/models/service_request.py`
-  - 13-state FSM: CREATED, ASSIGNED, DECLINED, ACCEPTED, VISIT_IN_PROGRESS, VISIT_COMPLETED, PENDING_PART, PENDING_APPROVAL, REPAIR_IN_PROGRESS, QC_PENDING, READY_FOR_RETURN, RESOLVED, CANCELLED
-  - 6-character alphanumeric ticket numbers (collision-safe)
-  - Customer & Location snapshots for historical accuracy
-  - First-class visit tracking with multi-visit support
-  - Immutable state history for audit
-  - Approval workflow support
-
-- **FSM Engine**: `/app/backend/services/service_request_fsm.py`
-  - Server-side validation ONLY (no force flags, no bypasses)
-  - Validates: module enabled, tenant active, valid transition, required data
-  - Convenience methods: assign(), accept(), decline(), start_visit(), complete_visit(), resolve(), cancel()
-
-- **API Routes**: `/app/backend/routes/service_requests.py`
-  - CRUD: POST/GET/PUT/DELETE /api/admin/service-requests
-  - Stats: GET /api/admin/service-requests/stats
-  - States: GET /api/admin/service-requests/states
-  - Transitions: POST /api/admin/service-requests/{id}/transition
-  - Convenience: /assign, /accept, /decline, /start-visit, /complete-visit, /resolve, /cancel
-  - Visits: POST/PUT /api/admin/service-requests/{id}/visits
-
-#### Frontend Implementation
-- **Page**: `/app/frontend/src/pages/admin/ServiceRequests.js`
-  - Stats cards: Total, Open, Resolved, Cancelled
-  - Search by ticket/title/customer
-  - Filter by state and priority
-  - Create modal with 3 tabs: Basic Info, Customer, Device
-  - Detail modal with state history and available transitions
-  - Transition buttons based on FSM rules
-
-- **Route**: `/admin/service-requests` added to App.js
-- **Sidebar**: Link added to AdminLayout.js under main navigation
-
-#### Test Results
-- **Backend**: 27/27 tests passed (100%)
-- **Frontend**: UI verified working (100%)
-- **Test file**: `/app/backend/tests/test_service_request_fsm.py`
-- **Report**: `/app/test_reports/iteration_30.json`
-
-### 2026-02-03: Critical Tenant Scoping Bug Fix (Complete)
-
-#### Root Cause Analysis
-- **Issue**: Companies, Devices, and other entities created by users were not visible after creation
-- **Root Cause**: Pydantic models had `ConfigDict(extra="ignore")` which silently dropped the `organization_id` field when creating records. The create endpoints were adding `organization_id` to the dict, but it was being ignored by the model.
-- **Fix Applied**: Added `organization_id: Optional[str] = None` field to all tenant-scoped models
-
-#### Models Fixed
-- `Device` model - Added organization_id field
-- `AMCContract` model - Added organization_id field
-- `Company` model - Already had organization_id
-- `User` model - Added organization_id field
-- `Site` model - Added organization_id field
-- `License` model - Added organization_id field
-- `Engineer` model - Added organization_id field
-- `Ticket` model - Added organization_id field
-
-#### Endpoints Fixed
-- `create_user` - Now adds organization_id
-- `create_site` - Now adds organization_id
-- `create_license` - Now adds organization_id
-- `get_current_admin()` - Now fetches organization_id from organization_members
-
-#### Test Results
-- **Backend**: 27/27 tests passed (100%)
-- **Frontend**: All UI pages verified working (100%)
-- **Tenant Isolation**: Verified - Admin A cannot see Admin B's data
-
-### 2026-02-01: Public Pages UI Consistency & Platform Dashboard Fix (Complete)
-
-#### P0: Platform Dashboard Stats Fix
-- **Confirmed Working**: `/api/platform/dashboard/stats` endpoint returns correct data
-- Dashboard now displays:
-  - 6 total organizations
-  - 5 trial status organizations
-  - 23 companies, 35 devices, 7 users, 24 tickets
-  - Revenue metrics (MRR, ARR, conversion rate)
-  - Organizations by status and plan breakdown
-  - Recent organizations list
-
-#### P1: Shared Header/Footer Components
-- **Created**: `frontend/src/components/public/PublicHeader.js`
-  - Consistent navigation: Features, Pricing, Contact, Support Portal
-  - Sign In link and Get Started CTA button
-  - Mobile responsive with hamburger menu
-  - Uses company logo and name from settings context
-- **Created**: `frontend/src/components/public/PublicFooter.js`
-  - Full footer with Product, Company, Legal links
-  - Simple footer variant for signup/login pages
-  - Social media links and company branding
-
-#### P1: Public Pages Refactored
-- **LandingPage.js**: Now uses `PublicHeader` and `PublicFooter` components
-- **FeaturesPage.js**: Now uses `PublicHeader` and `PublicFooter` components
-- **PricingPage.js**: Now uses `PublicHeader` and `PublicFooter` components
-- **SignupPage.js**: Converted from dark purple theme to light white/slate theme
-  - Uses `PublicHeader` and `PublicFooter` (simple variant)
-  - All form inputs, cards, buttons now use light theme colors
-  - Plan cards with white backgrounds and slate borders
-
-**All tests passed**: 100% backend (10/10) and frontend success rate
-
-### 2026-01-30: Full Multi-Tenant SaaS Features (Phases 1-3 Complete)
-
-#### Phase 1: Role System & Team Management
-- **5-Tier Role System UI**: Team Members page with role-based user management
-  - All 5 roles available in dropdown (MSP Admin, MSP Technician, Company Admin, Company Employee, External Customer)
-  - Legacy roles (owner, admin, member) mapped to new roles for display
-- **Company Switcher**: Dropdown in admin sidebar for MSP users to switch between companies
-  - Shows assigned companies for technicians
-  - Persists selection in session storage
-  - Only visible when companies exist with organization_id
-- **Team Members Management**: Full CRUD for organization members
-  - Invite member modal with role selection
-  - Edit member role, phone, active status
-  - Technician Assignments tab for MSP admin
-- **Technician Assignment APIs**: 
-  - `GET/POST/PUT/DELETE /api/org/technician-assignments`
-  - Assign/unassign technicians to specific companies
-
-#### Phase 2: Custom Domains
-- **Custom Domains Page** (`/admin/custom-domains`):
-  - Add custom domain with DNS TXT verification
-  - Verification token generation
-  - Domain status badges (Pending/Verified, SSL status)
-  - Delete domain capability
-- **Backend APIs**:
-  - `GET/POST/DELETE /api/org/custom-domains`
-  - `POST /api/org/custom-domains/verify` - DNS TXT record verification using dnspython
-
-#### Phase 3: Email White-labeling
-- **Email Settings Page** (`/admin/email-whitelabel`):
-  - Enable/disable custom email sending toggle
-  - SMTP Settings tab: Provider presets (SendGrid, Mailgun, SES, Gmail, etc.)
-  - Sender Info tab: From email, from name, reply-to
-  - Branding tab: Logo URL, primary color, footer text, "Powered by" toggle
-  - Test email functionality
-- **Backend APIs**:
-  - `GET/PUT /api/org/email-settings` - SMTP configuration
-  - `POST /api/org/email-settings/test` - Send test email
-
-**All tests passed**: 100% backend (17/17) and frontend success rate
-
-### 2026-01-30: P0 Signup Bug Fix & 4-Level SaaS Architecture (Complete)
-- **P0 FIX: Signup Flow**: Fixed critical bug where signup created `organization_member` but not `admins` record
-  - Now creates records in BOTH `admins` and `organization_members` collections
-  - Login at `/api/auth/login` now works immediately after signup
-  - Token includes organization context for proper tenant scoping
-- **5-Tier Role System Implementation**: Added comprehensive role system to `OrganizationMember` model
-  - `msp_admin`: Full tenant access, can manage all companies
-  - `msp_technician`: Access to assigned companies only
-  - `company_admin`: Admin of specific client company
-  - `company_employee`: Regular company user
-  - `external_customer`: Limited external access
-- **Technician Assignment Model**: Created `/app/backend/models/technician_assignment.py` for granular MSP technician-to-company assignments
-- **Platform Admin noindex**: Added SEO protection to prevent search engine indexing of platform admin pages
-- **All tests passed**: 100% backend (16/16) and frontend success rate
-
-### 2026-01-30: Subdomain-Based Multi-Tenancy (Complete)
-- **Tenant Resolution Middleware**: Extracts tenant from subdomain, X-Tenant-Slug header, or ?_tenant query param
-- **Tenant-Aware Login**: Login endpoint validates user belongs to resolved tenant
-- **Cross-Tenant Protection**: Generic "Invalid credentials" error for cross-tenant login attempts (no information leakage)
-- **Platform Admin Isolation**: Platform routes (/platform/*) completely separate from tenant routes
-- **Frontend TenantProvider**: Resolves tenant context and applies branding
-- **Tenant Error Pages**: Dedicated pages for suspended/not found workspaces
-- **Admin Login Branding**: Shows tenant name, logo, workspace indicator when tenant context present
-- **Dev Mode Support**: Query param fallback for local development
-- **All tests passed**: 100% backend (16/16) and frontend success rate
-
-### 2026-01-30: Platform Super Admin Portal Build-out (Complete)
-- **Enhanced Dashboard**: Added MRR/ARR revenue metrics, new signups this month, trial conversion rate
-- **Organizations Management**: Plan change capability in detail modal
-- **Revenue & Billing Page**: Detailed revenue analytics by plan
-- **Platform Admins Page**: Manage super admin users
-- **Audit Logs Page**: Track all platform administrative actions with filters
-- **Platform Settings Page**: 5-tab configuration (General, Signup & Trial, Email, Billing, Integrations)
-- **Backend API Enhancement**: `/api/platform/dashboard/stats` now returns revenue metrics
-- **All tests passed**: 100% backend (16/16) and frontend success rate
-
-### 2026-01-30: Tenant Scoping Audit & Knowledge Base Completion
-- **Complete Tenant Scoping**: Applied `organization_id` filter to ALL remaining admin endpoints:
-  - Users (`list_users`)
-  - Company Employees (`list_company_employees`)
-  - Sites (`list_sites`)
-  - Licenses (`list_licenses`)
-  - Deployments (`list_deployments`)
-  - Email/Cloud Subscriptions (`list_subscriptions`)
-  - Asset Groups (`list_asset_groups`)
-  - Accessories (`list_accessories`)
-- **Knowledge Base System Completed**:
-  - Added route `/admin/knowledge-base` in App.js
-  - Added sidebar link under Settings in AdminLayout.js
-  - Full CRUD functionality working for articles and categories
-  - Tenant-scoped KB articles and categories
-
-### Previous Updates
-- **2026-01-30**: Complete Tenant Scoping & Tactical RMM Integration
-- **2026-01-30**: MSP-Focused Landing Pages & Tenant Scoping
-- **2026-01-30**: Beautiful SaaS Landing Pages Implementation
-- **2026-01-30**: Multi-Tenant Admin Authentication Fix (P0 Blocker Resolved)
-- **2026-01-30**: Editable Static Pages Implementation
-- **2026-01-30**: Self-Signup & Razorpay Billing Implementation
-- **2026-01-30**: Multi-tenant SaaS Architecture Implementation
-- **2026-01-30**: Enhanced AMC Onboarding Wizard
-- **2026-01-29**: Implemented comprehensive AMC Onboarding Wizard
-- **2026-01-29**: Enterprise Ticketing System - All 4 Phases Complete
-
-## Original Problem Statement
-Build an enterprise-grade Warranty & Asset Tracking Portal with:
-- **Multi-tenant SaaS Platform** with independent organizations
-- B2B office supplies ordering system
-- Bulk data import capabilities
-- QR code generation for asset tagging
-- Mobile-friendly portal for field service engineers
-- AI-powered triage bot
-- Device configuration and employee assignment
-- Email & Cloud Subscription management module
-- Asset Grouping/Bundles feature
-- Renewal Alerts Dashboard
-- Accessories & Peripherals module
-- Asset Transfer between employees
-- Comprehensive Credentials Management
+### 5. Staff Management ✅
+- Employee/technician management
+- Role-based access control
+- Department management
 
 ## What's Been Implemented
 
-### Core Features (Complete)
-- ✅ Admin Portal with dashboard, companies, users, devices management
-- ✅ Company Portal for end-users to view devices, raise tickets
-- ✅ Engineer Portal for field service visits
-- ✅ QR Code generation for asset tagging
-- ✅ AI Support Triage Bot (GPT-4o-mini via Emergent LLM Key)
-- ✅ osTicket integration for ticket creation
-- ✅ Office Supplies ordering system
-- ✅ AMC Contract management
-- ✅ License management
-- ✅ Site management
-- ✅ Device User & Configuration feature
-- ✅ Company Employee management with bulk Excel/CSV upload
-- ✅ Email & Cloud Subscriptions module with user tracking
-- ✅ Employee Detail Page (360-degree view)
-- ✅ Admin Device Detail Page
-- ✅ **Knowledge Base System** (articles & categories with tenant scoping)
+### Backend (Phase 1 - Service Module) - December 2025
+| Feature | Status | Test Coverage |
+|---------|--------|---------------|
+| Problem Master API | ✅ Complete | 7 tests |
+| Item Master API | ✅ Complete | 8 tests |
+| Inventory Location API | ✅ Complete | 6 tests |
+| Stock Ledger API | ✅ Complete | 5 tests |
+| Vendor Master API | ✅ Complete | 8 tests |
+| Service Tickets (New) API | ✅ Complete | 12 tests |
+| Service Visits API | ✅ Complete | 9 tests |
+| Ticket Parts API | ✅ Complete | 9 tests |
+| Stock Transfer API | ✅ Complete | 1 test |
 
-### Multi-Tenant Features (Complete)
-- ✅ **Full Tenant Scoping on ALL Admin Routes**
-- ✅ Platform Super Admin Layer
-- ✅ Organization (Tenant) Model with data isolation
-- ✅ Subscription Plans (Trial, Starter, Professional, Enterprise)
-- ✅ White-Label UI (logo upload, color picker, custom domain)
-- ✅ Organization Settings Page with all tabs functional
+### API Endpoints Reference
+```
+# Problem Master
+GET/POST /api/admin/problems
+GET/PUT/DELETE /api/admin/problems/{id}
+POST /api/admin/problems/seed
 
-### Subdomain-Based Multi-Tenancy (Complete)
-- ✅ Tenant Resolution Middleware (subdomain, header, query param)
-- ✅ Tenant-Aware Login with cross-tenant protection
-- ✅ Platform Admin completely isolated from tenant routes
-- ✅ Frontend TenantProvider with branding support
-- ✅ Tenant Error Pages (suspended, not found)
-- ✅ Dev mode query param fallback
+# Item Master
+GET/POST /api/admin/items
+GET/PUT/DELETE /api/admin/items/{id}
+GET /api/admin/items/{id}/stock
+GET /api/admin/items/search
 
-### Platform Super Admin Portal (Complete)
-- ✅ Enhanced Dashboard with MRR/ARR/growth metrics
-- ✅ Organizations Management with plan change capability
-- ✅ Revenue & Billing analytics page
-- ✅ Platform Admins management
-- ✅ Audit Logs with action/entity filters
-- ✅ Platform Settings (General, Signup, Email, Billing, Integrations)
+# Inventory
+GET/POST /api/admin/inventory/locations
+GET/PUT/DELETE /api/admin/inventory/locations/{id}
+GET /api/admin/inventory/stock
+POST /api/admin/inventory/stock/transfer
+POST /api/admin/inventory/stock/adjustment
+GET /api/admin/inventory/ledger
 
-### Enterprise Ticketing System (Complete - All 4 Phases)
-- ✅ Core Ticket Model with SLA Engine
-- ✅ Department System with auto-assignment
-- ✅ Help Topics with auto-routing
-- ✅ Custom Forms (dynamic forms per topic)
-- ✅ Canned Responses with variable replacement
-- ✅ Ticket Participants (CC/Collaboration)
-- ✅ Email Integration (SMTP + IMAP)
+# Vendors
+GET/POST /api/admin/vendors
+GET/PUT/DELETE /api/admin/vendors/{id}
+POST /api/admin/vendors/{id}/items
+GET /api/admin/vendors/for-item/{item_id}
 
-### Multi-Tenant SaaS Features (Complete - All 3 Phases)
-- ✅ **5-Tier Role System UI** - Team Members page with full role management
-- ✅ **Company Switcher** - Sidebar dropdown for MSP users
-- ✅ **Technician Assignment Management** - Assign technicians to companies
-- ✅ **Custom Domains** - DNS TXT verification, domain status tracking
-- ✅ **Email White-labeling** - Full SMTP configuration, sender info, branding
+# Service Tickets (New)
+GET/POST /api/admin/service-tickets
+GET/PUT/DELETE /api/admin/service-tickets/{id}
+GET /api/admin/service-tickets/stats
+POST /api/admin/service-tickets/{id}/assign
+POST /api/admin/service-tickets/{id}/start
+POST /api/admin/service-tickets/{id}/pending-parts
+POST /api/admin/service-tickets/{id}/complete
+POST /api/admin/service-tickets/{id}/close
+POST /api/admin/service-tickets/{id}/cancel
+POST /api/admin/service-tickets/{id}/comments
+
+# Service Visits
+GET/POST /api/admin/visits
+GET/PUT/DELETE /api/admin/visits/{id}
+GET /api/admin/visits/today
+GET /api/admin/visits/technician/{id}
+POST /api/admin/visits/{id}/start-timer
+POST /api/admin/visits/{id}/stop-timer
+POST /api/admin/visits/{id}/add-action
+
+# Ticket Parts
+GET/POST /api/admin/ticket-parts/requests
+GET /api/admin/ticket-parts/requests/pending
+GET /api/admin/ticket-parts/requests/{id}
+POST /api/admin/ticket-parts/requests/{id}/approve
+DELETE /api/admin/ticket-parts/requests/{id}
+GET/POST /api/admin/ticket-parts/issues
+GET /api/admin/ticket-parts/issues/{id}
+POST /api/admin/ticket-parts/issues/{id}/return
+```
 
 ## Prioritized Backlog
 
-### P0 - Critical (Complete)
-- ✅ **Subdomain-Based Multi-Tenancy** - Full subdomain routing with data isolation
-- ✅ **Tenant Scoping Audit** - All admin APIs now filter by organization_id
-- ✅ **Knowledge Base System** - Full CRUD with tenant scoping
-- ✅ **Platform Super Admin Portal** - Full build-out complete
-- ✅ **P0 Signup Bug Fix** - Signup now creates records in both admins and organization_members collections
-- ✅ **5-Tier Role System UI** - Complete with Team Members page
-- ✅ **Company Switcher** - Complete with session persistence
-- ✅ **Technician Assignment Management** - Complete with bulk assignment
-- ✅ **Custom Domains** - Complete with DNS verification
-- ✅ **Email White-labeling** - Complete with SMTP config and test email
+### P0 - In Progress
+- **Frontend for Service Module**: Create UI for new service tickets, visits, inventory, vendors
 
-### P1 - In Progress
-- [ ] **Finalize Razorpay Integration** - Need API keys (KEY_ID, KEY_SECRET)
-- [ ] **Finalize Tactical RMM Integration** - Need API URL & Key
-- [ ] **SSL Automation for Custom Domains** - Server-level integration needed
+### P1 - Next
+- Service Module Phase 2: Automated vendor communication, Quotation PDFs, Invoice generation
+- RMM Integration with Tactical RMM
+- Razorpay payments finalization
 
-### P2 - Upcoming
-- [ ] Scheduled Email Sync - Background task for IMAP
-- [ ] SLA Breach Checking - Automated background task
-- [ ] Auto-Escalation for tickets
-- [ ] Add Dashboard Screenshots to Features Page
+### P2 - Future
+- Fix ESLint warnings in frontend
+- CompanySwitcher component
+- server.py refactoring
+- AI Ticket Summary completion
 
-### P3 - Future/Backlog
-- [ ] Integrations for other RMMs (NinjaRMM, ConnectWise)
-- [ ] PDF Export for service history reports
-- [ ] Full Refactor of `server.py` into modular routes
+## Technical Architecture
+- **Frontend**: React + TailwindCSS + Shadcn UI
+- **Backend**: FastAPI + Python 3.11
+- **Database**: MongoDB with motor async driver
+- **Authentication**: JWT tokens
+- **Multi-tenancy**: organization_id scoping
 
-## Tech Stack
-- Frontend: React + Tailwind CSS + Shadcn/UI
-- Backend: FastAPI + Motor (async MongoDB)
-- Database: MongoDB
-- AI: OpenAI GPT-4o-mini via emergentintegrations
-- File Processing: pandas, openpyxl
-- Security: slowapi (rate limiting), bcrypt (password hashing), JWT (authentication)
-- DNS Verification: dnspython
-
-## Key API Endpoints
-
-### Service Request FSM API (NEW)
-- `POST /api/admin/service-requests` - Create service request (returns ticket_number, state=CREATED)
-- `GET /api/admin/service-requests` - List with pagination, filter by state/priority, search
-- `GET /api/admin/service-requests/stats` - Statistics by state
-- `GET /api/admin/service-requests/states` - All 13 FSM states with metadata
-- `GET /api/admin/service-requests/{id}` - Get with available_transitions
-- `GET /api/admin/service-requests/{id}/history` - State transition history
-- `POST /api/admin/service-requests/{id}/transition` - FSM state transition
-- `POST /api/admin/service-requests/{id}/assign` - Assign to technician
-- `POST /api/admin/service-requests/{id}/accept` - Accept assignment
-- `POST /api/admin/service-requests/{id}/decline` - Decline assignment
-- `POST /api/admin/service-requests/{id}/start-visit` - Start visit
-- `POST /api/admin/service-requests/{id}/complete-visit` - Complete visit
-- `POST /api/admin/service-requests/{id}/resolve` - Resolve request
-- `POST /api/admin/service-requests/{id}/cancel` - Cancel request
-
-### Tenant-Scoped Endpoints (All filtered by organization_id)
-- `/api/admin/companies` - Company management
-- `/api/admin/users` - User management
-- `/api/admin/devices` - Device management
-- `/api/admin/company-employees` - Employee management
-- `/api/admin/sites` - Site management
-- `/api/admin/licenses` - License management
-- `/api/admin/deployments` - Deployment management
-- `/api/admin/subscriptions` - Email/Cloud subscriptions
-- `/api/admin/asset-groups` - Asset groups
-- `/api/admin/accessories` - Accessories
-- `/api/admin/services` - Service history
-- `/api/admin/parts` - Parts inventory
-- `/api/admin/amc-contracts` - AMC contracts
-- `/api/admin/engineers` - Engineers
-
-### Knowledge Base API
-- `GET /api/kb/admin/categories` - List KB categories
-- `POST /api/kb/admin/categories` - Create KB category
-- `GET /api/kb/admin/articles` - List KB articles
-- `POST /api/kb/admin/articles` - Create KB article
-- `PUT /api/kb/admin/articles/{id}` - Update KB article
-- `POST /api/kb/admin/articles/{id}/publish` - Publish article
-- `GET /api/kb/public/articles` - Public articles
-
-### Organization & White-Label
-- `GET /api/org/current` - Get current organization
-- `PUT /api/org/current/branding` - Update branding
-- `PUT /api/org/current/settings` - Update settings
-
-## Test Credentials
-- Admin: admin@demo.com / admin123
-- Company: jane@acme.com / company123
-- Engineer: raj@example.com / password
+## Key Data Models (New)
+- `ProblemMaster` - Problem/issue type definitions
+- `ItemMaster` - Parts/items catalog
+- `InventoryLocation` - Physical/logical stock locations
+- `StockLedger` - Immutable stock movement records
+- `VendorMaster` - Vendor/supplier management
+- `VendorItemMapping` - Vendor-item price mappings
+- `ServiceTicketNew` - Service ticket (new 7-state model)
+- `ServiceVisitNew` - Visit records with timer
+- `TicketPartRequest` - Parts request from tickets
+- `TicketPartIssue` - Parts issued to tickets
 
 ## Test Reports
-- `/app/test_reports/iteration_19.json` - Auth fix tests
-- `/app/test_reports/iteration_20.json` - SaaS pages tests
+- Latest: /app/test_reports/iteration_31.json (65/65 tests passed)
 
-## Code Architecture
-```
-/app
-├── backend/
-│   ├── models/
-│   │   └── knowledge_base.py     # KB schema
-│   ├── routes/
-│   │   ├── knowledge_base.py     # KB API (tenant-scoped)
-│   │   ├── tactical_rmm.py       # RMM integration
-│   │   └── organization.py       # Org management
-│   ├── services/
-│   │   └── tactical_rmm.py       # RMM service
-│   └── server.py                 # Main server (tenant scoping applied)
-└── frontend/
-    └── src/
-        ├── pages/
-        │   ├── admin/
-        │   │   ├── KnowledgeBase.js      # KB management UI
-        │   │   ├── OrganizationSettings.js # White-label UI
-        │   │   └── TacticalRMMIntegration.js
-        │   └── public/
-        │       ├── LandingPage.js        # MSP-focused landing
-        │       ├── FeaturesPage.js
-        │       └── PricingPage.js
-        ├── App.js                # Routes (KB route added)
-        └── layouts/
-            └── AdminLayout.js    # Sidebar (KB link added)
-```
-
-## Project Health Check
-- **Working:**
-  - All admin endpoints tenant-scoped ✅
-  - Knowledge Base CRUD ✅
-  - White-Label settings UI ✅
-  - Enterprise Ticketing ✅
-  - MSP-focused public website ✅
-- **Blocked:**
-  - Razorpay (needs API keys)
-  - Tactical RMM (needs credentials)
-- **Mocked:**
-  - "Trusted By" logos on landing page (placeholders)
-  - Features page (text-only, needs screenshots)
+## Credentials
+- Admin: ck@motta.in / Charu@123@
