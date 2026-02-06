@@ -238,12 +238,15 @@ async def add_vendor_item_mapping(
     if existing:
         raise HTTPException(status_code=400, detail="This item is already mapped to this vendor")
     
+    # Exclude vendor_id and item_id from data since we're setting them explicitly
+    mapping_data = data.model_dump(exclude={"vendor_id", "item_id"})
     mapping = VendorItemMapping(
         organization_id=org_id,
         vendor_id=vendor_id,
+        item_id=data.item_id,
         vendor_name=vendor["name"],
         item_name=item["name"],
-        **data.model_dump()
+        **mapping_data
     )
     
     await db.vendor_item_mappings.insert_one(mapping.model_dump())
