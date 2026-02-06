@@ -61,6 +61,7 @@ const PriorityBadge = ({ priority }) => {
 };
 
 export default function ServiceRequests() {
+  const navigate = useNavigate();
   const token = localStorage.getItem('admin_token');
   
   // Data state
@@ -80,7 +81,6 @@ export default function ServiceRequests() {
   
   // Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [creating, setCreating] = useState(false);
