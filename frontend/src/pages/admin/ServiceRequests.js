@@ -213,20 +213,9 @@ export default function ServiceRequests() {
     }
   };
 
-  // Fetch ticket detail
-  const fetchTicketDetail = async (ticketId) => {
-    try {
-      const res = await axios.get(`${API_URL}/api/admin/service-tickets/${ticketId}`, { headers });
-      setSelectedTicket(res.data);
-    } catch (error) {
-      toast.error('Failed to load ticket details');
-    }
-  };
-
-  // View ticket detail
-  const handleViewTicket = async (ticket) => {
-    await fetchTicketDetail(ticket.id);
-    setShowDetailModal(true);
+  // View ticket detail - navigate to detail page
+  const handleViewTicket = (ticket) => {
+    navigate(`/admin/service-requests/${ticket.id}`);
   };
 
   // Reset form
