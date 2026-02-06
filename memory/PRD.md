@@ -1,158 +1,170 @@
 # Warranty & Asset Tracking Portal - PRD
 
-## Project Overview
-Multi-tenant SaaS platform for warranty management, asset tracking, and service operations.
-
-## User Personas
-- **Platform Admin**: Full system access, manages organizations
-- **Company Admin**: Manages their organization's assets, tickets, and staff
-- **Technician/Engineer**: Handles service visits, ticket resolution
+## Original Problem Statement
+Build an enterprise-grade multi-tenant SaaS platform for Warranty & Asset Tracking. The platform serves MSPs (Managed Service Providers) to manage:
+- Asset/device tracking with warranty information
+- Service ticket management with full lifecycle support
+- Inventory and parts management
+- Technician/engineer field service operations
+- Multi-company (tenant) support
 
 ## Core Requirements
 
-### 1. Company & Contact Management ✅
-- Multi-tenant company management
-- Contact persons per company
-- Site/location management
+### Service Module (Primary Focus)
+A comprehensive MSP-grade service ticket system with:
+1. **7-Stage Ticket Lifecycle**: New → Assigned → In Progress → Pending Parts → Completed → Closed → Cancelled
+2. **Multi-visit tracking** with start/stop timers for each visit
+3. **Inventory/parts management** integrated with tickets
+4. **Technician portal** for field engineers
+5. **Procurement workflow** for parts requests
 
-### 2. Device & Asset Management ✅
-- Device catalog and tracking
-- Asset tagging and grouping
-- Device model catalog
-
-### 3. Service & Inventory Module (NEW - PHASE 1 COMPLETE) ✅
-**Backend APIs Complete:**
-- Problem Master - Problem types/categories (8 default types seeded)
-- Item Master - Parts/items catalog with pricing
-- Inventory Location - Warehouses, vans, offices, etc.
-- Stock Ledger - Immutable ledger for all stock movements
-- Vendor Master - Vendor management with item-price mappings
-- Service Tickets (New) - 7-state lifecycle (NEW → ASSIGNED → IN_PROGRESS → PENDING_PARTS → COMPLETED → CLOSED, CANCELLED)
-- Service Visits - Multi-visit per ticket with timer functionality
-- Ticket Parts - Parts request, approval, and issuance workflow
-
-**Test Results:** 65/65 tests passed (100%)
-
-### 4. AMC Contracts ✅
-- Annual maintenance contract management
-- Renewal tracking and alerts
-
-### 5. Staff Management ✅
-- Employee/technician management
-- Role-based access control
-- Department management
+### Other Modules
+- Device/Asset Management
+- Company/Client Management
+- AMC (Annual Maintenance Contract) Management
+- License Tracking
+- Knowledge Base
+- Platform Admin (Multi-org management)
 
 ## What's Been Implemented
 
-### Backend (Phase 1 - Service Module) - December 2025
-| Feature | Status | Test Coverage |
-|---------|--------|---------------|
-| Problem Master API | ✅ Complete | 7 tests |
-| Item Master API | ✅ Complete | 8 tests |
-| Inventory Location API | ✅ Complete | 6 tests |
-| Stock Ledger API | ✅ Complete | 5 tests |
-| Vendor Master API | ✅ Complete | 8 tests |
-| Service Tickets (New) API | ✅ Complete | 12 tests |
-| Service Visits API | ✅ Complete | 9 tests |
-| Ticket Parts API | ✅ Complete | 9 tests |
-| Stock Transfer API | ✅ Complete | 1 test |
+### ✅ Service Module - Backend (COMPLETE)
+- All data models: `ServiceTicket`, `ServiceVisit`, `TicketPartRequest`, `TicketPartIssue`, `ProblemMaster`, `ItemMaster`, `InventoryLocation`, `StockLedger`, `VendorMaster`, `PurchaseRequest`
+- Full CRUD APIs under `/api/admin/service-module/` prefix
+- Workflow APIs: assign, start, complete, close, cancel
+- Visit APIs with timer support: start-timer, stop-timer, add-action
+- Parts request/approval/issue workflow
+- Tested with 100% pass rate (iteration_31.json)
 
-### API Endpoints Reference
+### ✅ Service Module - Frontend Phase 1 (COMPLETE - Dec 2025)
+- **Service Tickets List Page** (`/admin/service-requests`):
+  - Stats cards (Total, Open, Closed, Urgent)
+  - Search, status filter, priority filter
+  - Create new ticket modal
+  - Click-through to detail page
+  
+- **Ticket Detail Page** (`/admin/service-requests/:ticketId`):
+  - Full ticket information display
+  - Customer and contact information
+  - Device information (if linked)
+  - Assignment details
+  - Resolution summary (for completed tickets)
+  - **Action Buttons**: Assign, Start Work, Pending Parts, Complete, Close, Cancel
+  - **Modals**: Assign Technician, Schedule Visit, Request Parts, Add Comment
+  - **Tabs**: Details, Visits, Parts, History
+  
+- **Technician Portal** (`/engineer/*`):
+  - Login page with authentication
+  - Dashboard showing visits (Scheduled, In Progress, Completed)
+  - Visit detail page with:
+    - Live timer for in-progress visits
+    - Start/Stop timer functionality
+    - Add action during visit
+    - Request parts from field
+    - Complete visit with summary
+
+### ✅ Codebase Consolidation (COMPLETE)
+- Old "Support Tickets" module completely removed
+- All related frontend pages, backend routes, and models archived
+- Navigation cleaned up to show only new unified "Service Tickets"
+
+### ✅ Production Deployment Support
+- Guided user through Vultr deployment issues
+- Resolved Python venv requirement (PEP 668)
+- Provided working deployment command
+
+## Architecture
+
 ```
-# Problem Master
-GET/POST /api/admin/problems
-GET/PUT/DELETE /api/admin/problems/{id}
-POST /api/admin/problems/seed
-
-# Item Master
-GET/POST /api/admin/items
-GET/PUT/DELETE /api/admin/items/{id}
-GET /api/admin/items/{id}/stock
-GET /api/admin/items/search
-
-# Inventory
-GET/POST /api/admin/inventory/locations
-GET/PUT/DELETE /api/admin/inventory/locations/{id}
-GET /api/admin/inventory/stock
-POST /api/admin/inventory/stock/transfer
-POST /api/admin/inventory/stock/adjustment
-GET /api/admin/inventory/ledger
-
-# Vendors
-GET/POST /api/admin/vendors
-GET/PUT/DELETE /api/admin/vendors/{id}
-POST /api/admin/vendors/{id}/items
-GET /api/admin/vendors/for-item/{item_id}
-
-# Service Tickets (New)
-GET/POST /api/admin/service-tickets
-GET/PUT/DELETE /api/admin/service-tickets/{id}
-GET /api/admin/service-tickets/stats
-POST /api/admin/service-tickets/{id}/assign
-POST /api/admin/service-tickets/{id}/start
-POST /api/admin/service-tickets/{id}/pending-parts
-POST /api/admin/service-tickets/{id}/complete
-POST /api/admin/service-tickets/{id}/close
-POST /api/admin/service-tickets/{id}/cancel
-POST /api/admin/service-tickets/{id}/comments
-
-# Service Visits
-GET/POST /api/admin/visits
-GET/PUT/DELETE /api/admin/visits/{id}
-GET /api/admin/visits/today
-GET /api/admin/visits/technician/{id}
-POST /api/admin/visits/{id}/start-timer
-POST /api/admin/visits/{id}/stop-timer
-POST /api/admin/visits/{id}/add-action
-
-# Ticket Parts
-GET/POST /api/admin/ticket-parts/requests
-GET /api/admin/ticket-parts/requests/pending
-GET /api/admin/ticket-parts/requests/{id}
-POST /api/admin/ticket-parts/requests/{id}/approve
-DELETE /api/admin/ticket-parts/requests/{id}
-GET/POST /api/admin/ticket-parts/issues
-GET /api/admin/ticket-parts/issues/{id}
-POST /api/admin/ticket-parts/issues/{id}/return
+/app
+├── backend/
+│   ├── models/
+│   │   ├── service_ticket.py      # Main ticket model with 7-stage lifecycle
+│   │   ├── service_visit.py       # Visit model with timer support
+│   │   ├── ticket_parts.py        # Parts request and issue models
+│   │   ├── item_master.py         # Inventory items
+│   │   ├── inventory.py           # Stock locations and ledger
+│   │   ├── vendor.py              # Vendor management
+│   │   └── purchase.py            # Purchase requests
+│   ├── routes/
+│   │   ├── service_tickets_new.py # Ticket CRUD and workflow
+│   │   ├── service_visits.py      # Visit management with timers
+│   │   ├── ticket_parts.py        # Parts request/issue flow
+│   │   ├── item_master.py         # Item CRUD
+│   │   ├── inventory_new.py       # Inventory operations
+│   │   ├── vendor_master.py       # Vendor CRUD
+│   │   └── problem_master.py      # Problem types
+│   └── server.py                  # Main FastAPI app
+└── frontend/
+    └── src/
+        └── pages/
+            ├── admin/
+            │   ├── ServiceRequests.js     # Ticket list page
+            │   └── ServiceTicketDetail.js # Ticket detail page (NEW)
+            └── engineer/
+                ├── TechnicianDashboard.js # New technician dashboard
+                └── TechnicianVisitDetail.js # Visit detail with timer
 ```
+
+## Key API Endpoints
+
+### Service Tickets
+- `GET /api/admin/service-module/tickets` - List tickets
+- `GET /api/admin/service-module/tickets/{id}` - Get ticket detail
+- `POST /api/admin/service-module/tickets` - Create ticket
+- `POST /api/admin/service-module/tickets/{id}/assign` - Assign technician
+- `POST /api/admin/service-module/tickets/{id}/start` - Start work
+- `POST /api/admin/service-module/tickets/{id}/pending-parts` - Mark pending parts
+- `POST /api/admin/service-module/tickets/{id}/complete` - Complete ticket
+- `POST /api/admin/service-module/tickets/{id}/close` - Close ticket
+- `POST /api/admin/service-module/tickets/{id}/cancel` - Cancel ticket
+- `POST /api/admin/service-module/tickets/{id}/comments` - Add comment
+
+### Service Visits
+- `GET /api/admin/visits` - List visits
+- `GET /api/admin/visits/{id}` - Get visit detail
+- `GET /api/admin/visits/technician/{id}` - Get technician's visits
+- `POST /api/admin/visits` - Create visit
+- `POST /api/admin/visits/{id}/start-timer` - Start work timer
+- `POST /api/admin/visits/{id}/stop-timer` - Stop timer and complete
+- `POST /api/admin/visits/{id}/add-action` - Record action taken
+
+### Parts Management
+- `POST /api/admin/ticket-parts/requests` - Request parts
+- `POST /api/admin/ticket-parts/requests/{id}/approve` - Approve request
+- `POST /api/admin/ticket-parts/issue` - Issue parts
 
 ## Prioritized Backlog
 
-### P0 - In Progress
-- **Frontend for Service Module**: Create UI for new service tickets, visits, inventory, vendors
+### P0 - Immediate
+- None (Phase 1 complete and tested)
 
-### P1 - Next
-- Service Module Phase 2: Automated vendor communication, Quotation PDFs, Invoice generation
-- RMM Integration with Tactical RMM
-- Razorpay payments finalization
+### P1 - Next Sprint
+- **Service Module Phase 2**: Automated vendor communication (Email/WhatsApp), Quotation PDF generation, Invoice generation
+- **RMM Integration**: Install and configure Tactical RMM on dedicated server (`64.176.171.108`)
+- **Payments**: Finalize Razorpay integration
 
 ### P2 - Future
-- Fix ESLint warnings in frontend
-- CompanySwitcher component
-- server.py refactoring
-- AI Ticket Summary completion
-
-## Technical Architecture
-- **Frontend**: React + TailwindCSS + Shadcn UI
-- **Backend**: FastAPI + Python 3.11
-- **Database**: MongoDB with motor async driver
-- **Authentication**: JWT tokens
-- **Multi-tenancy**: organization_id scoping
-
-## Key Data Models (New)
-- `ProblemMaster` - Problem/issue type definitions
-- `ItemMaster` - Parts/items catalog
-- `InventoryLocation` - Physical/logical stock locations
-- `StockLedger` - Immutable stock movement records
-- `VendorMaster` - Vendor/supplier management
-- `VendorItemMapping` - Vendor-item price mappings
-- `ServiceTicketNew` - Service ticket (new 7-state model)
-- `ServiceVisitNew` - Visit records with timer
-- `TicketPartRequest` - Parts request from tickets
-- `TicketPartIssue` - Parts issued to tickets
+- CompanySwitcher.js component implementation
+- AI Ticket Summary feature completion
+- Plan Versioning and Audit Logs
+- ESLint warnings cleanup across frontend components
+- server.py refactoring (move routes to /routes directory)
 
 ## Test Reports
-- Latest: /app/test_reports/iteration_31.json (65/65 tests passed)
+- `/app/test_reports/iteration_31.json` - Backend API tests (100% pass)
+- `/app/test_reports/iteration_32.json` - Frontend and route removal verification
+- `/app/test_reports/iteration_33.json` - Service Module Frontend Phase 1 (100% pass, 28/28 tests)
 
-## Credentials
-- Admin: ck@motta.in / Charu@123@
+## Credentials (Preview Environment)
+- Admin: `ck@motta.in` / `Charu@123@`
+- Portal User: `portal@acme.com` / `Portal@123`
+
+## 3rd Party Integrations
+- **OpenAI GPT-4o-mini**: AI features (uses Emergent LLM Key)
+- **Razorpay**: Payments (partial)
+- **Cloudflare**: DNS and SSL
+
+---
+Last Updated: December 2025
+Phase 1 Service Module Frontend COMPLETE
