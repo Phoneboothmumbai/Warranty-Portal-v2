@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -10,10 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '../../components/ui/dropdown-menu';
 import { 
-  Plus, Search, Clock, User, MapPin, Phone, 
-  Wrench, AlertCircle, CheckCircle2, XCircle, Play, Pause,
+  Plus, Search, Clock, User,
+  Wrench, AlertCircle, CheckCircle2, XCircle, Play,
   RefreshCw, Calendar, FileText, MoreVertical, UserPlus,
-  Timer, Package, ChevronRight, Building2, Hash
+  Timer, Package, ChevronRight, Building2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
