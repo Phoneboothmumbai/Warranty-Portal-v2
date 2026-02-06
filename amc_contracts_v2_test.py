@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 
 class AMCContractsV2Tester:
-    def __init__(self, base_url="https://asset-manager-214.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://ticketmaster-109.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.token = None
         self.test_data = {}
