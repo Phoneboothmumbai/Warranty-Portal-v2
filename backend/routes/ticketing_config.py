@@ -281,7 +281,7 @@ async def list_help_topics(
     if is_public is not None:
         query["is_public"] = is_public
     
-    topics = await db.help_topics.find(query).sort("sort_order", 1).to_list(200)
+    topics = await db.help_topics.find(query, {"_id": 0}).sort("sort_order", 1).to_list(200)
     
     # Build hierarchy
     topic_map = {}
@@ -430,7 +430,7 @@ async def list_workflow_rules(
     if is_active is not None:
         query["is_active"] = is_active
     
-    rules = await db.workflow_rules.find(query).sort("sort_order", 1).to_list(200)
+    rules = await db.workflow_rules.find(query, {"_id": 0}).sort("sort_order", 1).to_list(200)
     
     return {
         "rules": [{**r, "id": str(r.get("_id", r.get("id")))} for r in rules]
