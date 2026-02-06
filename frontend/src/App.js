@@ -55,6 +55,7 @@ import StaffManagement from "./pages/admin/StaffManagement";
 import CustomDomains from "./pages/admin/CustomDomains";
 import EmailWhitelabel from "./pages/admin/EmailWhitelabel";
 import ServiceRequests from "./pages/admin/ServiceRequests";
+import ServiceTicketDetail from "./pages/admin/ServiceTicketDetail";
 import TGMSIntegration from "./pages/admin/TGMSIntegration";
 
 // Platform Super Admin Pages
