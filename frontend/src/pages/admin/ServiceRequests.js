@@ -60,7 +60,7 @@ const PriorityBadge = ({ priority }) => {
 };
 
 export default function ServiceRequests() {
-  const token = localStorage.getItem('adminToken');
+  const token = localStorage.getItem('admin_token');
   
   // Data state
   const [tickets, setTickets] = useState([]);
