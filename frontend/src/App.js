@@ -57,6 +57,7 @@ import EmailWhitelabel from "./pages/admin/EmailWhitelabel";
 import ServiceRequests from "./pages/admin/ServiceRequests";
 import ServiceTicketDetail from "./pages/admin/ServiceTicketDetail";
 import TGMSIntegration from "./pages/admin/TGMSIntegration";
+import TicketingConfig from "./pages/admin/TicketingConfig";
 
 // Platform Super Admin Pages
 import PlatformLogin from "./pages/platform/PlatformLogin";
