@@ -9955,10 +9955,6 @@ app.include_router(kb_router, prefix="/api", tags=["Knowledge Base"])
 from routes.staff import router as staff_router
 app.include_router(staff_router, tags=["Staff Module"])
 
-# Include Service Requests FSM router
-from routes.service_requests import router as service_requests_router
-app.include_router(service_requests_router, tags=["Service Requests FSM"])
-
 # Include TGMS router
 from routes.tgms import router as tgms_router
 app.include_router(tgms_router, tags=["TGMS"])
