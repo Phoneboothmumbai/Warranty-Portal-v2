@@ -166,6 +166,7 @@ function App() {
                     <Route path="amc-requests" element={<AdminAMCRequests />} />
                     <Route path="amc-requests/:requestId" element={<AdminAMCRequestDetail />} />
                     <Route path="service-requests" element={<ServiceRequests />} />
+                    <Route path="service-requests/:ticketId" element={<ServiceTicketDetail />} />
                     <Route path="sites" element={<Sites />} />
                     <Route path="deployments" element={<Deployments />} />
                     <Route path="licenses" element={<Licenses />} />
@@ -213,10 +214,10 @@ function App() {
                     <Route path="profile" element={<CompanyProfile />} />
                   </Route>
 
-                  {/* Engineer Portal Routes */}
+                  {/* Engineer/Technician Portal Routes */}
                   <Route path="/engineer" element={<EngineerLogin />} />
-                  <Route path="/engineer/dashboard" element={<EngineerDashboard />} />
-                  <Route path="/engineer/visit/:visitId" element={<EngineerVisitDetail />} />
+                  <Route path="/engineer/dashboard" element={<TechnicianDashboard />} />
+                  <Route path="/engineer/visit/:visitId" element={<TechnicianVisitDetail />} />
                 </Routes>
               </div>
               <Toaster position="top-right" richColors />
