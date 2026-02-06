@@ -205,10 +205,6 @@ function App() {
                     <Route path="amc-requests" element={<CompanyAMCRequests />} />
                     <Route path="amc-requests/new" element={<NewAMCRequest />} />
                     <Route path="amc-requests/:requestId" element={<CompanyAMCRequests />} />
-                    <Route path="tickets" element={<CompanyTickets />} />
-                    <Route path="tickets/:ticketId" element={<CompanyTicketDetails />} />
-                    <Route path="support-tickets" element={<CompanySupportTickets />} />
-                    <Route path="support-tickets/:ticketId" element={<CompanySupportTicketDetail />} />
                     <Route path="deployments" element={<CompanyDeployments />} />
                     <Route path="users" element={<CompanyUsers />} />
                     <Route path="sites" element={<CompanySites />} />
