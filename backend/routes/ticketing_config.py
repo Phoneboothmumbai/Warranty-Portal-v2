@@ -101,11 +101,9 @@ async def list_service_masters(
     if is_active is not None:
         query["is_active"] = is_active
     
-    masters = await db.service_masters.find(query).sort("sort_order", 1).to_list(500)
+    masters = await db.service_masters.find(query, {"_id": 0}).sort("sort_order", 1).to_list(500)
     
-    return {
-        "masters": [{**m, "id": str(m["_id"])} for m in masters if "_id" in m]
-    }
+    return {"masters": masters}
 
 
 @router.post("/masters")
