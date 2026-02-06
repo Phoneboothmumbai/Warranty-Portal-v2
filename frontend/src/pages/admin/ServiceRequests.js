@@ -136,9 +136,11 @@ export default function ServiceRequests() {
         axios.get(`${API_URL}/api/admin/staff/users?limit=100`, { headers }),
         axios.get(`${API_URL}/api/admin/problems`, { headers })
       ]);
-      setCompanies(companiesRes.data.companies || []);
-      setStaff(staffRes.data.users || []);
-      setProblems(problemsRes.data.problems || []);
+      // Companies API returns array directly, not { companies: [...] }
+      const companiesData = Array.isArray(companiesRes.data) ? companiesRes.data : (companiesRes.data.companies || []);
+      setCompanies(companiesData);
+      setStaff(staffRes.data.users || staffRes.data || []);
+      setProblems(problemsRes.data.problems || problemsRes.data || []);
     } catch (error) {
       console.error('Failed to fetch supporting data:', error);
     }
