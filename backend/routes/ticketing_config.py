@@ -30,26 +30,57 @@ async def get_admin_from_token(authorization: str = Header(None)):
     try:
         token = authorization.replace("Bearer ", "")
         payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-        admin_id = payload.get("sub")
         
-        if not admin_id:
-            raise HTTPException(status_code=401, detail="Invalid token")
+        # Handle different token types
+        token_type = payload.get("type", "admin")
+        organization_id = payload.get("organization_id")
         
-        # Get admin from database
-        admin = await db.admins.find_one({"id": admin_id})
-        if not admin:
-            raise HTTPException(status_code=401, detail="Admin not found")
-        
-        return {
-            "id": admin["id"],
-            "organization_id": admin.get("organization_id"),
-            "email": admin.get("email"),
-            "name": admin.get("name")
-        }
+        if token_type == "org_member":
+            # This is an organization member (admin panel user)
+            member_id = payload.get("org_member_id")
+            email = payload.get("sub")
+            
+            return {
+                "id": member_id,
+                "email": email,
+                "organization_id": organization_id,
+                "role": payload.get("role"),
+                "name": email  # Fallback
+            }
+        else:
+            # Legacy admin token
+            admin_id = payload.get("sub")
+            admin = await db.admins.find_one({"id": admin_id})
+            
+            if admin:
+                return {
+                    "id": admin["id"],
+                    "organization_id": admin.get("organization_id"),
+                    "email": admin.get("email"),
+                    "name": admin.get("name")
+                }
+            
+            # Try by email
+            admin = await db.admins.find_one({"email": admin_id})
+            if admin:
+                return {
+                    "id": admin.get("id", admin_id),
+                    "organization_id": admin.get("organization_id", organization_id),
+                    "email": admin.get("email", admin_id),
+                    "name": admin.get("name", admin_id)
+                }
+            
+            # Return payload data as fallback
+            return {
+                "id": admin_id,
+                "email": admin_id,
+                "organization_id": organization_id,
+                "name": admin_id
+            }
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    except jwt.InvalidTokenError as e:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
 
 
 # =============================================================================
