@@ -254,28 +254,6 @@ export default function ServiceRequests() {
     });
   };
 
-  // Get status badge
-  const StatusBadge = ({ status }) => {
-    const config = STATUS_CONFIG[status] || STATUS_CONFIG.new;
-    const Icon = config.icon;
-    return (
-      <Badge variant="outline" className={`${config.color} gap-1`}>
-        <Icon className="h-3 w-3" />
-        {config.label}
-      </Badge>
-    );
-  };
-
-  // Get priority badge
-  const PriorityBadge = ({ priority }) => {
-    const config = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.medium;
-    return (
-      <Badge variant="outline" className={config.color}>
-        {config.label}
-      </Badge>
-    );
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
