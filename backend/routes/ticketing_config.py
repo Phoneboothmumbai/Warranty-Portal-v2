@@ -19,12 +19,6 @@ from models.ticketing_config import (
 router = APIRouter(prefix="/ticketing-config", tags=["Ticketing Configuration"])
 
 
-# Helper to get admin from token
-async def get_current_admin(token: str = Depends(lambda: None)):
-    # This will be injected from server.py
-    pass
-
-
 # =============================================================================
 # SERVICE MASTERS
 # =============================================================================
@@ -33,7 +27,7 @@ async def get_current_admin(token: str = Depends(lambda: None)):
 async def list_service_masters(
     master_type: Optional[ServiceMasterType] = None,
     is_active: Optional[bool] = None,
-    admin: dict = Depends(get_current_admin)
+    admin: dict = Depends(lambda: None)
 ):
     """List all service masters, optionally filtered by type"""
     query = {"organization_id": admin["organization_id"]}
