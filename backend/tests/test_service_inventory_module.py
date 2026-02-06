@@ -454,10 +454,25 @@ class TestStockLedgerAPI:
         print(f"✓ Found {len(data['entries'])} ledger entries")
     
     def test_stock_adjustment_negative(self, auth_headers):
-        """POST /api/admin/inventory/stock/adjustment - Remove stock"""
+        """POST /api/admin/inventory/stock/adjustment - Remove stock (validates insufficient stock)"""
         if not TestStockLedgerAPI.test_item_id or not TestStockLedgerAPI.test_location_id:
             pytest.skip("Test data not created")
         
+        # First add stock so we can remove it
+        add_data = {
+            "item_id": TestStockLedgerAPI.test_item_id,
+            "location_id": TestStockLedgerAPI.test_location_id,
+            "quantity": 20,
+            "reason": "Adding stock for negative adjustment test"
+        }
+        response = requests.post(
+            f"{BASE_URL}/api/admin/inventory/stock/adjustment",
+            json=add_data,
+            headers=auth_headers
+        )
+        assert response.status_code == 200, f"Failed to add stock: {response.text}"
+        
+        # Now remove stock
         adjustment_data = {
             "item_id": TestStockLedgerAPI.test_item_id,
             "location_id": TestStockLedgerAPI.test_location_id,
