@@ -189,6 +189,7 @@ function App() {
                     <Route path="staff" element={<StaffManagement />} />
                     <Route path="custom-domains" element={<CustomDomains />} />
                     <Route path="email-whitelabel" element={<EmailWhitelabel />} />
+                    <Route path="ticketing-config" element={<TicketingConfig />} />
                   </Route>
 
                   {/* Company Portal Routes */}
