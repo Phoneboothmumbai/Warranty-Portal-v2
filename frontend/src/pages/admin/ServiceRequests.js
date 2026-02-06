@@ -99,10 +99,9 @@ export default function ServiceRequests() {
     is_urgent: false
   });
 
-  const headers = { Authorization: `Bearer ${token}` };
-
   // Fetch tickets
   const fetchTickets = useCallback(async () => {
+    const headers = { Authorization: `Bearer ${token}` };
     try {
       const params = new URLSearchParams({ page, limit: 20 });
       if (searchQuery) params.append('search', searchQuery);
@@ -120,6 +119,7 @@ export default function ServiceRequests() {
 
   // Fetch stats
   const fetchStats = useCallback(async () => {
+    const headers = { Authorization: `Bearer ${token}` };
     try {
       const res = await axios.get(`${API_URL}/api/admin/service-tickets/stats`, { headers });
       setStats(res.data);
@@ -130,6 +130,7 @@ export default function ServiceRequests() {
 
   // Fetch supporting data
   const fetchSupportingData = useCallback(async () => {
+    const headers = { Authorization: `Bearer ${token}` };
     try {
       const [companiesRes, staffRes, problemsRes] = await Promise.all([
         axios.get(`${API_URL}/api/admin/companies?limit=500`, { headers }),
@@ -143,6 +144,8 @@ export default function ServiceRequests() {
       console.error('Failed to fetch supporting data:', error);
     }
   }, [token]);
+
+  const headers = { Authorization: `Bearer ${token}` };
 
   // Initial load
   useEffect(() => {
