@@ -38,6 +38,28 @@ const PRIORITY_CONFIG = {
   critical: { label: 'Critical', color: 'bg-red-100 text-red-700' }
 };
 
+// Status Badge Component
+const StatusBadge = ({ status }) => {
+  const config = STATUS_CONFIG[status] || STATUS_CONFIG.new;
+  const Icon = config.icon;
+  return (
+    <Badge variant="outline" className={`${config.color} gap-1`}>
+      <Icon className="h-3 w-3" />
+      {config.label}
+    </Badge>
+  );
+};
+
+// Priority Badge Component
+const PriorityBadge = ({ priority }) => {
+  const config = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.medium;
+  return (
+    <Badge variant="outline" className={config.color}>
+      {config.label}
+    </Badge>
+  );
+};
+
 export default function ServiceRequests() {
   const navigate = useNavigate();
   const token = localStorage.getItem('adminToken');
