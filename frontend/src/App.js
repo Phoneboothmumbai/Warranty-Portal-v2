@@ -84,8 +84,6 @@ import CompanyRegister from "./pages/company/CompanyRegister";
 import CompanyDashboard from "./pages/company/CompanyDashboard";
 import CompanyDevices from "./pages/company/CompanyDevices";
 import CompanyDeviceDetails from "./pages/company/CompanyDeviceDetails";
-import CompanyTickets from "./pages/company/CompanyTickets";
-import CompanyTicketDetails from "./pages/company/CompanyTicketDetails";
 import CompanyAMC from "./pages/company/CompanyAMC";
 import CompanyDeployments from "./pages/company/CompanyDeployments";
 import CompanyUsers from "./pages/company/CompanyUsers";
@@ -96,8 +94,6 @@ import CompanyOfficeSupplies from "./pages/company/CompanyOfficeSupplies";
 import CompanyCredentials from "./pages/company/CompanyCredentials";
 import CompanyAMCRequests from "./pages/company/CompanyAMCRequests";
 import NewAMCRequest from "./pages/company/NewAMCRequest";
-import CompanySupportTickets from "./pages/company/CompanySupportTickets";
-import CompanySupportTicketDetail from "./pages/company/CompanySupportTicketDetail";
 import CompanyAMCOnboarding from "./pages/company/CompanyAMCOnboarding";
 
 // Engineer Portal Pages
