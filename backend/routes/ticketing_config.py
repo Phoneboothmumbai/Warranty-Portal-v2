@@ -2,10 +2,12 @@
 Ticketing Configuration Routes
 API endpoints for managing service ticket configuration
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header
 from typing import Optional, List
 from datetime import datetime, timezone
 import uuid
+import jwt
+import os
 
 from database import db
 from models.ticketing_config import (
@@ -18,6 +20,37 @@ from models.ticketing_config import (
 
 router = APIRouter(prefix="/ticketing-config", tags=["Ticketing Configuration"])
 
+JWT_SECRET = os.environ.get("JWT_SECRET", "your-secret-key-here")
+
+async def get_admin_from_token(authorization: str = Header(None)):
+    """Extract admin from JWT token"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    try:
+        token = authorization.replace("Bearer ", "")
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        admin_id = payload.get("sub")
+        
+        if not admin_id:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        # Get admin from database
+        admin = await db.admins.find_one({"id": admin_id})
+        if not admin:
+            raise HTTPException(status_code=401, detail="Admin not found")
+        
+        return {
+            "id": admin["id"],
+            "organization_id": admin.get("organization_id"),
+            "email": admin.get("email"),
+            "name": admin.get("name")
+        }
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
 
 # =============================================================================
 # SERVICE MASTERS
@@ -27,7 +60,7 @@ router = APIRouter(prefix="/ticketing-config", tags=["Ticketing Configuration"])
 async def list_service_masters(
     master_type: Optional[ServiceMasterType] = None,
     is_active: Optional[bool] = None,
-    admin: dict = Depends(lambda: None)
+    admin: dict = Depends(get_admin_from_token)
 ):
     """List all service masters, optionally filtered by type"""
     query = {"organization_id": admin["organization_id"]}
