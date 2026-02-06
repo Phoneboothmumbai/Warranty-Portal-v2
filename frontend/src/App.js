@@ -99,8 +99,8 @@ import CompanyAMCOnboarding from "./pages/company/CompanyAMCOnboarding";
 
 // Engineer Portal Pages
 import EngineerLogin from "./pages/engineer/EngineerLogin";
-import EngineerDashboard from "./pages/engineer/EngineerDashboard";
-import EngineerVisitDetail from "./pages/engineer/EngineerVisitDetail";
+import TechnicianDashboard from "./pages/engineer/TechnicianDashboard";
+import TechnicianVisitDetail from "./pages/engineer/TechnicianVisitDetail";
 
 // Contexts
 import { BrandingProvider } from "./contexts/BrandingContext";
