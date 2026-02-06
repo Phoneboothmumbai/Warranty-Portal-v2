@@ -261,7 +261,7 @@ export default function ServiceRequests() {
           <h1 className="text-2xl font-bold text-slate-900">Service Tickets</h1>
           <p className="text-slate-500 text-sm">Manage service requests and field operations</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} data-testid="new-ticket-btn">
+        <Button onClick={() => { fetchSupportingData(); setShowCreateModal(true); }} data-testid="new-ticket-btn">
           <Plus className="h-4 w-4 mr-2" />
           New Ticket
         </Button>
