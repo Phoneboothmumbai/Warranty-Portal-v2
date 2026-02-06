@@ -60,7 +60,6 @@ const PriorityBadge = ({ priority }) => {
 };
 
 export default function ServiceRequests() {
-  const navigate = useNavigate();
   const token = localStorage.getItem('adminToken');
   
   // Data state
