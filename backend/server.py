@@ -1993,6 +1993,20 @@ async def delete_company(company_id: str, admin: dict = Depends(get_current_admi
 
 # ==================== COMPANY DOMAIN MANAGEMENT ====================
 
+@api_router.get("/admin/companies/{company_id}/domains")
+async def get_company_domains(company_id: str, admin: dict = Depends(get_current_admin)):
+    """Get all email domains for a specific company"""
+    company = await db.companies.find_one(
+        {"id": company_id, "is_deleted": {"$ne": True}},
+        {"_id": 0, "email_domains": 1}
+    )
+    
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    return company.get("email_domains", [])
+
+
 @api_router.post("/admin/companies/{company_id}/domains")
 async def add_company_domain(company_id: str, data: dict, admin: dict = Depends(get_current_admin)):
     """Add an email domain to a company for ticket routing"""
