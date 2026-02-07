@@ -1727,7 +1727,7 @@ const CompanyDetails = () => {
               <Label>License Key</Label>
               <Input value={licenseForm.license_key} onChange={(e) => setLicenseForm({...licenseForm, license_key: e.target.value})} placeholder="XXXXX-XXXXX-XXXXX" />
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>License Type</Label>
                 <select className="w-full h-10 border rounded-md px-3" value={licenseForm.license_type} onChange={(e) => setLicenseForm({...licenseForm, license_type: e.target.value})}>
@@ -1740,6 +1740,12 @@ const CompanyDetails = () => {
               <div>
                 <Label>Seats</Label>
                 <Input type="number" value={licenseForm.seats} onChange={(e) => setLicenseForm({...licenseForm, seats: parseInt(e.target.value) || 1})} min="1" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Start Date</Label>
+                <Input type="date" value={licenseForm.start_date} onChange={(e) => setLicenseForm({...licenseForm, start_date: e.target.value})} />
               </div>
               <div>
                 <Label>Expiry Date</Label>
