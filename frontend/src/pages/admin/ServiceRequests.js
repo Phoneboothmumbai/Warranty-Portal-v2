@@ -96,7 +96,8 @@ export default function ServiceRequests() {
     contact_name: '',
     contact_phone: '',
     contact_email: '',
-    is_urgent: false
+    is_urgent: false,
+    notes: ''
   });
 
   // Fetch tickets
