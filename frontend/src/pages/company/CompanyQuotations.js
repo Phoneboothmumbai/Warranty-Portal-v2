@@ -54,7 +54,9 @@ const CompanyQuotations = () => {
   const fetchQuotations = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/api/company/quotations`, { headers });
+      const response = await axios.get(`${API}/api/company/quotations`, { 
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setQuotations(response.data.quotations || []);
     } catch (err) {
       console.error('Failed to fetch quotations:', err);
