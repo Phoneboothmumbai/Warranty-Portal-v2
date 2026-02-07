@@ -4,7 +4,7 @@ import axios from 'axios';
 import { 
   Building2, ArrowLeft, Edit2, Save, X, MapPin, Users, Laptop, Package, 
   FileText, Shield, Wrench, Mail, Phone, Calendar, CheckCircle2, XCircle,
-  AlertCircle, Clock, ChevronRight, KeyRound, Plus, Eye, EyeOff, Trash2, Search
+  AlertCircle, Clock, ChevronRight, KeyRound, Plus, Eye, EyeOff, Trash2, Search, Globe
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
@@ -19,6 +19,7 @@ const TABS = [
   { id: 'portal_users', label: 'Portal Logins', icon: KeyRound },
   { id: 'sites', label: 'Sites', icon: MapPin },
   { id: 'users', label: 'Users/Contacts', icon: Users },
+  { id: 'email_domains', label: 'Email Domains', icon: Globe },
   { id: 'devices', label: 'Devices', icon: Laptop },
   { id: 'deployments', label: 'Deployments', icon: Package },
   { id: 'licenses', label: 'Licenses', icon: FileText },
