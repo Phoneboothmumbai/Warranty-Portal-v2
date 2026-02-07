@@ -361,11 +361,14 @@ class TestCompanyDevices:
         assert response.status_code == 200, f"Failed to get device: {response.text}"
         data = response.json()
         
-        assert data["id"] == TEST_DEVICE_ID
-        assert "serial_number" in data
-        assert "brand" in data
-        assert "model" in data
-        print(f"✓ Got device: {data.get('brand')} {data.get('model')} ({data.get('serial_number')})")
+        # API returns {"device": {...}, "parts": [...]}
+        device = data.get("device", data)  # Handle both formats
+        
+        assert device["id"] == TEST_DEVICE_ID
+        assert "serial_number" in device
+        assert "brand" in device
+        assert "model" in device
+        print(f"✓ Got device: {device.get('brand')} {device.get('model')} ({device.get('serial_number')})")
 
 
 class TestCleanup:
