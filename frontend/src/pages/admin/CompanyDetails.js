@@ -179,7 +179,59 @@ const CompanyDetails = () => {
     if (activeTab === 'portal_users' && portalUsers.length === 0) {
       fetchPortalUsers();
     }
+    if (activeTab === 'email_domains' && emailDomains.length === 0) {
+      fetchEmailDomains();
+    }
   }, [activeTab]);
+
+  // Fetch email domains for this company
+  const fetchEmailDomains = async () => {
+    setLoadingDomains(true);
+    try {
+      const response = await axios.get(`${API}/admin/companies/${companyId}/domains`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setEmailDomains(Array.isArray(response.data) ? response.data : (response.data.domains || []));
+    } catch (error) {
+      console.error('Failed to fetch email domains:', error);
+      // If endpoint doesn't exist, try fetching from company data
+      if (data?.company?.email_domains) {
+        setEmailDomains(data.company.email_domains);
+      }
+    }
+    setLoadingDomains(false);
+  };
+
+  // Add email domain
+  const handleAddDomain = async () => {
+    if (!newDomain.trim()) return;
+    try {
+      await axios.post(`${API}/admin/companies/${companyId}/domains`, 
+        { domain: newDomain.trim().toLowerCase() },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      toast.success('Email domain added');
+      setNewDomain('');
+      setShowAddDomain(false);
+      fetchEmailDomains();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to add domain');
+    }
+  };
+
+  // Delete email domain
+  const handleDeleteDomain = async (domain) => {
+    if (!window.confirm(`Remove domain "${domain}"?`)) return;
+    try {
+      await axios.delete(`${API}/admin/companies/${companyId}/domains/${encodeURIComponent(domain)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Domain removed');
+      fetchEmailDomains();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to remove domain');
+    }
+  };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
