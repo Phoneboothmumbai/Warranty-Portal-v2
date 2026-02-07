@@ -170,6 +170,7 @@ function App() {
                     <Route path="amc-requests/:requestId" element={<AdminAMCRequestDetail />} />
                     <Route path="service-requests" element={<ServiceRequests />} />
                     <Route path="service-requests/:ticketId" element={<ServiceTicketDetail />} />
+                    <Route path="quotations" element={<Quotations />} />
                     <Route path="sites" element={<Sites />} />
                     <Route path="deployments" element={<Deployments />} />
                     <Route path="licenses" element={<Licenses />} />
