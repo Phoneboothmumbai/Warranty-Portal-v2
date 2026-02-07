@@ -102,6 +102,7 @@ import CompanyAMCOnboarding from "./pages/company/CompanyAMCOnboarding";
 import EngineerLogin from "./pages/engineer/EngineerLogin";
 import TechnicianDashboard from "./pages/engineer/TechnicianDashboard";
 import TechnicianVisitDetail from "./pages/engineer/TechnicianVisitDetail";
+import EngineerTicketDetail from "./pages/engineer/EngineerTicketDetail";
 
 // Contexts
 import { BrandingProvider } from "./contexts/BrandingContext";
