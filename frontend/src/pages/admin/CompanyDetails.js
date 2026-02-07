@@ -1595,6 +1595,241 @@ const CompanyDetails = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add Site Modal */}
+      <Dialog open={showAddSite} onOpenChange={setShowAddSite}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Site</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Site Name *</Label>
+              <Input value={siteForm.name} onChange={(e) => setSiteForm({...siteForm, name: e.target.value})} placeholder="e.g., Head Office, Branch Office" />
+            </div>
+            <div>
+              <Label>Address</Label>
+              <Input value={siteForm.address} onChange={(e) => setSiteForm({...siteForm, address: e.target.value})} placeholder="Full address" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Contact Person</Label>
+                <Input value={siteForm.contact_person} onChange={(e) => setSiteForm({...siteForm, contact_person: e.target.value})} placeholder="Name" />
+              </div>
+              <div>
+                <Label>Contact Phone</Label>
+                <Input value={siteForm.contact_phone} onChange={(e) => setSiteForm({...siteForm, contact_phone: e.target.value})} placeholder="Phone" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddSite(false)}>Cancel</Button>
+            <Button onClick={handleAddSite} disabled={savingItem}>{savingItem ? 'Adding...' : 'Add Site'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Contact Modal */}
+      <Dialog open={showAddContact} onOpenChange={setShowAddContact}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Contact</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Name *</Label>
+              <Input value={contactForm.name} onChange={(e) => setContactForm({...contactForm, name: e.target.value})} placeholder="Full name" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Email</Label>
+                <Input type="email" value={contactForm.email} onChange={(e) => setContactForm({...contactForm, email: e.target.value})} placeholder="email@company.com" />
+              </div>
+              <div>
+                <Label>Phone</Label>
+                <Input value={contactForm.phone} onChange={(e) => setContactForm({...contactForm, phone: e.target.value})} placeholder="Phone number" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Department</Label>
+                <Input value={contactForm.department} onChange={(e) => setContactForm({...contactForm, department: e.target.value})} placeholder="e.g., IT, HR, Admin" />
+              </div>
+              <div>
+                <Label>Designation</Label>
+                <Input value={contactForm.designation} onChange={(e) => setContactForm({...contactForm, designation: e.target.value})} placeholder="e.g., Manager, Executive" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddContact(false)}>Cancel</Button>
+            <Button onClick={handleAddContact} disabled={savingItem}>{savingItem ? 'Adding...' : 'Add Contact'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Device Modal */}
+      <Dialog open={showAddDevice} onOpenChange={setShowAddDevice}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Device</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Brand</Label>
+                <Input value={deviceForm2.brand} onChange={(e) => setDeviceForm2({...deviceForm2, brand: e.target.value})} placeholder="e.g., HP, Dell, Cisco" />
+              </div>
+              <div>
+                <Label>Model</Label>
+                <Input value={deviceForm2.model} onChange={(e) => setDeviceForm2({...deviceForm2, model: e.target.value})} placeholder="Model name/number" />
+              </div>
+            </div>
+            <div>
+              <Label>Serial Number *</Label>
+              <Input value={deviceForm2.serial_number} onChange={(e) => setDeviceForm2({...deviceForm2, serial_number: e.target.value})} placeholder="Device serial number" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Device Type</Label>
+                <Input value={deviceForm2.device_type} onChange={(e) => setDeviceForm2({...deviceForm2, device_type: e.target.value})} placeholder="e.g., Laptop, Printer, Server" />
+              </div>
+              <div>
+                <Label>Location</Label>
+                <Input value={deviceForm2.location} onChange={(e) => setDeviceForm2({...deviceForm2, location: e.target.value})} placeholder="Where it's installed" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddDevice(false)}>Cancel</Button>
+            <Button onClick={handleAddDevice2} disabled={savingItem}>{savingItem ? 'Adding...' : 'Add Device'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add License Modal */}
+      <Dialog open={showAddLicense} onOpenChange={setShowAddLicense}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add License</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Software Name *</Label>
+              <Input value={licenseForm.software_name} onChange={(e) => setLicenseForm({...licenseForm, software_name: e.target.value})} placeholder="e.g., Microsoft Office, Adobe Creative Suite" />
+            </div>
+            <div>
+              <Label>License Key</Label>
+              <Input value={licenseForm.license_key} onChange={(e) => setLicenseForm({...licenseForm, license_key: e.target.value})} placeholder="XXXXX-XXXXX-XXXXX" />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>License Type</Label>
+                <select className="w-full h-10 border rounded-md px-3" value={licenseForm.license_type} onChange={(e) => setLicenseForm({...licenseForm, license_type: e.target.value})}>
+                  <option value="perpetual">Perpetual</option>
+                  <option value="subscription">Subscription</option>
+                  <option value="volume">Volume</option>
+                  <option value="oem">OEM</option>
+                </select>
+              </div>
+              <div>
+                <Label>Seats</Label>
+                <Input type="number" value={licenseForm.seats} onChange={(e) => setLicenseForm({...licenseForm, seats: parseInt(e.target.value) || 1})} min="1" />
+              </div>
+              <div>
+                <Label>Expiry Date</Label>
+                <Input type="date" value={licenseForm.expiry_date} onChange={(e) => setLicenseForm({...licenseForm, expiry_date: e.target.value})} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddLicense(false)}>Cancel</Button>
+            <Button onClick={handleAddLicense} disabled={savingItem}>{savingItem ? 'Adding...' : 'Add License'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Deployment Modal */}
+      <Dialog open={showAddDeployment} onOpenChange={setShowAddDeployment}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Deployment</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Deployment Name *</Label>
+              <Input value={deploymentForm.name} onChange={(e) => setDeploymentForm({...deploymentForm, name: e.target.value})} placeholder="e.g., Server Room Setup, Network Installation" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Deployment Type</Label>
+                <Input value={deploymentForm.deployment_type} onChange={(e) => setDeploymentForm({...deploymentForm, deployment_type: e.target.value})} placeholder="e.g., Hardware, Software, Network" />
+              </div>
+              <div>
+                <Label>Status</Label>
+                <select className="w-full h-10 border rounded-md px-3" value={deploymentForm.status} onChange={(e) => setDeploymentForm({...deploymentForm, status: e.target.value})}>
+                  <option value="planned">Planned</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="on_hold">On Hold</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <Label>Notes</Label>
+              <Input value={deploymentForm.notes} onChange={(e) => setDeploymentForm({...deploymentForm, notes: e.target.value})} placeholder="Additional notes" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddDeployment(false)}>Cancel</Button>
+            <Button onClick={handleAddDeployment} disabled={savingItem}>{savingItem ? 'Adding...' : 'Add Deployment'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add AMC Contract Modal */}
+      <Dialog open={showAddAMC} onOpenChange={setShowAddAMC}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add AMC Contract</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Contract Number *</Label>
+              <Input value={amcForm.contract_number} onChange={(e) => setAmcForm({...amcForm, contract_number: e.target.value})} placeholder="e.g., AMC-2024-001" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Start Date</Label>
+                <Input type="date" value={amcForm.start_date} onChange={(e) => setAmcForm({...amcForm, start_date: e.target.value})} />
+              </div>
+              <div>
+                <Label>End Date</Label>
+                <Input type="date" value={amcForm.end_date} onChange={(e) => setAmcForm({...amcForm, end_date: e.target.value})} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Coverage Type</Label>
+                <select className="w-full h-10 border rounded-md px-3" value={amcForm.coverage_type} onChange={(e) => setAmcForm({...amcForm, coverage_type: e.target.value})}>
+                  <option value="comprehensive">Comprehensive</option>
+                  <option value="non_comprehensive">Non-Comprehensive</option>
+                  <option value="labor_only">Labor Only</option>
+                  <option value="parts_only">Parts Only</option>
+                </select>
+              </div>
+              <div>
+                <Label>Contract Value</Label>
+                <Input type="number" value={amcForm.value} onChange={(e) => setAmcForm({...amcForm, value: e.target.value})} placeholder="Amount" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddAMC(false)}>Cancel</Button>
+            <Button onClick={handleAddAMC} disabled={savingItem}>{savingItem ? 'Adding...' : 'Add AMC Contract'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
