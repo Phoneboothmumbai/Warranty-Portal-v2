@@ -72,6 +72,8 @@ export default function StaffManagement() {
   const [showStateModal, setShowStateModal] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [showPermissionMatrixModal, setShowPermissionMatrixModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ password: '', confirmPassword: '' });
   
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedDept, setSelectedDept] = useState(null);
