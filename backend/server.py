@@ -5978,26 +5978,53 @@ from services.auth import get_current_engineer
 @limiter.limit(RATE_LIMITS["login"])
 async def engineer_login(request: Request, login: EngineerLogin):
     """Engineer login with rate limiting (5 attempts/minute per IP)"""
+    # First check the legacy engineers collection
     engineer = await db.engineers.find_one(
         {"email": login.email, "is_active": True, "is_deleted": {"$ne": True}},
         {"_id": 0}
     )
     
-    if not engineer or not verify_password(login.password, engineer["password_hash"]):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    
-    token = create_access_token(data={"sub": engineer["id"], "type": "engineer"})
-    
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-        "engineer": {
-            "id": engineer["id"],
-            "name": engineer["name"],
-            "email": engineer["email"],
-            "phone": engineer.get("phone")
+    if engineer and verify_password(login.password, engineer["password_hash"]):
+        token = create_access_token(data={"sub": engineer["id"], "type": "engineer"})
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "engineer": {
+                "id": engineer["id"],
+                "name": engineer["name"],
+                "email": engineer["email"],
+                "phone": engineer.get("phone")
+            }
         }
-    }
+    
+    # Check staff_users with Technician role
+    staff_user = await db.staff_users.find_one(
+        {"email": login.email, "state": "active", "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    )
+    
+    if staff_user and staff_user.get("password_hash") and verify_password(login.password, staff_user["password_hash"]):
+        # Verify user has Technician role
+        role_ids = staff_user.get("role_ids", [])
+        if role_ids:
+            tech_role = await db.staff_roles.find_one({
+                "id": {"$in": role_ids},
+                "name": {"$regex": "technician", "$options": "i"}
+            })
+            if tech_role:
+                token = create_access_token(data={"sub": staff_user["id"], "type": "engineer"})
+                return {
+                    "access_token": token,
+                    "token_type": "bearer",
+                    "engineer": {
+                        "id": staff_user["id"],
+                        "name": staff_user["name"],
+                        "email": staff_user["email"],
+                        "phone": staff_user.get("phone")
+                    }
+                }
+    
+    raise HTTPException(status_code=401, detail="Invalid email or password")
 
 
 @api_router.get("/engineer/me")
