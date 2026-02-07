@@ -19,6 +19,7 @@ const navGroups = [
       { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { path: '/admin/usage', label: 'Usage & Limits', icon: Layers },
       { path: '/admin/service-requests', label: 'Service Tickets', icon: Wrench },
+      { path: '/admin/quotations', label: 'Quotations', icon: FileText },
       { path: '/admin/renewal-alerts', label: 'Renewal Alerts', icon: AlertTriangle },
       { path: '/admin/credentials', label: 'Credentials', icon: Lock },
     ]
