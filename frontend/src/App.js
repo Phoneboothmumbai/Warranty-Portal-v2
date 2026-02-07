@@ -208,7 +208,7 @@ function App() {
                     <Route index element={<Navigate to="/company/dashboard" replace />} />
                     <Route path="dashboard" element={<CompanyDashboard />} />
                     <Route path="devices" element={<CompanyDevices />} />
-                    <Route path="devices/:deviceId" element={<CompanyDeviceDetails />} />
+                    <Route path="devices/:deviceId" element={<DeviceDashboard />} />
                     <Route path="credentials" element={<CompanyCredentials />} />
                     <Route path="warranty" element={<CompanyWarranty />} />
                     <Route path="quotations" element={<CompanyQuotations />} />
