@@ -760,6 +760,15 @@ async def list_permissions(
         {"_id": 0}
     ).sort([("category", 1), ("module", 1), ("resource", 1)]).to_list(None)
     
+    # Auto-initialize if no permissions exist
+    if not permissions and not module and not category:
+        logger.info(f"No permissions found for org {org_id}, auto-initializing...")
+        await StaffService.initialize_organization_staff(org_id, admin)
+        permissions = await db.staff_permissions.find(
+            {"organization_id": org_id, "is_deleted": {"$ne": True}},
+            {"_id": 0}
+        ).sort([("category", 1), ("module", 1), ("resource", 1)]).to_list(None)
+    
     # Group by category
     grouped = {}
     for perm in permissions:
