@@ -211,6 +211,8 @@ function App() {
                     <Route path="credentials" element={<CompanyCredentials />} />
                     <Route path="warranty" element={<CompanyWarranty />} />
                     <Route path="quotations" element={<CompanyQuotations />} />
+                    <Route path="tickets" element={<CompanyTickets />} />
+                    <Route path="tickets/:ticketId" element={<CompanyTicketDetail />} />
                     <Route path="amc" element={<CompanyAMC />} />
                     <Route path="amc-onboarding" element={<CompanyAMCOnboarding />} />
                     <Route path="amc-requests" element={<CompanyAMCRequests />} />
