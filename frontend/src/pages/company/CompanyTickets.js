@@ -374,15 +374,15 @@ const CompanyTickets = () => {
             <div className="space-y-2">
               <Label>Device (Optional)</Label>
               <Select 
-                value={newTicket.device_id} 
-                onValueChange={(value) => setNewTicket({...newTicket, device_id: value})}
+                value={newTicket.device_id || "none"} 
+                onValueChange={(value) => setNewTicket({...newTicket, device_id: value === "none" ? "" : value})}
               >
                 <SelectTrigger>
                   <Laptop className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Select a device" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No specific device</SelectItem>
+                  <SelectItem value="none">No specific device</SelectItem>
                   {devices.map((device) => (
                     <SelectItem key={device.id} value={device.id}>
                       {device.serial_number} - {device.brand} {device.model}
