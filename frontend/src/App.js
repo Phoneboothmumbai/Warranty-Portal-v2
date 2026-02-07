@@ -87,6 +87,7 @@ import CompanyRegister from "./pages/company/CompanyRegister";
 import CompanyDashboard from "./pages/company/CompanyDashboard";
 import CompanyDevices from "./pages/company/CompanyDevices";
 import CompanyDeviceDetails from "./pages/company/CompanyDeviceDetails";
+import DeviceDashboard from "./pages/company/DeviceDashboard";
 import CompanyAMC from "./pages/company/CompanyAMC";
 import CompanyDeployments from "./pages/company/CompanyDeployments";
 import CompanyUsers from "./pages/company/CompanyUsers";
