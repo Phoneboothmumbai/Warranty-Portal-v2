@@ -32,14 +32,6 @@ const navGroups = [
     ]
   },
   {
-    id: 'myteam',
-    label: 'My Team',
-    icon: UserCog,
-    items: [
-      { path: '/admin/staff', label: 'Staff & Technicians', icon: Shield },
-    ]
-  },
-  {
     id: 'assets',
     label: 'Assets',
     icon: Laptop,
