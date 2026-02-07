@@ -182,6 +182,13 @@ class ServiceTicketNew(BaseModel):
     is_billed: bool = False
     invoice_id: Optional[str] = None
     
+    # Quotation (for pending_parts workflow)
+    quotation_id: Optional[str] = None
+    quotation_status: Optional[str] = None  # draft, sent, approved, rejected
+    quotation_sent_at: Optional[str] = None
+    quotation_approved_at: Optional[str] = None
+    quotation_approved_by: Optional[str] = None
+    
     # Customer feedback
     customer_rating: Optional[int] = None  # 1-5
     customer_feedback: Optional[str] = None
