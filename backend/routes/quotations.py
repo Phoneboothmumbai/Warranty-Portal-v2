@@ -477,3 +477,151 @@ async def delete_quotation(quotation_id: str, admin: dict = Depends(get_current_
     )
     
     return {"success": True, "message": "Quotation deleted"}
+
+
+
+# ==================== COMPANY PORTAL ENDPOINTS ====================
+
+from services.auth import get_current_company_user
+
+company_router = APIRouter(prefix="/api/company/quotations")
+
+
+@company_router.get("")
+async def list_company_quotations(
+    user: dict = Depends(get_current_company_user),
+    status: Optional[str] = None,
+    page: int = 1,
+    limit: int = 20
+):
+    """List quotations for the company - visible to company users"""
+    company_id = user.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=403, detail="Company context required")
+    
+    query = {
+        "company_id": company_id,
+        "is_deleted": {"$ne": True},
+        # Only show sent, approved, or rejected quotations (not drafts)
+        "status": {"$in": [QuotationStatus.SENT.value, QuotationStatus.APPROVED.value, QuotationStatus.REJECTED.value]}
+    }
+    
+    if status:
+        query["status"] = status
+    
+    total = await db.quotations.count_documents(query)
+    skip = (page - 1) * limit
+    
+    quotations = await db.quotations.find(query, {"_id": 0, "internal_notes": 0})\
+        .sort("sent_at", -1)\
+        .skip(skip)\
+        .limit(limit)\
+        .to_list(limit)
+    
+    return {
+        "quotations": quotations,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": (total + limit - 1) // limit
+    }
+
+
+@company_router.get("/{quotation_id}")
+async def get_company_quotation(quotation_id: str, user: dict = Depends(get_current_company_user)):
+    """Get quotation details - for company user"""
+    company_id = user.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=403, detail="Company context required")
+    
+    quotation = await db.quotations.find_one({
+        "id": quotation_id,
+        "company_id": company_id,
+        "is_deleted": {"$ne": True},
+        # Only allow viewing sent/approved/rejected
+        "status": {"$in": [QuotationStatus.SENT.value, QuotationStatus.APPROVED.value, QuotationStatus.REJECTED.value]}
+    }, {"_id": 0, "internal_notes": 0})
+    
+    if not quotation:
+        raise HTTPException(status_code=404, detail="Quotation not found")
+    
+    return quotation
+
+
+@company_router.post("/{quotation_id}/respond")
+async def respond_to_quotation(
+    quotation_id: str,
+    approved: bool,
+    notes: Optional[str] = None,
+    user: dict = Depends(get_current_company_user)
+):
+    """Company user approves or rejects a quotation"""
+    company_id = user.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=403, detail="Company context required")
+    
+    quotation = await db.quotations.find_one({
+        "id": quotation_id,
+        "company_id": company_id,
+        "is_deleted": {"$ne": True},
+        "status": QuotationStatus.SENT.value  # Can only respond to sent quotations
+    })
+    
+    if not quotation:
+        raise HTTPException(status_code=404, detail="Quotation not found or already responded")
+    
+    now = get_ist_isoformat()
+    
+    if approved:
+        await db.quotations.update_one(
+            {"id": quotation_id},
+            {"$set": {
+                "status": QuotationStatus.APPROVED.value,
+                "approved_at": now,
+                "approved_by": user.get("name"),
+                "customer_notes": notes,
+                "updated_at": now
+            }}
+        )
+        
+        # Update ticket status
+        await db.service_tickets_new.update_one(
+            {"id": quotation.get("ticket_id")},
+            {"$set": {
+                "quotation_status": QuotationStatus.APPROVED.value,
+                "quotation_approved_at": now,
+                "quotation_approved_by": user.get("name"),
+                "updated_at": now
+            }}
+        )
+        
+        logger.info(f"Quotation {quotation.get('quotation_number')} approved by company user {user.get('name')}")
+    else:
+        if not notes:
+            raise HTTPException(
+                status_code=400,
+                detail="Please provide a reason for rejection"
+            )
+        
+        await db.quotations.update_one(
+            {"id": quotation_id},
+            {"$set": {
+                "status": QuotationStatus.REJECTED.value,
+                "rejection_reason": notes,
+                "customer_notes": notes,
+                "updated_at": now
+            }}
+        )
+        
+        # Update ticket
+        await db.service_tickets_new.update_one(
+            {"id": quotation.get("ticket_id")},
+            {"$set": {
+                "quotation_status": QuotationStatus.REJECTED.value,
+                "updated_at": now
+            }}
+        )
+        
+        logger.info(f"Quotation {quotation.get('quotation_number')} rejected by company user: {notes}")
+    
+    return await db.quotations.find_one({"id": quotation_id}, {"_id": 0, "internal_notes": 0})
