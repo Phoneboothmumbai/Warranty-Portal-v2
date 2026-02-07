@@ -30,7 +30,6 @@ const navGroups = [
     items: [
       { path: '/admin/companies', label: 'Companies', icon: Building2 },
       { path: '/admin/sites', label: 'Sites', icon: MapPin },
-      { path: '/admin/users', label: 'Portal Users', icon: Users },
       { path: '/admin/company-domains', label: 'Email Domains', icon: Globe },
     ]
   },
