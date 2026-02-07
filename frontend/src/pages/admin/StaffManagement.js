@@ -600,6 +600,10 @@ export default function StaffManagement() {
                                   <Edit2 className="h-4 w-4 mr-2" />
                                   Edit
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openPasswordModal(user)}>
+                                  <Lock className="h-4 w-4 mr-2" />
+                                  Set Password
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 {user.state === 'created' && (
                                   <DropdownMenuItem onClick={() => openStateModal(user, 'active')}>
