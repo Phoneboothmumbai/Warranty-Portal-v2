@@ -1,7 +1,7 @@
 """
-Tactical RMM Integration Routes
+WatchTower Integration Routes
 ===============================
-API endpoints for managing Tactical RMM integration settings and syncing agents.
+API endpoints for managing WatchTower integration settings and syncing agents.
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -11,15 +11,15 @@ import uuid
 
 from services.auth import get_current_admin
 from utils.tenant_scope import get_admin_org_id, scope_query
-from services.tactical_rmm import TacticalRMMService, TacticalRMMConfig, map_agent_to_device
+from services.watchtower import WatchTowerService, WatchTowerConfig, map_agent_to_device
 
-router = APIRouter(prefix="/rmm/tactical", tags=["Tactical RMM Integration"])
+router = APIRouter(prefix="/rmm/tactical", tags=["WatchTower Integration"])
 
 # Database reference - will be injected
 _db = None
 
 
-def init_tactical_rmm_router(database):
+def init_watchtower_router(database):
     """Initialize the router with database dependency"""
     global _db
     _db = database
@@ -27,15 +27,15 @@ def init_tactical_rmm_router(database):
 
 # ==================== REQUEST/RESPONSE MODELS ====================
 
-class TacticalRMMSetup(BaseModel):
-    """Setup Tactical RMM integration"""
+class WatchTowerSetup(BaseModel):
+    """Setup WatchTower integration"""
     api_url: str  # e.g., https://api.yourdomain.com
     api_key: str
     enabled: bool = True
 
 
 class AgentSyncRequest(BaseModel):
-    """Request to sync agents from Tactical RMM"""
+    """Request to sync agents from WatchTower"""
     company_id: str  # Which company to assign synced devices to
     sync_all: bool = True
     agent_ids: Optional[List[str]] = None  # Specific agents to sync (if not sync_all)
@@ -50,16 +50,16 @@ class RunCommandRequest(BaseModel):
 
 # ==================== HELPER FUNCTIONS ====================
 
-async def get_rmm_config(org_id: str) -> Optional[TacticalRMMConfig]:
-    """Get Tactical RMM configuration for an organization"""
+async def get_rmm_config(org_id: str) -> Optional[WatchTowerConfig]:
+    """Get WatchTower configuration for an organization"""
     config = await _db.integrations.find_one({
         "organization_id": org_id,
-        "type": "tactical_rmm",
+        "type": "watchtower",
         "is_deleted": {"$ne": True}
     }, {"_id": 0})
     
     if config and config.get("enabled"):
-        return TacticalRMMConfig(
+        return WatchTowerConfig(
             api_url=config.get("api_url"),
             api_key=config.get("api_key"),
             enabled=config.get("enabled", True)
@@ -67,24 +67,24 @@ async def get_rmm_config(org_id: str) -> Optional[TacticalRMMConfig]:
     return None
 
 
-async def get_rmm_service(org_id: str) -> TacticalRMMService:
-    """Get authenticated Tactical RMM service for an organization"""
+async def get_rmm_service(org_id: str) -> WatchTowerService:
+    """Get authenticated WatchTower service for an organization"""
     config = await get_rmm_config(org_id)
     if not config:
-        raise HTTPException(status_code=400, detail="Tactical RMM integration not configured")
-    return TacticalRMMService(config)
+        raise HTTPException(status_code=400, detail="WatchTower integration not configured")
+    return WatchTowerService(config)
 
 
 # ==================== CONFIGURATION ENDPOINTS ====================
 
 @router.get("/config")
-async def get_tactical_rmm_config(admin: dict = Depends(get_current_admin)):
-    """Get current Tactical RMM configuration (hides sensitive key)"""
+async def get_watchtower_config(admin: dict = Depends(get_current_admin)):
+    """Get current WatchTower configuration (hides sensitive key)"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     
     config = await _db.integrations.find_one({
         "organization_id": org_id,
-        "type": "tactical_rmm",
+        "type": "watchtower",
         "is_deleted": {"$ne": True}
     }, {"_id": 0})
     
@@ -102,27 +102,27 @@ async def get_tactical_rmm_config(admin: dict = Depends(get_current_admin)):
 
 
 @router.post("/config")
-async def setup_tactical_rmm(setup: TacticalRMMSetup, admin: dict = Depends(get_current_admin)):
-    """Configure Tactical RMM integration"""
+async def setup_watchtower(setup: WatchTowerSetup, admin: dict = Depends(get_current_admin)):
+    """Configure WatchTower integration"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     
     # Test connection first
     try:
-        service = TacticalRMMService(TacticalRMMConfig(
+        service = WatchTowerService(WatchTowerConfig(
             api_url=setup.api_url,
             api_key=setup.api_key,
             enabled=True
         ))
         connected = await service.test_connection()
         if not connected:
-            raise HTTPException(status_code=400, detail="Failed to connect to Tactical RMM API. Please check your credentials.")
+            raise HTTPException(status_code=400, detail="Failed to connect to WatchTower API. Please check your credentials.")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Connection test failed: {str(e)}")
     
     # Save or update configuration
     config_data = {
         "organization_id": org_id,
-        "type": "tactical_rmm",
+        "type": "watchtower",
         "api_url": setup.api_url,
         "api_key": setup.api_key,
         "enabled": setup.enabled,
@@ -132,12 +132,12 @@ async def setup_tactical_rmm(setup: TacticalRMMSetup, admin: dict = Depends(get_
     
     existing = await _db.integrations.find_one({
         "organization_id": org_id,
-        "type": "tactical_rmm"
+        "type": "watchtower"
     })
     
     if existing:
         await _db.integrations.update_one(
-            {"organization_id": org_id, "type": "tactical_rmm"},
+            {"organization_id": org_id, "type": "watchtower"},
             {"$set": config_data}
         )
     else:
@@ -145,27 +145,27 @@ async def setup_tactical_rmm(setup: TacticalRMMSetup, admin: dict = Depends(get_
         config_data["created_at"] = datetime.utcnow().isoformat()
         await _db.integrations.insert_one(config_data)
     
-    return {"success": True, "message": "Tactical RMM integration configured successfully"}
+    return {"success": True, "message": "WatchTower integration configured successfully"}
 
 
 @router.delete("/config")
-async def disable_tactical_rmm(admin: dict = Depends(get_current_admin)):
-    """Disable Tactical RMM integration"""
+async def disable_watchtower(admin: dict = Depends(get_current_admin)):
+    """Disable WatchTower integration"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     
     await _db.integrations.update_one(
-        {"organization_id": org_id, "type": "tactical_rmm"},
+        {"organization_id": org_id, "type": "watchtower"},
         {"$set": {"enabled": False, "is_deleted": True}}
     )
     
-    return {"success": True, "message": "Tactical RMM integration disabled"}
+    return {"success": True, "message": "WatchTower integration disabled"}
 
 
 # ==================== AGENT ENDPOINTS ====================
 
 @router.get("/agents")
 async def list_rmm_agents(admin: dict = Depends(get_current_admin)):
-    """List all agents from Tactical RMM"""
+    """List all agents from WatchTower"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     service = await get_rmm_service(org_id)
     
@@ -197,7 +197,7 @@ async def get_rmm_agent(agent_id: str, admin: dict = Depends(get_current_admin))
 
 @router.post("/agents/sync")
 async def sync_rmm_agents(request: AgentSyncRequest, admin: dict = Depends(get_current_admin)):
-    """Sync agents from Tactical RMM to our device inventory"""
+    """Sync agents from WatchTower to our device inventory"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     service = await get_rmm_service(org_id)
     
@@ -211,7 +211,7 @@ async def sync_rmm_agents(request: AgentSyncRequest, admin: dict = Depends(get_c
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
-    # Get agents from Tactical RMM
+    # Get agents from WatchTower
     all_agents = await service.get_agents()
     
     # Filter agents if specific IDs provided
@@ -269,7 +269,7 @@ async def sync_rmm_agents(request: AgentSyncRequest, admin: dict = Depends(get_c
     
     # Update integration last sync time
     await _db.integrations.update_one(
-        {"organization_id": org_id, "type": "tactical_rmm"},
+        {"organization_id": org_id, "type": "watchtower"},
         {"$set": {
             "last_sync": datetime.utcnow().isoformat(),
             "agents_count": len(all_agents)
@@ -331,7 +331,7 @@ async def recover_agent(agent_id: str, admin: dict = Depends(get_current_admin))
 
 @router.get("/clients")
 async def list_rmm_clients(admin: dict = Depends(get_current_admin)):
-    """List all clients from Tactical RMM"""
+    """List all clients from WatchTower"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     service = await get_rmm_service(org_id)
     
@@ -343,7 +343,7 @@ async def list_rmm_sites(
     client_id: Optional[int] = None,
     admin: dict = Depends(get_current_admin)
 ):
-    """List all sites from Tactical RMM"""
+    """List all sites from WatchTower"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     service = await get_rmm_service(org_id)
     
@@ -352,7 +352,7 @@ async def list_rmm_sites(
 
 @router.get("/scripts")
 async def list_rmm_scripts(admin: dict = Depends(get_current_admin)):
-    """List all available scripts from Tactical RMM"""
+    """List all available scripts from WatchTower"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     service = await get_rmm_service(org_id)
     
