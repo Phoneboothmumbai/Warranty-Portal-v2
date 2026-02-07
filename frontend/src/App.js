@@ -94,6 +94,8 @@ import CompanySites from "./pages/company/CompanySites";
 import CompanyProfile from "./pages/company/CompanyProfile";
 import CompanyWarranty from "./pages/company/CompanyWarranty";
 import CompanyQuotations from "./pages/company/CompanyQuotations";
+import CompanyTickets from "./pages/company/CompanyTickets";
+import CompanyTicketDetail from "./pages/company/CompanyTicketDetail";
 import CompanyOfficeSupplies from "./pages/company/CompanyOfficeSupplies";
 import CompanyCredentials from "./pages/company/CompanyCredentials";
 import CompanyAMCRequests from "./pages/company/CompanyAMCRequests";
