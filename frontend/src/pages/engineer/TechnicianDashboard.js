@@ -62,32 +62,38 @@ const TechnicianDashboard = () => {
     try {
       setRefreshing(true);
       
-      // Fetch tickets and visits in parallel
-      const [ticketsRes, visitsRes] = await Promise.all([
-        axios.get(`${API}/api/engineer/my-tickets`, {
+      // Fetch tickets, visits, and stats in parallel using new engineer portal APIs
+      const [ticketsRes, visitsRes, statsRes] = await Promise.all([
+        axios.get(`${API}/api/engineer/tickets?status=active`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        axios.get(`${API}/api/engineer/my-visits`, {
+        axios.get(`${API}/api/engineer/visits`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get(`${API}/api/engineer/dashboard/stats`, {
           headers: { Authorization: `Bearer ${token}` }
         })
       ]);
       
       const ticketsData = ticketsRes.data || {};
-      const visitsList = visitsRes.data || [];
+      const visitsData = visitsRes.data || {};
+      const statsData = statsRes.data || {};
       
-      setTickets(ticketsData);
-      setVisits(visitsList);
+      // Use grouped data from backend
+      setTickets({
+        pending_acceptance: ticketsData.grouped?.pending_acceptance || [],
+        accepted: ticketsData.grouped?.assigned || [],
+        in_progress: [...(ticketsData.grouped?.in_progress || []), ...(ticketsData.grouped?.pending_parts || [])],
+        total: ticketsData.total || 0
+      });
+      setVisits(visitsData.visits || []);
       
-      // Calculate stats
-      const scheduled = visitsList.filter(v => v.status === 'scheduled').length;
-      const in_progress = visitsList.filter(v => ['in_progress', 'in_transit', 'on_site'].includes(v.status)).length;
-      const completed = visitsList.filter(v => v.status === 'completed').length;
-      
+      // Use stats from backend
       setStats({ 
-        pending_acceptance: ticketsData.pending_acceptance?.length || 0,
-        scheduled, 
-        in_progress, 
-        completed 
+        pending_acceptance: statsData.tickets?.pending_acceptance || 0,
+        scheduled: statsData.visits?.scheduled_today || 0, 
+        in_progress: statsData.visits?.in_progress || 0, 
+        completed: statsData.visits?.completed_today || 0 
       });
       
     } catch (err) {
