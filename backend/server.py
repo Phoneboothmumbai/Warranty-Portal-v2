@@ -10506,6 +10506,10 @@ app.include_router(ticket_parts_router, tags=["Ticket Parts"])
 from routes.ticketing_config import router as ticketing_config_router
 app.include_router(ticketing_config_router, prefix="/api/admin", tags=["Ticketing Config"])
 
+# Engineer Portal Routes (new comprehensive API)
+from routes.engineer_portal import router as engineer_portal_router
+app.include_router(engineer_portal_router, tags=["Engineer Portal"])
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
