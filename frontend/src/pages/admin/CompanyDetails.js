@@ -314,11 +314,11 @@ const CompanyDetails = () => {
     setSavingItem(true);
     try {
       await axios.post(`${API}/admin/licenses`, 
-        { ...licenseForm, company_id: companyId },
+        { ...licenseForm, company_id: companyId, start_date: licenseForm.start_date || new Date().toISOString().split('T')[0] },
         { headers: { Authorization: `Bearer ${token}` }}
       );
       toast.success('License added');
-      setLicenseForm({ software_name: '', license_key: '', license_type: 'perpetual', seats: 1, expiry_date: '' });
+      setLicenseForm({ software_name: '', license_key: '', license_type: 'perpetual', seats: 1, start_date: new Date().toISOString().split('T')[0], expiry_date: '' });
       setShowAddLicense(false);
       fetchCompanyOverview();
     } catch (error) {
