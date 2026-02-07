@@ -35,29 +35,23 @@ const TechnicianDashboard = () => {
     
     try {
       setRefreshing(true);
-      // Fetch visits assigned to this technician
-      const response = await axios.get(`${API}/api/admin/visits/technician/${engineer.id}`, {
+      // Fetch visits assigned to this technician using engineer endpoint
+      const response = await axios.get(`${API}/api/engineer/my-visits`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      const visitsList = response.data.visits || [];
+      const visitsList = response.data || [];
       setVisits(visitsList);
       
       // Calculate stats
       const scheduled = visitsList.filter(v => v.status === 'scheduled').length;
-      const in_progress = visitsList.filter(v => v.status === 'in_progress').length;
+      const in_progress = visitsList.filter(v => ['in_progress', 'in_transit', 'on_site'].includes(v.status)).length;
       const completed = visitsList.filter(v => v.status === 'completed').length;
       setStats({ scheduled, in_progress, completed });
       
     } catch (err) {
       console.error('Failed to fetch visits:', err);
-      // Try fallback to old API
-      try {
-        const fallbackRes = await axios.get(`${API}/api/engineer/my-visits`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setVisits(fallbackRes.data || []);
-      } catch (fallbackErr) {
+      toast.error('Failed to load visits');
         console.error('Fallback also failed:', fallbackErr);
         toast.error('Failed to load visits');
       }
