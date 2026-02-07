@@ -464,6 +464,67 @@ export default function ServiceTicketDetail() {
         </CardContent>
       </Card>
 
+      {/* Workflow Progress Indicator */}
+      <Card className="bg-white">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-700">Ticket Workflow Progress</span>
+            {ticket.status === 'pending_parts' && ticket.quotation_status && (
+              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                Quotation: {ticket.quotation_status}
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            {[
+              { key: 'new', label: '1. Created', color: 'slate' },
+              { key: 'pending_acceptance', label: '2. Assigned', color: 'purple' },
+              { key: 'assigned', label: '3. Accepted', color: 'blue' },
+              { key: 'in_progress', label: '4. In Progress', color: 'amber' },
+              { key: 'pending_parts', label: '5. Parts', color: 'orange', optional: true },
+              { key: 'completed', label: '6. Completed', color: 'green' },
+              { key: 'closed', label: '7. Closed', color: 'emerald' },
+            ].map((step, idx, arr) => {
+              const statusOrder = ['new', 'pending_acceptance', 'assigned', 'in_progress', 'pending_parts', 'completed', 'closed'];
+              const currentIdx = statusOrder.indexOf(ticket.status);
+              const stepIdx = statusOrder.indexOf(step.key);
+              const isActive = step.key === ticket.status;
+              const isPast = stepIdx < currentIdx || (ticket.status === 'in_progress' && step.key === 'pending_parts');
+              const isCancelled = ticket.status === 'cancelled';
+              
+              return (
+                <React.Fragment key={step.key}>
+                  <div 
+                    className={`flex-1 h-2 rounded-full transition-all ${
+                      isCancelled ? 'bg-red-200' :
+                      isActive ? `bg-${step.color}-500` :
+                      isPast ? `bg-${step.color}-300` :
+                      'bg-slate-200'
+                    }`}
+                    title={step.label}
+                  />
+                  {idx < arr.length - 1 && <div className="w-1" />}
+                </React.Fragment>
+              );
+            })}
+          </div>
+          <div className="flex justify-between mt-1 text-xs text-slate-500">
+            <span>Created</span>
+            <span>Assigned</span>
+            <span>Accepted</span>
+            <span>Work</span>
+            <span>Parts</span>
+            <span>Done</span>
+            <span>Closed</span>
+          </div>
+          {ticket.status === 'cancelled' && (
+            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+              This ticket was cancelled. Reason: {ticket.cancellation_reason || 'Not specified'}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Main Content - Tabs */}
       <Tabs defaultValue="details" className="space-y-4">
         <TabsList>
