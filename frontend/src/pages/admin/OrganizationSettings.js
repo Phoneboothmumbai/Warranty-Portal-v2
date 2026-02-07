@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -9,7 +10,7 @@ import { Switch } from '../../components/ui/switch';
 import { toast } from 'sonner';
 import { 
   Building2, Users, HardDrive, Ticket, Settings, CreditCard, Shield, Palette,
-  Upload, Globe, Mail, Image, Eye, Loader2, CheckCircle, AlertCircle
+  Upload, Globe, Mail, Image, Eye, Loader2, CheckCircle, AlertCircle, UserCog, ChevronRight
 } from 'lucide-react';
 import axios from 'axios';
 
