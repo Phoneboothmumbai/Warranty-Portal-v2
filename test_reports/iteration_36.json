@@ -1,0 +1,83 @@
+{
+  "summary": "Quotation Management & Workflow Validation Testing Complete - All Features Working",
+  "test_date": "2026-02-08",
+  "overall_pass_rate": "100%",
+  "test_results": {
+    "backend_api_tests": {
+      "status": "PASS",
+      "tests": [
+        {"name": "Admin list quotations", "status": "PASS", "notes": "Returns quotations with pagination"},
+        {"name": "Admin get single quotation", "status": "PASS", "notes": "Returns full quotation details"},
+        {"name": "Admin update quotation", "status": "PASS", "notes": "Updates items, prices, terms"},
+        {"name": "Admin send quotation", "status": "PASS", "notes": "Changes status to 'sent'"},
+        {"name": "Workflow: Cannot assign pending_parts ticket", "status": "PASS", "notes": "Returns 400 with clear error"},
+        {"name": "Workflow: Cannot assign in_progress ticket", "status": "PASS", "notes": "Returns 400 with clear error"},
+        {"name": "Workflow: Cannot assign assigned ticket", "status": "PASS", "notes": "Returns 400 with clear error"},
+        {"name": "Workflow: Can assign new ticket", "status": "PASS", "notes": "Changes to pending_acceptance"},
+        {"name": "Company list quotations", "status": "PASS", "notes": "Only shows sent/approved/rejected"},
+        {"name": "Company get quotation detail", "status": "PASS", "notes": "Excludes internal_notes"},
+        {"name": "Company approve quotation", "status": "PASS", "notes": "Changes status to approved"}
+      ]
+    },
+    "frontend_ui_tests": {
+      "status": "PASS",
+      "tests": [
+        {"name": "Admin Quotations page", "status": "PASS", "notes": "Shows summary cards, table with quotations"},
+        {"name": "Admin Quotations nav link", "status": "PASS", "notes": "Visible in sidebar"},
+        {"name": "Ticket Detail - Quotation Banner", "status": "PASS", "notes": "Shows 'Quotation Approved - Ready to resume work'"},
+        {"name": "Ticket Detail - Workflow Progress", "status": "PASS", "notes": "Shows Created→Assigned→Accepted→Work→Parts→Done→Closed"},
+        {"name": "Ticket Detail - View Quotation button", "status": "PASS", "notes": "Visible in action buttons"},
+        {"name": "Company Quotations page", "status": "PASS", "notes": "Shows summary cards, table with quotations"},
+        {"name": "Company Quotations nav link", "status": "PASS", "notes": "Visible in sidebar"}
+      ]
+    }
+  },
+  "features_verified": [
+    "Admin Quotation Management UI at /admin/quotations - list, view, edit, send quotations",
+    "Workflow validation - cannot reassign ticket once in_progress/pending_parts/assigned",
+    "Workflow validation - can only assign NEW or PENDING_ACCEPTANCE tickets",
+    "Quotation banner shows on ticket detail when status is pending_parts",
+    "Workflow progress indicator shows on ticket detail page",
+    "View Quotation button appears for pending_parts tickets",
+    "Company portal quotations page at /company/quotations",
+    "Company can respond (approve/reject) to sent quotations"
+  ],
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_quotation_workflow.py"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_quotation_workflow.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "test_credentials": {
+    "admin": {"email": "ck@motta.in", "password": "Charu@123@"},
+    "company": {"email": "testuser@testcompany.com", "password": "Test@123"}
+  },
+  "seed_data_creation": "Created company user testuser@testcompany.com for testing company portal quotations",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Quotation workflow is fully functional. Admin can create/edit/send quotations. Company users can view and approve/reject sent quotations. Workflow validation prevents reassignment of tickets once work has started (in_progress, pending_parts, assigned statuses). Test company user created: testuser@testcompany.com / Test@123",
+  "workflow_validation_summary": {
+    "valid_for_assignment": ["new", "pending_acceptance"],
+    "blocked_from_assignment": ["assigned", "in_progress", "pending_parts", "completed", "closed"],
+    "error_messages": {
+      "assigned": "Engineer has already accepted this ticket. Cannot reassign - work must proceed.",
+      "in_progress": "Work is in progress. Cannot reassign ticket at this stage.",
+      "pending_parts": "Ticket is pending parts. Complete the quotation workflow before any changes."
+    }
+  }
+}
