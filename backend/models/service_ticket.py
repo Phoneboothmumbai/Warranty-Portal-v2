@@ -34,12 +34,20 @@ from utils.helpers import get_ist_isoformat
 class TicketStatus(str, Enum):
     """Ticket status (simplified from old 13-state FSM)"""
     NEW = "new"                    # Ticket created, awaiting assignment
-    ASSIGNED = "assigned"          # Assigned to technician
+    PENDING_ACCEPTANCE = "pending_acceptance"  # Assigned, awaiting engineer acceptance
+    ASSIGNED = "assigned"          # Assigned to technician (accepted)
     IN_PROGRESS = "in_progress"    # Work has begun
     PENDING_PARTS = "pending_parts"  # Waiting for parts
     COMPLETED = "completed"        # Work done, awaiting closure
     CLOSED = "closed"              # Ticket closed
     CANCELLED = "cancelled"        # Ticket cancelled
+
+
+class AssignmentStatus(str, Enum):
+    """Status of ticket assignment to engineer"""
+    PENDING = "pending"            # Awaiting engineer's response
+    ACCEPTED = "accepted"          # Engineer accepted the assignment
+    DECLINED = "declined"          # Engineer declined the assignment
 
 
 class TicketPriority(str, Enum):
