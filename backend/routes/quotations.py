@@ -625,3 +625,166 @@ async def respond_to_quotation(
         logger.info(f"Quotation {quotation.get('quotation_number')} rejected by company user: {notes}")
     
     return await db.quotations.find_one({"id": quotation_id}, {"_id": 0, "internal_notes": 0})
+
+
+
+# ==================== COMPANY SERVICE TICKETS ====================
+
+company_tickets_router = APIRouter(prefix="/api/company/service-tickets")
+
+
+@company_tickets_router.get("")
+async def list_company_tickets(
+    user: dict = Depends(get_current_company_user),
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    page: int = 1,
+    limit: int = 50
+):
+    """List service tickets for the company"""
+    company_id = user.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=403, detail="Company context required")
+    
+    query = {
+        "company_id": company_id,
+        "is_deleted": {"$ne": True}
+    }
+    
+    if status and status != 'all':
+        query["status"] = status
+    
+    if search:
+        query["$or"] = [
+            {"ticket_number": {"$regex": search, "$options": "i"}},
+            {"title": {"$regex": search, "$options": "i"}},
+            {"description": {"$regex": search, "$options": "i"}},
+            {"device_serial": {"$regex": search, "$options": "i"}},
+        ]
+    
+    total = await db.service_tickets_new.count_documents(query)
+    skip = (page - 1) * limit
+    
+    tickets = await db.service_tickets_new.find(query, {"_id": 0})\
+        .sort("created_at", -1)\
+        .skip(skip)\
+        .limit(limit)\
+        .to_list(limit)
+    
+    return {
+        "tickets": tickets,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": (total + limit - 1) // limit if limit > 0 else 0
+    }
+
+
+@company_tickets_router.get("/{ticket_id}")
+async def get_company_ticket(ticket_id: str, user: dict = Depends(get_current_company_user)):
+    """Get service ticket details for company user"""
+    company_id = user.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=403, detail="Company context required")
+    
+    ticket = await db.service_tickets_new.find_one({
+        "id": ticket_id,
+        "company_id": company_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    return ticket
+
+
+@company_tickets_router.post("")
+async def create_company_ticket(
+    user: dict = Depends(get_current_company_user),
+    device_id: Optional[str] = None,
+    title: str = "",
+    description: str = "",
+    priority: str = "medium",
+    contact_name: Optional[str] = None,
+    contact_phone: Optional[str] = None,
+    contact_email: Optional[str] = None,
+):
+    """Create a new service ticket from company portal"""
+    import uuid
+    import random
+    import string
+    
+    company_id = user.get("company_id")
+    organization_id = user.get("organization_id")
+    
+    if not company_id or not organization_id:
+        raise HTTPException(status_code=403, detail="Company context required")
+    
+    if not title:
+        raise HTTPException(status_code=400, detail="Title is required")
+    if not description:
+        raise HTTPException(status_code=400, detail="Description is required")
+    
+    # Get company info
+    company = await db.companies.find_one({"id": company_id}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    # Get device info if provided
+    device = None
+    if device_id:
+        device = await db.devices.find_one({
+            "id": device_id,
+            "company_id": company_id,
+            "is_deleted": {"$ne": True}
+        }, {"_id": 0})
+    
+    # Generate ticket number
+    ticket_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    
+    now = get_ist_isoformat()
+    
+    ticket_data = {
+        "id": str(uuid.uuid4()),
+        "ticket_number": ticket_number,
+        "organization_id": organization_id,
+        "company_id": company_id,
+        "company_name": company.get("name"),
+        "title": title,
+        "description": description,
+        "priority": priority,
+        "status": "new",
+        "device_id": device_id,
+        "device_serial": device.get("serial_number") if device else None,
+        "device_brand": device.get("brand") if device else None,
+        "device_model": device.get("model") if device else None,
+        "site_id": device.get("site_id") if device else None,
+        "site_name": device.get("site_name") if device else None,
+        "contact_name": contact_name or user.get("name"),
+        "contact_phone": contact_phone or user.get("phone"),
+        "contact_email": contact_email or user.get("email"),
+        "created_by_id": user.get("id"),
+        "created_by_name": user.get("name"),
+        "created_by_type": "company_user",
+        "created_at": now,
+        "updated_at": now,
+        "status_history": [{
+            "from_status": None,
+            "to_status": "new",
+            "changed_at": now,
+            "changed_by_id": user.get("id"),
+            "changed_by_name": user.get("name"),
+            "notes": "Ticket created from company portal"
+        }],
+        "visits": [],
+        "is_deleted": False
+    }
+    
+    await db.service_tickets_new.insert_one(ticket_data)
+    
+    logger.info(f"Service ticket #{ticket_number} created by company user {user.get('name')}")
+    
+    # Return without _id
+    del ticket_data["_id"] if "_id" in ticket_data else None
+    return ticket_data
