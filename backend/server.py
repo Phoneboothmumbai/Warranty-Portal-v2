@@ -10687,10 +10687,10 @@ from routes.static_pages import router as static_pages_router, init_db as init_s
 init_static_pages_db(db)
 app.include_router(static_pages_router, prefix="/api", tags=["Static Pages"])
 
-# Include Tactical RMM Integration router
-from routes.tactical_rmm import router as tactical_rmm_router, init_tactical_rmm_router
-init_tactical_rmm_router(db)
-app.include_router(tactical_rmm_router, prefix="/api", tags=["Tactical RMM Integration"])
+# Include WatchTower Integration router
+from routes.watchtower import router as watchtower_router, init_watchtower_router
+init_watchtower_router(db)
+app.include_router(watchtower_router, prefix="/api", tags=["WatchTower Integration"])
 
 # Initialize Email Service for Ticketing
 from services.email_service import init_email_service
