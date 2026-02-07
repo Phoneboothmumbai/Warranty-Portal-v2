@@ -431,6 +431,17 @@ export default function ServiceTicketDetail() {
                 Close Ticket
               </Button>
             )}
+            {/* Show link to quotations when pending parts */}
+            {ticket.status === 'pending_parts' && ticket.quotation_id && (
+              <Button 
+                onClick={() => navigate('/admin/quotations')} 
+                variant="outline" 
+                className="text-orange-600 border-orange-300 hover:bg-orange-50"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                View Quotation
+              </Button>
+            )}
             <Button onClick={() => setShowVisitModal(true)} variant="outline" data-testid="schedule-visit-btn">
               <Calendar className="h-4 w-4 mr-2" />
               Schedule Visit
