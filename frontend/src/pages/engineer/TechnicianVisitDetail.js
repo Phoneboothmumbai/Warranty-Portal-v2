@@ -100,14 +100,30 @@ const TechnicianVisitDetail = () => {
       const response = await axios.get(`${API}/api/engineer/visits/${visitId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setVisit(response.data);
+      
+      // Handle both old and new API response structures
+      let visitData;
+      if (response.data.visit) {
+        // Old API structure: { visit: {...}, ticket: {...}, device: {...}, company: {...} }
+        visitData = {
+          ...response.data.visit,
+          ticket: response.data.ticket || {},
+          previous_visits: response.data.service_history || [],
+          parts_issued: []
+        };
+      } else {
+        // New API structure: flat object with nested data
+        visitData = response.data;
+      }
+      
+      setVisit(visitData);
       
       // Pre-fill diagnosis form if data exists
-      if (response.data.problem_found || response.data.diagnosis) {
+      if (visitData.problem_found || visitData.diagnosis) {
         setDiagnosisData({
-          problem_identified: response.data.problem_found || '',
-          root_cause: response.data.diagnosis || '',
-          observations: response.data.findings || ''
+          problem_identified: visitData.problem_found || '',
+          root_cause: visitData.diagnosis || '',
+          observations: visitData.findings || ''
         });
       }
     } catch (err) {
