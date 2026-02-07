@@ -145,7 +145,7 @@ export default function ServiceTicketDetail() {
     } catch (error) {
       console.error('Failed to fetch supporting data:', error);
     }
-  }, []);
+  }, [headers]);
 
   useEffect(() => {
     fetchTicket();
