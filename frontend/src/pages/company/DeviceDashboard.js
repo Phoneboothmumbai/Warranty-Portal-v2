@@ -642,39 +642,44 @@ const DeviceDashboard = () => {
           </TabsContent>
         )}
 
-        {/* RMM Tab */}
+        {/* WatchTower Tab */}
         <TabsContent value="rmm" className="space-y-4">
           {rmmData.integrated ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* RMM metrics would go here when integrated */}
+              {/* WatchTower metrics would go here when integrated */}
             </div>
           ) : (
-            <Card className="border-dashed border-2 border-slate-300">
+            <Card className="border-dashed border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-slate-50">
               <CardContent className="py-12 text-center">
-                <div className="w-20 h-20 mx-auto bg-slate-100 rounded-full flex items-center justify-center mb-6">
-                  <Monitor className="h-10 w-10 text-slate-400" />
+                <div className="w-20 h-20 mx-auto bg-indigo-100 rounded-full flex items-center justify-center mb-6">
+                  <Monitor className="h-10 w-10 text-indigo-600" />
                 </div>
-                <h3 className="text-xl font-semibold text-slate-700 mb-2">RMM Integration Coming Soon</h3>
-                <p className="text-slate-500 max-w-md mx-auto mb-6">
-                  Tactical RMM will be integrated to provide real-time device monitoring, including CPU usage, memory, disk space, installed software, and more.
+                <h3 className="text-xl font-semibold text-indigo-900 mb-2">WatchTower - Real-Time Monitoring</h3>
+                <p className="text-slate-600 max-w-md mx-auto mb-6">
+                  WatchTower provides real-time device monitoring, including CPU usage, memory, disk space, installed software, pending updates, and security alerts.
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
-                  <div className="p-4 bg-slate-50 rounded-lg">
-                    <Cpu className="h-6 w-6 text-slate-400 mx-auto mb-2" />
-                    <p className="text-xs text-slate-500">CPU Usage</p>
+                  <div className="p-4 bg-white rounded-lg shadow-sm border border-indigo-100">
+                    <Cpu className="h-6 w-6 text-indigo-500 mx-auto mb-2" />
+                    <p className="text-xs text-slate-600 font-medium">CPU Usage</p>
                   </div>
-                  <div className="p-4 bg-slate-50 rounded-lg">
-                    <Server className="h-6 w-6 text-slate-400 mx-auto mb-2" />
-                    <p className="text-xs text-slate-500">Memory</p>
+                  <div className="p-4 bg-white rounded-lg shadow-sm border border-indigo-100">
+                    <Server className="h-6 w-6 text-indigo-500 mx-auto mb-2" />
+                    <p className="text-xs text-slate-600 font-medium">Memory</p>
                   </div>
-                  <div className="p-4 bg-slate-50 rounded-lg">
-                    <HardDrive className="h-6 w-6 text-slate-400 mx-auto mb-2" />
-                    <p className="text-xs text-slate-500">Disk Space</p>
+                  <div className="p-4 bg-white rounded-lg shadow-sm border border-indigo-100">
+                    <HardDrive className="h-6 w-6 text-indigo-500 mx-auto mb-2" />
+                    <p className="text-xs text-slate-600 font-medium">Disk Space</p>
                   </div>
-                  <div className="p-4 bg-slate-50 rounded-lg">
-                    <Wifi className="h-6 w-6 text-slate-400 mx-auto mb-2" />
-                    <p className="text-xs text-slate-500">Network</p>
+                  <div className="p-4 bg-white rounded-lg shadow-sm border border-indigo-100">
+                    <Wifi className="h-6 w-6 text-indigo-500 mx-auto mb-2" />
+                    <p className="text-xs text-slate-600 font-medium">Network</p>
                   </div>
+                </div>
+                <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg max-w-md mx-auto">
+                  <p className="text-sm text-amber-800">
+                    <strong>Setup Required:</strong> Install the WatchTower agent on this device to enable real-time monitoring.
+                  </p>
                 </div>
               </CardContent>
             </Card>
