@@ -31,7 +31,7 @@ class TestEngineerAcceptDeclineWorkflow:
     def setup(self):
         """Setup - get tokens"""
         # Admin login
-        admin_response = requests.post(f"{BASE_URL}/api/admin/login", json={
+        admin_response = requests.post(f"{BASE_URL}/api/auth/login", json={
             "email": "ck@motta.in",
             "password": "Charu@123@"
         })
@@ -39,7 +39,7 @@ class TestEngineerAcceptDeclineWorkflow:
             self.__class__.admin_token = admin_response.json().get("access_token")
         
         # Engineer login
-        engineer_response = requests.post(f"{BASE_URL}/api/engineer/login", json={
+        engineer_response = requests.post(f"{BASE_URL}/api/engineer/auth/login", json={
             "email": "john.tech@test.com",
             "password": "Tech@123"
         })
@@ -48,7 +48,7 @@ class TestEngineerAcceptDeclineWorkflow:
     
     def test_01_admin_login(self):
         """Test admin can login"""
-        response = requests.post(f"{BASE_URL}/api/admin/login", json={
+        response = requests.post(f"{BASE_URL}/api/auth/login", json={
             "email": "ck@motta.in",
             "password": "Charu@123@"
         })
@@ -60,7 +60,7 @@ class TestEngineerAcceptDeclineWorkflow:
     
     def test_02_engineer_login(self):
         """Test engineer can login with staff_users credentials"""
-        response = requests.post(f"{BASE_URL}/api/engineer/login", json={
+        response = requests.post(f"{BASE_URL}/api/engineer/auth/login", json={
             "email": "john.tech@test.com",
             "password": "Tech@123"
         })
