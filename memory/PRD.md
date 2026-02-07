@@ -16,57 +16,78 @@ A comprehensive MSP-grade service ticket system with:
 2. **Engineer Accept/Decline Workflow**: When a job is assigned, the engineer is notified and must accept or decline
 3. **Multi-visit tracking** with start/stop timers for each visit
 4. **Inventory/parts management** integrated with tickets
-5. **Quotation workflow** for pending parts
+5. **Quotation workflow** for pending parts (auto-generated)
 6. **Technician portal** for field engineers
-
-### Other Modules
-- Device/Asset Management
-- Company/Client Management
-- AMC (Annual Maintenance Contract) Management
-- License Tracking
-- Knowledge Base
-- Platform Admin (Multi-org management)
 
 ## What's Been Implemented
 
-### ✅ Engineer Accept/Decline Workflow (COMPLETE - Dec 2025)
-- **Backend Changes**:
-  - New `PENDING_ACCEPTANCE` status added to TicketStatus enum
-  - New `AssignmentStatus` enum (pending, accepted, declined)
-  - Assignment fields added: `assignment_status`, `assignment_accepted_at`, `assignment_declined_at`, `assignment_decline_reason`
-  - New engineer endpoints:
-    - `GET /api/engineer/my-tickets` - Get all tickets assigned to engineer
-    - `GET /api/engineer/tickets/{id}` - Get ticket detail
-    - `POST /api/engineer/tickets/{id}/accept` - Accept assignment
-    - `POST /api/engineer/tickets/{id}/decline` - Decline with reason
-  - Updated assign endpoint to use `pending_acceptance` status
-  
-- **Frontend Changes**:
-  - Completely rewritten `TechnicianDashboard.js` with:
-    - Stats row showing New Jobs, Scheduled, In Progress, Completed
-    - Tabs: Tickets, Visits, Done
-    - "New Job Assignments - Action Required" section with Accept/Decline buttons
-    - "My Active Tickets" section for accepted tickets
-  - New `EngineerTicketDetail.js` page for viewing ticket details
-  - Status configurations updated in ServiceRequests.js and ServiceTicketDetail.js
+### ✅ Engineer Portal - Complete Implementation (Dec 2025)
 
-### ✅ Service Module - Backend (COMPLETE)
-- All data models: `ServiceTicket`, `ServiceVisit`, `TicketPartRequest`, `TicketPartIssue`, `ProblemMaster`, `ItemMaster`, `InventoryLocation`, `StockLedger`, `VendorMaster`, `PurchaseRequest`, `Quotation`
-- Full CRUD APIs under `/api/admin/service-module/` and `/api/admin/service-tickets/` prefixes
-- Workflow APIs: assign, start, complete, close, cancel
-- Visit APIs with timer support: start-timer, stop-timer, add-action
-- Parts request/approval/issue workflow
-- Quotation CRUD and send/approve/reject workflow
+**1. Ticket Dashboard**
+- View all assigned tickets (New, Assigned, In Progress, Pending Parts)
+- Clear status indicators and priority levels
+- Filter tickets by date, status, priority
 
-### ✅ Service Module - Frontend (COMPLETE)
-- **Service Tickets List Page** (`/admin/service-requests`)
-- **Ticket Detail Page** (`/admin/service-requests/:ticketId`)
-- **Technician Portal** (`/engineer/*`)
+**2. Ticket Details View**
+- Full ticket information: issue description, customer details, location, asset info
+- View previous visit history and notes
+- SLA timeline visibility
 
-### ✅ Codebase Consolidation (COMPLETE)
-- Old "Support Tickets" module removed
-- Navigation cleaned up
-- Production deployment support provided
+**3. Ticket Acknowledgement**
+- Accept or decline assigned tickets
+- Status auto-updates to Assigned or returns to New
+
+**4. Visit Management**
+- Start Visit / End Visit tracking
+- Auto-capture visit timestamps
+- Live timer during visits
+- Visit history stored per ticket
+
+**5. Issue Diagnosis & Findings**
+- Engineer can record problem identified, root cause, and observations
+- Photo/document attachment capability (base64 storage)
+
+**6. Resolution Actions**
+- Mark ticket as Resolved or Pending for Parts
+- Mandatory remarks before status change
+
+**7. Parts Requirement Flow**
+- Select required parts from inventory OR add manually
+- Submit ticket with Pending for Parts status
+- **AUTO-GENERATES draft quotation** for admin review
+
+**8. Revisit Handling**
+- Ticket reassigned after customer approval
+- Revisit clearly marked in ticket
+
+**9. Ticket Closure**
+- Final findings and solution details required
+- Validates no incomplete visits
+- Cannot close when pending parts
+
+### Backend Endpoints (New)
+```
+GET  /api/engineer/dashboard/stats      - Dashboard statistics
+GET  /api/engineer/tickets              - Ticket list with filtering
+GET  /api/engineer/tickets/{id}         - Ticket detail with visits, parts, quotation
+POST /api/engineer/tickets/{id}/accept  - Accept assignment
+POST /api/engineer/tickets/{id}/decline - Decline with reason
+POST /api/engineer/tickets/{id}/close   - Close ticket
+GET  /api/engineer/visits               - Visit list
+GET  /api/engineer/visits/{id}          - Visit detail with history
+POST /api/engineer/visits/{id}/start    - Start visit
+POST /api/engineer/visits/{id}/end      - End visit
+POST /api/engineer/visits/{id}/diagnosis - Save diagnosis
+POST /api/engineer/visits/{id}/resolve  - Resolve visit
+POST /api/engineer/visits/{id}/pending-parts - Mark pending + create quotation
+POST /api/engineer/visits/{id}/photos   - Upload photo
+GET  /api/engineer/inventory/items      - Search inventory
+```
+
+### Frontend Components (Updated)
+- `TechnicianDashboard.js` - Complete rewrite with stats, tabs, accept/decline UI
+- `TechnicianVisitDetail.js` - Full workflow with timer, diagnosis, resolution, parts modals
+- `EngineerTicketDetail.js` - Ticket details with accept/decline, SLA info
 
 ## Architecture
 
@@ -74,49 +95,21 @@ A comprehensive MSP-grade service ticket system with:
 /app
 ├── backend/
 │   ├── models/
-│   │   └── service_ticket.py      # Updated with PENDING_ACCEPTANCE status and assignment fields
+│   │   └── service_ticket.py      # PENDING_ACCEPTANCE status, assignment fields
 │   ├── routes/
-│   │   ├── service_tickets_new.py # Updated with pending_acceptance workflow
+│   │   ├── engineer_portal.py     # NEW - Comprehensive engineer API
+│   │   ├── service_tickets_new.py # Ticket workflow
 │   │   └── quotations.py          # Quotation management
-│   └── server.py                  # Engineer accept/decline endpoints added
+│   └── server.py                  # Legacy engineer endpoints
 ├── frontend/
 │   └── src/
 │       └── pages/
-│           ├── admin/
-│           │   ├── ServiceRequests.js     # Updated STATUS_CONFIG
-│           │   └── ServiceTicketDetail.js # Updated STATUS_CONFIG
 │           └── engineer/
-│               ├── TechnicianDashboard.js    # Rewritten with accept/decline UI
-│               └── EngineerTicketDetail.js   # New ticket detail page
+│               ├── TechnicianDashboard.js    # Complete dashboard
+│               ├── TechnicianVisitDetail.js  # Full visit workflow
+│               └── EngineerTicketDetail.js   # Ticket detail
 └── ...
 ```
-
-## Key API Endpoints
-
-### Engineer Portal
-- `POST /api/engineer/auth/login` - Engineer login (supports staff_users)
-- `GET /api/engineer/my-tickets` - Get tickets assigned to engineer (grouped by status)
-- `GET /api/engineer/tickets/{id}` - Get ticket detail
-- `POST /api/engineer/tickets/{id}/accept` - Accept assignment
-- `POST /api/engineer/tickets/{id}/decline` - Decline with reason
-- `GET /api/engineer/my-visits` - Get visits
-- `POST /api/engineer/service-visits/{id}/start` - Start visit
-- `POST /api/engineer/service-visits/{id}/complete` - Complete visit
-
-### Admin Service Tickets
-- `GET /api/admin/service-tickets` - List tickets
-- `POST /api/admin/service-tickets` - Create ticket
-- `POST /api/admin/service-tickets/{id}/assign` - Assign to technician (creates pending_acceptance)
-- `POST /api/admin/service-tickets/{id}/start` - Start work
-- `POST /api/admin/service-tickets/{id}/pending-parts` - Mark pending parts
-- `POST /api/admin/service-tickets/{id}/complete` - Complete ticket
-- `POST /api/admin/service-tickets/{id}/close` - Close ticket
-
-### Quotations
-- `GET /api/admin/quotations` - List quotations
-- `POST /api/admin/quotations` - Create quotation for ticket
-- `POST /api/admin/quotations/{id}/send` - Send to customer
-- `POST /api/admin/quotations/{id}/approve` - Approve/reject quotation
 
 ## Ticket Status Flow
 
@@ -131,28 +124,24 @@ PENDING_ACCEPTANCE → (engineer declines) → NEW (ready for reassignment)
 ## Prioritized Backlog
 
 ### P0 - Immediate
-- None (Accept/Decline workflow complete and tested)
+- None (Engineer Portal complete and tested)
 
 ### P1 - Next Sprint
-- **Quotation PDF Generation**: Generate and attach PDF when sending quotation
-- **RMM Integration**: Tactical RMM on dedicated server
-- **Payments**: Finalize Razorpay integration
-- **Email Notifications**: Send notifications for assignment, quotation events
+- **Admin Quotation Management UI** - Send/approve quotations
+- **Email Notifications** - Assignment, quotation events
+- **Quotation PDF Generation**
+- **RMM Integration** - Tactical RMM
 
 ### P2 - Future
-- CompanySwitcher.js component implementation
-- AI Ticket Summary feature completion
-- Plan Versioning and Audit Logs
-- ESLint warnings cleanup across frontend components
-- server.py refactoring (move routes to /routes directory)
+- Razorpay payments finalization
+- CompanySwitcher.js implementation
+- AI Ticket Summary completion
 - Backend model unification (staff_users vs organization_members)
-- Frontend dependency conflicts resolution
+- server.py refactoring (move legacy routes)
 
 ## Test Reports
-- `/app/test_reports/iteration_31.json` - Backend API tests (100% pass)
-- `/app/test_reports/iteration_32.json` - Frontend and route removal verification
-- `/app/test_reports/iteration_33.json` - Service Module Frontend Phase 1 (100% pass)
-- `/app/test_reports/iteration_34.json` - Engineer Accept/Decline Workflow (100% pass)
+- `/app/test_reports/iteration_34.json` - Accept/Decline workflow (100% pass)
+- `/app/test_reports/iteration_35.json` - Engineer Portal comprehensive (95% pass)
 
 ## Credentials (Preview Environment)
 - Admin: `ck@motta.in` / `Charu@123@`
@@ -166,4 +155,4 @@ PENDING_ACCEPTANCE → (engineer declines) → NEW (ready for reassignment)
 
 ---
 Last Updated: December 2025
-Engineer Accept/Decline Workflow COMPLETE
+Engineer Portal - All 9 Features COMPLETE
