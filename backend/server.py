@@ -10080,6 +10080,10 @@ app.include_router(tickets_new_router, tags=["Service Tickets (New)"])
 from routes.service_visits import router as visits_router
 app.include_router(visits_router, tags=["Service Visits"])
 
+# Quotations
+from routes.quotations import router as quotations_router
+app.include_router(quotations_router, tags=["Quotations"])
+
 # Ticket Parts (Requests & Issues)
 from routes.ticket_parts import router as ticket_parts_router
 app.include_router(ticket_parts_router, tags=["Ticket Parts"])
