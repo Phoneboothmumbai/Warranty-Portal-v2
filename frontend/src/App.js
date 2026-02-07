@@ -219,6 +219,7 @@ function App() {
                   {/* Engineer/Technician Portal Routes */}
                   <Route path="/engineer" element={<EngineerLogin />} />
                   <Route path="/engineer/dashboard" element={<TechnicianDashboard />} />
+                  <Route path="/engineer/ticket/:ticketId" element={<EngineerTicketDetail />} />
                   <Route path="/engineer/visit/:visitId" element={<TechnicianVisitDetail />} />
                 </Routes>
               </div>
