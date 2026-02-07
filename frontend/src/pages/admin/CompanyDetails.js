@@ -1772,20 +1772,34 @@ const CompanyDetails = () => {
               <Label>Deployment Name *</Label>
               <Input value={deploymentForm.name} onChange={(e) => setDeploymentForm({...deploymentForm, name: e.target.value})} placeholder="e.g., Server Room Setup, Network Installation" />
             </div>
+            <div>
+              <Label>Site *</Label>
+              <select className="w-full h-10 border rounded-md px-3" value={deploymentForm.site_id} onChange={(e) => setDeploymentForm({...deploymentForm, site_id: e.target.value})}>
+                <option value="">Select a site</option>
+                {sites.map(site => (
+                  <option key={site.id} value={site.id}>{site.name}</option>
+                ))}
+              </select>
+              {sites.length === 0 && <p className="text-xs text-amber-600 mt-1">No sites found. Please add a site first.</p>}
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Deployment Type</Label>
                 <Input value={deploymentForm.deployment_type} onChange={(e) => setDeploymentForm({...deploymentForm, deployment_type: e.target.value})} placeholder="e.g., Hardware, Software, Network" />
               </div>
               <div>
-                <Label>Status</Label>
-                <select className="w-full h-10 border rounded-md px-3" value={deploymentForm.status} onChange={(e) => setDeploymentForm({...deploymentForm, status: e.target.value})}>
-                  <option value="planned">Planned</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                  <option value="on_hold">On Hold</option>
-                </select>
+                <Label>Deployment Date</Label>
+                <Input type="date" value={deploymentForm.deployment_date} onChange={(e) => setDeploymentForm({...deploymentForm, deployment_date: e.target.value})} />
               </div>
+            </div>
+            <div>
+              <Label>Status</Label>
+              <select className="w-full h-10 border rounded-md px-3" value={deploymentForm.status} onChange={(e) => setDeploymentForm({...deploymentForm, status: e.target.value})}>
+                <option value="planned">Planned</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="on_hold">On Hold</option>
+              </select>
             </div>
             <div>
               <Label>Notes</Label>
