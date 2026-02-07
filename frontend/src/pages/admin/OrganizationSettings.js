@@ -24,6 +24,7 @@ const PLAN_BADGES = {
 };
 
 export default function OrganizationSettings() {
+  const navigate = useNavigate();
   const [organization, setOrganization] = useState(null);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
