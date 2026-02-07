@@ -352,6 +352,74 @@ export default function OrganizationSettings() {
         </div>
       )}
 
+      {/* Configuration Tab */}
+      {activeTab === 'config' && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                System Configuration
+              </CardTitle>
+              <CardDescription>
+                Configure ticketing, email templates, and static pages
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div 
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
+                  onClick={() => navigate('/admin/ticketing-config')}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                      <Wrench className="w-5 h-5 text-orange-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-slate-900">Ticketing Config</h3>
+                      <p className="text-sm text-slate-500">Configure service masters, help topics, workflows, and notifications</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-400" />
+                </div>
+                
+                <div 
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
+                  onClick={() => navigate('/admin/email-whitelabel')}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <MailCheck className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-slate-900">Email Settings</h3>
+                      <p className="text-sm text-slate-500">Configure SMTP, email templates, and notifications</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-400" />
+                </div>
+                
+                <div 
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
+                  onClick={() => navigate('/admin/static-pages')}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-slate-900">Static Pages</h3>
+                      <p className="text-sm text-slate-500">Manage terms of service, privacy policy, and other pages</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* White Label Tab */}
       {activeTab === 'branding' && (
         <div className="space-y-6">
