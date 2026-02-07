@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Laptop, Shield, FileText, Package, 
-  Users, MapPin, User, LogOut, Menu, X, ChevronDown, ShoppingBag, Key, ClipboardList, Building2
+  Users, MapPin, User, LogOut, Menu, X, ChevronDown, ShoppingBag, Key, ClipboardList, Building2, Ticket
 } from 'lucide-react';
 import { useCompanyAuth } from '../context/CompanyAuthContext';
 
