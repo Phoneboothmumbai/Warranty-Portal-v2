@@ -438,7 +438,15 @@ async def assign_ticket(
     data: TicketAssignRequest,
     admin: dict = Depends(get_current_admin)
 ):
-    """Assign ticket to a technician - engineer must accept/decline"""
+    """
+    Assign ticket to a technician - engineer must accept/decline.
+    
+    WORKFLOW RULES:
+    - Can only assign tickets in 'new' status (fresh tickets)
+    - Can also assign if engineer declined (status goes back to 'new')
+    - Can reassign if in 'pending_acceptance' (engineer hasn't responded yet)
+    - CANNOT reassign once work has started (in_progress, pending_parts, completed)
+    """
     org_id = admin.get("organization_id")
     if not org_id:
         raise HTTPException(status_code=403, detail="Organization context required")
@@ -451,13 +459,41 @@ async def assign_ticket(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     
-    # Check valid status for assignment
-    valid_statuses = [TicketStatus.NEW.value, TicketStatus.PENDING_ACCEPTANCE.value, TicketStatus.ASSIGNED.value]
-    if ticket.get("status") not in valid_statuses:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot assign ticket in {ticket.get('status')} status"
-        )
+    current_status = ticket.get("status")
+    
+    # STRICT WORKFLOW ENFORCEMENT:
+    # 1. NEW tickets can be assigned
+    # 2. PENDING_ACCEPTANCE tickets can be reassigned (before engineer responds)
+    # 3. Everything else - no assignment changes allowed
+    valid_for_assignment = [TicketStatus.NEW.value, TicketStatus.PENDING_ACCEPTANCE.value]
+    
+    if current_status not in valid_for_assignment:
+        # Provide clear error message based on status
+        if current_status == TicketStatus.ASSIGNED.value:
+            raise HTTPException(
+                status_code=400,
+                detail="Engineer has already accepted this ticket. Cannot reassign - work must proceed."
+            )
+        elif current_status == TicketStatus.IN_PROGRESS.value:
+            raise HTTPException(
+                status_code=400,
+                detail="Work is in progress. Cannot reassign ticket at this stage."
+            )
+        elif current_status == TicketStatus.PENDING_PARTS.value:
+            raise HTTPException(
+                status_code=400,
+                detail="Ticket is pending parts. Complete the quotation workflow before any changes."
+            )
+        elif current_status in [TicketStatus.COMPLETED.value, TicketStatus.CLOSED.value]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Ticket is already {current_status}. Cannot reassign."
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot assign ticket in '{current_status}' status. Workflow rules prevent this action."
+            )
     
     # Get technician details
     tech = await db.staff_users.find_one(
