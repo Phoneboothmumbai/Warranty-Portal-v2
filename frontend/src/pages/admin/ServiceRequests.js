@@ -148,6 +148,43 @@ export default function ServiceRequests() {
     }
   }, [token]);
 
+  // Fetch company contacts when company changes
+  const fetchCompanyContacts = useCallback(async (companyId) => {
+    if (!companyId) {
+      setCompanyContacts([]);
+      return;
+    }
+    const headers = { Authorization: `Bearer ${token}` };
+    try {
+      // Try fetching from portal users endpoint first
+      const res = await axios.get(`${API_URL}/api/admin/companies/${companyId}/users`, { headers });
+      const users = Array.isArray(res.data) ? res.data : (res.data.users || []);
+      setCompanyContacts(users);
+    } catch (error) {
+      console.error('Failed to fetch company contacts:', error);
+      setCompanyContacts([]);
+    }
+  }, [token]);
+
+  // Handle company selection change
+  const handleCompanyChange = (companyId) => {
+    setFormData({...formData, company_id: companyId, contact_name: '', contact_phone: '', contact_email: ''});
+    fetchCompanyContacts(companyId);
+  };
+
+  // Handle contact selection
+  const handleContactSelect = (contactId) => {
+    const contact = companyContacts.find(c => c.id === contactId);
+    if (contact) {
+      setFormData({
+        ...formData,
+        contact_name: contact.name || '',
+        contact_phone: contact.phone || '',
+        contact_email: contact.email || ''
+      });
+    }
+  };
+
   const headers = { Authorization: `Bearer ${token}` };
 
   // Initial load
