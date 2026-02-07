@@ -24,17 +24,22 @@ const navGroups = [
     ]
   },
   {
-    id: 'organization',
-    label: 'Organization',
+    id: 'clients',
+    label: 'Clients',
     icon: Building2,
     items: [
       { path: '/admin/companies', label: 'Companies', icon: Building2 },
-      { path: '/admin/company-domains', label: 'Email Domains', icon: Globe },
       { path: '/admin/sites', label: 'Sites', icon: MapPin },
-      { path: '/admin/users', label: 'Users', icon: Users },
-      { path: '/admin/employees', label: 'Employees', icon: UserCircle },
-      { path: '/admin/team', label: 'Team Members', icon: UserCog },
-      { path: '/admin/staff', label: 'Staff Management', icon: Shield },
+      { path: '/admin/users', label: 'Portal Users', icon: Users },
+      { path: '/admin/company-domains', label: 'Email Domains', icon: Globe },
+    ]
+  },
+  {
+    id: 'myteam',
+    label: 'My Team',
+    icon: UserCog,
+    items: [
+      { path: '/admin/staff', label: 'Staff & Technicians', icon: Shield },
     ]
   },
   {
