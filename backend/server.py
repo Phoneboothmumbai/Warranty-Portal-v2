@@ -10496,8 +10496,9 @@ from routes.service_visits import router as visits_router
 app.include_router(visits_router, tags=["Service Visits"])
 
 # Quotations
-from routes.quotations import router as quotations_router
+from routes.quotations import router as quotations_router, company_router as company_quotations_router
 app.include_router(quotations_router, tags=["Quotations"])
+app.include_router(company_quotations_router, tags=["Company Quotations"])
 
 # Ticket Parts (Requests & Issues)
 from routes.ticket_parts import router as ticket_parts_router
