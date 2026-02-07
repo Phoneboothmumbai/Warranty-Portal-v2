@@ -577,10 +577,10 @@ export default function ServiceRequests() {
           <DialogHeader>
             <DialogTitle>Create Service Ticket</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
             <div>
               <Label>Company *</Label>
-              <Select value={formData.company_id} onValueChange={(val) => setFormData({...formData, company_id: val})}>
+              <Select value={formData.company_id} onValueChange={handleCompanyChange}>
                 <SelectTrigger data-testid="company-select">
                   <SelectValue placeholder="Select company" />
                 </SelectTrigger>
@@ -638,24 +638,59 @@ export default function ServiceRequests() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Contact Name</Label>
-                <Input
-                  value={formData.contact_name}
-                  onChange={(e) => setFormData({...formData, contact_name: e.target.value})}
-                  placeholder="Contact person"
-                />
-              </div>
-              <div>
-                <Label>Contact Phone</Label>
-                <Input
-                  value={formData.contact_phone}
-                  onChange={(e) => setFormData({...formData, contact_phone: e.target.value})}
-                  placeholder="Phone number"
-                />
+            
+            {/* Contact Person Section */}
+            <div className="space-y-3 p-3 bg-slate-50 rounded-lg">
+              <Label className="font-medium">Contact Person</Label>
+              {companyContacts.length > 0 ? (
+                <Select onValueChange={handleContactSelect}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select from company contacts" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companyContacts.map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        {contact.name} {contact.phone ? `(${contact.phone})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : formData.company_id ? (
+                <p className="text-sm text-slate-500">No contacts found for this company</p>
+              ) : (
+                <p className="text-sm text-slate-500">Select a company to see contacts</p>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-slate-500">Name</Label>
+                  <Input
+                    value={formData.contact_name}
+                    onChange={(e) => setFormData({...formData, contact_name: e.target.value})}
+                    placeholder="Contact name"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500">Phone</Label>
+                  <Input
+                    value={formData.contact_phone}
+                    onChange={(e) => setFormData({...formData, contact_phone: e.target.value})}
+                    placeholder="Phone number"
+                  />
+                </div>
               </div>
             </div>
+
+            {/* Notes/Comments */}
+            <div>
+              <Label>Internal Notes</Label>
+              <Textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                placeholder="Add any internal notes or comments..."
+                rows={2}
+              />
+            </div>
+
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
