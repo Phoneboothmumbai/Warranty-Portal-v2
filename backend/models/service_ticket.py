@@ -149,6 +149,12 @@ class ServiceTicketNew(BaseModel):
     assigned_by_id: Optional[str] = None
     assigned_by_name: Optional[str] = None
     
+    # Assignment Acceptance (for engineer accept/decline workflow)
+    assignment_status: Optional[str] = None  # pending, accepted, declined
+    assignment_accepted_at: Optional[str] = None
+    assignment_declined_at: Optional[str] = None
+    assignment_decline_reason: Optional[str] = None
+    
     # SLA
     sla_response_due: Optional[str] = None  # First response due
     sla_resolution_due: Optional[str] = None  # Resolution due
