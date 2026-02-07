@@ -666,6 +666,12 @@ const CompanyDetails = () => {
           {/* Sites Tab */}
           {activeTab === 'sites' && (
             <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-medium text-slate-900">Sites & Locations</h3>
+                <Button onClick={() => setShowAddSite(true)} size="sm">
+                  <Plus className="h-4 w-4 mr-1" /> Add Site
+                </Button>
+              </div>
               {sites.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full table-modern">
