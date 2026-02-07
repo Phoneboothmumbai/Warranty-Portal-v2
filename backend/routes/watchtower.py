@@ -357,3 +357,199 @@ async def list_rmm_scripts(admin: dict = Depends(get_current_admin)):
     service = await get_rmm_service(org_id)
     
     return await service.get_scripts()
+
+
+
+# ==================== COMPANY PORTAL ENDPOINTS ====================
+# These use environment variables for WatchTower access
+
+import os
+from services.auth import get_current_company_user
+
+def get_global_watchtower_service() -> WatchTowerService:
+    """Get WatchTower service using environment variables"""
+    api_url = os.environ.get("WATCHTOWER_API_URL")
+    api_key = os.environ.get("WATCHTOWER_API_KEY")
+    
+    if not api_url or not api_key:
+        return None
+    
+    return WatchTowerService(WatchTowerConfig(
+        api_url=api_url,
+        api_key=api_key,
+        enabled=True
+    ))
+
+
+@router.get("/device/{device_id}/status")
+async def get_device_watchtower_status(device_id: str, user: dict = Depends(get_current_company_user)):
+    """Get WatchTower agent status for a device (Company Portal)"""
+    company_id = user.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=403, detail="Company context required")
+    
+    # Get device
+    device = await _db.devices.find_one({
+        "id": device_id,
+        "company_id": company_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    
+    # Check if device has RMM agent linked
+    rmm_agent_id = device.get("rmm_agent_id")
+    hostname = device.get("hostname") or device.get("computer_name") or device.get("serial_number")
+    
+    service = get_global_watchtower_service()
+    if not service:
+        return {
+            "integrated": False,
+            "message": "WatchTower not configured",
+            "agent_status": None
+        }
+    
+    try:
+        # If we have an agent_id, get that agent directly
+        if rmm_agent_id:
+            agent = await service.get_agent(rmm_agent_id)
+            if agent:
+                return {
+                    "integrated": True,
+                    "agent_status": "online" if agent.get("status") == "online" else "offline",
+                    "agent_data": {
+                        "agent_id": agent.get("agent_id"),
+                        "hostname": agent.get("hostname"),
+                        "operating_system": agent.get("operating_system"),
+                        "platform": agent.get("plat"),
+                        "public_ip": agent.get("public_ip"),
+                        "total_ram_gb": agent.get("total_ram"),
+                        "last_seen": agent.get("last_seen"),
+                        "logged_in_user": agent.get("logged_in_username"),
+                        "needs_reboot": agent.get("needs_reboot", False),
+                        "version": agent.get("version"),
+                        "client_name": agent.get("client_name"),
+                        "site_name": agent.get("site_name")
+                    }
+                }
+        
+        # Otherwise, try to find agent by hostname
+        agents = await service.get_agents()
+        for agent in agents:
+            if agent.get("hostname", "").lower() == hostname.lower():
+                # Found matching agent - save the mapping
+                await _db.devices.update_one(
+                    {"id": device_id},
+                    {"$set": {
+                        "rmm_agent_id": agent.get("agent_id"),
+                        "rmm_source": "watchtower",
+                        "rmm_last_sync": datetime.utcnow().isoformat()
+                    }}
+                )
+                
+                return {
+                    "integrated": True,
+                    "agent_status": "online" if agent.get("status") == "online" else "offline",
+                    "agent_data": {
+                        "agent_id": agent.get("agent_id"),
+                        "hostname": agent.get("hostname"),
+                        "operating_system": agent.get("operating_system"),
+                        "platform": agent.get("plat"),
+                        "public_ip": agent.get("public_ip"),
+                        "total_ram_gb": agent.get("total_ram"),
+                        "last_seen": agent.get("last_seen"),
+                        "logged_in_user": agent.get("logged_in_username"),
+                        "needs_reboot": agent.get("needs_reboot", False),
+                        "version": agent.get("version"),
+                        "client_name": agent.get("client_name"),
+                        "site_name": agent.get("site_name")
+                    }
+                }
+        
+        # Agent not found
+        return {
+            "integrated": True,
+            "agent_status": "not_installed",
+            "message": "WatchTower agent not installed on this device",
+            "agent_data": None
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching WatchTower status for device {device_id}: {str(e)}")
+        return {
+            "integrated": True,
+            "agent_status": "error",
+            "message": f"Error connecting to WatchTower: {str(e)}",
+            "agent_data": None
+        }
+
+
+@router.get("/device/{device_id}/details")
+async def get_device_watchtower_details(device_id: str, user: dict = Depends(get_current_company_user)):
+    """Get detailed WatchTower agent info including hardware/software (Company Portal)"""
+    company_id = user.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=403, detail="Company context required")
+    
+    # Get device
+    device = await _db.devices.find_one({
+        "id": device_id,
+        "company_id": company_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    
+    rmm_agent_id = device.get("rmm_agent_id")
+    if not rmm_agent_id:
+        return {
+            "integrated": False,
+            "message": "Device not linked to WatchTower agent"
+        }
+    
+    service = get_global_watchtower_service()
+    if not service:
+        return {
+            "integrated": False,
+            "message": "WatchTower not configured"
+        }
+    
+    try:
+        details = await service.get_agent_details(rmm_agent_id)
+        
+        # Extract useful metrics
+        return {
+            "integrated": True,
+            "agent_id": rmm_agent_id,
+            "system_info": {
+                "hostname": details.get("hostname"),
+                "operating_system": details.get("operating_system"),
+                "cpu": details.get("cpu_model", []),
+                "cpu_count": details.get("cpu_count"),
+                "total_ram_gb": details.get("total_ram"),
+                "boot_time": details.get("boot_time"),
+                "public_ip": details.get("public_ip"),
+                "local_ips": details.get("local_ips", [])
+            },
+            "disk_info": details.get("disks", []),
+            "memory_info": {
+                "total": details.get("total_ram"),
+                "used_percent": details.get("mem_used_percent")
+            },
+            "cpu_usage": details.get("cpu_usage"),
+            "installed_software": details.get("software", [])[:50],  # Limit to 50
+            "pending_updates": details.get("pending_actions", {}).get("patches", []),
+            "alerts": details.get("alerts", []),
+            "last_seen": details.get("last_seen"),
+            "needs_reboot": details.get("needs_reboot", False)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching WatchTower details for device {device_id}: {str(e)}")
+        return {
+            "integrated": True,
+            "error": str(e),
+            "message": "Error fetching detailed information"
+        }
