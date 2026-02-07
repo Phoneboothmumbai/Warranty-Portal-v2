@@ -53,7 +53,7 @@ class TestEngineerDashboard:
         })
         if response.status_code != 200:
             pytest.skip("Engineer login failed")
-        return response.json()["token"]
+        return response.json()["access_token"]
     
     def test_dashboard_stats_returns_correct_structure(self, engineer_token):
         """Dashboard stats API returns correct counts structure"""
@@ -98,7 +98,7 @@ class TestEngineerTickets:
         })
         if response.status_code != 200:
             pytest.skip("Engineer login failed")
-        return response.json()["token"]
+        return response.json()["access_token"]
     
     def test_tickets_list_with_active_filter(self, engineer_token):
         """Ticket list API returns active tickets with filtering"""
@@ -149,7 +149,7 @@ class TestEngineerVisits:
         })
         if response.status_code != 200:
             pytest.skip("Engineer login failed")
-        return response.json()["token"]
+        return response.json()["access_token"]
     
     def test_visits_list_returns_visits(self, engineer_token):
         """Visit list API returns visits for engineer"""
@@ -192,7 +192,7 @@ class TestVisitWorkflow:
         })
         if response.status_code != 200:
             pytest.skip("Engineer login failed")
-        return response.json()["token"]
+        return response.json()["access_token"]
     
     @pytest.fixture
     def admin_token(self):
@@ -203,7 +203,7 @@ class TestVisitWorkflow:
         })
         if response.status_code != 200:
             pytest.skip("Admin login failed")
-        return response.json()["token"]
+        return response.json()["access_token"]
     
     def test_start_visit_changes_status(self, engineer_token):
         """Start visit changes status to in_progress"""
@@ -333,7 +333,7 @@ class TestPendingPartsFlow:
         })
         if response.status_code != 200:
             pytest.skip("Engineer login failed")
-        return response.json()["token"]
+        return response.json()["access_token"]
     
     def test_pending_parts_creates_quotation(self, engineer_token):
         """Mark pending parts auto-creates draft quotation"""
@@ -403,7 +403,7 @@ class TestTicketClosure:
         })
         if response.status_code != 200:
             pytest.skip("Engineer login failed")
-        return response.json()["token"]
+        return response.json()["access_token"]
     
     def test_cannot_close_pending_parts_ticket(self, engineer_token):
         """Engineer cannot close ticket when pending parts"""
@@ -454,7 +454,7 @@ class TestInventorySearch:
         })
         if response.status_code != 200:
             pytest.skip("Engineer login failed")
-        return response.json()["token"]
+        return response.json()["access_token"]
     
     def test_inventory_search_returns_items(self, engineer_token):
         """Inventory search returns items"""
@@ -493,7 +493,7 @@ class TestVisitDetail:
         })
         if response.status_code != 200:
             pytest.skip("Engineer login failed")
-        return response.json()["token"]
+        return response.json()["access_token"]
     
     def test_visit_detail_includes_ticket_info(self, engineer_token):
         """Visit detail includes ticket information"""
@@ -543,7 +543,7 @@ class TestTicketDetail:
         })
         if response.status_code != 200:
             pytest.skip("Engineer login failed")
-        return response.json()["token"]
+        return response.json()["access_token"]
     
     def test_ticket_detail_includes_visits_and_parts(self, engineer_token):
         """Ticket detail includes visits, parts, quotation"""
