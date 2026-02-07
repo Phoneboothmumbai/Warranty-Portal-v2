@@ -216,11 +216,91 @@ class ServiceTicketNew(BaseModel):
     requires_followup: bool = False
     is_deleted: bool = False
     
+    # Resolution (required for closure)
+    resolution_notes: Optional[str] = None
+    resolution_type: Optional[str] = None  # on_site_fix, parts_replaced, referred, no_issue_found
+    
     # Audit
     created_at: str = Field(default_factory=get_ist_isoformat)
     created_by_id: str = ""
     created_by_name: str = ""
     updated_at: str = Field(default_factory=get_ist_isoformat)
+
+
+# ==================== QUOTATION MODEL ====================
+
+class QuotationStatus(str, Enum):
+    """Quotation status"""
+    DRAFT = "draft"
+    SENT = "sent"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    EXPIRED = "expired"
+
+
+class QuotationItem(BaseModel):
+    """Single item in a quotation"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    item_type: str = "part"  # part, labour, other
+    description: str
+    quantity: int = 1
+    unit_price: float = 0
+    total_price: float = 0
+    part_id: Optional[str] = None  # Reference to parts inventory
+    part_number: Optional[str] = None
+
+
+class Quotation(BaseModel):
+    """Quotation for service ticket"""
+    model_config = ConfigDict(extra="ignore")
+    
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    organization_id: str
+    ticket_id: str
+    ticket_number: str
+    quotation_number: str  # Auto-generated
+    
+    # Customer details
+    company_id: str
+    company_name: str
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    
+    # Status
+    status: str = QuotationStatus.DRAFT.value
+    
+    # Items
+    items: List[QuotationItem] = Field(default_factory=list)
+    
+    # Totals
+    subtotal: float = 0
+    tax_rate: float = 18.0  # GST percentage
+    tax_amount: float = 0
+    total_amount: float = 0
+    
+    # Validity
+    valid_until: Optional[str] = None
+    
+    # Notes
+    terms_and_conditions: Optional[str] = None
+    internal_notes: Optional[str] = None
+    customer_notes: Optional[str] = None
+    
+    # Approval
+    approved_at: Optional[str] = None
+    approved_by: Optional[str] = None
+    rejection_reason: Optional[str] = None
+    
+    # Flags
+    is_deleted: bool = False
+    
+    # Audit
+    created_at: str = Field(default_factory=get_ist_isoformat)
+    created_by_id: str = ""
+    created_by_name: str = ""
+    updated_at: str = Field(default_factory=get_ist_isoformat)
+    sent_at: Optional[str] = None
 
 
 class ServiceTicketCreate(BaseModel):
