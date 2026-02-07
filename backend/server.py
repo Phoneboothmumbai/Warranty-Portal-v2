@@ -6113,6 +6113,173 @@ async def get_engineer_visits(
     return all_visits
 
 
+# --- Engineer Assigned Tickets (New Workflow) ---
+
+@api_router.get("/engineer/my-tickets")
+async def get_engineer_assigned_tickets(
+    status: Optional[str] = None,
+    engineer: dict = Depends(get_current_engineer)
+):
+    """Get all tickets assigned to this engineer/technician"""
+    engineer_id = engineer["id"]
+    
+    # Build query for tickets assigned to this engineer
+    query = {
+        "assigned_to_id": engineer_id,
+        "is_deleted": {"$ne": True}
+    }
+    
+    if status:
+        query["status"] = status
+    else:
+        # By default, get all active tickets (not closed/cancelled)
+        query["status"] = {"$nin": ["closed", "cancelled"]}
+    
+    tickets = await db.service_tickets_new.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    # Group tickets by assignment status for easier frontend handling
+    pending_acceptance = []
+    accepted = []
+    in_progress_list = []
+    
+    for ticket in tickets:
+        if ticket.get("status") == "pending_acceptance":
+            pending_acceptance.append(ticket)
+        elif ticket.get("status") == "assigned":
+            accepted.append(ticket)
+        elif ticket.get("status") in ["in_progress", "pending_parts"]:
+            in_progress_list.append(ticket)
+    
+    return {
+        "tickets": tickets,
+        "pending_acceptance": pending_acceptance,
+        "accepted": accepted,
+        "in_progress": in_progress_list,
+        "total": len(tickets)
+    }
+
+
+@api_router.post("/engineer/tickets/{ticket_id}/accept")
+async def engineer_accept_ticket(
+    ticket_id: str,
+    engineer: dict = Depends(get_current_engineer)
+):
+    """Engineer accepts an assigned ticket"""
+    engineer_id = engineer["id"]
+    
+    ticket = await db.service_tickets_new.find_one({
+        "id": ticket_id,
+        "assigned_to_id": engineer_id,
+        "is_deleted": {"$ne": True}
+    })
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found or not assigned to you")
+    
+    if ticket.get("status") != "pending_acceptance":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot accept ticket in {ticket.get('status')} status"
+        )
+    
+    from utils.helpers import get_ist_isoformat
+    now = get_ist_isoformat()
+    
+    # Create status change record
+    status_change = {
+        "id": str(uuid.uuid4()),
+        "from_status": "pending_acceptance",
+        "to_status": "assigned",
+        "changed_by_id": engineer_id,
+        "changed_by_name": engineer.get("name", ""),
+        "changed_at": now,
+        "notes": f"Accepted by {engineer.get('name', '')}"
+    }
+    
+    await db.service_tickets_new.update_one(
+        {"id": ticket_id},
+        {
+            "$set": {
+                "status": "assigned",
+                "assignment_status": "accepted",
+                "assignment_accepted_at": now,
+                "first_response_at": now,  # First response is when engineer accepts
+                "updated_at": now
+            },
+            "$push": {"status_history": status_change}
+        }
+    )
+    
+    logger.info(f"Ticket {ticket.get('ticket_number')} accepted by engineer {engineer.get('name')}")
+    
+    return await db.service_tickets_new.find_one({"id": ticket_id}, {"_id": 0})
+
+
+class DeclineTicketRequest(BaseModel):
+    reason: str
+
+
+@api_router.post("/engineer/tickets/{ticket_id}/decline")
+async def engineer_decline_ticket(
+    ticket_id: str,
+    data: DeclineTicketRequest,
+    engineer: dict = Depends(get_current_engineer)
+):
+    """Engineer declines an assigned ticket"""
+    engineer_id = engineer["id"]
+    
+    ticket = await db.service_tickets_new.find_one({
+        "id": ticket_id,
+        "assigned_to_id": engineer_id,
+        "is_deleted": {"$ne": True}
+    })
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found or not assigned to you")
+    
+    if ticket.get("status") != "pending_acceptance":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot decline ticket in {ticket.get('status')} status"
+        )
+    
+    from utils.helpers import get_ist_isoformat
+    now = get_ist_isoformat()
+    
+    # Create status change record
+    status_change = {
+        "id": str(uuid.uuid4()),
+        "from_status": "pending_acceptance",
+        "to_status": "new",
+        "changed_by_id": engineer_id,
+        "changed_by_name": engineer.get("name", ""),
+        "changed_at": now,
+        "notes": f"Declined by {engineer.get('name', '')}: {data.reason}"
+    }
+    
+    # Reset ticket to NEW status so it can be reassigned
+    await db.service_tickets_new.update_one(
+        {"id": ticket_id},
+        {
+            "$set": {
+                "status": "new",
+                "assignment_status": "declined",
+                "assignment_declined_at": now,
+                "assignment_decline_reason": data.reason,
+                "assigned_to_id": None,
+                "assigned_to_name": None,
+                "assigned_at": None,
+                "updated_at": now
+            },
+            "$push": {"status_history": status_change}
+        }
+    )
+    
+    logger.info(f"Ticket {ticket.get('ticket_number')} declined by engineer {engineer.get('name')}: {data.reason}")
+    
+    return {"success": True, "message": "Ticket declined", "ticket_number": ticket.get("ticket_number")}
+
+
 @api_router.get("/engineer/visits/{visit_id}")
 async def get_visit_details(
     visit_id: str,
