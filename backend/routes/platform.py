@@ -401,16 +401,19 @@ async def get_organization_details(
 @router.put("/organizations/{org_id}")
 async def update_organization(
     org_id: str,
-    name: Optional[str] = None,
-    status: Optional[str] = None,
-    plan: Optional[str] = None,
-    request: Request = None,
+    request: Request,
     admin: dict = Depends(require_platform_permission("manage_organizations"))
 ):
     """Update an organization's details"""
     org = await _db.organizations.find_one({"id": org_id, "is_deleted": {"$ne": True}})
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
+    
+    # Parse request body
+    body = await request.json()
+    name = body.get("name")
+    status = body.get("status")
+    plan = body.get("plan")
     
     update_data = {"updated_at": get_ist_isoformat()}
     changes = {}
