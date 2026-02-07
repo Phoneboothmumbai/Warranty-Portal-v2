@@ -847,17 +847,20 @@ const CompanyDetails = () => {
           {/* Devices Tab */}
           {activeTab === 'devices' && (
             <div>
-              {/* Device Search Bar */}
-              <div className="mb-4">
-                <div className="relative max-w-md">
+              {/* Header with Add Button */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="relative max-w-md flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder="Search devices (e.g., CCTV, security camera, laptop, notebook...)"
+                    placeholder="Search devices..."
                     value={deviceSearchQuery}
                     onChange={(e) => setDeviceSearchQuery(e.target.value)}
                     className="pl-10"
                   />
                 </div>
+                <Button onClick={() => setShowAddDevice(true)} size="sm" className="ml-4">
+                  <Plus className="h-4 w-4 mr-1" /> Add Device
+                </Button>
               </div>
               
               {(() => {
