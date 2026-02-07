@@ -392,6 +392,38 @@ export default function StaffManagement() {
     setShowStateModal(true);
   };
 
+  const openPasswordModal = (user) => {
+    setSelectedUser(user);
+    setPasswordForm({ password: '', confirmPassword: '' });
+    setShowPasswordModal(true);
+  };
+
+  const handleSetPassword = async () => {
+    if (!selectedUser) return;
+    if (!passwordForm.password || passwordForm.password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    if (passwordForm.password !== passwordForm.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    setSaving(true);
+    try {
+      await axios.post(
+        `${API}/api/admin/staff/users/${selectedUser.id}/set-password`,
+        { password: passwordForm.password },
+        { headers: getAuthHeaders() }
+      );
+      toast.success('Password set successfully');
+      setShowPasswordModal(false);
+      fetchUsers();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to set password');
+    }
+    setSaving(false);
+  };
+
   const openDeptModal = (dept = null) => {
     setSelectedDept(dept);
     setDeptForm(dept ? {
