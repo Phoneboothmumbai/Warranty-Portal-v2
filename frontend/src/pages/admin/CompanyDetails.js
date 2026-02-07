@@ -1696,9 +1696,13 @@ const CompanyDetails = () => {
                 <Input value={deviceForm2.device_type} onChange={(e) => setDeviceForm2({...deviceForm2, device_type: e.target.value})} placeholder="e.g., Laptop, Printer, Server" />
               </div>
               <div>
-                <Label>Location</Label>
-                <Input value={deviceForm2.location} onChange={(e) => setDeviceForm2({...deviceForm2, location: e.target.value})} placeholder="Where it's installed" />
+                <Label>Purchase Date</Label>
+                <Input type="date" value={deviceForm2.purchase_date} onChange={(e) => setDeviceForm2({...deviceForm2, purchase_date: e.target.value})} />
               </div>
+            </div>
+            <div>
+              <Label>Location</Label>
+              <Input value={deviceForm2.location} onChange={(e) => setDeviceForm2({...deviceForm2, location: e.target.value})} placeholder="Where it's installed" />
             </div>
           </div>
           <DialogFooter>
