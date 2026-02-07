@@ -114,7 +114,7 @@ async def log_audit(entity_type: str, entity_id: str, action: str, changes: dict
 
 
 async def get_current_engineer(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Get current engineer from JWT token"""
+    """Get current engineer from JWT token - supports both engineers and staff_users"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -129,10 +129,30 @@ async def get_current_engineer(credentials: HTTPAuthorizationCredentials = Depen
     except JWTError:
         raise credentials_exception
     
+    # First check engineers collection
     engineer = await db.engineers.find_one(
         {"id": engineer_id, "is_active": True, "is_deleted": {"$ne": True}}, 
         {"_id": 0, "password_hash": 0}
     )
+    
+    # If not found in engineers, check staff_users
+    if engineer is None:
+        staff_user = await db.staff_users.find_one(
+            {"id": engineer_id, "state": "active", "is_deleted": {"$ne": True}},
+            {"_id": 0, "password_hash": 0}
+        )
+        if staff_user:
+            # Return staff user in engineer format
+            engineer = {
+                "id": staff_user["id"],
+                "name": staff_user.get("name"),
+                "email": staff_user.get("email"),
+                "phone": staff_user.get("phone"),
+                "is_active": True,
+                "organization_id": staff_user.get("organization_id"),
+                "source": "staff_user"
+            }
+    
     if engineer is None:
         raise credentials_exception
     return engineer
