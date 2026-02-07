@@ -1122,6 +1122,52 @@ export default function StaffManagement() {
         </DialogContent>
       </Dialog>
 
+      {/* SET PASSWORD MODAL */}
+      <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set Password</DialogTitle>
+            <DialogDescription>
+              {selectedUser?.name} ({selectedUser?.email})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>New Password *</Label>
+              <Input
+                type="password"
+                value={passwordForm.password}
+                onChange={(e) => setPasswordForm(f => ({ ...f, password: e.target.value }))}
+                placeholder="Enter new password (min 6 characters)"
+                data-testid="new-password-input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Confirm Password *</Label>
+              <Input
+                type="password"
+                value={passwordForm.confirmPassword}
+                onChange={(e) => setPasswordForm(f => ({ ...f, confirmPassword: e.target.value }))}
+                placeholder="Confirm new password"
+                data-testid="confirm-password-input"
+              />
+            </div>
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+              This will allow the user to login to the Engineer Portal at <strong>/engineer</strong>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPasswordModal(false)}>Cancel</Button>
+            <Button 
+              onClick={handleSetPassword} 
+              disabled={saving || !passwordForm.password || !passwordForm.confirmPassword}
+            >
+              {saving ? 'Setting...' : 'Set Password'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* DEPARTMENT MODAL */}
       <Dialog open={showDeptModal} onOpenChange={setShowDeptModal}>
         <DialogContent>
