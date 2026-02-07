@@ -16,7 +16,7 @@ A comprehensive MSP-grade service ticket system with:
 2. **Engineer Accept/Decline Workflow**: When a job is assigned, the engineer is notified and must accept or decline
 3. **Multi-visit tracking** with start/stop timers for each visit
 4. **Inventory/parts management** integrated with tickets
-5. **Quotation workflow** for pending parts (auto-generated)
+5. **Quotation workflow** for pending parts (auto-generated, admin managed, customer approval)
 6. **Technician portal** for field engineers
 
 ## What's Been Implemented
@@ -65,29 +65,66 @@ A comprehensive MSP-grade service ticket system with:
 - Validates no incomplete visits
 - Cannot close when pending parts
 
-### Backend Endpoints (New)
+### ✅ Admin Quotation Management UI - NEW (Feb 2026)
+
+**Features Implemented:**
+- Quotation list view with summary cards (Draft, Awaiting Response, Approved, Total)
+- Detailed quotation view modal with items, prices, totals
+- Edit quotation modal to add/remove/modify line items
+- Send quotation functionality (changes status from draft → sent)
+- Record customer response (approve/reject) with notes
+- Navigation link added to admin sidebar
+
+**API Endpoints:**
+- `GET /api/admin/quotations` - List quotations with filtering
+- `GET /api/admin/quotations/{id}` - Get quotation detail
+- `PUT /api/admin/quotations/{id}` - Update quotation items/prices
+- `POST /api/admin/quotations/{id}/send` - Send to customer
+- `POST /api/admin/quotations/{id}/approve` - Record approval/rejection
+
+### ✅ Customer Portal Quotations - NEW (Feb 2026)
+
+**Features Implemented:**
+- Company users can view quotations sent to them
+- Approve or reject quotations with notes
+- Summary cards showing pending/approved counts
+- Alert banner for pending quotations
+- Draft quotations are hidden from company users
+
+**API Endpoints:**
+- `GET /api/company/quotations` - List quotations for company
+- `GET /api/company/quotations/{id}` - Get quotation detail (no internal notes)
+- `POST /api/company/quotations/{id}/respond` - Approve/reject quotation
+
+### ✅ Strict Ticket Workflow Enforcement - NEW (Feb 2026)
+
+**Workflow Rules Implemented:**
 ```
-GET  /api/engineer/dashboard/stats      - Dashboard statistics
-GET  /api/engineer/tickets              - Ticket list with filtering
-GET  /api/engineer/tickets/{id}         - Ticket detail with visits, parts, quotation
-POST /api/engineer/tickets/{id}/accept  - Accept assignment
-POST /api/engineer/tickets/{id}/decline - Decline with reason
-POST /api/engineer/tickets/{id}/close   - Close ticket
-GET  /api/engineer/visits               - Visit list
-GET  /api/engineer/visits/{id}          - Visit detail with history
-POST /api/engineer/visits/{id}/start    - Start visit
-POST /api/engineer/visits/{id}/end      - End visit
-POST /api/engineer/visits/{id}/diagnosis - Save diagnosis
-POST /api/engineer/visits/{id}/resolve  - Resolve visit
-POST /api/engineer/visits/{id}/pending-parts - Mark pending + create quotation
-POST /api/engineer/visits/{id}/photos   - Upload photo
-GET  /api/engineer/inventory/items      - Search inventory
+1️⃣ Ticket Created (NEW)
+2️⃣ Technician Assigned (PENDING_ACCEPTANCE)
+3️⃣ Technician Accepts (ASSIGNED)
+4️⃣ Visit & Diagnosis (IN_PROGRESS)
+5️⃣ Parts Required (PENDING_PARTS) → Quotation workflow
+6️⃣ Work Completed (COMPLETED)
+7️⃣ Ticket Closed (CLOSED)
 ```
 
-### Frontend Components (Updated)
-- `TechnicianDashboard.js` - Complete rewrite with stats, tabs, accept/decline UI
-- `TechnicianVisitDetail.js` - Full workflow with timer, diagnosis, resolution, parts modals
-- `EngineerTicketDetail.js` - Ticket details with accept/decline, SLA info
+**Validation Rules:**
+- Can only assign: `new`, `pending_acceptance` tickets
+- Cannot reassign: `assigned`, `in_progress`, `pending_parts`, `completed`, `closed` tickets
+- Clear error messages for each blocked scenario
+- Workflow progress indicator on ticket detail page
+
+**Error Messages:**
+- assigned: "Engineer has already accepted this ticket. Cannot reassign - work must proceed."
+- in_progress: "Work is in progress. Cannot reassign ticket at this stage."
+- pending_parts: "Ticket is pending parts. Complete the quotation workflow before any changes."
+
+### Ticket Detail Enhancements - NEW (Feb 2026)
+
+- **Quotation Alert Banner**: Shows quotation status when ticket is pending_parts
+- **Workflow Progress Indicator**: Visual 7-step progress bar
+- **View Quotation Button**: Quick access to quotation from ticket
 
 ## Architecture
 
@@ -97,15 +134,20 @@ GET  /api/engineer/inventory/items      - Search inventory
 │   ├── models/
 │   │   └── service_ticket.py      # PENDING_ACCEPTANCE status, assignment fields
 │   ├── routes/
-│   │   ├── engineer_portal.py     # NEW - Comprehensive engineer API
-│   │   ├── service_tickets_new.py # Ticket workflow
-│   │   └── quotations.py          # Quotation management
-│   └── server.py                  # Legacy engineer endpoints
+│   │   ├── engineer_portal.py     # Comprehensive engineer API
+│   │   ├── service_tickets_new.py # Ticket workflow with strict validation
+│   │   └── quotations.py          # Admin + Company quotation APIs
+│   └── server.py                  # Router registrations
 ├── frontend/
 │   └── src/
 │       └── pages/
+│           ├── admin/
+│           │   ├── Quotations.js           # Admin quotation management
+│           │   └── ServiceTicketDetail.js  # Workflow progress, quotation banner
+│           ├── company/
+│           │   └── CompanyQuotations.js    # Customer quotation portal
 │           └── engineer/
-│               ├── TechnicianDashboard.js    # Complete dashboard
+│               ├── TechnicianDashboard.js    # Engineer dashboard
 │               ├── TechnicianVisitDetail.js  # Full visit workflow
 │               └── EngineerTicketDetail.js   # Ticket detail
 └── ...
@@ -123,11 +165,13 @@ PENDING_ACCEPTANCE → (engineer declines) → NEW (ready for reassignment)
 
 ## Prioritized Backlog
 
-### P0 - Immediate
-- None (Engineer Portal complete and tested)
+### P0 - COMPLETE
+- ✅ Admin Quotation Management UI
+- ✅ Customer Portal Quotations
+- ✅ Strict Ticket Workflow Enforcement
+- ✅ Workflow Progress Indicator
 
 ### P1 - Next Sprint
-- **Admin Quotation Management UI** - Send/approve quotations
 - **Email Notifications** - Assignment, quotation events
 - **Quotation PDF Generation**
 - **RMM Integration** - Tactical RMM
@@ -142,11 +186,15 @@ PENDING_ACCEPTANCE → (engineer declines) → NEW (ready for reassignment)
 ## Test Reports
 - `/app/test_reports/iteration_34.json` - Accept/Decline workflow (100% pass)
 - `/app/test_reports/iteration_35.json` - Engineer Portal comprehensive (95% pass)
+- `/app/test_reports/iteration_36.json` - Quotation & Workflow tests (100% pass)
+
+## Test Files
+- `/app/backend/tests/test_quotation_workflow.py` - Quotation and workflow validation tests
 
 ## Credentials (Preview Environment)
 - Admin: `ck@motta.in` / `Charu@123@`
 - Engineer: `john.tech@test.com` / `Tech@123`
-- Portal User: `portal@acme.com` / `Portal@123`
+- Company: `testuser@testcompany.com` / `Test@123`
 
 ## 3rd Party Integrations
 - **OpenAI GPT-4o-mini**: AI features (uses Emergent LLM Key)
@@ -154,5 +202,7 @@ PENDING_ACCEPTANCE → (engineer declines) → NEW (ready for reassignment)
 - **Cloudflare**: DNS and SSL
 
 ---
-Last Updated: December 2025
-Engineer Portal - All 9 Features COMPLETE
+Last Updated: February 2026
+- Admin Quotation Management UI - COMPLETE
+- Customer Portal Quotations - COMPLETE  
+- Strict Workflow Enforcement - COMPLETE
