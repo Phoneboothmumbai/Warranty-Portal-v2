@@ -6362,6 +6362,217 @@ async def engineer_check_out(
     }
 
 
+# ==================== NEW SERVICE MODULE - ENGINEER ENDPOINTS ====================
+
+@api_router.post("/engineer/service-visits/{visit_id}/start")
+async def engineer_start_visit(
+    visit_id: str,
+    request: Request,
+    engineer: dict = Depends(get_current_engineer)
+):
+    """Engineer starts a visit (check-in)"""
+    engineer_id = engineer["id"]
+    
+    visit = await db.service_visits_new.find_one(
+        {"id": visit_id, "technician_id": engineer_id, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    )
+    
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visit not found")
+    
+    if visit.get("status") not in ["scheduled", "in_transit"]:
+        raise HTTPException(status_code=400, detail=f"Cannot start visit in {visit.get('status')} status")
+    
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    now = get_ist_isoformat()
+    
+    await db.service_visits_new.update_one(
+        {"id": visit_id},
+        {"$set": {
+            "status": "on_site",
+            "actual_start_time": now,
+            "check_in_time": now,
+            "check_in_location": body.get("location"),
+            "updated_at": now
+        }}
+    )
+    
+    # Update ticket status to in_progress
+    if visit.get("ticket_id"):
+        await db.service_tickets_new.update_one(
+            {"id": visit["ticket_id"]},
+            {"$set": {"status": "in_progress", "updated_at": now}}
+        )
+    
+    return {"success": True, "message": "Visit started", "status": "on_site"}
+
+
+@api_router.post("/engineer/service-visits/{visit_id}/update-findings")
+async def engineer_update_findings(
+    visit_id: str,
+    request: Request,
+    engineer: dict = Depends(get_current_engineer)
+):
+    """Engineer updates visit findings"""
+    engineer_id = engineer["id"]
+    
+    visit = await db.service_visits_new.find_one(
+        {"id": visit_id, "technician_id": engineer_id, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    )
+    
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visit not found")
+    
+    if visit.get("status") != "on_site":
+        raise HTTPException(status_code=400, detail="Visit must be on_site to update findings")
+    
+    body = await request.json()
+    now = get_ist_isoformat()
+    
+    update_data = {"updated_at": now}
+    
+    if "findings" in body:
+        update_data["findings"] = body["findings"]
+    if "problem_found" in body:
+        update_data["problem_found"] = body["problem_found"]
+    if "diagnosis" in body:
+        update_data["diagnosis"] = body["diagnosis"]
+    
+    await db.service_visits_new.update_one({"id": visit_id}, {"$set": update_data})
+    
+    return {"success": True, "message": "Findings updated"}
+
+
+@api_router.post("/engineer/service-visits/{visit_id}/complete")
+async def engineer_complete_visit(
+    visit_id: str,
+    request: Request,
+    engineer: dict = Depends(get_current_engineer)
+):
+    """Engineer completes visit with resolution"""
+    engineer_id = engineer["id"]
+    
+    visit = await db.service_visits_new.find_one(
+        {"id": visit_id, "technician_id": engineer_id, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    )
+    
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visit not found")
+    
+    if visit.get("status") != "on_site":
+        raise HTTPException(status_code=400, detail="Visit must be on_site to complete")
+    
+    body = await request.json()
+    now = get_ist_isoformat()
+    
+    resolution = body.get("resolution")
+    action_taken = body.get("action_taken")
+    
+    if not resolution:
+        raise HTTPException(status_code=400, detail="Resolution is required to complete visit")
+    
+    await db.service_visits_new.update_one(
+        {"id": visit_id},
+        {"$set": {
+            "status": "completed",
+            "resolution": resolution,
+            "action_taken": action_taken,
+            "actual_end_time": now,
+            "check_out_time": now,
+            "updated_at": now
+        }}
+    )
+    
+    # Update ticket status to completed
+    if visit.get("ticket_id"):
+        await db.service_tickets_new.update_one(
+            {"id": visit["ticket_id"]},
+            {"$set": {
+                "status": "completed",
+                "resolution_summary": resolution,
+                "resolved_at": now,
+                "resolved_by_id": engineer_id,
+                "resolved_by_name": engineer.get("name"),
+                "updated_at": now
+            }}
+        )
+    
+    return {"success": True, "message": "Visit completed", "status": "completed"}
+
+
+@api_router.post("/engineer/service-visits/{visit_id}/pending-parts")
+async def engineer_mark_pending_parts(
+    visit_id: str,
+    request: Request,
+    engineer: dict = Depends(get_current_engineer)
+):
+    """Engineer marks visit as pending parts (requires quotation)"""
+    engineer_id = engineer["id"]
+    
+    visit = await db.service_visits_new.find_one(
+        {"id": visit_id, "technician_id": engineer_id, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    )
+    
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visit not found")
+    
+    if visit.get("status") != "on_site":
+        raise HTTPException(status_code=400, detail="Visit must be on_site to mark pending parts")
+    
+    body = await request.json()
+    now = get_ist_isoformat()
+    
+    findings = body.get("findings")
+    parts_required = body.get("parts_required", [])  # List of parts needed
+    
+    if not findings:
+        raise HTTPException(status_code=400, detail="Findings are required when marking pending parts")
+    
+    await db.service_visits_new.update_one(
+        {"id": visit_id},
+        {"$set": {
+            "status": "paused",
+            "findings": findings,
+            "parts_required": parts_required,
+            "paused_reason": "pending_parts",
+            "paused_at": now,
+            "updated_at": now
+        }}
+    )
+    
+    # Update ticket to pending_parts - this triggers quotation workflow
+    if visit.get("ticket_id"):
+        await db.service_tickets_new.update_one(
+            {"id": visit["ticket_id"]},
+            {"$set": {
+                "status": "pending_parts",
+                "requires_parts": True,
+                "updated_at": now
+            },
+            "$push": {
+                "status_history": {
+                    "from_status": "in_progress",
+                    "to_status": "pending_parts",
+                    "changed_at": now,
+                    "changed_by_id": engineer_id,
+                    "changed_by_name": engineer.get("name"),
+                    "notes": findings
+                }
+            }}
+        )
+    
+    return {
+        "success": True, 
+        "message": "Marked as pending parts. Back office will generate quotation.",
+        "status": "paused",
+        "next_step": "quotation_required"
+    }
+
+
 # --- Admin: Engineer Management ---
 
 @api_router.get("/admin/engineers")
