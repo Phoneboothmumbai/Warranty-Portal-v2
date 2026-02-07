@@ -1821,7 +1821,11 @@ const CompanyDetails = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label>Contract Number *</Label>
+              <Label>Contract Name *</Label>
+              <Input value={amcForm.name} onChange={(e) => setAmcForm({...amcForm, name: e.target.value})} placeholder="e.g., Annual Maintenance - IT Equipment" />
+            </div>
+            <div>
+              <Label>Contract Number</Label>
               <Input value={amcForm.contract_number} onChange={(e) => setAmcForm({...amcForm, contract_number: e.target.value})} placeholder="e.g., AMC-2024-001" />
             </div>
             <div className="grid grid-cols-2 gap-4">
