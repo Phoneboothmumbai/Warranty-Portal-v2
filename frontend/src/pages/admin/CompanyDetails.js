@@ -1065,6 +1065,12 @@ const CompanyDetails = () => {
           {/* Licenses Tab */}
           {activeTab === 'licenses' && (
             <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-medium text-slate-900">Software Licenses</h3>
+                <Button onClick={() => setShowAddLicense(true)} size="sm">
+                  <Plus className="h-4 w-4 mr-1" /> Add License
+                </Button>
+              </div>
               {licenses.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full table-modern">
@@ -1112,6 +1118,12 @@ const CompanyDetails = () => {
           {/* AMC Tab */}
           {activeTab === 'amc' && (
             <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-medium text-slate-900">AMC Contracts</h3>
+                <Button onClick={() => setShowAddAMC(true)} size="sm">
+                  <Plus className="h-4 w-4 mr-1" /> Add AMC Contract
+                </Button>
+              </div>
               {amc_contracts.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full table-modern">
