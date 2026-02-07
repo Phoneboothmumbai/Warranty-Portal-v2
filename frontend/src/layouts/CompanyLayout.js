@@ -8,6 +8,7 @@ import { useCompanyAuth } from '../context/CompanyAuthContext';
 
 const navItems = [
   { to: '/company/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/company/tickets', icon: Ticket, label: 'Service Tickets' },
   { to: '/company/devices', icon: Laptop, label: 'Devices' },
   { to: '/company/credentials', icon: Key, label: 'Credentials' },
   { to: '/company/warranty', icon: Shield, label: 'Warranty & Coverage' },
