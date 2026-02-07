@@ -81,7 +81,7 @@ const DeviceDashboard = () => {
   };
 
   const getWarrantyStatus = () => {
-    if (!device?.warranty_end) return { status: 'unknown', color: 'slate' };
+    if (!device?.warranty_end) return { status: 'unknown', color: 'slate', days: 'N/A' };
     const endDate = new Date(device.warranty_end);
     const now = new Date();
     const daysLeft = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
