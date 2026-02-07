@@ -6011,32 +6011,25 @@ async def engineer_login(request: Request, login: EngineerLogin):
             }
         }
     
-    # Check staff_users with Technician role
+    # Check staff_users - any active staff with password can login as engineer/technician
     staff_user = await db.staff_users.find_one(
         {"email": login.email, "state": "active", "is_deleted": {"$ne": True}},
         {"_id": 0}
     )
     
     if staff_user and staff_user.get("password_hash") and verify_password(login.password, staff_user["password_hash"]):
-        # Verify user has Technician role
-        role_ids = staff_user.get("role_ids", [])
-        if role_ids:
-            tech_role = await db.staff_roles.find_one({
-                "id": {"$in": role_ids},
-                "name": {"$regex": "technician", "$options": "i"}
-            })
-            if tech_role:
-                token = create_access_token(data={"sub": staff_user["id"], "type": "engineer"})
-                return {
-                    "access_token": token,
-                    "token_type": "bearer",
-                    "engineer": {
-                        "id": staff_user["id"],
-                        "name": staff_user["name"],
-                        "email": staff_user["email"],
-                        "phone": staff_user.get("phone")
-                    }
-                }
+        # Allow any staff user to login to engineer portal (they can view their assigned visits)
+        token = create_access_token(data={"sub": staff_user["id"], "type": "engineer", "staff_user": True})
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "engineer": {
+                "id": staff_user["id"],
+                "name": staff_user["name"],
+                "email": staff_user["email"],
+                "phone": staff_user.get("phone")
+            }
+        }
     
     raise HTTPException(status_code=401, detail="Invalid email or password")
 
