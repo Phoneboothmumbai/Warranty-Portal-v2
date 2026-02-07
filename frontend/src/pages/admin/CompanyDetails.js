@@ -628,6 +628,79 @@ const CompanyDetails = () => {
             </div>
           )}
 
+          {/* Email Domains Tab */}
+          {activeTab === 'email_domains' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-slate-900">Email Domains</h3>
+                  <p className="text-sm text-slate-500">Users with these email domains will be auto-assigned to this company</p>
+                </div>
+                <Button onClick={() => setShowAddDomain(true)} size="sm">
+                  <Plus className="h-4 w-4 mr-1" /> Add Domain
+                </Button>
+              </div>
+              
+              {loadingDomains ? (
+                <div className="flex justify-center py-8">
+                  <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : emailDomains.length > 0 ? (
+                <div className="border rounded-lg divide-y">
+                  {emailDomains.map((domain, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 hover:bg-slate-50">
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-slate-400" />
+                        <span className="font-mono text-sm">@{typeof domain === 'string' ? domain : domain.domain}</span>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleDeleteDomain(typeof domain === 'string' ? domain : domain.domain)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-slate-500">
+                  <Globe className="h-12 w-12 mx-auto mb-2 text-slate-300" />
+                  <p>No email domains configured</p>
+                  <p className="text-sm">Add domains to auto-assign users to this company</p>
+                </div>
+              )}
+
+              {/* Add Domain Dialog */}
+              <Dialog open={showAddDomain} onOpenChange={setShowAddDomain}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Email Domain</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500">@</span>
+                      <Input
+                        value={newDomain}
+                        onChange={(e) => setNewDomain(e.target.value.replace('@', ''))}
+                        placeholder="example.com"
+                        className="flex-1"
+                      />
+                    </div>
+                    <p className="text-sm text-slate-500">
+                      Users signing up with emails from this domain will be automatically linked to {company?.name}
+                    </p>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowAddDomain(false)}>Cancel</Button>
+                    <Button onClick={handleAddDomain} disabled={!newDomain.trim()}>Add Domain</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
+
           {/* Devices Tab */}
           {activeTab === 'devices' && (
             <div>
