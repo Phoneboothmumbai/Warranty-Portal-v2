@@ -349,7 +349,7 @@ const CompanyDetails = () => {
 
   // Add AMC Contract
   const handleAddAMC = async () => {
-    if (!amcForm.contract_number) { toast.error('Contract number is required'); return; }
+    if (!amcForm.name) { toast.error('Contract name is required'); return; }
     setSavingItem(true);
     try {
       await axios.post(`${API}/admin/amc-contracts`, 
@@ -357,7 +357,7 @@ const CompanyDetails = () => {
         { headers: { Authorization: `Bearer ${token}` }}
       );
       toast.success('AMC Contract added');
-      setAmcForm({ contract_number: '', start_date: '', end_date: '', coverage_type: 'comprehensive', value: '' });
+      setAmcForm({ name: '', contract_number: '', start_date: '', end_date: '', coverage_type: 'comprehensive', value: '' });
       setShowAddAMC(false);
       fetchCompanyOverview();
     } catch (error) {
