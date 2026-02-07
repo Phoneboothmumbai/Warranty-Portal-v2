@@ -295,11 +295,11 @@ const CompanyDetails = () => {
     setSavingItem(true);
     try {
       await axios.post(`${API}/admin/devices`, 
-        { ...deviceForm2, company_id: companyId },
+        { ...deviceForm2, company_id: companyId, purchase_date: deviceForm2.purchase_date || new Date().toISOString().split('T')[0] },
         { headers: { Authorization: `Bearer ${token}` }}
       );
       toast.success('Device added');
-      setDeviceForm2({ brand: '', model: '', serial_number: '', device_type: '', location: '' });
+      setDeviceForm2({ brand: '', model: '', serial_number: '', device_type: '', location: '', purchase_date: new Date().toISOString().split('T')[0] });
       setShowAddDevice(false);
       fetchCompanyOverview();
     } catch (error) {
