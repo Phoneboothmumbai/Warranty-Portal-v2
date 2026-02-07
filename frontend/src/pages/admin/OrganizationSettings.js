@@ -282,6 +282,74 @@ export default function OrganizationSettings() {
         </div>
       )}
 
+      {/* Staff & Technicians Tab */}
+      {activeTab === 'team' && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCog className="w-5 h-5" />
+                Staff & Technicians
+              </CardTitle>
+              <CardDescription>
+                Manage your organization's staff members, technicians, roles and permissions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div 
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
+                  onClick={() => navigate('/admin/staff')}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <Users className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-slate-900">Staff Management</h3>
+                      <p className="text-sm text-slate-500">Add and manage staff members, technicians, and engineers</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-400" />
+                </div>
+                
+                <div 
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
+                  onClick={() => navigate('/admin/staff?tab=roles')}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                      <Shield className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-slate-900">Roles & Permissions</h3>
+                      <p className="text-sm text-slate-500">Configure roles and access permissions for your team</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-400" />
+                </div>
+                
+                <div 
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
+                  onClick={() => navigate('/admin/staff?tab=departments')}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                      <Building2 className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-slate-900">Departments</h3>
+                      <p className="text-sm text-slate-500">Organize staff into departments and teams</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* White Label Tab */}
       {activeTab === 'branding' && (
         <div className="space-y-6">
