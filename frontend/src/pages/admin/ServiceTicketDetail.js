@@ -117,13 +117,32 @@ export default function ServiceTicketDetail() {
   // Fetch supporting data
   const fetchSupportingData = useCallback(async () => {
     try {
-      const [staffRes, itemsRes, locationsRes] = await Promise.all([
+      const [staffRes, engineersRes, itemsRes, locationsRes] = await Promise.all([
         axios.get(`${API_URL}/api/admin/staff/users?limit=100`, { headers }),
+        axios.get(`${API_URL}/api/admin/engineers`, { headers }).catch(() => ({ data: [] })),
         axios.get(`${API_URL}/api/admin/items?limit=500`, { headers }),
         axios.get(`${API_URL}/api/admin/inventory/locations`, { headers })
       ]);
-      // Handle both array and object response formats
-      setStaff(Array.isArray(staffRes.data) ? staffRes.data : (staffRes.data.users || []));
+      // Combine staff users (with Technician role) and engineers
+      const staffUsers = Array.isArray(staffRes.data) ? staffRes.data : (staffRes.data.users || []);
+      const engineers = Array.isArray(engineersRes.data) ? engineersRes.data : [];
+      
+      // Filter staff to only show those with technician-related roles
+      const technicians = staffUsers.filter(s => {
+        const roles = s.roles || [];
+        return roles.some(r => r.name?.toLowerCase().includes('technician') || r.name?.toLowerCase().includes('engineer'));
+      });
+      
+      // Merge technicians and engineers, removing duplicates by email
+      const allTechnicians = [...technicians];
+      const existingEmails = new Set(technicians.map(t => t.email?.toLowerCase()));
+      engineers.forEach(eng => {
+        if (eng.is_active && !existingEmails.has(eng.email?.toLowerCase())) {
+          allTechnicians.push({ ...eng, state: 'active' });
+        }
+      });
+      
+      setStaff(allTechnicians);
       setItems(Array.isArray(itemsRes.data) ? itemsRes.data : (itemsRes.data.items || []));
       setLocations(Array.isArray(locationsRes.data) ? locationsRes.data : (locationsRes.data.locations || []));
     } catch (error) {
