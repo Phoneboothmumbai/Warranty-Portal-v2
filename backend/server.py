@@ -6112,44 +6112,73 @@ async def get_visit_details(
     engineer: dict = Depends(get_current_engineer)
 ):
     """Get detailed visit information"""
+    engineer_id = engineer["id"]
+    
+    # Try legacy field_visits first
     visit = await db.field_visits.find_one(
-        {"id": visit_id, "engineer_id": engineer["id"]},
+        {"id": visit_id, "engineer_id": engineer_id},
         {"_id": 0}
     )
+    
+    source = "legacy"
+    
+    # If not found, try new service_visits_new
+    if not visit:
+        visit = await db.service_visits_new.find_one(
+            {"id": visit_id, "technician_id": engineer_id},
+            {"_id": 0}
+        )
+        source = "service_module"
     
     if not visit:
         raise HTTPException(status_code=404, detail="Visit not found")
     
-    # Get device details
-    device = await db.devices.find_one(
-        {"id": visit["device_id"]},
-        {"_id": 0}
-    )
+    device = None
+    company = None
+    ticket = None
+    service_history = []
     
-    # Get company details
-    company = await db.companies.find_one(
-        {"id": visit["company_id"]},
-        {"_id": 0, "name": 1, "address": 1, "contact_name": 1, "contact_phone": 1, "contact_email": 1}
-    )
-    
-    # Get ticket details
-    ticket = await db.service_tickets.find_one(
-        {"id": visit["ticket_id"]},
-        {"_id": 0}
-    )
-    
-    # Get service history for this device
-    service_history = await db.service_history.find(
-        {"device_id": visit["device_id"]},
-        {"_id": 0}
-    ).sort("service_date", -1).limit(5).to_list(5)
+    if source == "legacy":
+        # Get device details
+        device = await db.devices.find_one(
+            {"id": visit.get("device_id")},
+            {"_id": 0}
+        )
+        
+        # Get company details
+        company = await db.companies.find_one(
+            {"id": visit.get("company_id")},
+            {"_id": 0, "name": 1, "address": 1, "contact_name": 1, "contact_phone": 1, "contact_email": 1}
+        )
+        
+        # Get ticket details
+        ticket = await db.service_tickets.find_one(
+            {"id": visit.get("ticket_id")},
+            {"_id": 0}
+        )
+        
+        # Get service history for this device
+        if visit.get("device_id"):
+            service_history = await db.service_history.find(
+                {"device_id": visit["device_id"]},
+                {"_id": 0}
+            ).sort("service_date", -1).limit(5).to_list(5)
+    else:
+        # New service module visit
+        ticket = await db.service_tickets_new.find_one(
+            {"id": visit.get("ticket_id")},
+            {"_id": 0}
+        )
+        if ticket:
+            company = {"name": ticket.get("company_name"), "address": ticket.get("site_address")}
     
     return {
         "visit": visit,
         "device": device,
         "company": company,
         "ticket": ticket,
-        "service_history": service_history
+        "service_history": service_history,
+        "source": source
     }
 
 
