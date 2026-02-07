@@ -231,7 +231,7 @@ class TestEngineerDeclineWorkflow:
     def setup(self):
         """Setup - get tokens"""
         # Admin login
-        admin_response = requests.post(f"{BASE_URL}/api/admin/login", json={
+        admin_response = requests.post(f"{BASE_URL}/api/auth/login", json={
             "email": "ck@motta.in",
             "password": "Charu@123@"
         })
@@ -239,7 +239,7 @@ class TestEngineerDeclineWorkflow:
             self.__class__.admin_token = admin_response.json().get("access_token")
         
         # Engineer login
-        engineer_response = requests.post(f"{BASE_URL}/api/engineer/login", json={
+        engineer_response = requests.post(f"{BASE_URL}/api/engineer/auth/login", json={
             "email": "john.tech@test.com",
             "password": "Tech@123"
         })
@@ -334,14 +334,14 @@ class TestEngineerWorkflowEdgeCases:
     @pytest.fixture(autouse=True)
     def setup(self):
         """Setup - get tokens"""
-        admin_response = requests.post(f"{BASE_URL}/api/admin/login", json={
+        admin_response = requests.post(f"{BASE_URL}/api/auth/login", json={
             "email": "ck@motta.in",
             "password": "Charu@123@"
         })
         if admin_response.status_code == 200:
             self.__class__.admin_token = admin_response.json().get("access_token")
         
-        engineer_response = requests.post(f"{BASE_URL}/api/engineer/login", json={
+        engineer_response = requests.post(f"{BASE_URL}/api/engineer/auth/login", json={
             "email": "john.tech@test.com",
             "password": "Tech@123"
         })
@@ -479,7 +479,7 @@ class TestAdminServiceTicketsList:
     @pytest.fixture(autouse=True)
     def setup(self):
         """Setup - get admin token"""
-        admin_response = requests.post(f"{BASE_URL}/api/admin/login", json={
+        admin_response = requests.post(f"{BASE_URL}/api/auth/login", json={
             "email": "ck@motta.in",
             "password": "Charu@123@"
         })
