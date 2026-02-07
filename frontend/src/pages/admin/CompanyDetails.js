@@ -721,6 +721,12 @@ const CompanyDetails = () => {
           {/* Users Tab */}
           {activeTab === 'users' && (
             <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-medium text-slate-900">Users / Contacts</h3>
+                <Button onClick={() => setShowAddContact(true)} size="sm">
+                  <Plus className="h-4 w-4 mr-1" /> Add Contact
+                </Button>
+              </div>
               {users.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full table-modern">
