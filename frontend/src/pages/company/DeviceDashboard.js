@@ -606,12 +606,14 @@ const DeviceDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {amcAnalytics.coverage_includes?.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-sm">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                        <span>{item}</span>
-                      </div>
-                    )) || (
+                    {Array.isArray(amcAnalytics.coverage_includes) && amcAnalytics.coverage_includes.length > 0 ? (
+                      amcAnalytics.coverage_includes.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-sm">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                          <span>{item}</span>
+                        </div>
+                      ))
+                    ) : (
                       <p className="text-slate-500 text-sm">Coverage details not specified</p>
                     )}
                   </div>
