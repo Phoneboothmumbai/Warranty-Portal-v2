@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
-  ArrowLeft, MapPin, Phone, Building2, Laptop, Clock, 
+  ArrowLeft, MapPin, Phone, Building2, Clock, 
   CheckCircle2, Camera, AlertCircle, Play, User, Square,
-  Calendar, FileText, Wrench, Package, Timer, Send
+  Calendar, FileText, Wrench, Package, Timer, Send, 
+  Plus, X, History, Upload, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useEngineerAuth } from '../../context/EngineerAuthContext';
 import { Button } from '../../components/ui/button';
@@ -28,38 +29,61 @@ const API = process.env.REACT_APP_BACKEND_URL;
 const TechnicianVisitDetail = () => {
   const { visitId } = useParams();
   const navigate = useNavigate();
-  const { token, isAuthenticated } = useEngineerAuth();
+  const { token, isAuthenticated, engineer } = useEngineerAuth();
   
   const [visit, setVisit] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const timerRef = useRef(null);
+  
+  // Expandable sections
+  const [showPreviousVisits, setShowPreviousVisits] = useState(false);
   
   // Modal states
-  const [showStopTimerModal, setShowStopTimerModal] = useState(false);
-  const [showAddActionModal, setShowAddActionModal] = useState(false);
-  const [showRequestPartsModal, setShowRequestPartsModal] = useState(false);
+  const [showDiagnosisModal, setShowDiagnosisModal] = useState(false);
+  const [showResolveModal, setShowResolveModal] = useState(false);
+  const [showPendingPartsModal, setShowPendingPartsModal] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
   
-  // Form data
-  const [stopTimerData, setStopTimerData] = useState({
-    diagnostics: '',
+  // Form data for diagnosis
+  const [diagnosisData, setDiagnosisData] = useState({
+    problem_identified: '',
+    root_cause: '',
+    observations: ''
+  });
+  
+  // Form data for resolution
+  const [resolutionData, setResolutionData] = useState({
+    resolution_summary: '',
     actions_taken: [],
-    work_summary: '',
-    outcome: 'resolved',
-    customer_name: '',
-    notes: ''
+    recommendations: ''
   });
   const [newAction, setNewAction] = useState('');
-  const [actionToAdd, setActionToAdd] = useState('');
   
-  // Items for parts request
-  const [items, setItems] = useState([]);
-  const [partsRequestData, setPartsRequestData] = useState({
-    item_id: '',
-    quantity_requested: 1,
-    urgency: 'normal',
-    request_notes: ''
+  // Form data for pending parts
+  const [partsData, setPartsData] = useState({
+    diagnosis: {
+      problem_identified: '',
+      root_cause: '',
+      observations: ''
+    },
+    parts_required: [],
+    remarks: ''
   });
+  const [newPart, setNewPart] = useState({
+    item_id: '',
+    item_name: '',
+    item_description: '',
+    quantity: 1,
+    urgency: 'normal',
+    notes: ''
+  });
+  
+  // Inventory items for selection
+  const [inventoryItems, setInventoryItems] = useState([]);
+  const [searchingItems, setSearchingItems] = useState(false);
+  const [itemSearch, setItemSearch] = useState('');
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -68,25 +92,22 @@ const TechnicianVisitDetail = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  // Fetch visit details
+  // Fetch visit details using new engineer portal API
   const fetchVisitDetails = useCallback(async () => {
     if (!token) return;
     
     try {
-      const response = await axios.get(`${API}/api/admin/visits/${visitId}`, {
+      const response = await axios.get(`${API}/api/engineer/visits/${visitId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setVisit(response.data);
       
-      // Pre-fill stop timer data if visit has data
-      if (response.data.diagnostics || response.data.work_summary) {
-        setStopTimerData({
-          diagnostics: response.data.diagnostics || '',
-          actions_taken: response.data.actions_taken || [],
-          work_summary: response.data.work_summary || '',
-          outcome: response.data.outcome || 'resolved',
-          customer_name: response.data.customer_name || '',
-          notes: response.data.internal_notes || ''
+      // Pre-fill diagnosis form if data exists
+      if (response.data.problem_found || response.data.diagnosis) {
+        setDiagnosisData({
+          problem_identified: response.data.problem_found || '',
+          root_cause: response.data.diagnosis || '',
+          observations: response.data.findings || ''
         });
       }
     } catch (err) {
@@ -98,173 +119,240 @@ const TechnicianVisitDetail = () => {
     }
   }, [visitId, token, navigate]);
 
-  // Fetch items for parts request
-  const fetchItems = useCallback(async () => {
-    if (!token) return;
-    try {
-      const res = await axios.get(`${API}/api/admin/items?limit=500`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setItems(res.data.items || []);
-    } catch (err) {
-      console.error('Failed to fetch items:', err);
-    }
-  }, [token]);
-
   useEffect(() => {
     fetchVisitDetails();
-    fetchItems();
-  }, [fetchVisitDetails, fetchItems]);
+  }, [fetchVisitDetails]);
 
-  // Timer effect for in-progress visits
+  // Timer for in-progress visits
   useEffect(() => {
     if (visit?.status === 'in_progress' && visit?.start_time) {
       const startTime = new Date(visit.start_time).getTime();
       
-      const updateElapsed = () => {
+      const updateTimer = () => {
         const now = Date.now();
         const elapsed = Math.floor((now - startTime) / 1000);
         setElapsedTime(elapsed);
       };
       
-      updateElapsed();
-      const interval = setInterval(updateElapsed, 1000);
+      updateTimer();
+      timerRef.current = setInterval(updateTimer, 1000);
       
-      return () => clearInterval(interval);
+      return () => {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+        }
+      };
     }
   }, [visit?.status, visit?.start_time]);
 
-  // Format elapsed time
-  const formatElapsedTime = (seconds) => {
+  // Search inventory items
+  const searchInventory = async (query) => {
+    if (!query || query.length < 2) {
+      setInventoryItems([]);
+      return;
+    }
+    
+    setSearchingItems(true);
+    try {
+      const response = await axios.get(`${API}/api/engineer/inventory/items?search=${query}&limit=10`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setInventoryItems(response.data.items || []);
+    } catch (err) {
+      console.error('Failed to search items:', err);
+    } finally {
+      setSearchingItems(false);
+    }
+  };
+
+  // Start Visit
+  const handleStartVisit = async () => {
+    setActionLoading(true);
+    try {
+      await axios.post(`${API}/api/engineer/visits/${visitId}/start`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Visit started!');
+      fetchVisitDetails();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to start visit');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // End Visit (just stops timer, doesn't resolve)
+  const handleEndVisit = async () => {
+    setActionLoading(true);
+    try {
+      await axios.post(`${API}/api/engineer/visits/${visitId}/end`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Visit timer stopped');
+      fetchVisitDetails();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to end visit');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Save Diagnosis
+  const handleSaveDiagnosis = async () => {
+    if (!diagnosisData.problem_identified.trim()) {
+      toast.error('Please enter the problem identified');
+      return;
+    }
+    
+    setActionLoading(true);
+    try {
+      await axios.post(`${API}/api/engineer/visits/${visitId}/diagnosis`, diagnosisData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Diagnosis saved');
+      setShowDiagnosisModal(false);
+      fetchVisitDetails();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to save diagnosis');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Resolve Visit
+  const handleResolveVisit = async () => {
+    if (!resolutionData.resolution_summary.trim()) {
+      toast.error('Please enter resolution summary');
+      return;
+    }
+    
+    setActionLoading(true);
+    try {
+      await axios.post(`${API}/api/engineer/visits/${visitId}/resolve`, resolutionData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Visit resolved successfully!');
+      setShowResolveModal(false);
+      navigate('/engineer/dashboard');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to resolve visit');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Mark Pending Parts
+  const handleMarkPendingParts = async () => {
+    if (!partsData.diagnosis.problem_identified.trim()) {
+      toast.error('Please enter the problem identified');
+      return;
+    }
+    if (partsData.parts_required.length === 0) {
+      toast.error('Please add at least one part');
+      return;
+    }
+    if (!partsData.remarks.trim()) {
+      toast.error('Please enter remarks (mandatory)');
+      return;
+    }
+    
+    setActionLoading(true);
+    try {
+      const response = await axios.post(`${API}/api/engineer/visits/${visitId}/pending-parts`, partsData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(`Marked as pending parts. Quotation ${response.data.quotation_number} created.`);
+      setShowPendingPartsModal(false);
+      navigate('/engineer/dashboard');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to mark pending parts');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Add action to resolution list
+  const handleAddAction = () => {
+    if (!newAction.trim()) return;
+    setResolutionData(prev => ({
+      ...prev,
+      actions_taken: [...prev.actions_taken, newAction.trim()]
+    }));
+    setNewAction('');
+  };
+
+  // Remove action from resolution list
+  const handleRemoveAction = (index) => {
+    setResolutionData(prev => ({
+      ...prev,
+      actions_taken: prev.actions_taken.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Add part to parts list
+  const handleAddPart = () => {
+    if (!newPart.item_name.trim()) {
+      toast.error('Please enter part name');
+      return;
+    }
+    setPartsData(prev => ({
+      ...prev,
+      parts_required: [...prev.parts_required, { ...newPart }]
+    }));
+    setNewPart({
+      item_id: '',
+      item_name: '',
+      item_description: '',
+      quantity: 1,
+      urgency: 'normal',
+      notes: ''
+    });
+    setItemSearch('');
+    setInventoryItems([]);
+  };
+
+  // Remove part from list
+  const handleRemovePart = (index) => {
+    setPartsData(prev => ({
+      ...prev,
+      parts_required: prev.parts_required.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Select item from inventory
+  const handleSelectInventoryItem = (item) => {
+    setNewPart(prev => ({
+      ...prev,
+      item_id: item.id,
+      item_name: item.name,
+      item_description: item.description || ''
+    }));
+    setItemSearch(item.name);
+    setInventoryItems([]);
+  };
+
+  const formatTime = (seconds) => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
-    if (hrs > 0) {
-      return `${hrs}h ${mins}m ${secs}s`;
-    }
-    return `${mins}m ${secs}s`;
-  };
-
-  // Start timer
-  const handleStartTimer = async () => {
-    setActionLoading(true);
-    try {
-      await axios.post(
-        `${API}/api/admin/visits/${visitId}/start-timer`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success('Timer started! Work in progress.');
-      fetchVisitDetails();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to start timer');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // Stop timer
-  const handleStopTimer = async () => {
-    if (!stopTimerData.work_summary) {
-      toast.error('Please provide a work summary');
-      return;
-    }
-    
-    setActionLoading(true);
-    try {
-      await axios.post(
-        `${API}/api/admin/visits/${visitId}/stop-timer`,
-        stopTimerData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success('Visit completed successfully!');
-      setShowStopTimerModal(false);
-      navigate('/engineer/dashboard');
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to stop timer');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // Add action
-  const handleAddAction = async () => {
-    if (!actionToAdd.trim()) {
-      toast.error('Please enter an action');
-      return;
-    }
-    
-    setActionLoading(true);
-    try {
-      await axios.post(
-        `${API}/api/admin/visits/${visitId}/add-action`,
-        { action: actionToAdd },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success('Action recorded');
-      setShowAddActionModal(false);
-      setActionToAdd('');
-      fetchVisitDetails();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to add action');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // Request parts
-  const handleRequestParts = async () => {
-    if (!partsRequestData.item_id) {
-      toast.error('Please select an item');
-      return;
-    }
-    
-    setActionLoading(true);
-    try {
-      await axios.post(
-        `${API}/api/admin/ticket-parts/requests`,
-        { 
-          ...partsRequestData, 
-          ticket_id: visit.ticket_id,
-          visit_id: visitId 
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success('Parts requested successfully');
-      setShowRequestPartsModal(false);
-      setPartsRequestData({ item_id: '', quantity_requested: 1, urgency: 'normal', request_notes: '' });
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to request parts');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // Add action to stop timer form
-  const addActionToList = () => {
-    if (newAction.trim()) {
-      setStopTimerData({
-        ...stopTimerData,
-        actions_taken: [...stopTimerData.actions_taken, newAction.trim()]
-      });
-      setNewAction('');
-    }
-  };
-
-  const removeActionFromList = (index) => {
-    setStopTimerData({
-      ...stopTimerData,
-      actions_taken: stopTimerData.actions_taken.filter((_, i) => i !== index)
-    });
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const formatDateTime = (dateStr) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleString('en-GB', {
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit'
+      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
     });
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'scheduled': return 'bg-blue-50 text-blue-600 border-blue-200';
+      case 'in_progress': return 'bg-amber-50 text-amber-600 border-amber-200';
+      case 'paused': return 'bg-orange-50 text-orange-600 border-orange-200';
+      case 'completed': return 'bg-emerald-50 text-emerald-600 border-emerald-200';
+      default: return 'bg-slate-50 text-slate-600 border-slate-200';
+    }
   };
 
   if (loading) {
@@ -277,12 +365,15 @@ const TechnicianVisitDetail = () => {
 
   if (!visit) return null;
 
+  const ticket = visit.ticket || {};
   const isScheduled = visit.status === 'scheduled';
-  const isInProgress = visit.status === 'in_progress';
+  const isInProgress = visit.status === 'in_progress' || visit.status === 'on_site';
   const isCompleted = visit.status === 'completed';
+  const isPaused = visit.status === 'paused';
+  const hasDiagnosis = visit.problem_found || visit.diagnosis;
 
   return (
-    <div data-testid="visit-detail-page" className="min-h-screen bg-slate-50 pb-32">
+    <div data-testid="technician-visit-detail" className="min-h-screen bg-slate-50 pb-32">
       {/* Header */}
       <header className="bg-gradient-to-r from-slate-900 to-slate-800 text-white sticky top-0 z-50">
         <div className="px-4 py-4">
@@ -297,35 +388,40 @@ const TechnicianVisitDetail = () => {
             </Button>
             <div className="flex-1">
               <p className="font-semibold flex items-center gap-2">
-                <span className="font-mono text-blue-300">#{visit.ticket_number}</span>
+                Visit #{visit.visit_number}
                 <span className="text-slate-400">•</span>
-                <span>Visit #{visit.visit_number}</span>
+                <span className="font-mono text-blue-300 text-sm">#{visit.ticket_number}</span>
               </p>
-              <p className="text-xs text-slate-400 capitalize">{visit.status?.replace('_', ' ')}</p>
+              <p className="text-xs text-slate-400">{ticket.company_name}</p>
             </div>
+            <Badge className={`${getStatusColor(visit.status)} border`}>
+              {visit.status?.replace('_', ' ')}
+            </Badge>
           </div>
         </div>
 
-        {/* Live Timer for In Progress */}
+        {/* Timer Display for In Progress */}
         {isInProgress && (
           <div className="px-4 pb-4">
             <div className="bg-amber-500/20 border border-amber-500/30 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 bg-amber-500 rounded-full animate-pulse" />
+                  <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center animate-pulse">
+                    <Timer className="h-5 w-5 text-white" />
+                  </div>
                   <div>
-                    <p className="text-xs text-amber-200">TIME ELAPSED</p>
-                    <p className="text-2xl font-mono font-bold text-amber-400">
-                      {formatElapsedTime(elapsedTime)}
-                    </p>
+                    <p className="text-amber-200 text-sm">Visit In Progress</p>
+                    <p className="text-2xl font-mono font-bold text-white">{formatTime(elapsedTime)}</p>
                   </div>
                 </div>
                 <Button 
-                  onClick={() => setShowStopTimerModal(true)}
-                  className="bg-red-500 hover:bg-red-600"
-                  data-testid="stop-timer-btn"
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleEndVisit}
+                  disabled={actionLoading}
+                  className="border-amber-400 text-amber-400 hover:bg-amber-500/20"
                 >
-                  <Square className="h-4 w-4 mr-2" />
+                  <Square className="h-4 w-4 mr-1" />
                   Stop
                 </Button>
               </div>
@@ -335,506 +431,544 @@ const TechnicianVisitDetail = () => {
       </header>
 
       <main className="p-4 space-y-4">
-        {/* Status Card */}
-        <Card className={`border-l-4 ${
-          isScheduled ? 'border-l-blue-500' : 
-          isInProgress ? 'border-l-amber-500' : 'border-l-emerald-500'
-        }`}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {isScheduled && <Clock className="h-6 w-6 text-blue-500" />}
-                {isInProgress && <Play className="h-6 w-6 text-amber-500" />}
-                {isCompleted && <CheckCircle2 className="h-6 w-6 text-emerald-500" />}
-                <div>
-                  <p className="font-medium text-slate-900">
-                    {isScheduled && 'Ready to Start'}
-                    {isInProgress && 'Work in Progress'}
-                    {isCompleted && 'Visit Completed'}
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    {isScheduled && 'Start the timer when you begin work'}
-                    {isInProgress && 'Remember to stop the timer when done'}
-                    {isCompleted && `Completed in ${visit.duration_minutes} minutes`}
-                  </p>
-                </div>
-              </div>
-            </div>
+        {/* Ticket Summary */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Issue Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="font-medium text-slate-900">{ticket.title}</p>
+            {ticket.description && (
+              <p className="text-sm text-slate-600">{ticket.description}</p>
+            )}
+            {ticket.priority && (
+              <Badge className={`
+                ${ticket.priority === 'critical' ? 'bg-red-500 text-white' :
+                  ticket.priority === 'high' ? 'bg-orange-500 text-white' :
+                  ticket.priority === 'medium' ? 'bg-yellow-500 text-white' :
+                  'bg-slate-400 text-white'}
+              `}>
+                {ticket.priority}
+              </Badge>
+            )}
           </CardContent>
         </Card>
 
-        {/* Ticket Info */}
-        {visit.ticket && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Ticket Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 text-sm">Ticket</span>
-                <span className="font-mono font-medium">#{visit.ticket.ticket_number}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 text-sm">Title</span>
-                <span className="font-medium text-right max-w-[60%]">{visit.ticket.title}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 text-sm">Company</span>
-                <span>{visit.ticket.company_name}</span>
-              </div>
-              {visit.ticket.device_name && (
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500 text-sm">Device</span>
-                  <span>{visit.ticket.device_name}</span>
+        {/* Customer & Location */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Customer
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="font-medium">{ticket.company_name}</p>
+            {ticket.contact && (
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-slate-400" />
+                  <span>{ticket.contact.name}</span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Contact Info */}
-        {visit.ticket?.contact && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Contact Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="font-medium">{visit.ticket.contact.name}</p>
-              {visit.ticket.contact.phone && (
-                <a 
-                  href={`tel:${visit.ticket.contact.phone}`}
-                  className="flex items-center gap-2 text-sm text-blue-600"
-                >
-                  <Phone className="h-4 w-4" />
-                  {visit.ticket.contact.phone}
-                </a>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Location */}
-        {(visit.visit_location || visit.ticket?.location) && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                Location
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-slate-700">
-                {visit.visit_location || 
-                  (visit.ticket?.location && 
-                    `${visit.ticket.location.site_name || ''} ${visit.ticket.location.address || ''} ${visit.ticket.location.city || ''}`.trim()
-                  )
-                }
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Schedule */}
-        {visit.scheduled_date && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Schedule
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Date</span>
-                <span>{visit.scheduled_date}</span>
+                {ticket.contact.phone && (
+                  <a href={`tel:${ticket.contact.phone}`} className="flex items-center gap-2 text-blue-600">
+                    <Phone className="h-4 w-4" />
+                    {ticket.contact.phone}
+                  </a>
+                )}
               </div>
-              {visit.scheduled_time_from && (
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Time</span>
-                  <span>{visit.scheduled_time_from} - {visit.scheduled_time_to || 'TBD'}</span>
+            )}
+            {ticket.location && (
+              <div className="pt-2 border-t">
+                <div className="flex items-start gap-2 text-sm text-slate-600">
+                  <MapPin className="h-4 w-4 text-slate-400 mt-0.5" />
+                  <span>{ticket.location.address}{ticket.location.city && `, ${ticket.location.city}`}</span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Purpose */}
-        {visit.purpose && (
+        {/* Device Info */}
+        {ticket.device_name && (
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Wrench className="h-4 w-4" />
-                Purpose
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-slate-700">{visit.purpose}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Actions Taken (for in-progress/completed) */}
-        {(isInProgress || isCompleted) && visit.actions_taken?.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4" />
-                Actions Taken
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                {visit.actions_taken.map((action, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm">
-                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2" />
-                    {action}
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Work Summary (for completed) */}
-        {isCompleted && visit.work_summary && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Work Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              {visit.diagnostics && (
-                <div>
-                  <p className="text-slate-500 mb-1">Diagnostics</p>
-                  <p className="text-slate-900">{visit.diagnostics}</p>
-                </div>
-              )}
-              <div>
-                <p className="text-slate-500 mb-1">Summary</p>
-                <p className="text-slate-900">{visit.work_summary}</p>
-              </div>
-              {visit.outcome && (
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Outcome</span>
-                  <Badge variant="outline" className="capitalize">{visit.outcome}</Badge>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Timeline (for completed) */}
-        {isCompleted && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Timer className="h-4 w-4" />
-                Time Log
+                Device
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-500">Started</span>
-                <span>{formatDateTime(visit.start_time)}</span>
+                <span className="text-slate-500">Device</span>
+                <span>{ticket.device_name}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Ended</span>
-                <span>{formatDateTime(visit.end_time)}</span>
-              </div>
-              <div className="flex justify-between font-medium">
-                <span className="text-slate-500">Duration</span>
-                <span>{visit.duration_minutes} minutes</span>
-              </div>
+              {ticket.device_serial && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Serial</span>
+                  <span className="font-mono">{ticket.device_serial}</span>
+                </div>
+              )}
+              {ticket.warranty_status && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Warranty</span>
+                  <Badge variant="outline">{ticket.warranty_status}</Badge>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
 
-        {/* Parts Issued */}
+        {/* Diagnosis & Findings */}
+        <Card className={hasDiagnosis ? 'border-emerald-200' : 'border-amber-200'}>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                Diagnosis & Findings
+              </CardTitle>
+              {isInProgress && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowDiagnosisModal(true)}
+                >
+                  {hasDiagnosis ? 'Edit' : 'Add'}
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {hasDiagnosis ? (
+              <div className="space-y-3 text-sm">
+                <div>
+                  <p className="text-slate-500 text-xs">Problem Identified</p>
+                  <p className="font-medium">{visit.problem_found}</p>
+                </div>
+                {visit.diagnosis && (
+                  <div>
+                    <p className="text-slate-500 text-xs">Root Cause</p>
+                    <p>{visit.diagnosis}</p>
+                  </div>
+                )}
+                {visit.findings && (
+                  <div>
+                    <p className="text-slate-500 text-xs">Observations</p>
+                    <p>{visit.findings}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-slate-500 text-sm italic">
+                {isInProgress ? 'Click "Add" to record diagnosis' : 'No diagnosis recorded'}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Previous Visits */}
+        {visit.previous_visits?.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <button 
+                className="flex items-center justify-between w-full"
+                onClick={() => setShowPreviousVisits(!showPreviousVisits)}
+              >
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Previous Visits ({visit.previous_visits.length})
+                </CardTitle>
+                {showPreviousVisits ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+            </CardHeader>
+            {showPreviousVisits && (
+              <CardContent>
+                <div className="space-y-3">
+                  {visit.previous_visits.map((pv, idx) => (
+                    <div key={idx} className="border border-slate-200 rounded-lg p-3 text-sm">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-medium">Visit #{pv.visit_number}</span>
+                        <Badge variant="outline" className="text-xs capitalize">{pv.status}</Badge>
+                      </div>
+                      <p className="text-xs text-slate-500 mb-1">{pv.scheduled_date} • {pv.technician_name}</p>
+                      {pv.problem_found && (
+                        <p className="text-slate-700"><strong>Problem:</strong> {pv.problem_found}</p>
+                      )}
+                      {pv.resolution && (
+                        <p className="text-slate-700"><strong>Resolution:</strong> {pv.resolution}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            )}
+          </Card>
+        )}
+
+        {/* Parts Issued (for this visit) */}
         {visit.parts_issued?.length > 0 && (
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Package className="h-4 w-4" />
-                Parts Used
+                Parts Issued ({visit.parts_issued.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {visit.parts_issued.map((part) => (
-                  <div key={part.id} className="flex justify-between items-center text-sm">
-                    <span>{part.item_name}</span>
-                    <Badge variant="outline">x{part.quantity_issued}</Badge>
+                {visit.parts_issued.map((part, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-sm border-b border-slate-100 pb-2 last:border-0">
+                    <div>
+                      <p className="font-medium">{part.item_name}</p>
+                      <p className="text-xs text-slate-500">Qty: {part.quantity_issued}</p>
+                    </div>
+                    {part.serial_numbers?.length > 0 && (
+                      <span className="text-xs text-slate-400 font-mono">{part.serial_numbers.join(', ')}</span>
+                    )}
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
         )}
+
+        {/* Photos */}
+        {visit.photos?.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Camera className="h-4 w-4" />
+                Photos ({visit.photos.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-2">
+                {visit.photos.map((photo, idx) => (
+                  <img key={idx} src={photo} alt={`Visit photo ${idx + 1}`} className="rounded-lg w-full h-20 object-cover" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Resolution Summary (if completed) */}
+        {isCompleted && visit.resolution && (
+          <Card className="border-emerald-200 bg-emerald-50/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2 text-emerald-700">
+                <CheckCircle2 className="h-4 w-4" />
+                Resolution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-slate-700">{visit.resolution}</p>
+              {visit.actions_taken?.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-emerald-200">
+                  <p className="text-xs text-slate-500 mb-1">Actions Taken:</p>
+                  <ul className="list-disc list-inside text-sm">
+                    {visit.actions_taken.map((action, idx) => (
+                      <li key={idx}>{action}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </main>
 
-      {/* Action Buttons */}
-      {!isCompleted && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 space-y-2">
-          {isScheduled && (
+      {/* Bottom Action Buttons */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 space-y-2">
+        {isScheduled && (
+          <Button 
+            className="w-full bg-blue-500 hover:bg-blue-600 h-12"
+            onClick={handleStartVisit}
+            disabled={actionLoading}
+            data-testid="start-visit-btn"
+          >
+            <Play className="h-5 w-5 mr-2" />
+            Start Visit
+          </Button>
+        )}
+        
+        {isInProgress && (
+          <div className="grid grid-cols-2 gap-2">
             <Button 
-              className="w-full bg-blue-500 hover:bg-blue-600 h-12"
-              onClick={handleStartTimer}
-              disabled={actionLoading}
-              data-testid="start-timer-btn"
+              className="bg-emerald-500 hover:bg-emerald-600"
+              onClick={() => setShowResolveModal(true)}
+              disabled={actionLoading || !hasDiagnosis}
+              data-testid="resolve-btn"
             >
-              <Play className="h-5 w-5 mr-2" />
-              {actionLoading ? 'Starting...' : 'Start Timer'}
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Resolve
             </Button>
-          )}
-          
-          {isInProgress && (
-            <>
-              <div className="grid grid-cols-2 gap-2">
-                <Button 
-                  variant="outline" 
-                  className="h-12"
-                  onClick={() => setShowAddActionModal(true)}
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Add Action
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="h-12"
-                  onClick={() => setShowRequestPartsModal(true)}
-                >
-                  <Package className="h-4 w-4 mr-2" />
-                  Request Parts
-                </Button>
-              </div>
-              <Button 
-                className="w-full bg-emerald-500 hover:bg-emerald-600 h-12"
-                onClick={() => setShowStopTimerModal(true)}
-                data-testid="complete-btn"
-              >
-                <CheckCircle2 className="h-5 w-5 mr-2" />
-                Complete Visit
-              </Button>
-            </>
-          )}
-        </div>
-      )}
+            <Button 
+              variant="outline"
+              className="border-orange-300 text-orange-600 hover:bg-orange-50"
+              onClick={() => {
+                setPartsData(prev => ({
+                  ...prev,
+                  diagnosis: { ...diagnosisData }
+                }));
+                setShowPendingPartsModal(true);
+              }}
+              disabled={actionLoading}
+              data-testid="pending-parts-btn"
+            >
+              <Package className="h-4 w-4 mr-2" />
+              Need Parts
+            </Button>
+          </div>
+        )}
+        
+        {isPaused && (
+          <div className="text-center py-2">
+            <Badge className="bg-orange-100 text-orange-700 border border-orange-300">
+              Pending Parts - Awaiting Quotation Approval
+            </Badge>
+          </div>
+        )}
+        
+        {isCompleted && (
+          <Button 
+            variant="outline"
+            className="w-full"
+            onClick={() => navigate('/engineer/dashboard')}
+          >
+            Back to Dashboard
+          </Button>
+        )}
+      </div>
 
-      {/* Stop Timer / Complete Modal */}
-      <Dialog open={showStopTimerModal} onOpenChange={setShowStopTimerModal}>
+      {/* Diagnosis Modal */}
+      <Dialog open={showDiagnosisModal} onOpenChange={setShowDiagnosisModal}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Complete Visit</DialogTitle>
+            <DialogTitle>Diagnosis & Findings</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4">
-            <div className="bg-slate-100 rounded-lg p-3 text-center">
-              <p className="text-sm text-slate-500">Total Time</p>
-              <p className="text-xl font-mono font-bold">{formatElapsedTime(elapsedTime)}</p>
-            </div>
-            
             <div className="space-y-2">
-              <Label>Diagnostics</Label>
+              <Label>Problem Identified *</Label>
               <Textarea
-                placeholder="What did you find/diagnose?"
-                value={stopTimerData.diagnostics}
-                onChange={(e) => setStopTimerData({...stopTimerData, diagnostics: e.target.value})}
-                rows={2}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Work Summary *</Label>
-              <Textarea
-                placeholder="Summarize the work done..."
-                value={stopTimerData.work_summary}
-                onChange={(e) => setStopTimerData({...stopTimerData, work_summary: e.target.value})}
+                placeholder="Describe the problem found..."
+                value={diagnosisData.problem_identified}
+                onChange={(e) => setDiagnosisData(prev => ({ ...prev, problem_identified: e.target.value }))}
                 rows={3}
               />
             </div>
-            
+            <div className="space-y-2">
+              <Label>Root Cause</Label>
+              <Textarea
+                placeholder="What caused the problem..."
+                value={diagnosisData.root_cause}
+                onChange={(e) => setDiagnosisData(prev => ({ ...prev, root_cause: e.target.value }))}
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Observations</Label>
+              <Textarea
+                placeholder="Additional observations..."
+                value={diagnosisData.observations}
+                onChange={(e) => setDiagnosisData(prev => ({ ...prev, observations: e.target.value }))}
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDiagnosisModal(false)}>Cancel</Button>
+            <Button onClick={handleSaveDiagnosis} disabled={actionLoading}>
+              {actionLoading ? 'Saving...' : 'Save Diagnosis'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Resolve Modal */}
+      <Dialog open={showResolveModal} onOpenChange={setShowResolveModal}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Resolve Visit</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label>Resolution Summary *</Label>
+              <Textarea
+                placeholder="Describe how the issue was resolved..."
+                value={resolutionData.resolution_summary}
+                onChange={(e) => setResolutionData(prev => ({ ...prev, resolution_summary: e.target.value }))}
+                rows={3}
+              />
+            </div>
             <div className="space-y-2">
               <Label>Actions Taken</Label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Add an action"
+                  placeholder="Add an action..."
                   value={newAction}
                   onChange={(e) => setNewAction(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addActionToList()}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddAction()}
                 />
-                <Button type="button" variant="outline" onClick={addActionToList}>Add</Button>
+                <Button type="button" onClick={handleAddAction} size="icon">
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
-              {stopTimerData.actions_taken.length > 0 && (
+              {resolutionData.actions_taken.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {stopTimerData.actions_taken.map((action, i) => (
-                    <Badge 
-                      key={i} 
-                      variant="secondary" 
-                      className="cursor-pointer" 
-                      onClick={() => removeActionFromList(i)}
-                    >
-                      {action} ✕
+                  {resolutionData.actions_taken.map((action, idx) => (
+                    <Badge key={idx} variant="secondary" className="flex items-center gap-1">
+                      {action}
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => handleRemoveAction(idx)} />
                     </Badge>
                   ))}
                 </div>
               )}
             </div>
-            
             <div className="space-y-2">
-              <Label>Outcome</Label>
-              <Select 
-                value={stopTimerData.outcome} 
-                onValueChange={(v) => setStopTimerData({...stopTimerData, outcome: v})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                  <SelectItem value="parts_needed">Parts Needed</SelectItem>
-                  <SelectItem value="followup_needed">Follow-up Needed</SelectItem>
-                  <SelectItem value="escalated">Escalated</SelectItem>
-                  <SelectItem value="unable_to_resolve">Unable to Resolve</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Customer Name (Optional)</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Person who received service"
-                  value={stopTimerData.customer_name}
-                  onChange={(e) => setStopTimerData({...stopTimerData, customer_name: e.target.value})}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Internal Notes</Label>
+              <Label>Recommendations</Label>
               <Textarea
-                placeholder="Any additional notes..."
-                value={stopTimerData.notes}
-                onChange={(e) => setStopTimerData({...stopTimerData, notes: e.target.value})}
+                placeholder="Any recommendations for the customer..."
+                value={resolutionData.recommendations}
+                onChange={(e) => setResolutionData(prev => ({ ...prev, recommendations: e.target.value }))}
                 rows={2}
               />
             </div>
           </div>
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setShowStopTimerModal(false)}>Cancel</Button>
-            <Button 
-              onClick={handleStopTimer} 
-              disabled={actionLoading}
-              className="bg-emerald-500 hover:bg-emerald-600"
-            >
-              {actionLoading ? 'Completing...' : 'Complete Visit'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Action Modal */}
-      <Dialog open={showAddActionModal} onOpenChange={setShowAddActionModal}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Record Action</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label>Action Taken</Label>
-              <Textarea
-                placeholder="Describe the action taken..."
-                value={actionToAdd}
-                onChange={(e) => setActionToAdd(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddActionModal(false)}>Cancel</Button>
-            <Button onClick={handleAddAction} disabled={actionLoading}>
-              {actionLoading ? 'Adding...' : 'Add Action'}
+            <Button variant="outline" onClick={() => setShowResolveModal(false)}>Cancel</Button>
+            <Button onClick={handleResolveVisit} disabled={actionLoading} className="bg-emerald-500 hover:bg-emerald-600">
+              {actionLoading ? 'Resolving...' : 'Resolve & Complete'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Request Parts Modal */}
-      <Dialog open={showRequestPartsModal} onOpenChange={setShowRequestPartsModal}>
-        <DialogContent>
+      {/* Pending Parts Modal */}
+      <Dialog open={showPendingPartsModal} onOpenChange={setShowPendingPartsModal}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Request Parts</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label>Item *</Label>
-              <Select 
-                value={partsRequestData.item_id} 
-                onValueChange={(v) => setPartsRequestData({...partsRequestData, item_id: v})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select item" />
-                </SelectTrigger>
-                <SelectContent>
-                  {items.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.name} {item.sku && `(${item.sku})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+            {/* Diagnosis Section */}
+            <div className="border rounded-lg p-3 bg-slate-50">
+              <p className="text-sm font-medium mb-2">Diagnosis (Required)</p>
               <div className="space-y-2">
-                <Label>Quantity</Label>
+                <Input
+                  placeholder="Problem identified *"
+                  value={partsData.diagnosis.problem_identified}
+                  onChange={(e) => setPartsData(prev => ({ 
+                    ...prev, 
+                    diagnosis: { ...prev.diagnosis, problem_identified: e.target.value }
+                  }))}
+                />
+                <Input
+                  placeholder="Root cause"
+                  value={partsData.diagnosis.root_cause}
+                  onChange={(e) => setPartsData(prev => ({ 
+                    ...prev, 
+                    diagnosis: { ...prev.diagnosis, root_cause: e.target.value }
+                  }))}
+                />
+              </div>
+            </div>
+
+            {/* Parts Selection */}
+            <div className="space-y-2">
+              <Label>Add Parts</Label>
+              <div className="relative">
+                <Input
+                  placeholder="Search inventory or type part name..."
+                  value={itemSearch}
+                  onChange={(e) => {
+                    setItemSearch(e.target.value);
+                    setNewPart(prev => ({ ...prev, item_name: e.target.value, item_id: '' }));
+                    searchInventory(e.target.value);
+                  }}
+                />
+                {inventoryItems.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                    {inventoryItems.map((item) => (
+                      <button
+                        key={item.id}
+                        className="w-full px-3 py-2 text-left hover:bg-slate-50 text-sm"
+                        onClick={() => handleSelectInventoryItem(item)}
+                      >
+                        <span className="font-medium">{item.name}</span>
+                        {item.sku && <span className="text-slate-400 ml-2">({item.sku})</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
                 <Input
                   type="number"
                   min="1"
-                  value={partsRequestData.quantity_requested}
-                  onChange={(e) => setPartsRequestData({...partsRequestData, quantity_requested: parseInt(e.target.value) || 1})}
+                  placeholder="Qty"
+                  value={newPart.quantity}
+                  onChange={(e) => setNewPart(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label>Urgency</Label>
-                <Select 
-                  value={partsRequestData.urgency} 
-                  onValueChange={(v) => setPartsRequestData({...partsRequestData, urgency: v})}
-                >
+                <Select value={newPart.urgency} onValueChange={(v) => setNewPart(prev => ({ ...prev, urgency: v }))}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Urgency" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
                     <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
                     <SelectItem value="critical">Critical</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              <Button type="button" variant="outline" onClick={handleAddPart} className="w-full">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Part
+              </Button>
             </div>
+
+            {/* Parts List */}
+            {partsData.parts_required.length > 0 && (
+              <div className="space-y-2">
+                <Label>Parts to Request ({partsData.parts_required.length})</Label>
+                <div className="space-y-2">
+                  {partsData.parts_required.map((part, idx) => (
+                    <div key={idx} className="flex items-center justify-between bg-slate-50 rounded-lg p-2 text-sm">
+                      <div>
+                        <span className="font-medium">{part.item_name}</span>
+                        <span className="text-slate-500 ml-2">x{part.quantity}</span>
+                        <Badge variant="outline" className="ml-2 text-xs capitalize">{part.urgency}</Badge>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => handleRemovePart(idx)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Remarks */}
             <div className="space-y-2">
-              <Label>Notes</Label>
+              <Label>Remarks (Mandatory) *</Label>
               <Textarea
-                placeholder="Why do you need this part?"
-                value={partsRequestData.request_notes}
-                onChange={(e) => setPartsRequestData({...partsRequestData, request_notes: e.target.value})}
+                placeholder="Explain why these parts are needed..."
+                value={partsData.remarks}
+                onChange={(e) => setPartsData(prev => ({ ...prev, remarks: e.target.value }))}
                 rows={2}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRequestPartsModal(false)}>Cancel</Button>
-            <Button onClick={handleRequestParts} disabled={actionLoading}>
-              {actionLoading ? 'Requesting...' : 'Request Parts'}
+            <Button variant="outline" onClick={() => setShowPendingPartsModal(false)}>Cancel</Button>
+            <Button 
+              onClick={handleMarkPendingParts} 
+              disabled={actionLoading}
+              className="bg-orange-500 hover:bg-orange-600"
+            >
+              {actionLoading ? 'Submitting...' : 'Submit & Create Quotation'}
             </Button>
           </DialogFooter>
         </DialogContent>
