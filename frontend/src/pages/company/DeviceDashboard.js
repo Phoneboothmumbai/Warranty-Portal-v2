@@ -43,6 +43,9 @@ const DeviceDashboard = () => {
 
   const headers = { Authorization: `Bearer ${token}` };
 
+  const [watchTowerData, setWatchTowerData] = useState(null);
+  const [watchTowerLoading, setWatchTowerLoading] = useState(false);
+
   const fetchDeviceAnalytics = useCallback(async () => {
     try {
       setLoading(true);
@@ -58,9 +61,23 @@ const DeviceDashboard = () => {
     }
   }, [deviceId, token, navigate]);
 
+  const fetchWatchTowerStatus = useCallback(async () => {
+    try {
+      setWatchTowerLoading(true);
+      const response = await axios.get(`${API}/api/watchtower/device/${deviceId}/status`, { headers });
+      setWatchTowerData(response.data);
+    } catch (err) {
+      console.error('Failed to fetch WatchTower status:', err);
+      setWatchTowerData({ integrated: false, message: 'Unable to connect to WatchTower' });
+    } finally {
+      setWatchTowerLoading(false);
+    }
+  }, [deviceId, token]);
+
   useEffect(() => {
     fetchDeviceAnalytics();
-  }, [fetchDeviceAnalytics]);
+    fetchWatchTowerStatus();
+  }, [fetchDeviceAnalytics, fetchWatchTowerStatus]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount || 0);
