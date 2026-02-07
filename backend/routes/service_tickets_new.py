@@ -437,7 +437,7 @@ async def assign_ticket(
     data: TicketAssignRequest,
     admin: dict = Depends(get_current_admin)
 ):
-    """Assign ticket to a technician"""
+    """Assign ticket to a technician - engineer must accept/decline"""
     org_id = admin.get("organization_id")
     if not org_id:
         raise HTTPException(status_code=403, detail="Organization context required")
@@ -451,7 +451,8 @@ async def assign_ticket(
         raise HTTPException(status_code=404, detail="Ticket not found")
     
     # Check valid status for assignment
-    if ticket.get("status") not in [TicketStatus.NEW.value, TicketStatus.ASSIGNED.value]:
+    valid_statuses = [TicketStatus.NEW.value, TicketStatus.PENDING_ACCEPTANCE.value, TicketStatus.ASSIGNED.value]
+    if ticket.get("status") not in valid_statuses:
         raise HTTPException(
             status_code=400,
             detail=f"Cannot assign ticket in {ticket.get('status')} status"
@@ -460,10 +461,10 @@ async def assign_ticket(
     # Get technician details
     tech = await db.staff_users.find_one(
         {"id": data.technician_id, "organization_id": org_id, "is_deleted": {"$ne": True}},
-        {"name": 1}
+        {"name": 1, "email": 1, "phone": 1}
     ) or await db.organization_members.find_one(
         {"id": data.technician_id, "is_deleted": {"$ne": True}},
-        {"name": 1}
+        {"name": 1, "email": 1, "phone": 1}
     )
     if not tech:
         raise HTTPException(status_code=404, detail="Technician not found")
@@ -472,27 +473,34 @@ async def assign_ticket(
     
     status_change = StatusChange(
         from_status=ticket.get("status"),
-        to_status=TicketStatus.ASSIGNED.value,
+        to_status=TicketStatus.PENDING_ACCEPTANCE.value,
         changed_by_id=admin.get("id", ""),
         changed_by_name=admin.get("name", ""),
-        notes=data.notes or f"Assigned to {tech.get('name', '')}"
+        notes=data.notes or f"Assigned to {tech.get('name', '')} - awaiting acceptance"
     )
     
     await db.service_tickets_new.update_one(
         {"id": ticket_id},
         {
             "$set": {
-                "status": TicketStatus.ASSIGNED.value,
+                "status": TicketStatus.PENDING_ACCEPTANCE.value,
                 "assigned_to_id": data.technician_id,
                 "assigned_to_name": tech.get("name", ""),
                 "assigned_at": now,
                 "assigned_by_id": admin.get("id"),
                 "assigned_by_name": admin.get("name"),
+                "assignment_status": "pending",
+                "assignment_accepted_at": None,
+                "assignment_declined_at": None,
+                "assignment_decline_reason": None,
                 "updated_at": now
             },
             "$push": {"status_history": status_change.model_dump()}
         }
     )
+    
+    # TODO: Send notification to technician (email/push)
+    logger.info(f"Ticket {ticket.get('ticket_number')} assigned to {tech.get('name')} - awaiting acceptance")
     
     return await db.service_tickets_new.find_one({"id": ticket_id}, {"_id": 0})
 
