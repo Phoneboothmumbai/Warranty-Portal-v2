@@ -250,6 +250,120 @@ const CompanyDetails = () => {
     }
   };
 
+  // Add Site
+  const handleAddSite = async () => {
+    if (!siteForm.name) { toast.error('Site name is required'); return; }
+    setSavingItem(true);
+    try {
+      await axios.post(`${API}/admin/sites`, 
+        { ...siteForm, company_id: companyId },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      toast.success('Site added');
+      setSiteForm({ name: '', address: '', contact_person: '', contact_phone: '', contact_email: '' });
+      setShowAddSite(false);
+      fetchCompanyOverview();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to add site');
+    }
+    setSavingItem(false);
+  };
+
+  // Add Contact/User
+  const handleAddContact = async () => {
+    if (!contactForm.name) { toast.error('Name is required'); return; }
+    setSavingItem(true);
+    try {
+      await axios.post(`${API}/admin/employees`, 
+        { ...contactForm, company_id: companyId },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      toast.success('Contact added');
+      setContactForm({ name: '', email: '', phone: '', department: '', designation: '' });
+      setShowAddContact(false);
+      fetchCompanyOverview();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to add contact');
+    }
+    setSavingItem(false);
+  };
+
+  // Add Device
+  const handleAddDevice2 = async () => {
+    if (!deviceForm2.serial_number) { toast.error('Serial number is required'); return; }
+    setSavingItem(true);
+    try {
+      await axios.post(`${API}/admin/devices`, 
+        { ...deviceForm2, company_id: companyId },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      toast.success('Device added');
+      setDeviceForm2({ brand: '', model: '', serial_number: '', device_type: '', location: '' });
+      setShowAddDevice(false);
+      fetchCompanyOverview();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to add device');
+    }
+    setSavingItem(false);
+  };
+
+  // Add License
+  const handleAddLicense = async () => {
+    if (!licenseForm.software_name) { toast.error('Software name is required'); return; }
+    setSavingItem(true);
+    try {
+      await axios.post(`${API}/admin/licenses`, 
+        { ...licenseForm, company_id: companyId },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      toast.success('License added');
+      setLicenseForm({ software_name: '', license_key: '', license_type: 'perpetual', seats: 1, expiry_date: '' });
+      setShowAddLicense(false);
+      fetchCompanyOverview();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to add license');
+    }
+    setSavingItem(false);
+  };
+
+  // Add Deployment
+  const handleAddDeployment = async () => {
+    if (!deploymentForm.name) { toast.error('Deployment name is required'); return; }
+    setSavingItem(true);
+    try {
+      await axios.post(`${API}/admin/deployments`, 
+        { ...deploymentForm, company_id: companyId },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      toast.success('Deployment added');
+      setDeploymentForm({ name: '', deployment_type: '', status: 'active', notes: '' });
+      setShowAddDeployment(false);
+      fetchCompanyOverview();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to add deployment');
+    }
+    setSavingItem(false);
+  };
+
+  // Add AMC Contract
+  const handleAddAMC = async () => {
+    if (!amcForm.contract_number) { toast.error('Contract number is required'); return; }
+    setSavingItem(true);
+    try {
+      await axios.post(`${API}/admin/amc-contracts`, 
+        { ...amcForm, company_id: companyId },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      toast.success('AMC Contract added');
+      setAmcForm({ contract_number: '', start_date: '', end_date: '', coverage_type: 'comprehensive', value: '' });
+      setShowAddAMC(false);
+      fetchCompanyOverview();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to add AMC contract');
+    }
+    setSavingItem(false);
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
