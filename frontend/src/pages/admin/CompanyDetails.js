@@ -52,6 +52,12 @@ const CompanyDetails = () => {
     role: 'company_viewer'
   });
   
+  // Email Domains state
+  const [emailDomains, setEmailDomains] = useState([]);
+  const [loadingDomains, setLoadingDomains] = useState(false);
+  const [showAddDomain, setShowAddDomain] = useState(false);
+  const [newDomain, setNewDomain] = useState('');
+  
   // Device search and modal state
   const [deviceSearchQuery, setDeviceSearchQuery] = useState('');
   const [selectedDevice, setSelectedDevice] = useState(null);
