@@ -615,10 +615,26 @@ async def complete_ticket(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     
+    # ⚠️ IMPORTANT: Cannot complete ticket if pending_parts without quotation approval
+    if ticket.get("status") == TicketStatus.PENDING_PARTS.value:
+        # Check if quotation is approved
+        if ticket.get("quotation_status") != "approved":
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot complete ticket pending for parts. Quotation must be approved first."
+            )
+    
     if ticket.get("status") not in [TicketStatus.IN_PROGRESS.value, TicketStatus.PENDING_PARTS.value]:
         raise HTTPException(
             status_code=400,
             detail=f"Cannot complete ticket in {ticket.get('status')} status"
+        )
+    
+    # ⚠️ IMPORTANT: Resolution notes are required for completion
+    if not data.resolution_summary:
+        raise HTTPException(
+            status_code=400,
+            detail="Resolution notes are required to complete the ticket"
         )
     
     now = get_ist_isoformat()
@@ -635,6 +651,7 @@ async def complete_ticket(
         "status": TicketStatus.COMPLETED.value,
         "resolution_summary": data.resolution_summary,
         "resolution_type": data.resolution_type,
+        "resolution_notes": data.resolution_summary,  # Store in both fields
         "resolved_at": now,
         "resolved_by_id": admin.get("id"),
         "resolved_by_name": admin.get("name"),
