@@ -1,7 +1,7 @@
 """
-Tactical RMM Integration Service
+WatchTower Integration Service
 ================================
-Provides integration with Tactical RMM for MSPs to sync agents/devices,
+Provides integration with WatchTower for MSPs to sync agents/devices,
 run scripts, and pull system information.
 """
 import httpx
@@ -13,15 +13,15 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 
-class TacticalRMMConfig(BaseModel):
-    """Configuration for Tactical RMM API connection"""
+class WatchTowerConfig(BaseModel):
+    """Configuration for WatchTower API connection"""
     api_url: str  # e.g., https://api.yourdomain.com
     api_key: str
     enabled: bool = True
 
 
-class TacticalRMMAgent(BaseModel):
-    """Tactical RMM Agent model"""
+class WatchTowerAgent(BaseModel):
+    """WatchTower Agent model"""
     agent_id: str
     hostname: str
     site_name: Optional[str] = None
@@ -40,10 +40,10 @@ class TacticalRMMAgent(BaseModel):
     overdue_text_alert: Optional[bool] = False
 
 
-class TacticalRMMService:
-    """Service class for Tactical RMM API integration"""
+class WatchTowerService:
+    """Service class for WatchTower API integration"""
     
-    def __init__(self, config: TacticalRMMConfig):
+    def __init__(self, config: WatchTowerConfig):
         self.config = config
         self.headers = {
             "X-API-KEY": config.api_key,
@@ -51,7 +51,7 @@ class TacticalRMMService:
         }
     
     async def _request(self, method: str, endpoint: str, data: dict = None) -> dict:
-        """Make authenticated request to Tactical RMM API"""
+        """Make authenticated request to WatchTower API"""
         url = f"{self.config.api_url.rstrip('/')}/{endpoint.lstrip('/')}"
         
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -71,10 +71,10 @@ class TacticalRMMService:
                 return response.json() if response.text else {}
                 
             except httpx.HTTPStatusError as e:
-                logger.error(f"Tactical RMM API error: {e.response.status_code} - {e.response.text}")
+                logger.error(f"WatchTower API error: {e.response.status_code} - {e.response.text}")
                 raise
             except Exception as e:
-                logger.error(f"Tactical RMM API request failed: {str(e)}")
+                logger.error(f"WatchTower API request failed: {str(e)}")
                 raise
     
     async def test_connection(self) -> bool:
@@ -83,11 +83,11 @@ class TacticalRMMService:
             await self._request("POST", "/v2/checkcreds/")
             return True
         except Exception as e:
-            logger.error(f"Tactical RMM connection test failed: {str(e)}")
+            logger.error(f"WatchTower connection test failed: {str(e)}")
             return False
     
     async def get_agents(self) -> List[Dict[str, Any]]:
-        """Get all agents from Tactical RMM"""
+        """Get all agents from WatchTower"""
         return await self._request("GET", "/agents/")
     
     async def get_agent(self, agent_id: str) -> Dict[str, Any]:
@@ -140,7 +140,7 @@ class TacticalRMMService:
 
 
 def map_agent_to_device(agent: Dict[str, Any], company_id: str, organization_id: str = None) -> Dict[str, Any]:
-    """Map Tactical RMM agent data to our device schema"""
+    """Map WatchTower agent data to our device schema"""
     import uuid
     
     # Determine device type based on OS and platform
@@ -165,9 +165,9 @@ def map_agent_to_device(agent: Dict[str, Any], company_id: str, organization_id:
         "brand": "Various",  # Could be enhanced with WMI data
         "model": agent.get("hostname", "Unknown"),
         "status": "active" if agent.get("status") == "online" else "inactive",
-        "notes": f"Synced from Tactical RMM. OS: {agent.get('operating_system', 'Unknown')}",
+        "notes": f"Synced from WatchTower. OS: {agent.get('operating_system', 'Unknown')}",
         "rmm_agent_id": agent.get("agent_id"),
-        "rmm_source": "tactical_rmm",
+        "rmm_source": "watchtower",
         "rmm_last_sync": datetime.utcnow().isoformat(),
         "rmm_data": {
             "hostname": agent.get("hostname"),
