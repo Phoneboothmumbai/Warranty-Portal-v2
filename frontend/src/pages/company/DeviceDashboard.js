@@ -241,7 +241,7 @@ const DeviceDashboard = () => {
           )}
           <TabsTrigger value="rmm" className="data-[state=active]:bg-white">
             <Monitor className="h-4 w-4 mr-2" />
-            RMM
+            WatchTower
           </TabsTrigger>
           <TabsTrigger value="details" className="data-[state=active]:bg-white">
             <Settings className="h-4 w-4 mr-2" />
