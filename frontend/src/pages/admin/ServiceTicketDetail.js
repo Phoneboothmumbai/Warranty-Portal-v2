@@ -118,21 +118,29 @@ export default function ServiceTicketDetail() {
   const fetchSupportingData = useCallback(async () => {
     const authHeaders = { Authorization: `Bearer ${localStorage.getItem('admin_token')}` };
     try {
-      const [staffRes, engineersRes, itemsRes, locationsRes] = await Promise.all([
-        axios.get(`${API_URL}/api/admin/staff/users?limit=100`, { headers: authHeaders }),
-        axios.get(`${API_URL}/api/admin/engineers`, { headers: authHeaders }).catch(() => ({ data: [] })),
-        axios.get(`${API_URL}/api/admin/items?limit=500`, { headers: authHeaders }),
-        axios.get(`${API_URL}/api/admin/inventory/locations`, { headers: authHeaders })
-      ]);
+      // Fetch staff users
+      const staffRes = await axios.get(`${API_URL}/api/admin/staff/users?limit=100`, { headers: authHeaders });
+      console.log('Staff API response:', staffRes.data);
       
-      // Get all staff users
-      const staffUsers = Array.isArray(staffRes.data) ? staffRes.data : (staffRes.data.users || []);
-      const engineers = Array.isArray(engineersRes.data) ? engineersRes.data : [];
+      // Also try engineers endpoint
+      let engineers = [];
+      try {
+        const engRes = await axios.get(`${API_URL}/api/admin/engineers`, { headers: authHeaders });
+        engineers = Array.isArray(engRes.data) ? engRes.data : [];
+        console.log('Engineers API response:', engineers);
+      } catch (e) {
+        console.log('Engineers fetch failed (optional):', e.message);
+      }
       
-      // Combine ALL active staff users AND engineers (no role filtering - if they're in staff management, they can be assigned)
+      // Get staff users from response - API returns { users: [...] }
+      const staffUsers = staffRes.data?.users || [];
+      console.log('Staff users parsed:', staffUsers.length, staffUsers);
+      
+      // Get ALL active staff users (they appear in Staff Management, so they can be technicians)
       const allTechnicians = staffUsers.filter(s => s.state === 'active');
+      console.log('Active staff users:', allTechnicians.length);
       
-      // Add engineers that aren't already in staff users (by email)
+      // Add engineers that aren't already in staff users
       const existingEmails = new Set(allTechnicians.map(t => t.email?.toLowerCase()));
       engineers.forEach(eng => {
         if (eng.is_active && !existingEmails.has(eng.email?.toLowerCase())) {
@@ -140,12 +148,22 @@ export default function ServiceTicketDetail() {
         }
       });
       
-      console.log('Loaded technicians:', allTechnicians.length, allTechnicians.map(t => t.name));
+      console.log('Final technicians list:', allTechnicians.length, allTechnicians.map(t => ({ name: t.name, state: t.state })));
       setStaff(allTechnicians);
-      setItems(Array.isArray(itemsRes.data) ? itemsRes.data : (itemsRes.data.items || []));
-      setLocations(Array.isArray(locationsRes.data) ? locationsRes.data : (locationsRes.data.locations || []));
+      
+      // Fetch other supporting data
+      try {
+        const [itemsRes, locationsRes] = await Promise.all([
+          axios.get(`${API_URL}/api/admin/items?limit=500`, { headers: authHeaders }),
+          axios.get(`${API_URL}/api/admin/inventory/locations`, { headers: authHeaders })
+        ]);
+        setItems(Array.isArray(itemsRes.data) ? itemsRes.data : (itemsRes.data?.items || []));
+        setLocations(Array.isArray(locationsRes.data) ? locationsRes.data : (locationsRes.data?.locations || []));
+      } catch (e) {
+        console.log('Items/Locations fetch failed (optional):', e.message);
+      }
     } catch (error) {
-      console.error('Failed to fetch supporting data:', error);
+      console.error('Failed to fetch staff users:', error);
     }
   }, []);
 
