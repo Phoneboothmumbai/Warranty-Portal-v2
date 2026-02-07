@@ -6280,6 +6280,43 @@ async def engineer_decline_ticket(
     return {"success": True, "message": "Ticket declined", "ticket_number": ticket.get("ticket_number")}
 
 
+@api_router.get("/engineer/tickets/{ticket_id}")
+async def get_engineer_ticket_detail(
+    ticket_id: str,
+    engineer: dict = Depends(get_current_engineer)
+):
+    """Get ticket detail for an engineer"""
+    engineer_id = engineer["id"]
+    
+    ticket = await db.service_tickets_new.find_one({
+        "id": ticket_id,
+        "assigned_to_id": engineer_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found or not assigned to you")
+    
+    # Get visits for this ticket assigned to this engineer
+    visits = await db.service_visits_new.find({
+        "ticket_id": ticket_id,
+        "technician_id": engineer_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).sort("visit_number", 1).to_list(50)
+    
+    ticket["visits"] = visits
+    
+    # Get quotation if exists
+    if ticket.get("quotation_id"):
+        quotation = await db.quotations.find_one({
+            "id": ticket.get("quotation_id"),
+            "is_deleted": {"$ne": True}
+        }, {"_id": 0})
+        ticket["quotation"] = quotation
+    
+    return ticket
+
+
 @api_router.get("/engineer/visits/{visit_id}")
 async def get_visit_details(
     visit_id: str,
