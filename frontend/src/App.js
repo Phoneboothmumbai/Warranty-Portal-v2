@@ -208,6 +208,7 @@ function App() {
                     <Route path="devices/:deviceId" element={<CompanyDeviceDetails />} />
                     <Route path="credentials" element={<CompanyCredentials />} />
                     <Route path="warranty" element={<CompanyWarranty />} />
+                    <Route path="quotations" element={<CompanyQuotations />} />
                     <Route path="amc" element={<CompanyAMC />} />
                     <Route path="amc-onboarding" element={<CompanyAMCOnboarding />} />
                     <Route path="amc-requests" element={<CompanyAMCRequests />} />
