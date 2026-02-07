@@ -8382,10 +8382,10 @@ async def get_device_analytics(device_id: str, user: dict = Depends(get_current_
     # Sort lifecycle by date
     lifecycle_events.sort(key=lambda x: x.get("date") or "", reverse=True)
     
-    # RMM placeholder (will be populated when Tactical RMM is integrated)
+    # WatchTower placeholder (will be populated when WatchTower is integrated)
     rmm_data = {
         "integrated": False,
-        "message": "RMM integration pending - Tactical RMM will be integrated soon",
+        "message": "WatchTower monitoring agent not installed on this device",
         "placeholder_metrics": {
             "cpu_usage": None,
             "memory_usage": None,
