@@ -375,6 +375,56 @@ export default function ServiceTicketDetail() {
 
   return (
     <div data-testid="ticket-detail-page" className="space-y-6">
+      {/* Quotation Alert Banner - Show when pending parts */}
+      {ticket.status === 'pending_parts' && (
+        <div className={`p-4 rounded-lg border ${
+          ticket.quotation_status === 'approved' 
+            ? 'bg-emerald-50 border-emerald-200' 
+            : ticket.quotation_status === 'rejected'
+            ? 'bg-red-50 border-red-200'
+            : ticket.quotation_status === 'sent'
+            ? 'bg-blue-50 border-blue-200'
+            : 'bg-orange-50 border-orange-200'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Package className={`h-5 w-5 ${
+                ticket.quotation_status === 'approved' ? 'text-emerald-600' :
+                ticket.quotation_status === 'rejected' ? 'text-red-600' :
+                ticket.quotation_status === 'sent' ? 'text-blue-600' :
+                'text-orange-600'
+              }`} />
+              <div>
+                <p className="font-medium text-slate-900">
+                  {ticket.quotation_status === 'approved' 
+                    ? '✅ Quotation Approved - Ready to resume work'
+                    : ticket.quotation_status === 'rejected'
+                    ? '❌ Quotation Rejected - Needs revision'
+                    : ticket.quotation_status === 'sent'
+                    ? '📧 Quotation Sent - Awaiting customer response'
+                    : '📝 Quotation Draft - Needs review and sending'}
+                </p>
+                <p className="text-sm text-slate-600">
+                  Parts are required to complete this service ticket.
+                </p>
+              </div>
+            </div>
+            <Button 
+              onClick={() => navigate('/admin/quotations')} 
+              size="sm"
+              className={
+                ticket.quotation_status === 'approved' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                ticket.quotation_status === 'draft' ? 'bg-orange-600 hover:bg-orange-700' :
+                ''
+              }
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              {ticket.quotation_status === 'draft' ? 'Review & Send' : 'View Quotation'}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
