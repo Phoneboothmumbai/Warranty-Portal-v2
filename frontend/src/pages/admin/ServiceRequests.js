@@ -23,6 +23,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 // Status configuration
 const STATUS_CONFIG = {
   new: { label: 'New', color: 'bg-slate-100 text-slate-800 border-slate-300', icon: FileText },
+  pending_acceptance: { label: 'Pending Acceptance', color: 'bg-purple-100 text-purple-800 border-purple-300', icon: Clock },
   assigned: { label: 'Assigned', color: 'bg-blue-100 text-blue-800 border-blue-300', icon: UserPlus },
   in_progress: { label: 'In Progress', color: 'bg-amber-100 text-amber-800 border-amber-300', icon: Play },
   pending_parts: { label: 'Pending Parts', color: 'bg-orange-100 text-orange-800 border-orange-300', icon: Package },
