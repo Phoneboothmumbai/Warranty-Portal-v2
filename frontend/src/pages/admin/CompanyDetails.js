@@ -275,7 +275,7 @@ const CompanyDetails = () => {
     if (!contactForm.name) { toast.error('Name is required'); return; }
     setSavingItem(true);
     try {
-      await axios.post(`${API}/admin/employees`, 
+      await axios.post(`${API}/admin/company-employees`, 
         { ...contactForm, company_id: companyId },
         { headers: { Authorization: `Bearer ${token}` }}
       );
