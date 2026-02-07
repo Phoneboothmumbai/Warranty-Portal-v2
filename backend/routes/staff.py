@@ -221,6 +221,60 @@ async def change_user_state(
         raise HTTPException(status_code=404, detail=str(e))
 
 
+@router.post("/users/{user_id}/set-password")
+async def set_user_password(
+    user_id: str,
+    request: Request,
+    admin: dict = Depends(get_current_admin)
+):
+    """Set or reset password for a staff user"""
+    from services.auth import get_password_hash
+    
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    
+    body = await request.json()
+    new_password = body.get("password")
+    
+    if not new_password or len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    # Find the user
+    user = await db.staff_users.find_one({
+        "id": user_id,
+        "organization_id": org_id,
+        "is_deleted": {"$ne": True}
+    })
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Update password
+    password_hash = get_password_hash(new_password)
+    await db.staff_users.update_one(
+        {"id": user_id},
+        {"$set": {
+            "password_hash": password_hash,
+            "state": "active",  # Activate user if they were in created state
+            "updated_at": get_ist_isoformat()
+        }}
+    )
+    
+    # Log audit
+    await StaffService.log_audit(
+        organization_id=org_id,
+        entity_type="user",
+        entity_id=user_id,
+        entity_name=user.get("name"),
+        action="update",
+        changes={"password": "changed", "state": "active"},
+        performed_by=admin
+    )
+    
+    return {"success": True, "message": "Password set successfully"}
+
+
 @router.delete("/users/{user_id}")
 async def archive_user(
     user_id: str,
