@@ -77,7 +77,7 @@ const navGroups = [
       { path: '/admin/master-data', label: 'Master Data', icon: Database },
       { path: '/admin/integrations/tactical-rmm', label: 'Tactical RMM', icon: Monitor },
       { path: '/admin/integrations/tgms', label: 'Remote Management', icon: Laptop },
-      { path: '/admin/settings', label: 'Settings', icon: Settings },
+      { path: '/admin/settings', label: 'Portal Settings', icon: Settings },
     ]
   },
 ];
