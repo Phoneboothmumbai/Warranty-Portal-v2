@@ -89,7 +89,7 @@ class TestEngineerAcceptDeclineWorkflow:
         }
         
         response = requests.post(
-            f"{BASE_URL}/api/admin/service-tickets-new",
+            f"{BASE_URL}/api/admin/service-tickets",
             json=ticket_data,
             headers=headers
         )
@@ -116,7 +116,7 @@ class TestEngineerAcceptDeclineWorkflow:
         }
         
         response = requests.post(
-            f"{BASE_URL}/api/admin/service-tickets-new/{self.__class__.test_ticket_id}/assign",
+            f"{BASE_URL}/api/admin/service-tickets/{self.__class__.test_ticket_id}/assign",
             json=assign_data,
             headers=headers
         )
@@ -262,7 +262,7 @@ class TestEngineerDeclineWorkflow:
         }
         
         create_response = requests.post(
-            f"{BASE_URL}/api/admin/service-tickets-new",
+            f"{BASE_URL}/api/admin/service-tickets",
             json=ticket_data,
             headers=headers
         )
@@ -272,7 +272,7 @@ class TestEngineerDeclineWorkflow:
         
         # Assign to engineer
         assign_response = requests.post(
-            f"{BASE_URL}/api/admin/service-tickets-new/{ticket['id']}/assign",
+            f"{BASE_URL}/api/admin/service-tickets/{ticket['id']}/assign",
             json={"technician_id": self.engineer_staff_id},
             headers=headers
         )
@@ -311,7 +311,7 @@ class TestEngineerDeclineWorkflow:
         headers = {"Authorization": f"Bearer {self.__class__.admin_token}"}
         
         response = requests.get(
-            f"{BASE_URL}/api/admin/service-tickets-new/{self.__class__.test_ticket_id}",
+            f"{BASE_URL}/api/admin/service-tickets/{self.__class__.test_ticket_id}",
             headers=headers
         )
         assert response.status_code == 200
@@ -363,7 +363,7 @@ class TestEngineerWorkflowEdgeCases:
             "priority": "medium"
         }
         create_resp = requests.post(
-            f"{BASE_URL}/api/admin/service-tickets-new",
+            f"{BASE_URL}/api/admin/service-tickets",
             json=ticket_data,
             headers=admin_headers
         )
@@ -374,7 +374,7 @@ class TestEngineerWorkflowEdgeCases:
         
         # Assign to engineer
         assign_resp = requests.post(
-            f"{BASE_URL}/api/admin/service-tickets-new/{ticket_id}/assign",
+            f"{BASE_URL}/api/admin/service-tickets/{ticket_id}/assign",
             json={"technician_id": "6e6bc3e3-430f-41b9-87b8-6a83067a2411"},
             headers=admin_headers
         )
@@ -413,7 +413,7 @@ class TestEngineerWorkflowEdgeCases:
             "priority": "medium"
         }
         create_resp = requests.post(
-            f"{BASE_URL}/api/admin/service-tickets-new",
+            f"{BASE_URL}/api/admin/service-tickets",
             json=ticket_data,
             headers=admin_headers
         )
@@ -424,7 +424,7 @@ class TestEngineerWorkflowEdgeCases:
         
         # Assign to engineer
         assign_resp = requests.post(
-            f"{BASE_URL}/api/admin/service-tickets-new/{ticket_id}/assign",
+            f"{BASE_URL}/api/admin/service-tickets/{ticket_id}/assign",
             json={"technician_id": "6e6bc3e3-430f-41b9-87b8-6a83067a2411"},
             headers=admin_headers
         )
@@ -494,7 +494,7 @@ class TestAdminServiceTicketsList:
         headers = {"Authorization": f"Bearer {self.__class__.admin_token}"}
         
         response = requests.get(
-            f"{BASE_URL}/api/admin/service-tickets-new",
+            f"{BASE_URL}/api/admin/service-tickets",
             headers=headers
         )
         assert response.status_code == 200, f"List tickets failed: {response.text}"
@@ -516,7 +516,7 @@ class TestAdminServiceTicketsList:
         headers = {"Authorization": f"Bearer {self.__class__.admin_token}"}
         
         response = requests.get(
-            f"{BASE_URL}/api/admin/service-tickets-new?status=pending_acceptance",
+            f"{BASE_URL}/api/admin/service-tickets?status=pending_acceptance",
             headers=headers
         )
         assert response.status_code == 200
