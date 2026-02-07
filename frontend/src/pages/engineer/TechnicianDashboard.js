@@ -52,9 +52,7 @@ const TechnicianDashboard = () => {
     } catch (err) {
       console.error('Failed to fetch visits:', err);
       toast.error('Failed to load visits');
-        console.error('Fallback also failed:', fallbackErr);
-        toast.error('Failed to load visits');
-      }
+      toast.error('Failed to load visits');
     } finally {
       setLoading(false);
       setRefreshing(false);
