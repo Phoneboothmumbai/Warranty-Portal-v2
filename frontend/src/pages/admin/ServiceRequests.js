@@ -71,6 +71,7 @@ export default function ServiceRequests() {
   const [companies, setCompanies] = useState([]);
   const [staff, setStaff] = useState([]);
   const [problems, setProblems] = useState([]);
+  const [companyContacts, setCompanyContacts] = useState([]);
   
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
