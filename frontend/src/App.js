@@ -56,6 +56,7 @@ import CustomDomains from "./pages/admin/CustomDomains";
 import EmailWhitelabel from "./pages/admin/EmailWhitelabel";
 import ServiceRequests from "./pages/admin/ServiceRequests";
 import ServiceTicketDetail from "./pages/admin/ServiceTicketDetail";
+import Quotations from "./pages/admin/Quotations";
 import TGMSIntegration from "./pages/admin/TGMSIntegration";
 import TicketingConfig from "./pages/admin/TicketingConfig";
 
