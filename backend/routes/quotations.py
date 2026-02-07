@@ -716,9 +716,8 @@ async def create_company_ticket(
     import string
     
     company_id = user.get("company_id")
-    organization_id = user.get("organization_id")
     
-    if not company_id or not organization_id:
+    if not company_id:
         raise HTTPException(status_code=403, detail="Company context required")
     
     if not title:
@@ -726,10 +725,15 @@ async def create_company_ticket(
     if not description:
         raise HTTPException(status_code=400, detail="Description is required")
     
-    # Get company info
+    # Get company info (includes organization_id)
     company = await db.companies.find_one({"id": company_id}, {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
+    
+    # Get organization_id from company
+    organization_id = company.get("organization_id")
+    if not organization_id:
+        raise HTTPException(status_code=403, detail="Company not linked to organization")
     
     # Get device info if provided
     device = None
