@@ -173,6 +173,7 @@ export default function OrganizationSettings() {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Building2 },
+    { id: 'team', label: 'Staff & Technicians', icon: UserCog },
     { id: 'branding', label: 'White Label', icon: Palette },
     { id: 'email', label: 'Email Config', icon: Mail },
     { id: 'billing', label: 'Billing', icon: CreditCard },
