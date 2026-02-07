@@ -10,7 +10,8 @@ import { Switch } from '../../components/ui/switch';
 import { toast } from 'sonner';
 import { 
   Building2, Users, HardDrive, Ticket, Settings, CreditCard, Shield, Palette,
-  Upload, Globe, Mail, Image, Eye, Loader2, CheckCircle, AlertCircle, UserCog, ChevronRight
+  Upload, Globe, Mail, Image, Eye, Loader2, CheckCircle, AlertCircle, UserCog, ChevronRight,
+  Wrench, FileText, MailCheck
 } from 'lucide-react';
 import axios from 'axios';
 
