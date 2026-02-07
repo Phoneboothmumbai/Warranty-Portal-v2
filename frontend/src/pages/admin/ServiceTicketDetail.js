@@ -358,11 +358,20 @@ export default function ServiceTicketDetail() {
 
   if (!ticket) return null;
 
-  const canAssign = ['new', 'assigned'].includes(ticket.status);
-  const canStart = ticket.status === 'assigned' || ticket.status === 'pending_parts';
-  const canComplete = ['in_progress', 'pending_parts'].includes(ticket.status);
+  // STRICT WORKFLOW RULES - enforcing 1→2→3→4→5→6→7 flow
+  // 1. NEW: Can assign
+  // 2. PENDING_ACCEPTANCE: Can reassign (before engineer responds)  
+  // 3. ASSIGNED: Engineer accepted, work should start - no reassign
+  // 4. IN_PROGRESS: Work ongoing - no reassign
+  // 5. PENDING_PARTS: Waiting for quotation - no reassign
+  // 6. COMPLETED: Work done - can only close
+  // 7. CLOSED/CANCELLED: Terminal states
+  
+  const canAssign = ['new', 'pending_acceptance'].includes(ticket.status);
+  const canStart = ticket.status === 'assigned';  // Only assigned can start work
+  const canComplete = ticket.status === 'in_progress' || (ticket.status === 'pending_parts' && ticket.quotation_status === 'approved');
   const canClose = ticket.status === 'completed';
-  const canCancel = !['closed', 'cancelled'].includes(ticket.status);
+  const canCancel = !['closed', 'cancelled', 'in_progress', 'pending_parts', 'completed'].includes(ticket.status);
 
   return (
     <div data-testid="ticket-detail-page" className="space-y-6">
