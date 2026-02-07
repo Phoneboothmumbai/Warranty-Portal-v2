@@ -330,6 +330,7 @@ const CompanyDetails = () => {
   // Add Deployment
   const handleAddDeployment = async () => {
     if (!deploymentForm.name) { toast.error('Deployment name is required'); return; }
+    if (!deploymentForm.site_id) { toast.error('Please select a site'); return; }
     setSavingItem(true);
     try {
       await axios.post(`${API}/admin/deployments`, 
@@ -337,7 +338,7 @@ const CompanyDetails = () => {
         { headers: { Authorization: `Bearer ${token}` }}
       );
       toast.success('Deployment added');
-      setDeploymentForm({ name: '', deployment_type: '', status: 'active', notes: '' });
+      setDeploymentForm({ name: '', deployment_type: '', status: 'planned', notes: '', site_id: '', deployment_date: new Date().toISOString().split('T')[0] });
       setShowAddDeployment(false);
       fetchCompanyOverview();
     } catch (error) {
