@@ -553,3 +553,283 @@ async def get_device_watchtower_details(device_id: str, user: dict = Depends(get
             "error": str(e),
             "message": "Error fetching detailed information"
         }
+
+
+
+# ==================== AUTOMATIC SYNC ENDPOINTS ====================
+
+@router.post("/auto-sync")
+async def auto_sync_all_agents(admin: dict = Depends(get_current_admin)):
+    """
+    Automatically sync ALL agents from WatchTower to Warranty Portal.
+    Maps WatchTower Client → Company (by name match)
+    Maps WatchTower Site → Site (by name match)
+    Creates devices with real serial numbers from WMI data.
+    """
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    
+    service = get_global_watchtower_service()
+    if not service:
+        raise HTTPException(status_code=400, detail="WatchTower not configured")
+    
+    try:
+        # Get all agents
+        agents = await service.get_agents()
+        
+        if not agents:
+            return {"success": True, "message": "No agents found in WatchTower", "synced": 0, "updated": 0}
+        
+        # Get all companies for this organization
+        companies = await _db.companies.find({
+            "organization_id": org_id,
+            "is_deleted": {"$ne": True}
+        }, {"_id": 0}).to_list(1000)
+        
+        # Build company name lookup (case-insensitive)
+        company_lookup = {c["name"].lower().strip(): c for c in companies}
+        
+        # Get all sites
+        sites = await _db.sites.find({
+            "organization_id": org_id,
+            "is_deleted": {"$ne": True}
+        }, {"_id": 0}).to_list(5000)
+        
+        # Build site lookup by company_id and name
+        site_lookup = {}
+        for site in sites:
+            key = f"{site['company_id']}:{site['name'].lower().strip()}"
+            site_lookup[key] = site
+        
+        synced = 0
+        updated = 0
+        skipped = 0
+        errors = []
+        created_companies = []
+        created_sites = []
+        
+        for agent in agents:
+            try:
+                agent_id = agent.get("agent_id")
+                client_name = agent.get("client_name", "").strip()
+                site_name = agent.get("site_name", "").strip()
+                hostname = agent.get("hostname", "")
+                
+                # Find or create company
+                company = company_lookup.get(client_name.lower())
+                if not company:
+                    # Auto-create company
+                    import uuid as uuid_module
+                    new_company_id = str(uuid_module.uuid4())
+                    company = {
+                        "id": new_company_id,
+                        "name": client_name,
+                        "organization_id": org_id,
+                        "source": "watchtower_sync",
+                        "created_at": datetime.utcnow().isoformat(),
+                        "is_deleted": False
+                    }
+                    await _db.companies.insert_one(company)
+                    company_lookup[client_name.lower()] = company
+                    created_companies.append(client_name)
+                
+                company_id = company["id"]
+                
+                # Find or create site
+                site_key = f"{company_id}:{site_name.lower()}"
+                site = site_lookup.get(site_key)
+                if not site and site_name:
+                    # Auto-create site
+                    import uuid as uuid_module
+                    new_site_id = str(uuid_module.uuid4())
+                    site = {
+                        "id": new_site_id,
+                        "name": site_name,
+                        "company_id": company_id,
+                        "organization_id": org_id,
+                        "source": "watchtower_sync",
+                        "created_at": datetime.utcnow().isoformat(),
+                        "is_deleted": False
+                    }
+                    await _db.sites.insert_one(site)
+                    site_lookup[site_key] = site
+                    created_sites.append(f"{client_name}/{site_name}")
+                
+                site_id = site["id"] if site else None
+                
+                # Try to get real serial number from agent details
+                serial_number = None
+                try:
+                    details = await service.get_agent_details(agent_id)
+                    # WMI serial number is usually in wmi_detail
+                    wmi = details.get("wmi_detail", {})
+                    serial_number = wmi.get("serialnumber") or wmi.get("SerialNumber")
+                    if not serial_number:
+                        # Try BIOS info
+                        bios = wmi.get("bios", {})
+                        serial_number = bios.get("SerialNumber")
+                except:
+                    pass
+                
+                # Fallback to hostname if no serial
+                if not serial_number:
+                    serial_number = hostname or agent_id[:16]
+                
+                # Check if device already exists (by rmm_agent_id OR serial_number OR hostname)
+                existing = await _db.devices.find_one({
+                    "$or": [
+                        {"rmm_agent_id": agent_id},
+                        {"serial_number": serial_number, "company_id": company_id},
+                        {"hostname": hostname, "company_id": company_id}
+                    ],
+                    "organization_id": org_id,
+                    "is_deleted": {"$ne": True}
+                }, {"_id": 0})
+                
+                # Determine device type
+                plat = agent.get("plat", "").lower()
+                os_name = agent.get("operating_system", "").lower()
+                if "server" in os_name:
+                    device_type = "Server"
+                elif plat == "darwin":
+                    device_type = "Mac"
+                elif "windows" in os_name:
+                    device_type = "Desktop"
+                else:
+                    device_type = "Desktop"
+                
+                now = datetime.utcnow().isoformat()
+                
+                if existing:
+                    # Update existing device
+                    update_data = {
+                        "rmm_agent_id": agent_id,
+                        "rmm_source": "watchtower",
+                        "rmm_last_sync": now,
+                        "status": "active" if agent.get("status") == "online" else "offline",
+                        "hostname": hostname,
+                        "computer_name": hostname,
+                        "operating_system": agent.get("operating_system"),
+                        "public_ip": agent.get("public_ip"),
+                        "rmm_data": {
+                            "hostname": hostname,
+                            "site_name": site_name,
+                            "client_name": client_name,
+                            "operating_system": agent.get("operating_system"),
+                            "platform": plat,
+                            "public_ip": agent.get("public_ip"),
+                            "total_ram_gb": agent.get("total_ram"),
+                            "last_seen": agent.get("last_seen"),
+                            "needs_reboot": agent.get("needs_reboot", False),
+                            "logged_in_user": agent.get("logged_in_username")
+                        },
+                        "updated_at": now
+                    }
+                    await _db.devices.update_one({"id": existing["id"]}, {"$set": update_data})
+                    updated += 1
+                else:
+                    # Create new device
+                    import uuid as uuid_module
+                    new_device = {
+                        "id": str(uuid_module.uuid4()),
+                        "organization_id": org_id,
+                        "company_id": company_id,
+                        "site_id": site_id,
+                        "site_name": site_name,
+                        "serial_number": serial_number,
+                        "hostname": hostname,
+                        "computer_name": hostname,
+                        "asset_tag": f"WT-{agent_id[:8].upper()}",
+                        "device_type": device_type,
+                        "category": device_type,
+                        "brand": "Auto-Detected",
+                        "model": hostname,
+                        "status": "active" if agent.get("status") == "online" else "offline",
+                        "operating_system": agent.get("operating_system"),
+                        "os": agent.get("operating_system"),
+                        "public_ip": agent.get("public_ip"),
+                        "ram": f"{agent.get('total_ram', 0):.1f} GB" if agent.get("total_ram") else None,
+                        "rmm_agent_id": agent_id,
+                        "rmm_source": "watchtower",
+                        "rmm_last_sync": now,
+                        "rmm_data": {
+                            "hostname": hostname,
+                            "site_name": site_name,
+                            "client_name": client_name,
+                            "operating_system": agent.get("operating_system"),
+                            "platform": plat,
+                            "public_ip": agent.get("public_ip"),
+                            "total_ram_gb": agent.get("total_ram"),
+                            "last_seen": agent.get("last_seen"),
+                            "needs_reboot": agent.get("needs_reboot", False),
+                            "logged_in_user": agent.get("logged_in_username")
+                        },
+                        "notes": f"Auto-synced from WatchTower on {now}",
+                        "created_at": now,
+                        "updated_at": now,
+                        "is_deleted": False
+                    }
+                    await _db.devices.insert_one(new_device)
+                    synced += 1
+                    
+            except Exception as e:
+                errors.append({"agent_id": agent.get("agent_id"), "hostname": agent.get("hostname"), "error": str(e)})
+        
+        return {
+            "success": True,
+            "total_agents": len(agents),
+            "devices_created": synced,
+            "devices_updated": updated,
+            "companies_created": created_companies,
+            "sites_created": created_sites,
+            "errors": errors[:10]  # Limit errors returned
+        }
+        
+    except Exception as e:
+        logger.error(f"Auto-sync failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
+
+
+@router.get("/clients-mapping")
+async def get_clients_mapping(admin: dict = Depends(get_current_admin)):
+    """Get WatchTower clients and their mapping to portal companies"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    
+    service = get_global_watchtower_service()
+    if not service:
+        raise HTTPException(status_code=400, detail="WatchTower not configured")
+    
+    try:
+        # Get clients from WatchTower
+        clients = await service.get_clients()
+        
+        # Get companies from portal
+        companies = await _db.companies.find({
+            "organization_id": org_id,
+            "is_deleted": {"$ne": True}
+        }, {"_id": 0, "id": 1, "name": 1}).to_list(1000)
+        
+        company_lookup = {c["name"].lower().strip(): c for c in companies}
+        
+        result = []
+        for client in clients:
+            client_name = client.get("name", "").strip()
+            matched_company = company_lookup.get(client_name.lower())
+            
+            result.append({
+                "watchtower_client_id": client.get("id"),
+                "watchtower_client_name": client_name,
+                "portal_company_id": matched_company["id"] if matched_company else None,
+                "portal_company_name": matched_company["name"] if matched_company else None,
+                "is_mapped": matched_company is not None
+            })
+        
+        return {
+            "clients": result,
+            "total_clients": len(clients),
+            "mapped_count": len([r for r in result if r["is_mapped"]]),
+            "unmapped_count": len([r for r in result if not r["is_mapped"]])
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching clients mapping: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
