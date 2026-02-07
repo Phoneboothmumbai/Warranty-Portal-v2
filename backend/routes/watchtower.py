@@ -13,7 +13,7 @@ from services.auth import get_current_admin
 from utils.tenant_scope import get_admin_org_id, scope_query
 from services.watchtower import WatchTowerService, WatchTowerConfig, map_agent_to_device
 
-router = APIRouter(prefix="/rmm/tactical", tags=["WatchTower Integration"])
+router = APIRouter(prefix="/watchtower", tags=["WatchTower Integration"])
 
 # Database reference - will be injected
 _db = None
