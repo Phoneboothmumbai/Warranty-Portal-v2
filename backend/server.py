@@ -8184,6 +8184,245 @@ async def get_company_device(device_id: str, user: dict = Depends(get_current_co
         "amc_info": amc_info
     }
 
+
+@api_router.get("/company/devices/{device_id}/analytics")
+async def get_device_analytics(device_id: str, user: dict = Depends(get_current_company_user)):
+    """Get comprehensive analytics for a device - tickets, spend, AMC metrics, lifecycle"""
+    from datetime import datetime, timedelta
+    
+    device = await db.devices.find_one({
+        "id": device_id,
+        "company_id": user["company_id"],
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    
+    # Get ALL tickets for this device from service_tickets_new
+    tickets = await db.service_tickets_new.find({
+        "device_id": device_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).sort("created_at", -1).to_list(200)
+    
+    # Also check old service_tickets collection
+    old_tickets = await db.service_tickets.find({
+        "device_id": device_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).sort("created_at", -1).to_list(200)
+    
+    all_tickets = tickets + old_tickets
+    
+    # Calculate ticket analytics
+    total_tickets = len(all_tickets)
+    open_tickets = len([t for t in all_tickets if t.get("status") in ["new", "pending_acceptance", "assigned", "in_progress", "pending_parts"]])
+    resolved_tickets = len([t for t in all_tickets if t.get("status") in ["completed", "closed", "resolved"]])
+    
+    # Calculate average TAT (Turn Around Time) for resolved tickets
+    tat_times = []
+    for t in all_tickets:
+        if t.get("created_at") and t.get("completed_at"):
+            try:
+                created = datetime.fromisoformat(t["created_at"].replace("Z", "+00:00")) if isinstance(t["created_at"], str) else t["created_at"]
+                completed = datetime.fromisoformat(t["completed_at"].replace("Z", "+00:00")) if isinstance(t["completed_at"], str) else t["completed_at"]
+                tat_hours = (completed - created).total_seconds() / 3600
+                tat_times.append(tat_hours)
+            except:
+                pass
+    
+    avg_tat_hours = sum(tat_times) / len(tat_times) if tat_times else 0
+    
+    # Get quotations related to device tickets
+    ticket_ids = [t["id"] for t in all_tickets]
+    quotations = await db.quotations.find({
+        "ticket_id": {"$in": ticket_ids},
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).to_list(100)
+    
+    total_spend = sum(q.get("total_amount", 0) for q in quotations if q.get("status") == "approved")
+    pending_quotations = len([q for q in quotations if q.get("status") in ["draft", "sent"]])
+    
+    # Get parts replaced on this device
+    parts_replaced = await db.parts.find({
+        "device_id": device_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).to_list(100)
+    
+    parts_cost = sum(p.get("cost", 0) or p.get("price", 0) or 0 for p in parts_replaced)
+    
+    # Get service history
+    service_history = await db.service_history.find({
+        "device_id": device_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).sort("service_date", -1).to_list(100)
+    
+    # AMC Analytics
+    amc_assignment = await db.amc_device_assignments.find_one({
+        "device_id": device_id,
+        "status": "active"
+    }, {"_id": 0})
+    
+    amc_analytics = None
+    if amc_assignment:
+        amc_contract = await db.amc_contracts.find_one({
+            "id": amc_assignment.get("amc_contract_id")
+        }, {"_id": 0})
+        
+        if amc_contract:
+            # Calculate AMC coverage metrics
+            coverage_start = amc_assignment.get("coverage_start")
+            coverage_end = amc_assignment.get("coverage_end")
+            
+            # Calculate days remaining
+            days_remaining = 0
+            coverage_percentage = 0
+            if coverage_end:
+                try:
+                    end_date = datetime.fromisoformat(coverage_end.replace("Z", "+00:00")) if isinstance(coverage_end, str) else coverage_end
+                    start_date = datetime.fromisoformat(coverage_start.replace("Z", "+00:00")) if isinstance(coverage_start, str) else coverage_start
+                    now = datetime.now(end_date.tzinfo) if end_date.tzinfo else datetime.now()
+                    days_remaining = max(0, (end_date - now).days)
+                    total_days = (end_date - start_date).days if start_date else 365
+                    days_used = total_days - days_remaining
+                    coverage_percentage = min(100, (days_used / total_days) * 100) if total_days > 0 else 0
+                except:
+                    pass
+            
+            # Count preventive maintenance visits
+            pm_visits = len([s for s in service_history if s.get("service_type") in ["preventive_maintenance", "PM", "Preventive Maintenance"]])
+            
+            # Expected PM visits (quarterly = 4 per year)
+            pm_schedule = amc_contract.get("pm_schedule", "quarterly")
+            expected_pm = 4 if pm_schedule == "quarterly" else 12 if pm_schedule == "monthly" else 2 if pm_schedule == "bi-annual" else 1
+            
+            amc_analytics = {
+                "contract_id": amc_contract.get("id"),
+                "contract_name": amc_contract.get("name"),
+                "amc_type": amc_contract.get("amc_type"),
+                "coverage_start": coverage_start,
+                "coverage_end": coverage_end,
+                "days_remaining": days_remaining,
+                "coverage_percentage": round(coverage_percentage, 1),
+                "coverage_includes": amc_contract.get("coverage_includes", []),
+                "entitlements": amc_contract.get("entitlements", {}),
+                "pm_schedule": pm_schedule,
+                "pm_visits_completed": pm_visits,
+                "pm_visits_expected": expected_pm,
+                "pm_compliance": round((pm_visits / expected_pm) * 100, 1) if expected_pm > 0 else 0,
+                "next_pm_due": amc_assignment.get("next_pm_date"),
+                "contract_value": amc_contract.get("contract_value", 0),
+                "is_active": True
+            }
+    
+    # Build lifecycle events
+    lifecycle_events = []
+    
+    # Device creation/registration
+    if device.get("created_at"):
+        lifecycle_events.append({
+            "type": "device_registered",
+            "title": "Device Registered",
+            "description": f"{device.get('brand', '')} {device.get('model', '')} added to inventory",
+            "date": device.get("created_at"),
+            "icon": "laptop"
+        })
+    
+    # Warranty events
+    if device.get("warranty_start"):
+        lifecycle_events.append({
+            "type": "warranty_start",
+            "title": "Warranty Started",
+            "description": f"Manufacturer warranty began",
+            "date": device.get("warranty_start"),
+            "icon": "shield"
+        })
+    
+    if device.get("warranty_end"):
+        lifecycle_events.append({
+            "type": "warranty_end",
+            "title": "Warranty Expiry",
+            "description": f"Manufacturer warranty ends",
+            "date": device.get("warranty_end"),
+            "icon": "alert",
+            "is_future": True
+        })
+    
+    # AMC enrollment
+    if amc_assignment:
+        lifecycle_events.append({
+            "type": "amc_enrolled",
+            "title": "AMC Enrolled",
+            "description": f"Enrolled in {amc_analytics.get('contract_name', 'AMC Contract') if amc_analytics else 'AMC'}",
+            "date": amc_assignment.get("created_at") or amc_assignment.get("coverage_start"),
+            "icon": "file-text"
+        })
+    
+    # Service tickets
+    for ticket in all_tickets[:10]:  # Last 10 tickets
+        lifecycle_events.append({
+            "type": "service_ticket",
+            "title": f"Service Ticket #{ticket.get('ticket_number', '')}",
+            "description": ticket.get("title") or ticket.get("subject", "Service request"),
+            "date": ticket.get("created_at"),
+            "status": ticket.get("status"),
+            "icon": "ticket"
+        })
+    
+    # Parts replacements
+    for part in parts_replaced[:5]:
+        lifecycle_events.append({
+            "type": "part_replaced",
+            "title": f"Part Replaced: {part.get('name', 'Component')}",
+            "description": part.get("description", "Component replacement"),
+            "date": part.get("created_at") or part.get("replaced_at"),
+            "cost": part.get("cost") or part.get("price"),
+            "icon": "package"
+        })
+    
+    # Sort lifecycle by date
+    lifecycle_events.sort(key=lambda x: x.get("date") or "", reverse=True)
+    
+    # RMM placeholder (will be populated when Tactical RMM is integrated)
+    rmm_data = {
+        "integrated": False,
+        "message": "RMM integration pending - Tactical RMM will be integrated soon",
+        "placeholder_metrics": {
+            "cpu_usage": None,
+            "memory_usage": None,
+            "disk_usage": None,
+            "last_seen": None,
+            "os_version": None,
+            "uptime": None,
+            "installed_software": [],
+            "pending_updates": [],
+            "alerts": []
+        }
+    }
+    
+    return {
+        "device": device,
+        "ticket_analytics": {
+            "total_tickets": total_tickets,
+            "open_tickets": open_tickets,
+            "resolved_tickets": resolved_tickets,
+            "avg_tat_hours": round(avg_tat_hours, 1),
+            "avg_tat_display": f"{int(avg_tat_hours)}h {int((avg_tat_hours % 1) * 60)}m" if avg_tat_hours else "N/A",
+            "tickets": all_tickets[:20]  # Last 20 tickets
+        },
+        "financial_summary": {
+            "total_spend": total_spend,
+            "parts_cost": parts_cost,
+            "pending_quotations": pending_quotations,
+            "quotations": quotations[:10]
+        },
+        "parts_replaced": parts_replaced,
+        "service_history": service_history[:20],
+        "amc_analytics": amc_analytics,
+        "lifecycle_events": lifecycle_events[:30],
+        "rmm_data": rmm_data
+    }
+
+
 # --- Company Credentials ---
 
 @api_router.get("/company/credentials")
