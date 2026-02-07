@@ -72,7 +72,7 @@ const CompanyDetails = () => {
   const [siteForm, setSiteForm] = useState({ name: '', address: '', contact_person: '', contact_phone: '', contact_email: '' });
   const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', department: '', designation: '' });
   const [deviceForm2, setDeviceForm2] = useState({ brand: '', model: '', serial_number: '', device_type: '', location: '', purchase_date: new Date().toISOString().split('T')[0] });
-  const [licenseForm, setLicenseForm] = useState({ software_name: '', license_key: '', license_type: 'perpetual', seats: 1, expiry_date: '' });
+  const [licenseForm, setLicenseForm] = useState({ software_name: '', license_key: '', license_type: 'perpetual', seats: 1, start_date: new Date().toISOString().split('T')[0], expiry_date: '' });
   const [deploymentForm, setDeploymentForm] = useState({ name: '', deployment_type: '', status: 'active', notes: '' });
   const [amcForm, setAmcForm] = useState({ contract_number: '', start_date: '', end_date: '', coverage_type: 'comprehensive', value: '' });
   
