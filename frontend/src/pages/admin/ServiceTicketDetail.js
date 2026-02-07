@@ -116,12 +116,13 @@ export default function ServiceTicketDetail() {
 
   // Fetch supporting data
   const fetchSupportingData = useCallback(async () => {
+    const authHeaders = { Authorization: `Bearer ${localStorage.getItem('admin_token')}` };
     try {
       const [staffRes, engineersRes, itemsRes, locationsRes] = await Promise.all([
-        axios.get(`${API_URL}/api/admin/staff/users?limit=100`, { headers }),
-        axios.get(`${API_URL}/api/admin/engineers`, { headers }).catch(() => ({ data: [] })),
-        axios.get(`${API_URL}/api/admin/items?limit=500`, { headers }),
-        axios.get(`${API_URL}/api/admin/inventory/locations`, { headers })
+        axios.get(`${API_URL}/api/admin/staff/users?limit=100`, { headers: authHeaders }),
+        axios.get(`${API_URL}/api/admin/engineers`, { headers: authHeaders }).catch(() => ({ data: [] })),
+        axios.get(`${API_URL}/api/admin/items?limit=500`, { headers: authHeaders }),
+        axios.get(`${API_URL}/api/admin/inventory/locations`, { headers: authHeaders })
       ]);
       
       // Get all staff users
@@ -139,13 +140,14 @@ export default function ServiceTicketDetail() {
         }
       });
       
+      console.log('Loaded technicians:', allTechnicians.length, allTechnicians.map(t => t.name));
       setStaff(allTechnicians);
       setItems(Array.isArray(itemsRes.data) ? itemsRes.data : (itemsRes.data.items || []));
       setLocations(Array.isArray(locationsRes.data) ? locationsRes.data : (locationsRes.data.locations || []));
     } catch (error) {
       console.error('Failed to fetch supporting data:', error);
     }
-  }, [headers]);
+  }, []);
 
   useEffect(() => {
     fetchTicket();
