@@ -123,19 +123,16 @@ export default function ServiceTicketDetail() {
         axios.get(`${API_URL}/api/admin/items?limit=500`, { headers }),
         axios.get(`${API_URL}/api/admin/inventory/locations`, { headers })
       ]);
-      // Combine staff users (with Technician role) and engineers
+      
+      // Get all staff users
       const staffUsers = Array.isArray(staffRes.data) ? staffRes.data : (staffRes.data.users || []);
       const engineers = Array.isArray(engineersRes.data) ? engineersRes.data : [];
       
-      // Filter staff to only show those with technician-related roles
-      const technicians = staffUsers.filter(s => {
-        const roles = s.roles || [];
-        return roles.some(r => r.name?.toLowerCase().includes('technician') || r.name?.toLowerCase().includes('engineer'));
-      });
+      // Combine ALL active staff users AND engineers (no role filtering - if they're in staff management, they can be assigned)
+      const allTechnicians = staffUsers.filter(s => s.state === 'active');
       
-      // Merge technicians and engineers, removing duplicates by email
-      const allTechnicians = [...technicians];
-      const existingEmails = new Set(technicians.map(t => t.email?.toLowerCase()));
+      // Add engineers that aren't already in staff users (by email)
+      const existingEmails = new Set(allTechnicians.map(t => t.email?.toLowerCase()));
       engineers.forEach(eng => {
         if (eng.is_active && !existingEmails.has(eng.email?.toLowerCase())) {
           allTechnicians.push({ ...eng, state: 'active' });
