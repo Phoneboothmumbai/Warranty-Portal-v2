@@ -6040,37 +6040,70 @@ async def get_engineer_visits(
     status: Optional[str] = None,
     engineer: dict = Depends(get_current_engineer)
 ):
-    """Get all field visits assigned to this engineer"""
-    query = {
-        "engineer_id": engineer["id"],
+    """Get all field visits assigned to this engineer/technician"""
+    engineer_id = engineer["id"]
+    
+    # Query both field_visits (legacy) and service_visits_new (new service module)
+    legacy_query = {
+        "engineer_id": engineer_id,
         "status": {"$ne": "cancelled"}
+    }
+    new_query = {
+        "technician_id": engineer_id,
+        "is_deleted": {"$ne": True}
     }
     
     if status:
-        query["status"] = status
+        legacy_query["status"] = status
+        new_query["status"] = status
     
-    visits = await db.field_visits.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    # Get legacy field visits
+    legacy_visits = await db.field_visits.find(legacy_query, {"_id": 0}).sort("created_at", -1).to_list(100)
     
-    # Enrich with device and company info
-    for visit in visits:
+    # Get new service visits
+    new_visits = await db.service_visits_new.find(new_query, {"_id": 0}).sort("scheduled_date", -1).to_list(100)
+    
+    all_visits = []
+    
+    # Process legacy visits
+    for visit in legacy_visits:
         device = await db.devices.find_one(
-            {"id": visit["device_id"]},
+            {"id": visit.get("device_id")},
             {"_id": 0, "brand": 1, "model": 1, "serial_number": 1, "location": 1}
         )
         company = await db.companies.find_one(
-            {"id": visit["company_id"]},
+            {"id": visit.get("company_id")},
             {"_id": 0, "name": 1, "address": 1, "contact_phone": 1}
         )
         ticket = await db.service_tickets.find_one(
-            {"id": visit["ticket_id"]},
+            {"id": visit.get("ticket_id")},
             {"_id": 0, "ticket_number": 1, "subject": 1, "priority": 1, "issue_category": 1}
         )
         
         visit["device"] = device
         visit["company"] = company
         visit["ticket"] = ticket
+        visit["source"] = "legacy"
+        all_visits.append(visit)
     
-    return visits
+    # Process new service visits
+    for visit in new_visits:
+        # Get ticket info for new visits
+        ticket = await db.service_tickets_new.find_one(
+            {"id": visit.get("ticket_id")},
+            {"_id": 0, "ticket_number": 1, "title": 1, "priority": 1, "company_id": 1, "company_name": 1}
+        )
+        if ticket:
+            visit["ticket"] = {
+                "ticket_number": ticket.get("ticket_number"),
+                "subject": ticket.get("title"),
+                "priority": ticket.get("priority")
+            }
+            visit["company"] = {"name": ticket.get("company_name")}
+        visit["source"] = "service_module"
+        all_visits.append(visit)
+    
+    return all_visits
 
 
 @api_router.get("/engineer/visits/{visit_id}")
