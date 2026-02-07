@@ -145,6 +145,7 @@ async def get_ticket_statuses(admin: dict = Depends(get_current_admin)):
     return {
         "statuses": [
             {"value": "new", "label": "New", "color": "slate", "is_open": True},
+            {"value": "pending_acceptance", "label": "Pending Acceptance", "color": "purple", "is_open": True},
             {"value": "assigned", "label": "Assigned", "color": "blue", "is_open": True},
             {"value": "in_progress", "label": "In Progress", "color": "amber", "is_open": True},
             {"value": "pending_parts", "label": "Pending Parts", "color": "orange", "is_open": True},
