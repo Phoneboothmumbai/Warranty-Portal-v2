@@ -21,188 +21,156 @@ A comprehensive MSP-grade service ticket system with:
 
 ## What's Been Implemented
 
-### ✅ Engineer Portal - Complete Implementation (Dec 2025)
+### ✅ Comprehensive Device Dashboard - NEW (Feb 2026)
 
-**1. Ticket Dashboard**
-- View all assigned tickets (New, Assigned, In Progress, Pending Parts)
-- Clear status indicators and priority levels
-- Filter tickets by date, status, priority
+**6-Tab Professional Dashboard:**
 
-**2. Ticket Details View**
-- Full ticket information: issue description, customer details, location, asset info
-- View previous visit history and notes
-- SLA timeline visibility
+1. **Overview Tab**
+   - Quick Stats Row: Total Tickets, Open Tickets, Avg TAT, Total Spend, Warranty Days, Parts Replaced
+   - Device Information Card
+   - Warranty Status Card with visual indicator
+   - Financial Summary Card
+   - Recent Activity timeline
 
-**3. Ticket Acknowledgement**
-- Accept or decline assigned tickets
-- Status auto-updates to Assigned or returns to New
+2. **Tickets Tab**
+   - Ticket statistics (Total, Open, Resolved, Avg Resolution Time)
+   - Complete ticket list with status badges
+   - Direct link to create new ticket
 
-**4. Visit Management**
-- Start Visit / End Visit tracking
-- Auto-capture visit timestamps
-- Live timer during visits
-- Visit history stored per ticket
+3. **Lifecycle Tab**
+   - Visual timeline of device history
+   - Color-coded events (Device Registered, Warranty, AMC, Tickets, Parts)
+   - Chronological order with dates and costs
 
-**5. Issue Diagnosis & Findings**
-- Engineer can record problem identified, root cause, and observations
-- Photo/document attachment capability (base64 storage)
+4. **AMC Tab** (when device enrolled)
+   - AMC Active status card
+   - Days Remaining progress bar
+   - PM Compliance circular gauge (% of scheduled visits completed)
+   - Contract Details (Name, Type, Schedule, Value)
+   - Coverage Includes list
+   - Entitlements display
 
-**6. Resolution Actions**
-- Mark ticket as Resolved or Pending for Parts
-- Mandatory remarks before status change
+5. **RMM Tab**
+   - Placeholder for Tactical RMM integration
+   - Icons for CPU Usage, Memory, Disk Space, Network
+   - "Coming Soon" professional message
 
-**7. Parts Requirement Flow**
-- Select required parts from inventory OR add manually
-- Submit ticket with Pending for Parts status
-- **AUTO-GENERATES draft quotation** for admin review
+6. **Details Tab**
+   - Configuration (Processor, RAM, Storage, OS)
+   - Assignment (User, Department, Location)
+   - Purchase Information (Date, Price, Vendor, Invoice)
+   - Network Information (IP, MAC, Hostname)
+   - Parts Replaced history
 
-**8. Revisit Handling**
-- Ticket reassigned after customer approval
-- Revisit clearly marked in ticket
+**API Endpoint:**
+- `GET /api/company/devices/:id/analytics` - Returns comprehensive device analytics
 
-**9. Ticket Closure**
-- Final findings and solution details required
-- Validates no incomplete visits
-- Cannot close when pending parts
+### ✅ Company Service Tickets - NEW (Feb 2026)
 
-### ✅ Admin Quotation Management UI - NEW (Feb 2026)
-
-**Features Implemented:**
-- Quotation list view with summary cards (Draft, Awaiting Response, Approved, Total)
-- Detailed quotation view modal with items, prices, totals
-- Edit quotation modal to add/remove/modify line items
-- Send quotation functionality (changes status from draft → sent)
-- Record customer response (approve/reject) with notes
-- Navigation link added to admin sidebar
-
-**API Endpoints:**
-- `GET /api/admin/quotations` - List quotations with filtering
-- `GET /api/admin/quotations/{id}` - Get quotation detail
-- `PUT /api/admin/quotations/{id}` - Update quotation items/prices
-- `POST /api/admin/quotations/{id}/send` - Send to customer
-- `POST /api/admin/quotations/{id}/approve` - Record approval/rejection
-
-### ✅ Customer Portal Quotations - NEW (Feb 2026)
-
-**Features Implemented:**
-- Company users can view quotations sent to them
-- Approve or reject quotations with notes
-- Summary cards showing pending/approved counts
-- Alert banner for pending quotations
-- Draft quotations are hidden from company users
+**Features:**
+- Service Tickets list page at `/company/tickets`
+- Ticket Detail page at `/company/tickets/:id`
+- Create ticket from company portal
+- Create ticket from device dashboard (device pre-selected)
+- Filter by status, search functionality
+- Stats cards (Open, Pending Parts, Completed, Total)
+- Workflow progress indicator on detail page
 
 **API Endpoints:**
-- `GET /api/company/quotations` - List quotations for company
-- `GET /api/company/quotations/{id}` - Get quotation detail (no internal notes)
-- `POST /api/company/quotations/{id}/respond` - Approve/reject quotation
+- `GET /api/company/service-tickets` - List tickets with filtering
+- `GET /api/company/service-tickets/:id` - Get ticket detail
+- `POST /api/company/service-tickets` - Create new ticket
 
-### ✅ Strict Ticket Workflow Enforcement - NEW (Feb 2026)
+### ✅ Previous Implementations
 
-**Workflow Rules Implemented:**
-```
-1️⃣ Ticket Created (NEW)
-2️⃣ Technician Assigned (PENDING_ACCEPTANCE)
-3️⃣ Technician Accepts (ASSIGNED)
-4️⃣ Visit & Diagnosis (IN_PROGRESS)
-5️⃣ Parts Required (PENDING_PARTS) → Quotation workflow
-6️⃣ Work Completed (COMPLETED)
-7️⃣ Ticket Closed (CLOSED)
-```
+**Admin Quotation Management UI** (`/admin/quotations`)
+- List, view, edit quotations with full CRUD
+- Send quotation to customer functionality
+- Navigation link in admin sidebar
 
-**Validation Rules:**
-- Can only assign: `new`, `pending_acceptance` tickets
-- Cannot reassign: `assigned`, `in_progress`, `pending_parts`, `completed`, `closed` tickets
+**Strict Ticket Workflow Enforcement**
+- Can only assign `new` or `pending_acceptance` tickets
+- Cannot reassign once engineer accepted
 - Clear error messages for each blocked scenario
 - Workflow progress indicator on ticket detail page
 
-**Error Messages:**
-- assigned: "Engineer has already accepted this ticket. Cannot reassign - work must proceed."
-- in_progress: "Work is in progress. Cannot reassign ticket at this stage."
-- pending_parts: "Ticket is pending parts. Complete the quotation workflow before any changes."
+**Customer Portal Quotations** (`/company/quotations`)
+- Company users can view sent quotations
+- Approve/reject quotations with notes
 
-### Ticket Detail Enhancements - NEW (Feb 2026)
-
-- **Quotation Alert Banner**: Shows quotation status when ticket is pending_parts
-- **Workflow Progress Indicator**: Visual 7-step progress bar
-- **View Quotation Button**: Quick access to quotation from ticket
+**Engineer Portal** - Complete 9-feature implementation
 
 ## Architecture
 
 ```
 /app
 ├── backend/
-│   ├── models/
-│   │   └── service_ticket.py      # PENDING_ACCEPTANCE status, assignment fields
 │   ├── routes/
-│   │   ├── engineer_portal.py     # Comprehensive engineer API
-│   │   ├── service_tickets_new.py # Ticket workflow with strict validation
-│   │   └── quotations.py          # Admin + Company quotation APIs
-│   └── server.py                  # Router registrations
+│   │   ├── engineer_portal.py     # Engineer API
+│   │   ├── service_tickets_new.py # Ticket workflow
+│   │   └── quotations.py          # Quotations + Company tickets API
+│   └── server.py                  # Device analytics API, router registrations
 ├── frontend/
 │   └── src/
 │       └── pages/
 │           ├── admin/
-│           │   ├── Quotations.js           # Admin quotation management
-│           │   └── ServiceTicketDetail.js  # Workflow progress, quotation banner
+│           │   ├── Quotations.js
+│           │   └── ServiceTicketDetail.js
 │           ├── company/
-│           │   └── CompanyQuotations.js    # Customer quotation portal
+│           │   ├── DeviceDashboard.js      # NEW: Comprehensive device dashboard
+│           │   ├── CompanyTickets.js       # NEW: Service tickets list
+│           │   ├── CompanyTicketDetail.js  # NEW: Ticket detail
+│           │   └── CompanyQuotations.js
 │           └── engineer/
-│               ├── TechnicianDashboard.js    # Engineer dashboard
-│               ├── TechnicianVisitDetail.js  # Full visit workflow
-│               └── EngineerTicketDetail.js   # Ticket detail
+│               ├── TechnicianDashboard.js
+│               └── TechnicianVisitDetail.js
 └── ...
-```
-
-## Ticket Status Flow
-
-```
-NEW → (admin assigns) → PENDING_ACCEPTANCE → (engineer accepts) → ASSIGNED → 
-IN_PROGRESS → (parts needed) → PENDING_PARTS → (quotation approved) → 
-IN_PROGRESS → COMPLETED → CLOSED
-
-PENDING_ACCEPTANCE → (engineer declines) → NEW (ready for reassignment)
 ```
 
 ## Prioritized Backlog
 
 ### P0 - COMPLETE
+- ✅ Device Dashboard with analytics, lifecycle, AMC metrics
+- ✅ Company Service Tickets functionality
 - ✅ Admin Quotation Management UI
 - ✅ Customer Portal Quotations
 - ✅ Strict Ticket Workflow Enforcement
-- ✅ Workflow Progress Indicator
+- ✅ Engineer Portal (all 9 features)
 
 ### P1 - Next Sprint
 - **Email Notifications** - Assignment, quotation events
 - **Quotation PDF Generation**
-- **RMM Integration** - Tactical RMM
+- **RMM Integration** - Tactical RMM setup
+- **Admin Device Dashboard** - Same dashboard view for admin panel
 
 ### P2 - Future
 - Razorpay payments finalization
-- CompanySwitcher.js implementation
 - AI Ticket Summary completion
-- Backend model unification (staff_users vs organization_members)
-- server.py refactoring (move legacy routes)
+- Backend model unification
+- server.py refactoring
 
 ## Test Reports
-- `/app/test_reports/iteration_34.json` - Accept/Decline workflow (100% pass)
-- `/app/test_reports/iteration_35.json` - Engineer Portal comprehensive (95% pass)
 - `/app/test_reports/iteration_36.json` - Quotation & Workflow tests (100% pass)
+- `/app/test_reports/iteration_37.json` - Device Dashboard & Company Tickets (100% pass)
 
 ## Test Files
-- `/app/backend/tests/test_quotation_workflow.py` - Quotation and workflow validation tests
+- `/app/backend/tests/test_quotation_workflow.py`
+- `/app/backend/tests/test_device_dashboard_company_tickets.py`
 
 ## Credentials (Preview Environment)
 - Admin: `ck@motta.in` / `Charu@123@`
 - Engineer: `john.tech@test.com` / `Tech@123`
 - Company: `testuser@testcompany.com` / `Test@123`
+- Test Device ID: `206eb754-b34e-4387-8262-a64543a3c769`
 
 ## 3rd Party Integrations
 - **OpenAI GPT-4o-mini**: AI features (uses Emergent LLM Key)
 - **Razorpay**: Payments (partial)
 - **Cloudflare**: DNS and SSL
+- **Tactical RMM**: Pending integration (placeholder ready)
 
 ---
 Last Updated: February 2026
-- Admin Quotation Management UI - COMPLETE
-- Customer Portal Quotations - COMPLETE  
-- Strict Workflow Enforcement - COMPLETE
+- Device Dashboard (6 tabs) - COMPLETE
+- Company Service Tickets - COMPLETE
+- RMM Integration - PENDING (placeholder ready)
