@@ -661,10 +661,117 @@ const DeviceDashboard = () => {
 
         {/* WatchTower Tab */}
         <TabsContent value="rmm" className="space-y-4">
-          {rmmData.integrated ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* WatchTower metrics would go here when integrated */}
+          {watchTowerLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
             </div>
+          ) : watchTowerData?.integrated && watchTowerData?.agent_status === 'online' ? (
+            <div className="space-y-4">
+              {/* Agent Status Banner */}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse" />
+                  <div className="flex-1">
+                    <p className="font-medium text-emerald-900">WatchTower Agent Online</p>
+                    <p className="text-sm text-emerald-700">
+                      Last seen: {formatDateTime(watchTowerData.agent_data?.last_seen)}
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={fetchWatchTowerStatus}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
+                </div>
+              </div>
+
+              {/* Quick Metrics */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                  <CardContent className="p-4 text-center">
+                    <Monitor className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                    <p className="text-xs text-blue-600 font-medium mb-1">Hostname</p>
+                    <p className="font-bold text-blue-800 truncate">{watchTowerData.agent_data?.hostname || '-'}</p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                  <CardContent className="p-4 text-center">
+                    <Server className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                    <p className="text-xs text-purple-600 font-medium mb-1">RAM</p>
+                    <p className="font-bold text-purple-800">{watchTowerData.agent_data?.total_ram_gb?.toFixed(1) || '-'} GB</p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+                  <CardContent className="p-4 text-center">
+                    <Wifi className="h-8 w-8 text-amber-600 mx-auto mb-2" />
+                    <p className="text-xs text-amber-600 font-medium mb-1">Public IP</p>
+                    <p className="font-bold text-amber-800 text-sm">{watchTowerData.agent_data?.public_ip || '-'}</p>
+                  </CardContent>
+                </Card>
+                
+                <Card className={`bg-gradient-to-br ${watchTowerData.agent_data?.needs_reboot ? 'from-red-50 to-red-100 border-red-200' : 'from-emerald-50 to-emerald-100 border-emerald-200'}`}>
+                  <CardContent className="p-4 text-center">
+                    <Zap className={`h-8 w-8 mx-auto mb-2 ${watchTowerData.agent_data?.needs_reboot ? 'text-red-600' : 'text-emerald-600'}`} />
+                    <p className={`text-xs font-medium mb-1 ${watchTowerData.agent_data?.needs_reboot ? 'text-red-600' : 'text-emerald-600'}`}>Reboot Status</p>
+                    <p className={`font-bold ${watchTowerData.agent_data?.needs_reboot ? 'text-red-800' : 'text-emerald-800'}`}>
+                      {watchTowerData.agent_data?.needs_reboot ? 'Reboot Required' : 'OK'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* System Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Monitor className="h-4 w-4" />
+                      System Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm">
+                    <InfoRow label="Hostname" value={watchTowerData.agent_data?.hostname} />
+                    <InfoRow label="Operating System" value={watchTowerData.agent_data?.operating_system} />
+                    <InfoRow label="Platform" value={watchTowerData.agent_data?.platform} />
+                    <InfoRow label="Agent Version" value={watchTowerData.agent_data?.version} />
+                    <InfoRow label="Logged In User" value={watchTowerData.agent_data?.logged_in_user} />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      WatchTower Assignment
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm">
+                    <InfoRow label="Client" value={watchTowerData.agent_data?.client_name} />
+                    <InfoRow label="Site" value={watchTowerData.agent_data?.site_name} />
+                    <InfoRow label="Agent ID" value={watchTowerData.agent_data?.agent_id} mono />
+                    <InfoRow label="Public IP" value={watchTowerData.agent_data?.public_ip} />
+                    <InfoRow label="Total RAM" value={`${watchTowerData.agent_data?.total_ram_gb?.toFixed(1) || '-'} GB`} />
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          ) : watchTowerData?.integrated && watchTowerData?.agent_status === 'offline' ? (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="py-12 text-center">
+                <div className="w-20 h-20 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-6">
+                  <Monitor className="h-10 w-10 text-red-500" />
+                </div>
+                <h3 className="text-xl font-semibold text-red-800 mb-2">Agent Offline</h3>
+                <p className="text-red-700 max-w-md mx-auto mb-4">
+                  The WatchTower agent on this device is currently offline. Last seen: {formatDateTime(watchTowerData.agent_data?.last_seen)}
+                </p>
+                <Button onClick={fetchWatchTowerStatus} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Check Again
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
             <Card className="border-dashed border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-slate-50">
               <CardContent className="py-12 text-center">
