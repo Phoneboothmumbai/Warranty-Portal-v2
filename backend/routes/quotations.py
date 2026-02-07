@@ -786,5 +786,5 @@ async def create_company_ticket(
     logger.info(f"Service ticket #{ticket_number} created by company user {user.get('name')}")
     
     # Return without _id
-    del ticket_data["_id"] if "_id" in ticket_data else None
+    ticket_data.pop("_id", None)
     return ticket_data
