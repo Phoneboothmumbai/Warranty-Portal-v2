@@ -684,9 +684,9 @@ export default function TicketingConfig() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Help Topics</CardTitle>
-                <CardDescription>Create help topics with custom forms for structured ticket input</CardDescription>
+                <CardDescription>Create help topics with linked forms for structured ticket input</CardDescription>
               </div>
-              <Button onClick={() => { setEditingTopic(null); setTopicForm({ name: '', description: '', is_active: true, is_public: true, custom_fields: [] }); setShowTopicModal(true); }}>
+              <Button onClick={() => { setEditingTopic(null); setTopicForm({ name: '', description: '', is_active: true, is_public: true, custom_form_id: '', auto_assign_department_id: '', sla_policy_id: '', custom_fields: [] }); setShowTopicModal(true); }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Topic
               </Button>
@@ -700,7 +700,7 @@ export default function TicketingConfig() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {helpTopics.map((topic) => (
-                    <Card key={topic.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => { setEditingTopic(topic); setTopicForm(topic); setShowTopicModal(true); }}>
+                    <Card key={topic.id} className="hover:shadow-md transition-shadow cursor-pointer group" onClick={() => { setEditingTopic(topic); setTopicForm(topic); setShowTopicModal(true); }}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2">
@@ -709,7 +709,16 @@ export default function TicketingConfig() {
                             </div>
                             <div>
                               <p className="font-medium text-slate-900">{topic.name}</p>
-                              <p className="text-xs text-slate-500">{topic.custom_fields?.length || 0} custom fields</p>
+                              {topic.custom_form_name ? (
+                                <p className="text-xs text-blue-600 flex items-center gap-1">
+                                  <FileText className="h-3 w-3" />
+                                  {topic.custom_form_name}
+                                </p>
+                              ) : topic.custom_fields?.length > 0 ? (
+                                <p className="text-xs text-slate-500">{topic.custom_fields.length} inline fields</p>
+                              ) : (
+                                <p className="text-xs text-slate-400">No form linked</p>
+                              )}
                             </div>
                           </div>
                           <div className="flex gap-1">
@@ -720,12 +729,23 @@ export default function TicketingConfig() {
                         {topic.description && (
                           <p className="text-sm text-slate-600 line-clamp-2">{topic.description}</p>
                         )}
-                        {(topic.sla_response_hours || topic.sla_resolution_hours) && (
-                          <div className="flex gap-2 mt-2">
-                            {topic.sla_response_hours && <Badge variant="secondary" className="text-xs">Response: {topic.sla_response_hours}h</Badge>}
-                            {topic.sla_resolution_hours && <Badge variant="secondary" className="text-xs">Resolution: {topic.sla_resolution_hours}h</Badge>}
-                          </div>
-                        )}
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {topic.department_name && (
+                            <Badge variant="secondary" className="text-xs">
+                              <Users className="h-3 w-3 mr-1" />
+                              {topic.department_name}
+                            </Badge>
+                          )}
+                          {topic.sla_policy_name && (
+                            <Badge variant="secondary" className="text-xs">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {topic.sla_policy_name}
+                            </Badge>
+                          )}
+                          {topic.sla_response_hours && !topic.sla_policy_name && (
+                            <Badge variant="outline" className="text-xs">Response: {topic.sla_response_hours}h</Badge>
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
