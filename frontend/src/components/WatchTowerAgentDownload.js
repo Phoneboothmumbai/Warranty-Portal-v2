@@ -395,34 +395,50 @@ const DownloadDialog = ({
             {loading ? (
               <>
                 <RefreshCw className="h-4 w-4 animate-spin" />
-                Generating Download Link...
+                Getting Download Instructions...
               </>
             ) : (
               <>
                 <Download className="h-4 w-4" />
-                Download {platform === 'windows' ? 'Windows' : 'Linux'} Agent
+                Get {platform === 'windows' ? 'Windows' : 'Linux'} Agent
               </>
             )}
           </Button>
           
-          {/* Success Message with Link */}
+          {/* Download Instructions */}
           {downloadUrl && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-amber-900">WatchTower Opened</p>
-                <p className="text-xs text-amber-700 mt-1">
-                  Log in to WatchTower if prompted, then navigate to <strong>Agents → Add Agent</strong> to download the installer.{' '}
+            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-indigo-900">Manual Download Required</p>
+                  <p className="text-xs text-indigo-700 mt-1">
+                    WatchTower requires admin access to download agents. Follow these steps:
+                  </p>
+                </div>
+              </div>
+              
+              <ol className="text-sm text-indigo-800 space-y-2 ml-7 list-decimal">
+                <li>
                   <a 
                     href={downloadUrl} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="underline hover:text-amber-800"
+                    className="text-indigo-600 underline hover:text-indigo-800 font-medium"
                   >
-                    Open WatchTower again
+                    Open WatchTower →
                   </a>
-                </p>
-              </div>
+                </li>
+                <li>Log in with your admin credentials</li>
+                <li>Go to <strong>Agents → Install Agent</strong></li>
+                <li>Select the correct <strong>Client</strong> and <strong>Site</strong></li>
+                <li>Choose <strong>{platform === 'windows' ? 'Windows 64-bit' : 'Linux'}</strong></li>
+                <li>Click <strong>Download</strong></li>
+              </ol>
+              
+              <p className="text-xs text-indigo-600 ml-7">
+                Contact your administrator if you don't have WatchTower login credentials.
+              </p>
             </div>
           )}
         </div>
