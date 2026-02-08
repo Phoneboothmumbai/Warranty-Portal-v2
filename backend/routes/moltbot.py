@@ -141,6 +141,13 @@ async def save_moltbot_config(
         "default_help_topic_id": data.default_help_topic_id,
         "default_priority": data.default_priority,
         "notification_channels": data.notification_channels,
+        # Bot Configuration fields
+        "bot_instructions": data.bot_instructions,
+        "knowledge_base": data.knowledge_base,
+        "restrict_to_support_only": data.restrict_to_support_only,
+        "restrict_to_employees": data.restrict_to_employees,
+        "allowed_topics": data.allowed_topics,
+        "off_topic_response": data.off_topic_response,
         "updated_at": datetime.now(timezone.utc),
         "updated_by": admin["id"]
     }
