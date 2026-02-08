@@ -168,8 +168,11 @@ class HelpTopicUpdate(BaseModel):
     default_problem_type: Optional[str] = None
     auto_assign_to: Optional[str] = None
     auto_assign_team: Optional[str] = None
+    auto_assign_department_id: Optional[str] = None
+    sla_policy_id: Optional[str] = None
     sla_response_hours: Optional[int] = None
     sla_resolution_hours: Optional[int] = None
+    custom_form_id: Optional[str] = None
     custom_fields: Optional[List[CustomFormField]] = None
     parent_topic_id: Optional[str] = None
 
