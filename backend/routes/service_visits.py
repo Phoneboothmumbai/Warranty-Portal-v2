@@ -178,6 +178,21 @@ async def create_visit(
     if ticket.get("status") in [TicketStatus.CLOSED.value, TicketStatus.CANCELLED.value]:
         raise HTTPException(status_code=400, detail="Cannot add visits to closed or cancelled tickets")
     
+    # BUG FIX: Prevent multiple active visits for a single ticket
+    # Only allow one visit that is scheduled or in_progress at a time
+    active_visit = await db.service_visits_new.find_one({
+        "ticket_id": data.ticket_id,
+        "organization_id": org_id,
+        "status": {"$in": [VisitStatus.SCHEDULED.value, VisitStatus.IN_PROGRESS.value]},
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0, "id": 1, "visit_number": 1, "status": 1, "technician_name": 1, "scheduled_date": 1})
+    
+    if active_visit:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot schedule new visit. Visit #{active_visit.get('visit_number')} is already {active_visit.get('status')} for {active_visit.get('scheduled_date')} (Technician: {active_visit.get('technician_name')}). Complete or cancel the existing visit first."
+        )
+    
     # Get technician details - check staff_users, organization_members, and engineers
     tech = await db.staff_users.find_one(
         {"id": data.technician_id, "organization_id": org_id, "is_deleted": {"$ne": True}},
