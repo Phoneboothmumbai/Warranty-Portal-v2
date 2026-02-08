@@ -1,16 +1,23 @@
-# MoltBot Setup Guide for Your Portal
+# MoltBot Setup Guide for AfterSales.Support Portal
+
+## Server Information
+- **Portal Server**: 65.20.79.16 (aftersales.support)
+- **MoltBot will run on**: 65.20.79.16 (same server as portal)
+- **WatchTower Server**: 65.20.87.25 (separate)
 
 ## Prerequisites
 
-Your server (65.20.87.25) needs:
+Your server needs:
 - Node.js 22+ 
 - npm or pnpm
 
 ## Step 1: Install MoltBot
 
-SSH into your server and run:
+SSH into your server:
 
 ```bash
+ssh root@65.20.79.16
+
 # Check Node.js version (must be 22+)
 node --version
 
@@ -39,22 +46,19 @@ During the wizard:
 After MoltBot is running, configure it to send messages to your portal:
 
 ```bash
-# Set the webhook URL (replace with your actual domain)
-moltbot config set webhook.url "https://your-domain.com/api/admin/moltbot/webhook/YOUR_ORG_ID"
+# Replace YOUR_ORG_ID with your actual organization ID from the portal
+# Get it from Admin Panel → Settings → Organization
+
+moltbot config set webhook.url "https://aftersales.support/api/admin/moltbot/webhook/YOUR_ORG_ID"
 
 # Set a webhook secret (optional but recommended)
 moltbot config set webhook.secret "YOUR_SECRET_KEY_HERE"
 ```
 
-To get your `YOUR_ORG_ID`:
-1. Log into your admin portal
-2. Go to Settings → Organization
-3. Copy the Organization ID
-
 ## Step 4: Configure Your Portal
 
-1. Go to **Admin Panel → Settings → Integrations** (or create this page)
-2. Enable MoltBot Integration
+1. Go to **Admin Panel → Settings → Integrations → MoltBot (Chat)**
+2. Enable the MoltBot Integration toggle
 3. Enter:
    - **API Key**: Get from `moltbot config get api.key`
    - **Webhook Secret**: Same as you set in Step 3
@@ -65,6 +69,14 @@ Send a message to your WhatsApp/Telegram bot. You should see:
 1. A greeting message asking how to help
 2. Options to create a ticket, check status, or general inquiry
 3. If you choose to create a ticket, it will ask for details before creating
+
+## Enabling MoltBot for Tenants
+
+As Platform Admin:
+1. Go to **Platform Admin → Organizations**
+2. Click on a tenant/organization
+3. In Feature Flags, enable "MoltBot Chat"
+4. The tenant will now see the MoltBot integration in their admin panel
 
 ## Useful Commands
 
@@ -77,6 +89,9 @@ moltbot logs -f
 
 # Restart MoltBot
 sudo systemctl restart moltbot
+
+# Get API key
+moltbot config get api.key
 
 # Test sending a message
 moltbot message send --to +91XXXXXXXXXX --message "Test message"
@@ -92,7 +107,12 @@ moltbot whatsapp reconnect
 ### Webhook Not Receiving Messages
 1. Check if MoltBot is running: `moltbot doctor`
 2. Check webhook config: `moltbot config get webhook`
-3. Test webhook manually: `curl -X POST https://your-domain.com/api/admin/moltbot/webhook/YOUR_ORG_ID -H "Content-Type: application/json" -d '{"event_type":"test"}'`
+3. Test webhook manually:
+```bash
+curl -X POST https://aftersales.support/api/admin/moltbot/webhook/YOUR_ORG_ID \
+  -H "Content-Type: application/json" \
+  -d '{"event_type":"message_received","message_content":"test"}'
+```
 
 ### Need Help?
 - MoltBot Documentation: https://molt-bot.live/docs
