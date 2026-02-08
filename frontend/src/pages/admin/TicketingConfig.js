@@ -1155,79 +1155,154 @@ export default function TicketingConfig() {
               <Textarea value={topicForm.description || ''} onChange={(e) => setTopicForm({ ...topicForm, description: e.target.value })} placeholder="Help text shown to users" />
             </div>
 
-            {/* SLA Settings */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Response SLA (hours)</Label>
-                <Input type="number" value={topicForm.sla_response_hours || ''} onChange={(e) => setTopicForm({ ...topicForm, sla_response_hours: parseInt(e.target.value) || null })} placeholder="e.g., 4" />
+            {/* Routing & Assignment */}
+            <div className="p-4 border rounded-lg bg-slate-50">
+              <h4 className="font-medium mb-3 flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Routing & Assignment
+              </h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Assign to Department</Label>
+                  <Select 
+                    value={topicForm.auto_assign_department_id || 'none'} 
+                    onValueChange={(v) => setTopicForm({ ...topicForm, auto_assign_department_id: v === 'none' ? null : v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No auto-assignment</SelectItem>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>SLA Policy</Label>
+                  <Select 
+                    value={topicForm.sla_policy_id || 'none'} 
+                    onValueChange={(v) => setTopicForm({ ...topicForm, sla_policy_id: v === 'none' ? null : v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Use default SLA" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Use default SLA</SelectItem>
+                      {slaPolicies.map((sla) => (
+                        <SelectItem key={sla.id} value={sla.id}>{sla.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+              {!topicForm.sla_policy_id && (
+                <div className="grid grid-cols-2 gap-4 mt-3">
+                  <div>
+                    <Label className="text-xs">Custom Response SLA (hours)</Label>
+                    <Input type="number" value={topicForm.sla_response_hours || ''} onChange={(e) => setTopicForm({ ...topicForm, sla_response_hours: parseInt(e.target.value) || null })} placeholder="e.g., 4" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Custom Resolution SLA (hours)</Label>
+                    <Input type="number" value={topicForm.sla_resolution_hours || ''} onChange={(e) => setTopicForm({ ...topicForm, sla_resolution_hours: parseInt(e.target.value) || null })} placeholder="e.g., 24" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Linked Custom Form */}
+            <div className="p-4 border rounded-lg bg-blue-50">
+              <h4 className="font-medium mb-3 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-blue-600" />
+                Linked Custom Form
+              </h4>
               <div>
-                <Label>Resolution SLA (hours)</Label>
-                <Input type="number" value={topicForm.sla_resolution_hours || ''} onChange={(e) => setTopicForm({ ...topicForm, sla_resolution_hours: parseInt(e.target.value) || null })} placeholder="e.g., 24" />
+                <Label>Select a Custom Form</Label>
+                <Select 
+                  value={topicForm.custom_form_id || 'none'} 
+                  onValueChange={(v) => setTopicForm({ ...topicForm, custom_form_id: v === 'none' ? null : v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="No form linked" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No form (or use inline fields below)</SelectItem>
+                    {customForms.filter(f => f.form_type === 'ticket').map((form) => (
+                      <SelectItem key={form.id} value={form.id}>
+                        {form.name} ({form.fields?.length || 0} fields)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500 mt-1">
+                  Link a reusable form, or define inline fields below for this topic only.
+                </p>
               </div>
             </div>
 
-            {/* Custom Form Fields */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <Label className="text-base">Custom Form Fields</Label>
-                <Button size="sm" variant="outline" onClick={addFormField}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Field
-                </Button>
-              </div>
-              {topicForm.custom_fields?.length === 0 ? (
-                <div className="text-center py-6 border-2 border-dashed rounded-lg text-slate-500">
-                  <FileText className="h-8 w-8 mx-auto mb-2 text-slate-300" />
-                  <p className="text-sm">No custom fields. Add fields to create a structured form.</p>
+            {/* Inline Custom Form Fields (if no linked form) */}
+            {!topicForm.custom_form_id && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <Label className="text-base">Inline Custom Fields</Label>
+                  <Button size="sm" variant="outline" onClick={addFormField}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Field
+                  </Button>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {topicForm.custom_fields.map((field, index) => (
-                    <div key={field.id} className="p-4 border rounded-lg bg-slate-50">
-                      <div className="flex items-start gap-3">
-                        <GripVertical className="h-5 w-5 text-slate-300 cursor-grab mt-2" />
-                        <div className="flex-1 grid grid-cols-3 gap-3">
-                          <div>
-                            <Label className="text-xs">Field Type</Label>
-                            <Select value={field.field_type} onValueChange={(v) => updateFormField(index, { field_type: v })}>
-                              <SelectTrigger className="h-9">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {FIELD_TYPES.map((t) => (
-                                  <SelectItem key={t.value} value={t.value}>{t.icon} {t.label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                {topicForm.custom_fields?.length === 0 ? (
+                  <div className="text-center py-6 border-2 border-dashed rounded-lg text-slate-500">
+                    <FileText className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+                    <p className="text-sm">No inline fields. Add fields or link a custom form above.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {topicForm.custom_fields.map((field, index) => (
+                      <div key={field.id} className="p-4 border rounded-lg bg-slate-50">
+                        <div className="flex items-start gap-3">
+                          <GripVertical className="h-5 w-5 text-slate-300 cursor-grab mt-2" />
+                          <div className="flex-1 grid grid-cols-3 gap-3">
+                            <div>
+                              <Label className="text-xs">Field Type</Label>
+                              <Select value={field.field_type} onValueChange={(v) => updateFormField(index, { field_type: v })}>
+                                <SelectTrigger className="h-9">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {FIELD_TYPES.map((t) => (
+                                    <SelectItem key={t.value} value={t.value}>{t.icon} {t.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Label</Label>
+                              <Input className="h-9" value={field.label} onChange={(e) => updateFormField(index, { label: e.target.value })} />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Width</Label>
+                              <Select value={field.width} onValueChange={(v) => updateFormField(index, { width: v })}>
+                                <SelectTrigger className="h-9">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="full">Full Width</SelectItem>
+                                  <SelectItem value="half">Half Width</SelectItem>
+                                  <SelectItem value="third">One Third</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
-                          <div>
-                            <Label className="text-xs">Label</Label>
-                            <Input className="h-9" value={field.label} onChange={(e) => updateFormField(index, { label: e.target.value })} />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Width</Label>
-                            <Select value={field.width} onValueChange={(v) => updateFormField(index, { width: v })}>
-                              <SelectTrigger className="h-9">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="full">Full Width</SelectItem>
-                                <SelectItem value="half">Half Width</SelectItem>
-                                <SelectItem value="third">One Third</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1">
-                            <Switch 
-                              checked={field.validation?.required} 
-                              onCheckedChange={(v) => updateFormField(index, { validation: { ...field.validation, required: v } })} 
-                            />
-                            <span className="text-xs text-slate-500">Required</span>
-                          </div>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={() => removeFormField(index)}>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
+                              <Switch 
+                                checked={field.validation?.required} 
+                                onCheckedChange={(v) => updateFormField(index, { validation: { ...field.validation, required: v } })} 
+                              />
+                              <span className="text-xs text-slate-500">Required</span>
+                            </div>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={() => removeFormField(index)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
