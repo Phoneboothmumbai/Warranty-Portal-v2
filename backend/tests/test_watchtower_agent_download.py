@@ -34,7 +34,7 @@ class TestWatchTowerCompanyPortal:
         })
         if response.status_code == 200:
             data = response.json()
-            self.token = data.get("token")
+            self.token = data.get("access_token") or data.get("token")
             self.session.headers.update({"Authorization": f"Bearer {self.token}"})
         else:
             pytest.skip(f"Company login failed: {response.status_code}")
@@ -264,7 +264,7 @@ class TestWatchTowerDeviceStatus:
         })
         if response.status_code == 200:
             data = response.json()
-            self.token = data.get("token")
+            self.token = data.get("access_token") or data.get("token")
             self.session.headers.update({"Authorization": f"Bearer {self.token}"})
         else:
             pytest.skip(f"Company login failed: {response.status_code}")
