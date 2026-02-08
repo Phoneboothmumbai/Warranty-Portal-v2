@@ -61,28 +61,6 @@ class MoltBotMessage(BaseModel):
 # HELPER FUNCTIONS
 # =============================================================================
 
-async def get_admin_from_token(authorization: str = Header(None)):
-    """Get admin from token"""
-    import jwt
-    
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authorization required")
-    
-    token = authorization.replace("Bearer ", "")
-    secret = os.environ.get("JWT_SECRET", "your-secret-key")
-    
-    try:
-        payload = jwt.decode(token, secret, algorithms=["HS256"])
-        admin = await db.staff_users.find_one({"id": payload.get("sub")}, {"_id": 0})
-        if not admin:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        return admin
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-
 async def send_moltbot_message(org_id: str, message_data: dict):
     """Send message via MoltBot API"""
     config = await db.moltbot_config.find_one({"organization_id": org_id})
