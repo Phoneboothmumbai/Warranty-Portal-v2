@@ -344,12 +344,12 @@ const DownloadDialog = ({
               <label className="text-sm font-medium text-slate-700 mb-2 block">
                 Site/Location (Optional)
               </label>
-              <Select value={selectedSite} onValueChange={setSelectedSite}>
+              <Select value={selectedSite || 'default'} onValueChange={(val) => setSelectedSite(val === 'default' ? '' : val)}>
                 <SelectTrigger data-testid="site-select">
                   <SelectValue placeholder="Select a site..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Default Site</SelectItem>
+                  <SelectItem value="default">Default Site</SelectItem>
                   {sites.map(site => (
                     <SelectItem key={site.id} value={site.id}>
                       {site.name}
