@@ -49,6 +49,7 @@ import AdminAMCRequests from "./pages/admin/AdminAMCRequests";
 import AdminAMCRequestDetail from "./pages/admin/AdminAMCRequestDetail";
 import OrganizationSettings from "./pages/admin/OrganizationSettings";
 import WatchTowerIntegration from "./pages/admin/WatchTowerIntegration";
+import MoltBotIntegration from "./pages/admin/MoltBotIntegration";
 import KnowledgeBase from "./pages/admin/KnowledgeBase";
 import TeamMembers from "./pages/admin/TeamMembers";
 import StaffManagement from "./pages/admin/StaffManagement";
