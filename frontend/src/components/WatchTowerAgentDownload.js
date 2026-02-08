@@ -413,19 +413,19 @@ const DownloadDialog = ({
           
           {/* Success Message with Link */}
           {downloadUrl && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-start gap-2">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-emerald-900">Download Started!</p>
-                <p className="text-xs text-emerald-700 mt-1">
-                  If download didn't start automatically,{' '}
+                <p className="text-sm font-medium text-amber-900">WatchTower Opened</p>
+                <p className="text-xs text-amber-700 mt-1">
+                  Log in to WatchTower if prompted, then navigate to <strong>Agents → Add Agent</strong> to download the installer.{' '}
                   <a 
                     href={downloadUrl} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="underline hover:text-emerald-800"
+                    className="underline hover:text-amber-800"
                   >
-                    click here to download
+                    Open WatchTower again
                   </a>
                 </p>
               </div>
