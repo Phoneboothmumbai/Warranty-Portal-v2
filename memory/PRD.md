@@ -117,20 +117,23 @@ A comprehensive MSP-grade service ticket system with:
 
 **Ticketing Configuration System** (`/admin/ticketing-config`) - NEW (Feb 2026)
 - **7-Tab Configuration Panel:**
-  1. **Help Topics** - Define issue types with auto-routing rules
-  2. **Custom Forms** - Create custom fields for ticket submission
+  1. **Help Topics** - Define issue types with linked custom forms, department routing, and SLA policies
+  2. **Custom Forms** - Create reusable forms to attach to help topics
   3. **Canned Responses** - Pre-defined replies with variables ({{customer_name}}, {{ticket_number}}, etc.)
   4. **Departments** - Organize tickets by department (Support, Technical, Field Service, Billing)
   5. **SLA Policies** - Response/resolution time targets with escalation settings
   6. **Masters** - Ticket statuses, priorities, problem types, visit types, etc.
   7. **Notifications** - Event-based notifications configuration
 
-**MoltBot Integration** (API Ready) - NEW (Feb 2026)
-- **Webhook Integration** for auto-creating tickets from customer messages
-- Send ticket updates back to customers via WhatsApp/Telegram
+**MoltBot Integration** (Smart Flow) - NEW (Feb 2026)
+- **Webhook Integration** with conversational ticket creation flow
+- Bot greets customer and asks how to help (1. Create ticket, 2. Check status, 3. General inquiry)
+- Collects customer name and issue description before creating ticket
+- Only creates ticket after customer confirms with "YES"
+- Supports adding messages to existing tickets
 - Configuration API at `/api/admin/moltbot/config`
 - Webhook endpoint at `/api/admin/moltbot/webhook/{org_id}`
-- *Note: User needs to provide MoltBot API key to activate*
+- Setup guide at `/app/memory/MOLTBOT_SETUP_GUIDE.md`
 
 **Admin Quotation Management UI** (`/admin/quotations`)
 - List, view, edit quotations with full CRUD
