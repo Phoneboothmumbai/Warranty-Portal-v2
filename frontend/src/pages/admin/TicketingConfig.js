@@ -124,7 +124,7 @@ export default function TicketingConfig() {
   const token = localStorage.getItem('admin_token');
   const headers = { Authorization: `Bearer ${token}` };
   
-  const [activeTab, setActiveTab] = useState('masters');
+  const [activeTab, setActiveTab] = useState('topics');
   const [loading, setLoading] = useState(false);
   
   // Data states
@@ -133,12 +133,21 @@ export default function TicketingConfig() {
   const [workflowRules, setWorkflowRules] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [staff, setStaff] = useState([]);
+  const [cannedResponses, setCannedResponses] = useState([]);
+  const [cannedCategories, setCannedCategories] = useState([]);
+  const [slaPolicies, setSlaPolicies] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [customForms, setCustomForms] = useState([]);
   
   // Modal states
   const [showMasterModal, setShowMasterModal] = useState(false);
   const [showTopicModal, setShowTopicModal] = useState(false);
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [showCannedModal, setShowCannedModal] = useState(false);
+  const [showSLAModal, setShowSLAModal] = useState(false);
+  const [showDeptModal, setShowDeptModal] = useState(false);
+  const [showFormModal, setShowFormModal] = useState(false);
   
   // Selected items
   const [selectedMasterType, setSelectedMasterType] = useState('ticket_status');
@@ -146,12 +155,24 @@ export default function TicketingConfig() {
   const [editingTopic, setEditingTopic] = useState(null);
   const [editingRule, setEditingRule] = useState(null);
   const [editingNotification, setEditingNotification] = useState(null);
+  const [editingCanned, setEditingCanned] = useState(null);
+  const [editingSLA, setEditingSLA] = useState(null);
+  const [editingDept, setEditingDept] = useState(null);
+  const [editingForm, setEditingForm] = useState(null);
   
   // Form data
   const [masterForm, setMasterForm] = useState({ name: '', code: '', color: '#6B7280', description: '', is_active: true });
   const [topicForm, setTopicForm] = useState({ name: '', description: '', is_active: true, is_public: true, custom_fields: [] });
   const [ruleForm, setRuleForm] = useState({ name: '', trigger: 'ticket_created', conditions: [], condition_logic: 'all', actions: [], is_active: true });
   const [notificationForm, setNotificationForm] = useState({ event: 'ticket_created', channels: ['email'], recipients: ['assigned_technician'], is_active: true });
+  const [cannedForm, setCannedForm] = useState({ title: '', category: '', content: '', is_personal: false, is_active: true });
+  const [slaForm, setSlaForm] = useState({ 
+    name: '', description: '', response_time_hours: 4, resolution_time_hours: 24, 
+    response_time_business_hours: true, resolution_time_business_hours: true,
+    escalation_enabled: true, escalation_after_hours: 2, is_active: true, is_default: false
+  });
+  const [deptForm, setDeptForm] = useState({ name: '', description: '', email: '', is_active: true, is_public: true });
+  const [formForm, setFormForm] = useState({ name: '', description: '', form_type: 'ticket', fields: [], is_active: true });
 
   // Fetch all data
   const fetchData = useCallback(async () => {
