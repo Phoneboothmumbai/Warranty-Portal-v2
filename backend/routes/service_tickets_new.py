@@ -495,12 +495,15 @@ async def assign_ticket(
                 detail=f"Cannot assign ticket in '{current_status}' status. Workflow rules prevent this action."
             )
     
-    # Get technician details
+    # Get technician details - check staff_users, organization_members, and engineers
     tech = await db.staff_users.find_one(
         {"id": data.technician_id, "organization_id": org_id, "is_deleted": {"$ne": True}},
         {"name": 1, "email": 1, "phone": 1}
     ) or await db.organization_members.find_one(
         {"id": data.technician_id, "is_deleted": {"$ne": True}},
+        {"name": 1, "email": 1, "phone": 1}
+    ) or await db.engineers.find_one(
+        {"id": data.technician_id, "organization_id": org_id, "is_deleted": {"$ne": True}},
         {"name": 1, "email": 1, "phone": 1}
     )
     if not tech:
