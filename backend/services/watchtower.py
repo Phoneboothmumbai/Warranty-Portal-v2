@@ -250,14 +250,32 @@ class WatchTowerService:
             "plat": platform
         }
         
-        # Tactical RMM uses /agents/installer/ endpoint for deploy links
-        try:
-            response = await self._request("POST", "/agents/installer/", data)
-            return response
-        except Exception as e:
-            # Fallback to deploy endpoint if installer doesn't exist
-            logger.warning(f"Installer endpoint failed, trying deploy: {e}")
-            return await self._request("POST", "/agents/deploy/", data)
+        # Try multiple endpoint variations
+        endpoints = [
+            "/agents/installer/",
+            "/core/installer/",
+            "/agents/deploy/"
+        ]
+        
+        for endpoint in endpoints:
+            try:
+                response = await self._request("POST", endpoint, data)
+                if response:
+                    return response
+            except Exception as e:
+                logger.warning(f"Endpoint {endpoint} failed: {e}")
+                continue
+        
+        # If all API endpoints fail, provide manual download instructions
+        # The user needs to download from the WatchTower web UI
+        base_url = self.config.api_url.replace("/api.", "/rmm.").replace("api.", "rmm.")
+        return {
+            "download_url": None,
+            "manual_download_required": True,
+            "web_ui_url": base_url,
+            "site_id": site_id,
+            "instructions": f"Please log into WatchTower at {base_url}, go to Agents > Add Agent, select site ID {site_id}, and generate the installer manually."
+        }
     
     async def provision_company_for_agent(
         self, 
