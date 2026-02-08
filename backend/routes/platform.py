@@ -531,7 +531,7 @@ async def update_organization_feature_flags(
     Controls which features are visible/enabled for the tenant.
     
     Available flags:
-    - tactical_rmm: Tactical RMM integration (default: False)
+    - watchtower: WatchTower integration (default: False)
     - white_labeling: Custom branding/white-label (default: False)
     - api_access: API access for integrations (default: False)
     - advanced_reports: Advanced reporting module (default: False)
@@ -550,7 +550,7 @@ async def update_organization_feature_flags(
     
     # Valid flag names
     valid_flags = [
-        "tactical_rmm", "white_labeling", "api_access", "advanced_reports",
+        "watchtower", "white_labeling", "api_access", "advanced_reports",
         "sla_management", "custom_domains", "email_integration", "knowledge_base", "staff_module"
     ]
     
@@ -598,7 +598,7 @@ async def get_organization_feature_flags(
     
     # Default flags if not set
     default_flags = {
-        "tactical_rmm": False,
+        "watchtower": False,
         "white_labeling": False,
         "api_access": False,
         "advanced_reports": False,
