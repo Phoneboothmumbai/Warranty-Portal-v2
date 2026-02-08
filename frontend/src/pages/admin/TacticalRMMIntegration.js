@@ -311,7 +311,7 @@ const WatchTowerIntegration = () => {
               ) : agents.length === 0 ? (
                 <div className="text-center py-8 text-slate-500">
                   <Server className="h-12 w-12 mx-auto mb-2 text-slate-300" />
-                  <p>No agents found. Make sure your Tactical RMM has agents deployed.</p>
+                  <p>No agents found. Make sure your WatchTower has agents deployed.</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
