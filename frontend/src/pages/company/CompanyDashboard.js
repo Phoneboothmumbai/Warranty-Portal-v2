@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { 
   Laptop, Shield, Clock, AlertTriangle, Ticket, 
-  ChevronRight, ArrowUpRight, CheckCircle2
+  ChevronRight, ArrowUpRight, CheckCircle2, Monitor
 } from 'lucide-react';
 import { useCompanyAuth } from '../../context/CompanyAuthContext';
 import { toast } from 'sonner';
+import WatchTowerAgentDownload from '../../components/WatchTowerAgentDownload';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
