@@ -246,37 +246,41 @@ class WatchTowerService:
         Returns:
             Dict with download_url and other deployment info
         """
+        # Construct the base URLs
+        api_base = self.config.api_url.rstrip('/')
+        # Convert api.domain.com to rmm.domain.com for web UI
+        web_base = api_base.replace("api.", "rmm.")
+        
+        # Try the API endpoint first
         data = {
             "site": site_id,
             "goarch": arch,
             "plat": platform
         }
         
-        # Try multiple endpoint variations
-        endpoints = [
-            "/agents/installer/",
-            "/core/installer/",
-            "/agents/deploy/"
-        ]
+        try:
+            response = await self._request("POST", "/agents/installer/", data)
+            if response and response.get("download_url"):
+                return response
+        except Exception as e:
+            logger.warning(f"API installer endpoint failed: {e}")
         
-        for endpoint in endpoints:
-            try:
-                response = await self._request("POST", endpoint, data)
-                if response:
-                    return response
-            except Exception as e:
-                logger.warning(f"Endpoint {endpoint} failed: {e}")
-                continue
+        # If API doesn't work, construct direct download URL
+        # Tactical RMM uses a specific URL pattern for agent downloads
+        # The download happens from the web UI with authentication
         
-        # If all API endpoints fail, provide manual download instructions
-        # The user needs to download from the WatchTower web UI
-        base_url = self.config.api_url.replace("/api.", "/rmm.").replace("api.", "rmm.")
+        # Return the web UI URL with deployment parameters
+        # Users will need to be logged in to download
+        deploy_url = f"{web_base}/#/takecontrol/agents?site={site_id}&arch={arch}&plat={platform}"
+        
         return {
-            "download_url": None,
+            "download_url": deploy_url,
             "manual_download_required": True,
-            "web_ui_url": base_url,
+            "web_ui_url": web_base,
             "site_id": site_id,
-            "instructions": f"Please log into WatchTower at {base_url}, go to Agents > Add Agent, select site ID {site_id}, and generate the installer manually."
+            "platform": platform,
+            "arch": arch,
+            "instructions": f"Click the link to open WatchTower. If prompted, log in with your admin credentials, then click 'Download' to get the agent installer for site ID {site_id}."
         }
     
     async def provision_company_for_agent(
