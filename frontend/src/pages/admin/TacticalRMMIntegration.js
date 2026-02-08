@@ -219,13 +219,13 @@ const WatchTowerIntegration = () => {
                 <Input
                   id="api_key"
                   type="password"
-                  placeholder="Your Tactical RMM API Key"
+                  placeholder="Your WatchTower API Key"
                   value={setupForm.api_key}
                   onChange={(e) => setSetupForm({ ...setupForm, api_key: e.target.value })}
                   required
                 />
                 <p className="text-xs text-slate-500">
-                  Generate from Settings → Global Settings → API Keys in your Tactical RMM dashboard
+                  Generate from Settings → Global Settings → API Keys in your WatchTower dashboard
                 </p>
               </div>
               
