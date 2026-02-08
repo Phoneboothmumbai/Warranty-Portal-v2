@@ -140,13 +140,16 @@ class HelpTopicCreate(BaseModel):
     # Auto-assignment
     auto_assign_to: Optional[str] = None  # User ID
     auto_assign_team: Optional[str] = None  # Team/Department ID
+    auto_assign_department_id: Optional[str] = None  # Department ID
     
     # SLA
+    sla_policy_id: Optional[str] = None  # Link to SLA Policy
     sla_response_hours: Optional[int] = None
     sla_resolution_hours: Optional[int] = None
     
-    # Custom form
-    custom_fields: Optional[List[CustomFormField]] = None
+    # Custom form - can link to existing form OR define inline fields
+    custom_form_id: Optional[str] = None  # Link to Custom Form
+    custom_fields: Optional[List[CustomFormField]] = None  # Inline custom fields
     
     # Parent topic for hierarchy
     parent_topic_id: Optional[str] = None
