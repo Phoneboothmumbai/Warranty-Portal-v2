@@ -335,7 +335,14 @@ class WatchTowerService:
             download_info = await self.get_agent_download_link(site_id)
         except Exception as e:
             logger.error(f"Failed to generate download link: {e}")
-            raise ValueError(f"Failed to generate agent download link. Please check WatchTower configuration.")
+            # Provide fallback with manual instructions
+            base_url = self.config.api_url.replace("/api.", "/rmm.").replace("api.", "rmm.")
+            download_info = {
+                "download_url": None,
+                "manual_download_required": True,
+                "web_ui_url": base_url,
+                "site_id": site_id
+            }
         
         download_url = download_info.get("download_url") or download_info.get("exe_url") or download_info.get("download")
         
@@ -345,6 +352,8 @@ class WatchTowerService:
             "site_id": site_id,
             "site_name": actual_site_name,
             "download_url": download_url,
+            "manual_download_required": download_info.get("manual_download_required", False),
+            "web_ui_url": download_info.get("web_ui_url"),
             "download_info": download_info
         }
 
