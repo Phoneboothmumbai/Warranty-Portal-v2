@@ -228,10 +228,15 @@ A comprehensive MSP-grade service ticket system with:
 - **WatchTower**: INTEGRATED - Self-service agent download feature complete
 
 ---
-Last Updated: February 2026
+Last Updated: February 9, 2026
 - Device Dashboard (6 tabs) - COMPLETE
 - Company Service Tickets - COMPLETE  
 - WatchTower Integration - COMPLETE (Self-service agent download)
   - Company Portal: Dashboard card + Devices page button
   - Admin Portal: WatchTower Integration page with agent download per company
   - Note: WatchTower API has limitations on POST endpoints (520 errors) - handled gracefully
+- **Critical Bug Fixes (Feb 9, 2026)** - COMPLETE
+  - Engineer Accept/Decline endpoints added
+  - Multiple visits prevention implemented
+  - Workflow lock enforcement added
+  - Service history now queries both ticket collections
