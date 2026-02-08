@@ -367,7 +367,6 @@ async def list_rmm_scripts(admin: dict = Depends(get_current_admin)):
 # These use environment variables for WatchTower access
 
 import os
-from services.auth import get_current_company_user
 
 def get_global_watchtower_service() -> WatchTowerService:
     """Get WatchTower service using environment variables"""
