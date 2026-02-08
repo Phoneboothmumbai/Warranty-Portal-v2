@@ -178,12 +178,16 @@ export default function TicketingConfig() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [mastersRes, topicsRes, rulesRes, notifRes, staffRes] = await Promise.all([
+      const [mastersRes, topicsRes, rulesRes, notifRes, staffRes, cannedRes, slaRes, deptRes, formsRes] = await Promise.all([
         axios.get(`${API_URL}/api/admin/ticketing-config/masters`, { headers }),
         axios.get(`${API_URL}/api/admin/ticketing-config/help-topics`, { headers }),
         axios.get(`${API_URL}/api/admin/ticketing-config/workflow-rules`, { headers }),
         axios.get(`${API_URL}/api/admin/ticketing-config/notifications`, { headers }),
-        axios.get(`${API_URL}/api/admin/staff/users?limit=100`, { headers }).catch(() => ({ data: { users: [] } }))
+        axios.get(`${API_URL}/api/admin/staff/users?limit=100`, { headers }).catch(() => ({ data: { users: [] } })),
+        axios.get(`${API_URL}/api/admin/ticketing-config/canned-responses`, { headers }).catch(() => ({ data: { responses: [], categories: [] } })),
+        axios.get(`${API_URL}/api/admin/ticketing-config/sla-policies`, { headers }).catch(() => ({ data: { policies: [] } })),
+        axios.get(`${API_URL}/api/admin/ticketing-config/departments`, { headers }).catch(() => ({ data: { departments: [] } })),
+        axios.get(`${API_URL}/api/admin/ticketing-config/custom-forms`, { headers }).catch(() => ({ data: { forms: [] } }))
       ]);
       
       // Group masters by type
@@ -198,6 +202,11 @@ export default function TicketingConfig() {
       setWorkflowRules(rulesRes.data.rules || []);
       setNotifications(notifRes.data.settings || []);
       setStaff(staffRes.data.users || staffRes.data || []);
+      setCannedResponses(cannedRes.data.responses || []);
+      setCannedCategories(cannedRes.data.categories || []);
+      setSlaPolicies(slaRes.data.policies || []);
+      setDepartments(deptRes.data.departments || []);
+      setCustomForms(formsRes.data.forms || []);
     } catch (error) {
       console.error('Failed to fetch config:', error);
       toast.error('Failed to load configuration');
