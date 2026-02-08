@@ -383,6 +383,73 @@ const TacticalRMMIntegration = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Agent Download Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Download className="h-5 w-5" />
+                Download Agent for Companies
+              </CardTitle>
+              <CardDescription>
+                Generate WatchTower agent installer for a specific company. The agent will auto-register to the company's client in WatchTower.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                {companies.length === 0 ? (
+                  <div className="text-center py-6 text-slate-500">
+                    <Building2 className="h-10 w-10 mx-auto mb-2 text-slate-300" />
+                    <p>No companies found. Create a company first.</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-3 max-h-80 overflow-y-auto">
+                    {companies.slice(0, 10).map((company) => (
+                      <div 
+                        key={company.id} 
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-indigo-100 rounded-lg">
+                            <Building2 className="h-5 w-5 text-indigo-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-slate-900">{company.name}</p>
+                            <p className="text-xs text-slate-500">
+                              {company.watchtower_client_id 
+                                ? `WatchTower Client: ${company.watchtower_client_id}` 
+                                : 'Not provisioned in WatchTower'}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadAgent(company.id, company.name)}
+                          disabled={downloadingFor === company.id}
+                          data-testid={`download-agent-${company.id}`}
+                        >
+                          {downloadingFor === company.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Download className="h-4 w-4 mr-2" />
+                              Download Agent
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {companies.length > 10 && (
+                  <p className="text-xs text-slate-500 text-center">
+                    Showing first 10 companies. Use company search for more.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </>
       )}
     </div>
