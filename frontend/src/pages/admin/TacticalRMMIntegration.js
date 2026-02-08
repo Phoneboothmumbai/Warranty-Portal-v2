@@ -261,7 +261,7 @@ const WatchTowerIntegration = () => {
                 Sync Agents
               </CardTitle>
               <CardDescription>
-                Import agents from Tactical RMM as devices in your inventory
+                Import agents from WatchTower as devices in your inventory
               </CardDescription>
             </CardHeader>
             <CardContent>
