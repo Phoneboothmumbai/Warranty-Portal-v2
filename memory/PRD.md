@@ -216,9 +216,10 @@ A comprehensive MSP-grade service ticket system with:
 
 ## Credentials (Preview Environment)
 - Admin: `ck@motta.in` / `Charu@123@`
-- Engineer: `john.tech@test.com` / `Tech@123`
+- Engineer: `test_engineer_1bfa72f0@test.com` / `Engineer@123`
 - Company: `testuser@testcompany.com` / `Test@123`
 - Test Device ID: `206eb754-b34e-4387-8262-a64543a3c769`
+- Test Engineer ID: `22468253-9dad-4fa5-89e3-aeabf0451051`
 
 ## 3rd Party Integrations
 - **OpenAI GPT-4o-mini**: AI features (uses Emergent LLM Key)
