@@ -137,6 +137,141 @@ class WatchTowerService:
     async def reboot_agent(self, agent_id: str) -> Dict[str, Any]:
         """Reboot an agent"""
         return await self._request("POST", f"/agents/{agent_id}/reboot/")
+    
+    # ==================== CLIENT/SITE MANAGEMENT ====================
+    
+    async def create_client(self, name: str) -> Dict[str, Any]:
+        """
+        Create a new client (organization) in WatchTower.
+        Returns the created client with its ID.
+        """
+        data = {"name": name}
+        return await self._request("POST", "/clients/", data)
+    
+    async def get_client_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """Find a client by name (case-insensitive)"""
+        clients = await self.get_clients()
+        name_lower = name.lower().strip()
+        for client in clients:
+            if client.get("name", "").lower().strip() == name_lower:
+                return client
+        return None
+    
+    async def create_site(self, client_id: int, name: str) -> Dict[str, Any]:
+        """
+        Create a new site under a client in WatchTower.
+        Returns the created site with its ID.
+        """
+        data = {
+            "client": client_id,
+            "name": name
+        }
+        return await self._request("POST", "/sites/", data)
+    
+    async def get_site_by_name(self, client_id: int, name: str) -> Optional[Dict[str, Any]]:
+        """Find a site by name under a specific client"""
+        sites = await self.get_sites(client_id)
+        name_lower = name.lower().strip()
+        for site in sites:
+            if site.get("name", "").lower().strip() == name_lower:
+                return site
+        return None
+    
+    async def get_or_create_client(self, name: str) -> Dict[str, Any]:
+        """
+        Get existing client by name or create a new one.
+        Returns the client dict with 'id' and 'name'.
+        """
+        existing = await self.get_client_by_name(name)
+        if existing:
+            return existing
+        return await self.create_client(name)
+    
+    async def get_or_create_site(self, client_id: int, name: str) -> Dict[str, Any]:
+        """
+        Get existing site by name or create a new one under the client.
+        Returns the site dict with 'id' and 'name'.
+        """
+        existing = await self.get_site_by_name(client_id, name)
+        if existing:
+            return existing
+        return await self.create_site(client_id, name)
+    
+    # ==================== AGENT DEPLOYMENT ====================
+    
+    async def get_agent_download_link(
+        self, 
+        site_id: int, 
+        platform: str = "windows",
+        arch: str = "64"
+    ) -> Dict[str, Any]:
+        """
+        Generate agent installer download link for a specific site.
+        
+        Args:
+            site_id: The WatchTower site ID
+            platform: 'windows' or 'linux'
+            arch: '64' or '32' (for Windows)
+        
+        Returns:
+            Dict with download_url and other deployment info
+        """
+        data = {
+            "site": site_id,
+            "goarch": arch,
+            "plat": platform
+        }
+        
+        # Tactical RMM uses /agents/installer/ endpoint for deploy links
+        try:
+            response = await self._request("POST", "/agents/installer/", data)
+            return response
+        except Exception as e:
+            # Fallback to deploy endpoint if installer doesn't exist
+            logger.warning(f"Installer endpoint failed, trying deploy: {e}")
+            return await self._request("POST", "/agents/deploy/", data)
+    
+    async def provision_company_for_agent(
+        self, 
+        company_name: str, 
+        site_name: str = "Default Site"
+    ) -> Dict[str, Any]:
+        """
+        Full provisioning flow: Create client and site in WatchTower,
+        then generate the agent download link.
+        
+        Args:
+            company_name: Name of the company (maps to WatchTower Client)
+            site_name: Name of the site (defaults to "Default Site")
+        
+        Returns:
+            Dict with client_id, site_id, and download_url
+        """
+        # Step 1: Get or create client
+        client = await self.get_or_create_client(company_name)
+        client_id = client.get("id")
+        
+        if not client_id:
+            raise ValueError(f"Failed to get/create client for {company_name}")
+        
+        # Step 2: Get or create site
+        site = await self.get_or_create_site(client_id, site_name)
+        site_id = site.get("id")
+        
+        if not site_id:
+            raise ValueError(f"Failed to get/create site for {site_name}")
+        
+        # Step 3: Generate download link
+        download_info = await self.get_agent_download_link(site_id)
+        
+        return {
+            "client_id": client_id,
+            "client_name": company_name,
+            "site_id": site_id,
+            "site_name": site_name,
+            "download_url": download_info.get("download_url") or download_info.get("exe_url"),
+            "download_info": download_info
+        }
 
 
 def map_agent_to_device(agent: Dict[str, Any], company_id: str, organization_id: str = None) -> Dict[str, Any]:
