@@ -129,7 +129,7 @@ class OrganizationSettings(BaseModel):
 
 class OrganizationFeatureFlags(BaseModel):
     """Feature flags controlled by Platform Admin - controls what features are visible to tenant"""
-    tactical_rmm: bool = False  # Tactical RMM integration - OFF by default
+    watchtower: bool = False  # WatchTower integration - OFF by default
     white_labeling: bool = False  # Custom branding/white-label
     api_access: bool = False  # API access for integrations
     advanced_reports: bool = False  # Advanced reporting module
