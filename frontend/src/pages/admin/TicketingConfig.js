@@ -389,20 +389,32 @@ export default function TicketingConfig() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-4 w-full max-w-2xl">
-          <TabsTrigger value="masters" className="flex items-center gap-2">
-            <List className="h-4 w-4" />
-            Service Masters
-          </TabsTrigger>
-          <TabsTrigger value="topics" className="flex items-center gap-2">
+        <TabsList className="flex flex-wrap gap-1 w-full h-auto p-1 bg-slate-100 rounded-lg">
+          <TabsTrigger value="topics" className="flex items-center gap-2 text-xs px-3 py-2">
             <HelpCircle className="h-4 w-4" />
             Help Topics
           </TabsTrigger>
-          <TabsTrigger value="rules" className="flex items-center gap-2">
-            <Workflow className="h-4 w-4" />
-            Workflow Rules
+          <TabsTrigger value="forms" className="flex items-center gap-2 text-xs px-3 py-2">
+            <FileText className="h-4 w-4" />
+            Custom Forms
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
+          <TabsTrigger value="canned" className="flex items-center gap-2 text-xs px-3 py-2">
+            <MessageSquare className="h-4 w-4" />
+            Canned Responses
+          </TabsTrigger>
+          <TabsTrigger value="departments" className="flex items-center gap-2 text-xs px-3 py-2">
+            <Users className="h-4 w-4" />
+            Departments
+          </TabsTrigger>
+          <TabsTrigger value="sla" className="flex items-center gap-2 text-xs px-3 py-2">
+            <Clock className="h-4 w-4" />
+            SLA Policies
+          </TabsTrigger>
+          <TabsTrigger value="masters" className="flex items-center gap-2 text-xs px-3 py-2">
+            <List className="h-4 w-4" />
+            Masters
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="flex items-center gap-2 text-xs px-3 py-2">
             <Bell className="h-4 w-4" />
             Notifications
           </TabsTrigger>
