@@ -197,7 +197,7 @@ const WatchTowerIntegration = () => {
               {config?.configured ? 'Update Configuration' : 'Setup WatchTower'}
             </CardTitle>
             <CardDescription>
-              Connect your WatchTower (Tactical RMM) instance to sync agents as devices
+              Connect your WatchTower instance to sync agents as devices
             </CardDescription>
           </CardHeader>
           <CardContent>
