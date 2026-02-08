@@ -326,6 +326,180 @@ export default function MoltBotIntegration() {
           </div>
         </TabsContent>
 
+        {/* Bot Configuration Tab */}
+        <TabsContent value="bot-config" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                Access Control
+              </CardTitle>
+              <CardDescription>
+                Control who can interact with the bot and what topics it handles
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                <div>
+                  <Label className="font-medium">Restrict to Support Queries Only</Label>
+                  <p className="text-sm text-slate-500">
+                    Bot will only respond to warranty, service, repair, and device-related questions
+                  </p>
+                </div>
+                <Switch
+                  checked={config.restrict_to_support_only}
+                  onCheckedChange={(v) => setConfig({ ...config, restrict_to_support_only: v })}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                <div>
+                  <Label className="font-medium">Restrict to Registered Employees</Label>
+                  <p className="text-sm text-slate-500">
+                    Only allow users whose phone numbers are registered as company employees
+                  </p>
+                </div>
+                <Switch
+                  checked={config.restrict_to_employees}
+                  onCheckedChange={(v) => setConfig({ ...config, restrict_to_employees: v })}
+                />
+              </div>
+
+              <div>
+                <Label>Allowed Topics (comma-separated)</Label>
+                <Input
+                  value={config.allowed_topics?.join(', ') || ''}
+                  onChange={(e) => setConfig({ 
+                    ...config, 
+                    allowed_topics: e.target.value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
+                  })}
+                  placeholder="warranty, service, repair, support, device, amc"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Topics the bot is allowed to discuss when restriction is enabled
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Bot Instructions & Guidelines
+              </CardTitle>
+              <CardDescription>
+                Define how the bot should behave and respond to customers
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Custom Instructions</Label>
+                <Textarea
+                  value={config.bot_instructions || ''}
+                  onChange={(e) => setConfig({ ...config, bot_instructions: e.target.value })}
+                  placeholder={`Example instructions:
+- Always greet the customer politely
+- Ask for device serial number before troubleshooting
+- If issue cannot be resolved, offer to create a support ticket
+- Never discuss pricing without manager approval
+- Escalate urgent issues immediately`}
+                  rows={8}
+                  className="font-mono text-sm"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  These instructions guide how the bot interacts with customers
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                Knowledge Base
+              </CardTitle>
+              <CardDescription>
+                Add product information, FAQs, and troubleshooting guides for the bot to reference
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Knowledge Base Content</Label>
+                <Textarea
+                  value={config.knowledge_base || ''}
+                  onChange={(e) => setConfig({ ...config, knowledge_base: e.target.value })}
+                  placeholder={`Example knowledge base:
+
+## Products We Support
+- Dell Laptops (Latitude, Inspiron, XPS series)
+- HP Printers (LaserJet, OfficeJet series)
+- Lenovo Desktops (ThinkCentre series)
+
+## Common Issues & Solutions
+
+### Laptop won't start
+1. Check if charger is connected and LED is on
+2. Try holding power button for 15 seconds
+3. Remove battery (if removable) and try again
+4. If still not working, create a support ticket
+
+### Printer not printing
+1. Check paper tray and ink/toner levels
+2. Run printer self-test
+3. Reinstall printer drivers
+4. If issue persists, schedule a service visit
+
+## Warranty Information
+- Standard warranty: 1 year from purchase
+- Extended warranty available: Up to 3 years
+- AMC contracts available for out-of-warranty devices
+
+## Contact Information
+- Support Hours: Mon-Sat 9 AM - 6 PM
+- Emergency Support: Available for AMC customers`}
+                  rows={15}
+                  className="font-mono text-sm"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  The bot will use this information to answer customer queries. Use Markdown formatting.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" />
+                Out-of-Scope Response
+              </CardTitle>
+              <CardDescription>
+                How the bot should respond to off-topic queries
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div>
+                <Label>Response for Off-Topic Queries</Label>
+                <Textarea
+                  value={config.off_topic_response || ''}
+                  onChange={(e) => setConfig({ ...config, off_topic_response: e.target.value })}
+                  placeholder="I'm sorry, I can only help with warranty, service, and device-related questions. For other queries, please contact our main office."
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end">
+            <Button onClick={saveConfig} disabled={saving}>
+              {saving ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Save Bot Configuration
+            </Button>
+          </div>
+        </TabsContent>
+
         {/* Webhook Tab */}
         <TabsContent value="webhook" className="space-y-4">
           <Card>
