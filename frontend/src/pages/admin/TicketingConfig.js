@@ -340,6 +340,146 @@ export default function TicketingConfig() {
     }
   };
 
+  // Canned Response CRUD
+  const saveCanned = async () => {
+    try {
+      if (editingCanned) {
+        await axios.put(`${API_URL}/api/admin/ticketing-config/canned-responses/${editingCanned.id}`, cannedForm, { headers });
+        toast.success('Canned response updated');
+      } else {
+        await axios.post(`${API_URL}/api/admin/ticketing-config/canned-responses`, cannedForm, { headers });
+        toast.success('Canned response created');
+      }
+      setShowCannedModal(false);
+      setEditingCanned(null);
+      setCannedForm({ title: '', category: '', content: '', is_personal: false, is_active: true });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save canned response');
+    }
+  };
+
+  const deleteCanned = async (id) => {
+    if (!window.confirm('Delete this canned response?')) return;
+    try {
+      await axios.delete(`${API_URL}/api/admin/ticketing-config/canned-responses/${id}`, { headers });
+      toast.success('Canned response deleted');
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete');
+    }
+  };
+
+  // SLA Policy CRUD
+  const saveSLA = async () => {
+    try {
+      if (editingSLA) {
+        await axios.put(`${API_URL}/api/admin/ticketing-config/sla-policies/${editingSLA.id}`, slaForm, { headers });
+        toast.success('SLA policy updated');
+      } else {
+        await axios.post(`${API_URL}/api/admin/ticketing-config/sla-policies`, slaForm, { headers });
+        toast.success('SLA policy created');
+      }
+      setShowSLAModal(false);
+      setEditingSLA(null);
+      setSlaForm({ 
+        name: '', description: '', response_time_hours: 4, resolution_time_hours: 24, 
+        response_time_business_hours: true, resolution_time_business_hours: true,
+        escalation_enabled: true, escalation_after_hours: 2, is_active: true, is_default: false
+      });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save SLA policy');
+    }
+  };
+
+  const deleteSLA = async (id) => {
+    if (!window.confirm('Delete this SLA policy?')) return;
+    try {
+      await axios.delete(`${API_URL}/api/admin/ticketing-config/sla-policies/${id}`, { headers });
+      toast.success('SLA policy deleted');
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to delete');
+    }
+  };
+
+  // Department CRUD
+  const saveDept = async () => {
+    try {
+      if (editingDept) {
+        await axios.put(`${API_URL}/api/admin/ticketing-config/departments/${editingDept.id}`, deptForm, { headers });
+        toast.success('Department updated');
+      } else {
+        await axios.post(`${API_URL}/api/admin/ticketing-config/departments`, deptForm, { headers });
+        toast.success('Department created');
+      }
+      setShowDeptModal(false);
+      setEditingDept(null);
+      setDeptForm({ name: '', description: '', email: '', is_active: true, is_public: true });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save department');
+    }
+  };
+
+  const deleteDept = async (id) => {
+    if (!window.confirm('Delete this department?')) return;
+    try {
+      await axios.delete(`${API_URL}/api/admin/ticketing-config/departments/${id}`, { headers });
+      toast.success('Department deleted');
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete');
+    }
+  };
+
+  // Custom Form CRUD
+  const saveForm = async () => {
+    try {
+      if (editingForm) {
+        await axios.put(`${API_URL}/api/admin/ticketing-config/custom-forms/${editingForm.id}`, formForm, { headers });
+        toast.success('Form updated');
+      } else {
+        await axios.post(`${API_URL}/api/admin/ticketing-config/custom-forms`, formForm, { headers });
+        toast.success('Form created');
+      }
+      setShowFormModal(false);
+      setEditingForm(null);
+      setFormForm({ name: '', description: '', form_type: 'ticket', fields: [], is_active: true });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save form');
+    }
+  };
+
+  const deleteForm = async (id) => {
+    if (!window.confirm('Delete this custom form?')) return;
+    try {
+      await axios.delete(`${API_URL}/api/admin/ticketing-config/custom-forms/${id}`, { headers });
+      toast.success('Form deleted');
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to delete');
+    }
+  };
+
+  // Seed defaults for new features
+  const seedAllDefaults = async () => {
+    try {
+      await Promise.all([
+        axios.post(`${API_URL}/api/admin/ticketing-config/masters/seed-defaults`, {}, { headers }),
+        axios.post(`${API_URL}/api/admin/ticketing-config/notifications/seed-defaults`, {}, { headers }),
+        axios.post(`${API_URL}/api/admin/ticketing-config/sla-policies/seed-defaults`, {}, { headers }),
+        axios.post(`${API_URL}/api/admin/ticketing-config/departments/seed-defaults`, {}, { headers })
+      ]);
+      toast.success('Default configuration seeded');
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to seed defaults');
+    }
+  };
+
   // Form field management for Help Topics
   const addFormField = () => {
     const newField = {
