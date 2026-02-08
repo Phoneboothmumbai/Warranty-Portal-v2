@@ -456,4 +456,4 @@ const WatchTowerIntegration = () => {
   );
 };
 
-export default TacticalRMMIntegration;
+export default WatchTowerIntegration;
