@@ -140,7 +140,6 @@ A comprehensive MSP-grade service ticket system with:
 ### P1 - Next Sprint
 - **Email Notifications** - Assignment, quotation events
 - **Quotation PDF Generation**
-- **RMM Integration** - Tactical RMM setup
 - **Admin Device Dashboard** - Same dashboard view for admin panel
 
 ### P2 - Future
@@ -152,10 +151,12 @@ A comprehensive MSP-grade service ticket system with:
 ## Test Reports
 - `/app/test_reports/iteration_36.json` - Quotation & Workflow tests (100% pass)
 - `/app/test_reports/iteration_37.json` - Device Dashboard & Company Tickets (100% pass)
+- `/app/test_reports/iteration_38.json` - WatchTower Agent Download Feature (100% backend, 100% company portal UI)
 
 ## Test Files
 - `/app/backend/tests/test_quotation_workflow.py`
 - `/app/backend/tests/test_device_dashboard_company_tickets.py`
+- `/app/backend/tests/test_watchtower_agent_download.py`
 
 ## Credentials (Preview Environment)
 - Admin: `ck@motta.in` / `Charu@123@`
@@ -167,10 +168,13 @@ A comprehensive MSP-grade service ticket system with:
 - **OpenAI GPT-4o-mini**: AI features (uses Emergent LLM Key)
 - **Razorpay**: Payments (partial)
 - **Cloudflare**: DNS and SSL
-- **Tactical RMM**: Pending integration (placeholder ready)
+- **WatchTower (Tactical RMM)**: INTEGRATED - Self-service agent download feature complete
 
 ---
 Last Updated: February 2026
 - Device Dashboard (6 tabs) - COMPLETE
-- Company Service Tickets - COMPLETE
-- RMM Integration - PENDING (placeholder ready)
+- Company Service Tickets - COMPLETE  
+- WatchTower Integration - COMPLETE (Self-service agent download)
+  - Company Portal: Dashboard card + Devices page button
+  - Admin Portal: WatchTower Integration page with agent download per company
+  - Note: WatchTower API has limitations on POST endpoints (520 errors) - handled gracefully
