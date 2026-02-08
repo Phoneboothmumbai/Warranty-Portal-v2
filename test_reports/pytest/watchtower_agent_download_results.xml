@@ -1,37 +1,17 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="9" skipped="2" tests="11" time="3.380" timestamp="2026-02-08T14:05:58.063915+00:00" hostname="agent-env-a71c7b9d-489c-48ca-bedb-e0f267237086"><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerCompanyPortal" name="test_company_agent_status_endpoint" time="0.383"><failure message="AssertionError: Expected 200, got 401: {&quot;detail&quot;:&quot;Could not validate credentials&quot;}&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">tests/test_watchtower_agent_download.py:46: in test_company_agent_status_endpoint
-    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
-E   AssertionError: Expected 200, got 401: {"detail":"Could not validate credentials"}
-E   assert 401 == 200
-E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerCompanyPortal" name="test_company_sites_for_agent_endpoint" time="0.277"><failure message="AssertionError: Expected 200, got 401: {&quot;detail&quot;:&quot;Could not validate credentials&quot;}&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">tests/test_watchtower_agent_download.py:65: in test_company_sites_for_agent_endpoint
-    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
-E   AssertionError: Expected 200, got 401: {"detail":"Could not validate credentials"}
-E   assert 401 == 200
-E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerCompanyPortal" name="test_company_agent_download_endpoint" time="0.280"><failure message="AssertionError: Unexpected status: 401&#10;assert 401 in [200, 400, 500]&#10; +  where 401 = &lt;Response [401]&gt;.status_code">tests/test_watchtower_agent_download.py:85: in test_company_agent_download_endpoint
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="11" time="13.594" timestamp="2026-02-08T14:06:43.821692+00:00" hostname="agent-env-a71c7b9d-489c-48ca-bedb-e0f267237086"><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerCompanyPortal" name="test_company_agent_status_endpoint" time="0.348" /><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerCompanyPortal" name="test_company_sites_for_agent_endpoint" time="0.315" /><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerCompanyPortal" name="test_company_agent_download_endpoint" time="2.370"><failure message="AssertionError: Unexpected status: 520&#10;assert 520 in [200, 400, 500]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">tests/test_watchtower_agent_download.py:85: in test_company_agent_download_endpoint
     assert response.status_code in [200, 400, 500], f"Unexpected status: {response.status_code}"
-E   AssertionError: Unexpected status: 401
-E   assert 401 in [200, 400, 500]
-E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerCompanyPortal" name="test_company_agent_download_linux" time="0.279"><failure message="AssertionError: Unexpected status: 401&#10;assert 401 in [200, 400, 500]&#10; +  where 401 = &lt;Response [401]&gt;.status_code">tests/test_watchtower_agent_download.py:109: in test_company_agent_download_linux
+E   AssertionError: Unexpected status: 520
+E   assert 520 in [200, 400, 500]
+E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerCompanyPortal" name="test_company_agent_download_linux" time="2.318"><failure message="AssertionError: Unexpected status: 520&#10;assert 520 in [200, 400, 500]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">tests/test_watchtower_agent_download.py:109: in test_company_agent_download_linux
     assert response.status_code in [200, 400, 500], f"Unexpected status: {response.status_code}"
-E   AssertionError: Unexpected status: 401
-E   assert 401 in [200, 400, 500]
-E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerAdminPortal" name="test_admin_watchtower_config" time="0.318"><failure message="AssertionError: Expected 200, got 401: {&quot;detail&quot;:&quot;Could not validate credentials&quot;}&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">tests/test_watchtower_agent_download.py:144: in test_admin_watchtower_config
-    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
-E   AssertionError: Expected 200, got 401: {"detail":"Could not validate credentials"}
-E   assert 401 == 200
-E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerAdminPortal" name="test_admin_watchtower_agents_list" time="0.276"><failure message="AssertionError: Unexpected status: 401&#10;assert 401 in [200, 400]&#10; +  where 401 = &lt;Response [401]&gt;.status_code">tests/test_watchtower_agent_download.py:161: in test_admin_watchtower_agents_list
+E   AssertionError: Unexpected status: 520
+E   assert 520 in [200, 400, 500]
+E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerAdminPortal" name="test_admin_watchtower_config" time="0.294" /><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerAdminPortal" name="test_admin_watchtower_agents_list" time="1.355" /><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerAdminPortal" name="test_admin_get_companies_for_download" time="0.285" /><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerAdminPortal" name="test_admin_agent_download_for_company" time="2.312"><failure message="AssertionError: Unexpected status: 520&#10;assert 520 in [200, 400, 500]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">tests/test_watchtower_agent_download.py:213: in test_admin_agent_download_for_company
+    assert response.status_code in [200, 400, 500], f"Unexpected status: {response.status_code}"
+E   AssertionError: Unexpected status: 520
+E   assert 520 in [200, 400, 500]
+E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerAdminPortal" name="test_admin_watchtower_clients" time="1.288" /><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerAdminPortal" name="test_admin_watchtower_sites" time="1.299"><failure message="AssertionError: Unexpected status: 520&#10;assert 520 in [200, 400]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">tests/test_watchtower_agent_download.py:241: in test_admin_watchtower_sites
     assert response.status_code in [200, 400], f"Unexpected status: {response.status_code}"
-E   AssertionError: Unexpected status: 401
-E   assert 401 in [200, 400]
-E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerAdminPortal" name="test_admin_get_companies_for_download" time="0.269"><failure message="AssertionError: Expected 200, got 401&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">tests/test_watchtower_agent_download.py:181: in test_admin_get_companies_for_download
-    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-E   AssertionError: Expected 200, got 401
-E   assert 401 == 200
-E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerAdminPortal" name="test_admin_agent_download_for_company" time="0.277"><skipped type="pytest.skip" message="No companies available for testing">/app/backend/tests/test_watchtower_agent_download.py:201: No companies available for testing</skipped></testcase><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerAdminPortal" name="test_admin_watchtower_clients" time="0.272"><failure message="AssertionError: Unexpected status: 401&#10;assert 401 in [200, 400]&#10; +  where 401 = &lt;Response [401]&gt;.status_code">tests/test_watchtower_agent_download.py:228: in test_admin_watchtower_clients
-    assert response.status_code in [200, 400], f"Unexpected status: {response.status_code}"
-E   AssertionError: Unexpected status: 401
-E   assert 401 in [200, 400]
-E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerAdminPortal" name="test_admin_watchtower_sites" time="0.270"><failure message="AssertionError: Unexpected status: 401&#10;assert 401 in [200, 400]&#10; +  where 401 = &lt;Response [401]&gt;.status_code">tests/test_watchtower_agent_download.py:241: in test_admin_watchtower_sites
-    assert response.status_code in [200, 400], f"Unexpected status: {response.status_code}"
-E   AssertionError: Unexpected status: 401
-E   assert 401 in [200, 400]
-E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerDeviceStatus" name="test_device_watchtower_status" time="0.310"><skipped type="pytest.skip" message="No devices available for testing">/app/backend/tests/test_watchtower_agent_download.py:277: No devices available for testing</skipped></testcase></testsuite></testsuites>
+E   AssertionError: Unexpected status: 520
+E   assert 520 in [200, 400]
+E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="tests.test_watchtower_agent_download.TestWatchTowerDeviceStatus" name="test_device_watchtower_status" time="1.309" /></testsuite></testsuites>
