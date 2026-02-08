@@ -1,0 +1,115 @@
+{
+  "summary": "Bug Fixes Testing - All 4 critical bugs verified as fixed. Backend API tests: 100% pass rate (20/20 tests)",
+  "test_date": "2026-02-09",
+  "bugs_tested": {
+    "bug_1_engineer_accept_decline": {
+      "status": "FIXED",
+      "description": "Engineer accept/decline ticket endpoints",
+      "endpoints_tested": [
+        "/api/engineer/tickets/{id}/accept",
+        "/api/engineer/tickets/{id}/decline"
+      ],
+      "verification": [
+        "Accept endpoint exists and validates ticket ownership",
+        "Accept endpoint validates ticket must be in 'pending_acceptance' status",
+        "Decline endpoint requires reason (min 10 chars)",
+        "Decline endpoint validates ticket ownership and status",
+        "Already accepted tickets cannot be accepted again (returns 400)"
+      ]
+    },
+    "bug_2_multiple_visits_prevention": {
+      "status": "FIXED",
+      "description": "Multiple visits prevention for single ticket",
+      "endpoint_tested": "/api/admin/visits",
+      "verification": [
+        "Creating second visit for ticket with scheduled/in_progress visit is blocked",
+        "Error message includes existing visit details (visit number, date, technician)",
+        "Proper error: 'Cannot schedule new visit. Visit #1 is already scheduled for 2026-02-10 (Technician: TEST_Engineer_448b62). Complete or cancel the existing visit first.'"
+      ]
+    },
+    "bug_3_workflow_lock": {
+      "status": "FIXED",
+      "description": "Workflow lock - starting visit timer validation",
+      "endpoint_tested": "/api/admin/visits/{id}/start-timer",
+      "verification": [
+        "Starting timer on visit for ticket in 'new' status fails with: 'Cannot start work. Ticket must be assigned to an engineer first.'",
+        "Starting timer on visit for ticket in 'pending_acceptance' status fails with: 'Cannot start work. Engineer must accept the ticket first.'",
+        "Starting timer on visit for ticket in 'assigned' status succeeds",
+        "Valid states for starting work: assigned, in_progress, pending_parts"
+      ]
+    },
+    "bug_4_service_history": {
+      "status": "FIXED",
+      "description": "Service history showing tickets from both collections",
+      "endpoint_tested": "/api/admin/devices/{device_id}/service-history",
+      "verification": [
+        "Returns service records from service_history collection (type: 'service_record')",
+        "Returns tickets from service_tickets collection (type: 'service_ticket')",
+        "Returns tickets from service_tickets_new collection (type: 'service_ticket')",
+        "Results sorted by date (most recent first)",
+        "Includes ticket details: ticket_number, status, priority, assigned_to, company_name"
+      ]
+    }
+  },
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/api/admin/devices/{device_id}/timeline",
+        "issue": "TypeError when sorting timeline with None dates",
+        "status": "FIXED",
+        "fix_applied": "Changed sort key from x.get('date', '') to x.get('date') or '' to handle None values"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_bug_fixes_iteration_39.py",
+    "/app/test_reports/pytest/bug_fixes_iteration_39_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "engineer_portal.py: Accept/decline endpoints properly validate ticket ownership and status",
+    "service_visits.py: create_visit() correctly checks for existing active visits before creating new one",
+    "service_visits.py: start_timer() validates ticket status before allowing work to start",
+    "server.py: get_device_service_history() queries both service_tickets and service_tickets_new collections"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_bug_fixes_iteration_39.py",
+    "/app/backend/server.py (minor fix for timeline sorting)"
+  ],
+  "success_rate": {
+    "backend": "100% (20/20 tests passed)"
+  },
+  "test_credentials": {
+    "admin": {"email": "ck@motta.in", "password": "Charu@123@"},
+    "engineer": {"email": "test_engineer_1bfa72f0@test.com", "password": "Engineer@123"},
+    "company_user": {"email": "testuser@testcompany.com", "password": "Test@123"}
+  },
+  "seed_data_creation": "None required - used existing test data",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 4 critical bugs have been verified as fixed: 1) Engineer accept/decline endpoints work correctly with proper validation, 2) Multiple visits prevention blocks creating second visit for ticket with active visit, 3) Workflow lock prevents starting timer on visits for tickets not in valid state, 4) Service history returns tickets from both old and new collections. A minor bug in timeline endpoint was also fixed (None date sorting).",
+  "manual_verification_results": {
+    "bug_1": {
+      "test": "Accept ticket in 'assigned' status",
+      "result": "Returns 400: 'Cannot accept ticket in assigned status' - CORRECT"
+    },
+    "bug_2": {
+      "test": "Create second visit for ticket with scheduled visit",
+      "result": "Returns 400: 'Cannot schedule new visit. Visit #1 is already scheduled...' - CORRECT"
+    },
+    "bug_3": {
+      "test": "Start timer on visit for ticket in 'new' status",
+      "result": "Returns 400: 'Cannot start work. Ticket must be assigned to an engineer first.' - CORRECT"
+    },
+    "bug_4": {
+      "test": "Get service history for device",
+      "result": "Returns list with both service_record and service_ticket types from multiple collections - CORRECT"
+    }
+  }
+}
