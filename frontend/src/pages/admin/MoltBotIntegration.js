@@ -168,6 +168,10 @@ export default function MoltBotIntegration() {
             <Settings className="h-4 w-4" />
             Settings
           </TabsTrigger>
+          <TabsTrigger value="bot-config" className="flex items-center gap-2">
+            <Bot className="h-4 w-4" />
+            Bot Config
+          </TabsTrigger>
           <TabsTrigger value="webhook" className="flex items-center gap-2">
             <Zap className="h-4 w-4" />
             Webhook
