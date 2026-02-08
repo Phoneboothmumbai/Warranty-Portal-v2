@@ -653,3 +653,25 @@ async def list_moltbot_messages(
     ).sort("sent_at", -1).limit(limit).to_list(limit)
     
     return {"messages": messages}
+
+
+
+@router.get("/conversations")
+async def list_moltbot_conversations(
+    state: Optional[str] = None,
+    limit: int = 50,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """List MoltBot conversations"""
+    org_id = admin.get("organization_id")
+    
+    query = {"organization_id": org_id}
+    if state:
+        query["state"] = state
+    
+    conversations = await db.moltbot_conversations.find(
+        query,
+        {"_id": 0}
+    ).sort("updated_at", -1).limit(limit).to_list(limit)
+    
+    return {"conversations": conversations}
