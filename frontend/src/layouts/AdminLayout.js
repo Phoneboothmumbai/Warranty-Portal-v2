@@ -76,7 +76,7 @@ const navGroups = [
       { path: '/admin/custom-domains', label: 'Custom Domains', icon: Globe },
       { path: '/admin/knowledge-base', label: 'Knowledge Base', icon: BookOpen },
       { path: '/admin/master-data', label: 'Master Data', icon: Database },
-      { path: '/admin/integrations/tactical-rmm', label: 'Tactical RMM', icon: Monitor },
+      { path: '/admin/integrations/watchtower', label: 'WatchTower', icon: Monitor },
       { path: '/admin/integrations/tgms', label: 'Remote Management', icon: Laptop },
       { path: '/admin/settings', label: 'Portal Settings', icon: Settings },
     ]
@@ -129,8 +129,8 @@ const AdminLayout = () => {
     return navGroups.map(group => ({
       ...group,
       items: group.items.filter(item => {
-        // Hide Tactical RMM if feature flag is disabled
-        if (item.path === '/admin/integrations/tactical-rmm' && !featureFlags.tactical_rmm) {
+        // Hide WatchTower if feature flag is disabled
+        if (item.path === '/admin/integrations/watchtower' && !featureFlags.watchtower) {
           return false;
         }
         // Hide TGMS if feature flag is disabled
