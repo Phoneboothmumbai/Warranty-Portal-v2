@@ -1678,7 +1678,7 @@ async def get_current_admin_info(request: Request, admin: dict = Depends(get_cur
         
         # Include feature flags
         default_flags = {
-            "tactical_rmm": False,
+            "watchtower": False,
             "white_labeling": False,
             "api_access": False,
             "advanced_reports": False,
@@ -1711,7 +1711,7 @@ async def get_tenant_feature_flags(admin: dict = Depends(get_current_admin)):
     
     # Default flags
     default_flags = {
-        "tactical_rmm": False,
+        "watchtower": False,
         "white_labeling": False,
         "api_access": False,
         "advanced_reports": False,
