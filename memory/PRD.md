@@ -50,10 +50,42 @@ A comprehensive MSP-grade service ticket system with:
    - Coverage Includes list
    - Entitlements display
 
-5. **RMM Tab**
-   - Placeholder for Tactical RMM integration
+5. **RMM Tab** (WatchTower)
+   - WatchTower agent status display
+   - Real-time monitoring metrics (when agent installed)
+   - Download Agent inline button for self-service installation
    - Icons for CPU Usage, Memory, Disk Space, Network
-   - "Coming Soon" professional message
+
+### ✅ WatchTower Self-Service Agent Download - NEW (Feb 2026)
+
+**Complete multi-portal integration for tenant self-service:**
+
+1. **Company Portal - Dashboard**
+   - WatchTower Monitoring card showing agent stats (Total, Online, Offline)
+   - "Download Agent for New Device" button
+   - Full download dialog with OS selection and site assignment
+
+2. **Company Portal - Devices Page**
+   - "Download WatchTower Agent" button in header
+   - Same download dialog as dashboard
+
+3. **Company Portal - Device Dashboard (RMM Tab)**
+   - Inline download option for individual devices
+   - Installation instructions embedded
+
+4. **Admin Portal - WatchTower Integration Page**
+   - Agent list from WatchTower
+   - "Download Agent for Companies" section
+   - Per-company download link generation
+   - Shows provisioning status (provisioned/not provisioned in WatchTower)
+
+**Backend Implementation:**
+- `/api/watchtower/company/agent-status` - Get WatchTower status for company
+- `/api/watchtower/company/sites-for-agent` - Get sites for agent assignment
+- `/api/watchtower/company/agent-download` - Generate download link for company (self-service)
+- `/api/watchtower/agent-download/{company_id}` - Admin generates download for any company
+- Auto-provisioning: Creates WatchTower Client/Site if not exists
+- Graceful error handling with manual download fallback when API fails
 
 6. **Details Tab**
    - Configuration (Processor, RAM, Storage, OS)
