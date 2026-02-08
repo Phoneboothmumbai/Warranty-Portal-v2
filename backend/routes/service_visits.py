@@ -325,6 +325,34 @@ async def start_timer(
             detail=f"Cannot start timer. Visit is already {visit.get('status')}"
         )
     
+    # BUG FIX: Check ticket status - can only start work if ticket is in valid state
+    ticket = await db.service_tickets_new.find_one(
+        {"id": visit["ticket_id"], "organization_id": org_id},
+        {"status": 1, "ticket_number": 1}
+    )
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Associated ticket not found")
+    
+    # Valid states to start work: assigned, in_progress, or pending_parts (resuming after parts received)
+    valid_ticket_states = [TicketStatus.ASSIGNED.value, TicketStatus.IN_PROGRESS.value, TicketStatus.PENDING_PARTS.value]
+    if ticket.get("status") not in valid_ticket_states:
+        if ticket.get("status") == "pending_acceptance":
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot start work. Engineer must accept the ticket first."
+            )
+        elif ticket.get("status") == "new":
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot start work. Ticket must be assigned to an engineer first."
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot start work. Ticket is in '{ticket.get('status')}' status."
+            )
+    
     now = get_ist_isoformat()
     
     await db.service_visits_new.update_one(
