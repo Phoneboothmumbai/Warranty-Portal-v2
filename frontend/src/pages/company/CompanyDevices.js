@@ -93,6 +93,7 @@ const CompanyDevices = () => {
           <h1 className="text-2xl font-bold text-slate-900">Devices</h1>
           <p className="text-slate-500 mt-1">View all your registered devices and their warranty status</p>
         </div>
+        <WatchTowerAgentDownload token={token} variant="button" />
       </div>
 
       {/* Filters */}
