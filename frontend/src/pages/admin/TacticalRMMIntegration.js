@@ -14,7 +14,7 @@ import axios from 'axios';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-const TacticalRMMIntegration = () => {
+const WatchTowerIntegration = () => {
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [agents, setAgents] = useState([]);
