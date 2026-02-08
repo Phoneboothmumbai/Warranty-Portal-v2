@@ -3343,23 +3343,45 @@ async def get_device_service_history(device_id: str, admin: dict = Depends(get_c
             "status": s.get("status")
         })
     
-    # Get service tickets
-    tickets = await db.service_tickets.find({
+    # BUG FIX: Get service tickets from BOTH collections (old and new)
+    # Old collection (for backward compatibility)
+    old_tickets = await db.service_tickets.find({
         "device_id": device_id,
         "is_deleted": {"$ne": True}
     }, {"_id": 0}).sort("created_at", -1).to_list(100)
     
-    for t in tickets:
+    for t in old_tickets:
         history.append({
             "id": t.get("id"),
             "type": "service_ticket",
             "service_type": "Service Ticket",
             "ticket_number": t.get("ticket_number"),
-            "description": t.get("subject"),
+            "description": t.get("subject") or t.get("title"),
             "date": t.get("created_at"),
             "status": t.get("status"),
             "priority": t.get("priority"),
             "resolved_date": t.get("resolved_at")
+        })
+    
+    # NEW collection (service_tickets_new) - this is where new tickets are created
+    new_tickets = await db.service_tickets_new.find({
+        "device_id": device_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    for t in new_tickets:
+        history.append({
+            "id": t.get("id"),
+            "type": "service_ticket",
+            "service_type": "Service Ticket",
+            "ticket_number": t.get("ticket_number"),
+            "description": t.get("title") or t.get("description"),
+            "date": t.get("created_at"),
+            "status": t.get("status"),
+            "priority": t.get("priority"),
+            "resolved_date": t.get("resolved_at"),
+            "assigned_to": t.get("assigned_to_name"),
+            "company_name": t.get("company_name")
         })
     
     # Get AI support chat history
