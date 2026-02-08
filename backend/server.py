@@ -10714,6 +10714,10 @@ from routes.watchtower import router as watchtower_router, init_watchtower_route
 init_watchtower_router(db)
 app.include_router(watchtower_router, prefix="/api", tags=["WatchTower Integration"])
 
+# Include MoltBot Integration router
+from routes.moltbot import router as moltbot_router
+app.include_router(moltbot_router, prefix="/api/admin", tags=["MoltBot Integration"])
+
 # Initialize Email Service for Ticketing
 from services.email_service import init_email_service
 init_email_service(db)
