@@ -1500,6 +1500,365 @@ export default function TicketingConfig() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Canned Response Modal */}
+      <Dialog open={showCannedModal} onOpenChange={setShowCannedModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingCanned ? 'Edit' : 'Create'} Canned Response</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Title *</Label>
+                <Input 
+                  value={cannedForm.title} 
+                  onChange={(e) => setCannedForm({ ...cannedForm, title: e.target.value })} 
+                  placeholder="e.g., Acknowledgement - Hardware"
+                />
+              </div>
+              <div>
+                <Label>Category</Label>
+                <Input 
+                  value={cannedForm.category || ''} 
+                  onChange={(e) => setCannedForm({ ...cannedForm, category: e.target.value })} 
+                  placeholder="e.g., Acknowledgement"
+                  list="canned-categories"
+                />
+                <datalist id="canned-categories">
+                  {cannedCategories.map((cat) => (
+                    <option key={cat} value={cat} />
+                  ))}
+                </datalist>
+              </div>
+            </div>
+            <div>
+              <Label>Department</Label>
+              <Select 
+                value={cannedForm.department_id || 'all'} 
+                onValueChange={(v) => setCannedForm({ ...cannedForm, department_id: v === 'all' ? null : v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All departments" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All departments</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Content *</Label>
+              <Textarea 
+                value={cannedForm.content} 
+                onChange={(e) => setCannedForm({ ...cannedForm, content: e.target.value })} 
+                placeholder="Dear {{customer_name}},&#10;&#10;Thank you for your ticket ({{ticket_number}})..."
+                rows={6}
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Variables: {'{{customer_name}}'}, {'{{ticket_number}}'}, {'{{subject}}'}, {'{{department_name}}'}, {'{{assigned_to}}'}, {'{{sla_due}}'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={cannedForm.is_personal} onCheckedChange={(v) => setCannedForm({ ...cannedForm, is_personal: v })} />
+              <Label>Personal (only visible to me)</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCannedModal(false)}>Cancel</Button>
+            <Button onClick={saveCanned}>
+              {editingCanned ? 'Update' : 'Create'} Response
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* SLA Policy Modal */}
+      <Dialog open={showSLAModal} onOpenChange={setShowSLAModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingSLA ? 'Edit' : 'Create'} SLA Policy</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Name *</Label>
+              <Input 
+                value={slaForm.name} 
+                onChange={(e) => setSlaForm({ ...slaForm, name: e.target.value })} 
+                placeholder="e.g., Standard - 4 Hour Response"
+              />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Textarea 
+                value={slaForm.description || ''} 
+                onChange={(e) => setSlaForm({ ...slaForm, description: e.target.value })} 
+                placeholder="Description of this SLA policy"
+                rows={2}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Response Time (hours)</Label>
+                <Input 
+                  type="number" 
+                  value={slaForm.response_time_hours} 
+                  onChange={(e) => setSlaForm({ ...slaForm, response_time_hours: parseInt(e.target.value) || 0 })} 
+                />
+                <div className="flex items-center gap-2 mt-1">
+                  <Switch 
+                    checked={slaForm.response_time_business_hours} 
+                    onCheckedChange={(v) => setSlaForm({ ...slaForm, response_time_business_hours: v })} 
+                  />
+                  <Label className="text-xs">Business hours only</Label>
+                </div>
+              </div>
+              <div>
+                <Label>Resolution Time (hours)</Label>
+                <Input 
+                  type="number" 
+                  value={slaForm.resolution_time_hours} 
+                  onChange={(e) => setSlaForm({ ...slaForm, resolution_time_hours: parseInt(e.target.value) || 0 })} 
+                />
+                <div className="flex items-center gap-2 mt-1">
+                  <Switch 
+                    checked={slaForm.resolution_time_business_hours} 
+                    onCheckedChange={(v) => setSlaForm({ ...slaForm, resolution_time_business_hours: v })} 
+                  />
+                  <Label className="text-xs">Business hours only</Label>
+                </div>
+              </div>
+            </div>
+            <div className="border-t pt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Switch 
+                  checked={slaForm.escalation_enabled} 
+                  onCheckedChange={(v) => setSlaForm({ ...slaForm, escalation_enabled: v })} 
+                />
+                <Label>Enable Escalation</Label>
+              </div>
+              {slaForm.escalation_enabled && (
+                <div>
+                  <Label>Escalate (hours before breach)</Label>
+                  <Input 
+                    type="number" 
+                    value={slaForm.escalation_after_hours} 
+                    onChange={(e) => setSlaForm({ ...slaForm, escalation_after_hours: parseInt(e.target.value) || 0 })} 
+                  />
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Switch checked={slaForm.is_active} onCheckedChange={(v) => setSlaForm({ ...slaForm, is_active: v })} />
+                <Label>Active</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={slaForm.is_default} onCheckedChange={(v) => setSlaForm({ ...slaForm, is_default: v })} />
+                <Label>Default Policy</Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSLAModal(false)}>Cancel</Button>
+            <Button onClick={saveSLA}>
+              {editingSLA ? 'Update' : 'Create'} Policy
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Department Modal */}
+      <Dialog open={showDeptModal} onOpenChange={setShowDeptModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingDept ? 'Edit' : 'Create'} Department</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Name *</Label>
+              <Input 
+                value={deptForm.name} 
+                onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })} 
+                placeholder="e.g., Technical Support"
+              />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Textarea 
+                value={deptForm.description || ''} 
+                onChange={(e) => setDeptForm({ ...deptForm, description: e.target.value })} 
+                placeholder="Brief description of this department"
+                rows={2}
+              />
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input 
+                type="email"
+                value={deptForm.email || ''} 
+                onChange={(e) => setDeptForm({ ...deptForm, email: e.target.value })} 
+                placeholder="support@company.com"
+              />
+            </div>
+            <div>
+              <Label>Manager</Label>
+              <Select 
+                value={deptForm.manager_id || 'none'} 
+                onValueChange={(v) => setDeptForm({ ...deptForm, manager_id: v === 'none' ? null : v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select manager" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No manager assigned</SelectItem>
+                  {staff.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name || s.email}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>SLA Policy</Label>
+              <Select 
+                value={deptForm.sla_policy_id || 'none'} 
+                onValueChange={(v) => setDeptForm({ ...deptForm, sla_policy_id: v === 'none' ? null : v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Use default SLA" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Use default SLA</SelectItem>
+                  {slaPolicies.map((sla) => (
+                    <SelectItem key={sla.id} value={sla.id}>{sla.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Switch checked={deptForm.is_active} onCheckedChange={(v) => setDeptForm({ ...deptForm, is_active: v })} />
+                <Label>Active</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={deptForm.is_public} onCheckedChange={(v) => setDeptForm({ ...deptForm, is_public: v })} />
+                <Label>Public (visible in portal)</Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeptModal(false)}>Cancel</Button>
+            <Button onClick={saveDept}>
+              {editingDept ? 'Update' : 'Create'} Department
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Custom Form Modal */}
+      <Dialog open={showFormModal} onOpenChange={setShowFormModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingForm ? 'Edit' : 'Create'} Custom Form</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Form Name *</Label>
+              <Input 
+                value={formForm.name} 
+                onChange={(e) => setFormForm({ ...formForm, name: e.target.value })} 
+                placeholder="e.g., Hardware Issue Form"
+              />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Input 
+                value={formForm.description || ''} 
+                onChange={(e) => setFormForm({ ...formForm, description: e.target.value })} 
+                placeholder="Brief description"
+              />
+            </div>
+            <div>
+              <Label>Form Type</Label>
+              <Select 
+                value={formForm.form_type} 
+                onValueChange={(v) => setFormForm({ ...formForm, form_type: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ticket">Ticket Form</SelectItem>
+                  <SelectItem value="visit">Visit Form</SelectItem>
+                  <SelectItem value="device">Device Form</SelectItem>
+                  <SelectItem value="contact">Contact Form</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Form Fields</Label>
+              <div className="border rounded-lg p-4 min-h-[100px] mt-1">
+                {formForm.fields?.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-4">
+                    No fields yet. Click 'Add Field' to start building your form.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {formForm.fields?.map((field, index) => (
+                      <div key={field.id || index} className="flex items-center gap-2 p-2 bg-slate-50 rounded">
+                        <span className="text-sm flex-1">{field.label || 'Untitled Field'}</span>
+                        <Badge variant="outline" className="text-xs">{field.field_type}</Badge>
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-6 w-6 text-red-500"
+                          onClick={() => {
+                            const newFields = formForm.fields.filter((_, i) => i !== index);
+                            setFormForm({ ...formForm, fields: newFields });
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-3 w-full"
+                  onClick={() => {
+                    const newField = {
+                      id: `field_${Date.now()}`,
+                      field_type: 'text',
+                      label: 'New Field',
+                      placeholder: '',
+                      validation: { required: false },
+                      sort_order: formForm.fields?.length || 0
+                    };
+                    setFormForm({ ...formForm, fields: [...(formForm.fields || []), newField] });
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Field
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={formForm.is_active} onCheckedChange={(v) => setFormForm({ ...formForm, is_active: v })} />
+              <Label>Active</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFormModal(false)}>Cancel</Button>
+            <Button onClick={saveForm}>
+              {editingForm ? 'Update' : 'Create'} Form
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
