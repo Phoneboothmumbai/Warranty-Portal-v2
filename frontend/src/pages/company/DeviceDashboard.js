@@ -801,10 +801,9 @@ const DeviceDashboard = () => {
                     <p className="text-xs text-slate-600 font-medium">Network</p>
                   </div>
                 </div>
-                <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg max-w-md mx-auto">
-                  <p className="text-sm text-amber-800">
-                    <strong>Setup Required:</strong> Install the WatchTower agent on this device to enable real-time monitoring.
-                  </p>
+                {/* Agent Download Section */}
+                <div className="mt-8 max-w-md mx-auto">
+                  <WatchTowerAgentDownload token={token} variant="inline" />
                 </div>
               </CardContent>
             </Card>
