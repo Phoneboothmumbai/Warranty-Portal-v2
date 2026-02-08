@@ -155,20 +155,24 @@ A comprehensive MSP-grade service ticket system with:
 /app
 ├── backend/
 │   ├── routes/
-│   │   ├── engineer_portal.py     # Engineer API
-│   │   ├── service_tickets_new.py # Ticket workflow
-│   │   └── quotations.py          # Quotations + Company tickets API
-│   └── server.py                  # Device analytics API, router registrations
+│   │   ├── engineer_portal.py        # Engineer API with accept/decline endpoints
+│   │   ├── service_tickets_new.py    # Ticket workflow
+│   │   ├── service_visits.py         # Visit management with workflow locks
+│   │   ├── ticketing_config.py       # Canned Responses, SLA, Departments, Custom Forms
+│   │   ├── moltbot.py                # MoltBot webhook integration (NEW)
+│   │   └── quotations.py             # Quotations + Company tickets API
+│   └── server.py                     # Device analytics API, router registrations
 ├── frontend/
 │   └── src/
 │       └── pages/
 │           ├── admin/
+│           │   ├── TicketingConfig.js    # 7-tab configuration panel (NEW)
 │           │   ├── Quotations.js
 │           │   └── ServiceTicketDetail.js
 │           ├── company/
-│           │   ├── DeviceDashboard.js      # NEW: Comprehensive device dashboard
-│           │   ├── CompanyTickets.js       # NEW: Service tickets list
-│           │   ├── CompanyTicketDetail.js  # NEW: Ticket detail
+│           │   ├── DeviceDashboard.js      # Comprehensive device dashboard
+│           │   ├── CompanyTickets.js       # Service tickets list
+│           │   ├── CompanyTicketDetail.js  # Ticket detail
 │           │   └── CompanyQuotations.js
 │           └── engineer/
 │               ├── TechnicianDashboard.js
