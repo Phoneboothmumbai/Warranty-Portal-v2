@@ -5,6 +5,7 @@ API endpoints for managing service ticket configuration
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header
 from typing import Optional, List
 from datetime import datetime, timezone
+from pydantic import BaseModel
 import uuid
 import jwt
 import os
