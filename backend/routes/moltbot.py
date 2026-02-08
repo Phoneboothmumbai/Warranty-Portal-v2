@@ -25,13 +25,20 @@ logger = logging.getLogger(__name__)
 
 class MoltBotConfig(BaseModel):
     """MoltBot configuration for an organization"""
-    api_key: str
+    api_key: str = ""
     webhook_secret: Optional[str] = None
     enabled: bool = True
     auto_create_tickets: bool = True
     default_help_topic_id: Optional[str] = None
     default_priority: str = "medium"
     notification_channels: List[str] = ["webhook"]  # webhook, whatsapp, telegram
+    # Bot Configuration
+    bot_instructions: Optional[str] = None
+    knowledge_base: Optional[str] = None
+    restrict_to_support_only: bool = True
+    restrict_to_employees: bool = False
+    allowed_topics: List[str] = ["warranty", "service", "repair", "support", "device", "amc"]
+    off_topic_response: Optional[str] = None
 
 
 class MoltBotWebhookPayload(BaseModel):
