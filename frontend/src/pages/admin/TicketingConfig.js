@@ -221,16 +221,7 @@ export default function TicketingConfig() {
 
   // Seed defaults
   const seedDefaults = async () => {
-    try {
-      await Promise.all([
-        axios.post(`${API_URL}/api/admin/ticketing-config/masters/seed-defaults`, {}, { headers }),
-        axios.post(`${API_URL}/api/admin/ticketing-config/notifications/seed-defaults`, {}, { headers })
-      ]);
-      toast.success('Default configuration seeded');
-      fetchData();
-    } catch (error) {
-      toast.error('Failed to seed defaults');
-    }
+    await seedAllDefaults();
   };
 
   // Master CRUD
