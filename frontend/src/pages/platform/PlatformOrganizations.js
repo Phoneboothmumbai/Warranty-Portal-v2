@@ -515,7 +515,7 @@ function OrganizationDetailModal({ org, onClose, token }) {
   };
 
   const FEATURE_LABELS = {
-    tactical_rmm: { label: 'Tactical RMM Integration', description: 'Allow tenant to connect Tactical RMM' },
+    watchtower: { label: 'WatchTower Integration', description: 'Allow tenant to connect WatchTower' },
     tgms: { label: 'TGMS Remote Management', description: 'Remote device management system' },
     white_labeling: { label: 'White Labeling', description: 'Custom branding and domain' },
     api_access: { label: 'API Access', description: 'External API integration access' },
