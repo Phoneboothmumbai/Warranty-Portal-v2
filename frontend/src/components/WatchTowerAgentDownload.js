@@ -68,6 +68,8 @@ const WatchTowerAgentDownload = ({ token, variant = 'button', onSuccess }) => {
     }
   };
   
+  const [downloadInstructions, setDownloadInstructions] = useState(null);
+  
   const handleDownload = async () => {
     try {
       setLoading(true);
@@ -82,21 +84,13 @@ const WatchTowerAgentDownload = ({ token, variant = 'button', onSuccess }) => {
       );
       
       if (response.data.manual_download_required) {
-        // Manual download required - show instructions and open WatchTower
-        setDownloadUrl(response.data.download_url || response.data.web_ui_url);
-        toast.info(
-          'Opening WatchTower. Log in if prompted, then navigate to Agents > Download Agent.',
-          { duration: 6000 }
-        );
-        // Open the download URL or web UI
-        const urlToOpen = response.data.download_url || response.data.web_ui_url;
-        if (urlToOpen) {
-          window.open(urlToOpen, '_blank');
-        }
+        // Show instructions instead of redirecting
+        setDownloadInstructions(response.data);
+        setDownloadUrl(response.data.install_page_url || response.data.web_ui_url);
+        toast.info('Please follow the instructions to download the agent.', { duration: 4000 });
         if (onSuccess) onSuccess(response.data);
       } else if (response.data.download_url) {
         setDownloadUrl(response.data.download_url);
-        // Open download in new tab
         window.open(response.data.download_url, '_blank');
         toast.success('Agent download started!');
         if (onSuccess) onSuccess(response.data);
