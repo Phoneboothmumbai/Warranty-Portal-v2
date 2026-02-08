@@ -796,3 +796,769 @@ async def delete_approval_setting(
         raise HTTPException(status_code=404, detail="Approval setting not found")
     
     return {"message": "Approval setting deleted"}
+
+
+
+# =============================================================================
+# CANNED RESPONSES
+# =============================================================================
+
+class CannedResponseCreate(BaseModel):
+    title: str
+    category: Optional[str] = None
+    department_id: Optional[str] = None
+    content: str
+    is_personal: bool = False
+    is_active: bool = True
+    sort_order: int = 0
+
+class CannedResponseUpdate(BaseModel):
+    title: Optional[str] = None
+    category: Optional[str] = None
+    department_id: Optional[str] = None
+    content: Optional[str] = None
+    is_personal: Optional[bool] = None
+    is_active: Optional[bool] = None
+    sort_order: Optional[int] = None
+
+from pydantic import BaseModel
+
+
+@router.get("/canned-responses")
+async def list_canned_responses(
+    category: Optional[str] = None,
+    department_id: Optional[str] = None,
+    include_personal: bool = True,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """List all canned responses"""
+    query = {"organization_id": admin["organization_id"]}
+    
+    if category:
+        query["category"] = category
+    if department_id:
+        query["department_id"] = department_id
+    
+    # Filter personal responses
+    if not include_personal:
+        query["$or"] = [
+            {"is_personal": False},
+            {"is_personal": {"$exists": False}}
+        ]
+    else:
+        # Include personal responses only for the current user
+        query["$or"] = [
+            {"is_personal": False},
+            {"is_personal": {"$exists": False}},
+            {"created_by": admin["id"]}
+        ]
+    
+    responses = await db.canned_responses.find(query, {"_id": 0}).sort("sort_order", 1).to_list(500)
+    
+    # Get unique categories
+    all_responses = await db.canned_responses.find(
+        {"organization_id": admin["organization_id"]},
+        {"category": 1}
+    ).to_list(500)
+    categories = list(set([r.get("category") for r in all_responses if r.get("category")]))
+    
+    return {"responses": responses, "categories": categories}
+
+
+@router.get("/canned-responses/{response_id}")
+async def get_canned_response(
+    response_id: str,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Get a single canned response"""
+    response = await db.canned_responses.find_one({
+        "id": response_id,
+        "organization_id": admin["organization_id"]
+    }, {"_id": 0})
+    
+    if not response:
+        raise HTTPException(status_code=404, detail="Canned response not found")
+    
+    return response
+
+
+@router.post("/canned-responses")
+async def create_canned_response(
+    data: CannedResponseCreate,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Create a new canned response"""
+    response_id = str(uuid.uuid4())
+    
+    response = {
+        "id": response_id,
+        "organization_id": admin["organization_id"],
+        "title": data.title,
+        "category": data.category,
+        "department_id": data.department_id,
+        "content": data.content,
+        "is_personal": data.is_personal,
+        "is_active": data.is_active,
+        "sort_order": data.sort_order,
+        "created_at": datetime.now(timezone.utc),
+        "created_by": admin["id"],
+        "created_by_name": admin.get("name", admin.get("email"))
+    }
+    
+    await db.canned_responses.insert_one(response)
+    
+    return {"id": response_id, "message": "Canned response created"}
+
+
+@router.put("/canned-responses/{response_id}")
+async def update_canned_response(
+    response_id: str,
+    data: CannedResponseUpdate,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Update a canned response"""
+    response = await db.canned_responses.find_one({
+        "id": response_id,
+        "organization_id": admin["organization_id"]
+    })
+    
+    if not response:
+        raise HTTPException(status_code=404, detail="Canned response not found")
+    
+    # Check if personal and belongs to another user
+    if response.get("is_personal") and response.get("created_by") != admin["id"]:
+        raise HTTPException(status_code=403, detail="Cannot edit another user's personal response")
+    
+    update_data = {k: v for k, v in data.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc)
+    update_data["updated_by"] = admin["id"]
+    
+    await db.canned_responses.update_one(
+        {"id": response_id},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Canned response updated"}
+
+
+@router.delete("/canned-responses/{response_id}")
+async def delete_canned_response(
+    response_id: str,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Delete a canned response"""
+    response = await db.canned_responses.find_one({
+        "id": response_id,
+        "organization_id": admin["organization_id"]
+    })
+    
+    if not response:
+        raise HTTPException(status_code=404, detail="Canned response not found")
+    
+    # Check if personal and belongs to another user
+    if response.get("is_personal") and response.get("created_by") != admin["id"]:
+        raise HTTPException(status_code=403, detail="Cannot delete another user's personal response")
+    
+    await db.canned_responses.delete_one({"id": response_id})
+    
+    return {"message": "Canned response deleted"}
+
+
+# =============================================================================
+# SLA POLICIES
+# =============================================================================
+
+class SLAPolicyCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    is_active: bool = True
+    is_default: bool = False
+    
+    # Response time
+    response_time_hours: int = 4
+    response_time_business_hours: bool = True
+    
+    # Resolution time
+    resolution_time_hours: int = 24
+    resolution_time_business_hours: bool = True
+    
+    # Grace period
+    grace_period_hours: int = 0
+    
+    # Priority multipliers (lower = faster)
+    priority_multipliers: Optional[dict] = None  # e.g., {"critical": 0.25, "high": 0.5, "medium": 1, "low": 2}
+    
+    # Escalation
+    escalation_enabled: bool = True
+    escalation_after_hours: int = 2  # Hours before breach to escalate
+    escalate_to_user_id: Optional[str] = None
+    escalate_to_role: Optional[str] = None
+    
+    # Business hours
+    business_hours_start: str = "09:00"  # HH:MM
+    business_hours_end: str = "18:00"
+    business_days: List[int] = [1, 2, 3, 4, 5]  # Monday=1, Sunday=7
+
+
+class SLAPolicyUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+    is_default: Optional[bool] = None
+    response_time_hours: Optional[int] = None
+    response_time_business_hours: Optional[bool] = None
+    resolution_time_hours: Optional[int] = None
+    resolution_time_business_hours: Optional[bool] = None
+    grace_period_hours: Optional[int] = None
+    priority_multipliers: Optional[dict] = None
+    escalation_enabled: Optional[bool] = None
+    escalation_after_hours: Optional[int] = None
+    escalate_to_user_id: Optional[str] = None
+    escalate_to_role: Optional[str] = None
+    business_hours_start: Optional[str] = None
+    business_hours_end: Optional[str] = None
+    business_days: Optional[List[int]] = None
+
+
+@router.get("/sla-policies")
+async def list_sla_policies(
+    is_active: Optional[bool] = None,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """List all SLA policies"""
+    query = {"organization_id": admin["organization_id"]}
+    
+    if is_active is not None:
+        query["is_active"] = is_active
+    
+    policies = await db.sla_policies.find(query, {"_id": 0}).sort("name", 1).to_list(100)
+    
+    return {"policies": policies}
+
+
+@router.get("/sla-policies/{policy_id}")
+async def get_sla_policy(
+    policy_id: str,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Get a single SLA policy"""
+    policy = await db.sla_policies.find_one({
+        "id": policy_id,
+        "organization_id": admin["organization_id"]
+    }, {"_id": 0})
+    
+    if not policy:
+        raise HTTPException(status_code=404, detail="SLA policy not found")
+    
+    return policy
+
+
+@router.post("/sla-policies")
+async def create_sla_policy(
+    data: SLAPolicyCreate,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Create a new SLA policy"""
+    policy_id = str(uuid.uuid4())
+    
+    # If this is being set as default, unset other defaults
+    if data.is_default:
+        await db.sla_policies.update_many(
+            {"organization_id": admin["organization_id"]},
+            {"$set": {"is_default": False}}
+        )
+    
+    policy = {
+        "id": policy_id,
+        "organization_id": admin["organization_id"],
+        **data.dict(),
+        "created_at": datetime.now(timezone.utc),
+        "created_by": admin["id"]
+    }
+    
+    await db.sla_policies.insert_one(policy)
+    
+    return {"id": policy_id, "message": "SLA policy created"}
+
+
+@router.put("/sla-policies/{policy_id}")
+async def update_sla_policy(
+    policy_id: str,
+    data: SLAPolicyUpdate,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Update an SLA policy"""
+    policy = await db.sla_policies.find_one({
+        "id": policy_id,
+        "organization_id": admin["organization_id"]
+    })
+    
+    if not policy:
+        raise HTTPException(status_code=404, detail="SLA policy not found")
+    
+    update_data = {k: v for k, v in data.dict().items() if v is not None}
+    
+    # If setting as default, unset others
+    if update_data.get("is_default"):
+        await db.sla_policies.update_many(
+            {"organization_id": admin["organization_id"], "id": {"$ne": policy_id}},
+            {"$set": {"is_default": False}}
+        )
+    
+    update_data["updated_at"] = datetime.now(timezone.utc)
+    update_data["updated_by"] = admin["id"]
+    
+    await db.sla_policies.update_one(
+        {"id": policy_id},
+        {"$set": update_data}
+    )
+    
+    return {"message": "SLA policy updated"}
+
+
+@router.delete("/sla-policies/{policy_id}")
+async def delete_sla_policy(
+    policy_id: str,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Delete an SLA policy"""
+    result = await db.sla_policies.delete_one({
+        "id": policy_id,
+        "organization_id": admin["organization_id"]
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="SLA policy not found")
+    
+    return {"message": "SLA policy deleted"}
+
+
+@router.post("/sla-policies/seed-defaults")
+async def seed_default_sla_policies(
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Seed default SLA policies"""
+    org_id = admin["organization_id"]
+    
+    existing = await db.sla_policies.count_documents({"organization_id": org_id})
+    if existing > 0:
+        return {"message": "Defaults already exist", "count": existing}
+    
+    defaults = [
+        {
+            "name": "Critical - 1 Hour Response",
+            "description": "For critical issues requiring immediate attention",
+            "response_time_hours": 1,
+            "resolution_time_hours": 4,
+            "priority_multipliers": {"critical": 0.25, "high": 0.5, "medium": 1, "low": 2},
+            "escalation_enabled": True,
+            "escalation_after_hours": 1
+        },
+        {
+            "name": "Standard - 4 Hour Response",
+            "description": "Default SLA for normal tickets",
+            "response_time_hours": 4,
+            "resolution_time_hours": 24,
+            "is_default": True,
+            "priority_multipliers": {"critical": 0.25, "high": 0.5, "medium": 1, "low": 2}
+        },
+        {
+            "name": "Extended - 8 Hour Response",
+            "description": "For low priority or non-urgent issues",
+            "response_time_hours": 8,
+            "resolution_time_hours": 48,
+            "priority_multipliers": {"critical": 0.5, "high": 0.75, "medium": 1, "low": 1.5}
+        }
+    ]
+    
+    for d in defaults:
+        d["id"] = str(uuid.uuid4())
+        d["organization_id"] = org_id
+        d["is_active"] = True
+        d["response_time_business_hours"] = True
+        d["resolution_time_business_hours"] = True
+        d["grace_period_hours"] = 0
+        d["business_hours_start"] = "09:00"
+        d["business_hours_end"] = "18:00"
+        d["business_days"] = [1, 2, 3, 4, 5]
+        d["created_at"] = datetime.now(timezone.utc)
+    
+    await db.sla_policies.insert_many(defaults)
+    
+    return {"message": "Default SLA policies created", "count": len(defaults)}
+
+
+# =============================================================================
+# DEPARTMENTS
+# =============================================================================
+
+class DepartmentCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    email: Optional[str] = None
+    manager_id: Optional[str] = None
+    sla_policy_id: Optional[str] = None
+    is_active: bool = True
+    is_public: bool = True  # Visible in customer portal
+    auto_assign_tickets: bool = False
+    signature: Optional[str] = None  # Email signature
+    sort_order: int = 0
+
+
+class DepartmentUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    email: Optional[str] = None
+    manager_id: Optional[str] = None
+    sla_policy_id: Optional[str] = None
+    is_active: Optional[bool] = None
+    is_public: Optional[bool] = None
+    auto_assign_tickets: Optional[bool] = None
+    signature: Optional[str] = None
+    sort_order: Optional[int] = None
+
+
+@router.get("/departments")
+async def list_departments(
+    is_active: Optional[bool] = None,
+    is_public: Optional[bool] = None,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """List all departments"""
+    query = {"organization_id": admin["organization_id"]}
+    
+    if is_active is not None:
+        query["is_active"] = is_active
+    if is_public is not None:
+        query["is_public"] = is_public
+    
+    departments = await db.departments.find(query, {"_id": 0}).sort("sort_order", 1).to_list(100)
+    
+    # Get member counts
+    for dept in departments:
+        dept["member_count"] = await db.staff_users.count_documents({
+            "organization_id": admin["organization_id"],
+            "department_id": dept["id"],
+            "is_deleted": {"$ne": True}
+        })
+        
+        # Get ticket counts
+        dept["open_tickets"] = await db.service_tickets_new.count_documents({
+            "organization_id": admin["organization_id"],
+            "department_id": dept["id"],
+            "status": {"$nin": ["closed", "cancelled"]},
+            "is_deleted": {"$ne": True}
+        })
+    
+    return {"departments": departments}
+
+
+@router.get("/departments/{dept_id}")
+async def get_department(
+    dept_id: str,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Get a single department with details"""
+    dept = await db.departments.find_one({
+        "id": dept_id,
+        "organization_id": admin["organization_id"]
+    }, {"_id": 0})
+    
+    if not dept:
+        raise HTTPException(status_code=404, detail="Department not found")
+    
+    # Get members
+    members = await db.staff_users.find({
+        "organization_id": admin["organization_id"],
+        "department_id": dept_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0, "password_hash": 0}).to_list(100)
+    
+    dept["members"] = members
+    
+    # Get manager details if set
+    if dept.get("manager_id"):
+        manager = await db.staff_users.find_one(
+            {"id": dept["manager_id"]},
+            {"_id": 0, "name": 1, "email": 1, "id": 1}
+        )
+        dept["manager"] = manager
+    
+    return dept
+
+
+@router.post("/departments")
+async def create_department(
+    data: DepartmentCreate,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Create a new department"""
+    dept_id = str(uuid.uuid4())
+    
+    dept = {
+        "id": dept_id,
+        "organization_id": admin["organization_id"],
+        **data.dict(),
+        "created_at": datetime.now(timezone.utc),
+        "created_by": admin["id"]
+    }
+    
+    await db.departments.insert_one(dept)
+    
+    return {"id": dept_id, "message": "Department created"}
+
+
+@router.put("/departments/{dept_id}")
+async def update_department(
+    dept_id: str,
+    data: DepartmentUpdate,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Update a department"""
+    dept = await db.departments.find_one({
+        "id": dept_id,
+        "organization_id": admin["organization_id"]
+    })
+    
+    if not dept:
+        raise HTTPException(status_code=404, detail="Department not found")
+    
+    update_data = {k: v for k, v in data.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc)
+    update_data["updated_by"] = admin["id"]
+    
+    await db.departments.update_one(
+        {"id": dept_id},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Department updated"}
+
+
+@router.delete("/departments/{dept_id}")
+async def delete_department(
+    dept_id: str,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Delete a department"""
+    # Check if department has members
+    member_count = await db.staff_users.count_documents({
+        "organization_id": admin["organization_id"],
+        "department_id": dept_id,
+        "is_deleted": {"$ne": True}
+    })
+    
+    if member_count > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot delete department with {member_count} members. Reassign members first."
+        )
+    
+    result = await db.departments.delete_one({
+        "id": dept_id,
+        "organization_id": admin["organization_id"]
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Department not found")
+    
+    return {"message": "Department deleted"}
+
+
+@router.post("/departments/seed-defaults")
+async def seed_default_departments(
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Seed default departments"""
+    org_id = admin["organization_id"]
+    
+    existing = await db.departments.count_documents({"organization_id": org_id})
+    if existing > 0:
+        return {"message": "Defaults already exist", "count": existing}
+    
+    defaults = [
+        {
+            "name": "Support",
+            "description": "General support and customer service",
+            "is_public": True
+        },
+        {
+            "name": "Technical",
+            "description": "Technical support and troubleshooting",
+            "is_public": True
+        },
+        {
+            "name": "Field Service",
+            "description": "On-site service and repairs",
+            "is_public": False
+        },
+        {
+            "name": "Billing",
+            "description": "Billing and payment inquiries",
+            "is_public": True
+        }
+    ]
+    
+    for d in defaults:
+        d["id"] = str(uuid.uuid4())
+        d["organization_id"] = org_id
+        d["is_active"] = True
+        d["sort_order"] = 0
+        d["created_at"] = datetime.now(timezone.utc)
+    
+    await db.departments.insert_many(defaults)
+    
+    return {"message": "Default departments created", "count": len(defaults)}
+
+
+# =============================================================================
+# CUSTOM FORMS
+# =============================================================================
+
+class CustomFormCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    form_type: str = "ticket"  # ticket, visit, device, etc.
+    fields: List[dict] = []
+    is_active: bool = True
+
+
+class CustomFormUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    form_type: Optional[str] = None
+    fields: Optional[List[dict]] = None
+    is_active: Optional[bool] = None
+
+
+@router.get("/custom-forms")
+async def list_custom_forms(
+    form_type: Optional[str] = None,
+    is_active: Optional[bool] = None,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """List all custom forms"""
+    query = {"organization_id": admin["organization_id"]}
+    
+    if form_type:
+        query["form_type"] = form_type
+    if is_active is not None:
+        query["is_active"] = is_active
+    
+    forms = await db.custom_forms.find(query, {"_id": 0}).sort("name", 1).to_list(100)
+    
+    return {"forms": forms}
+
+
+@router.get("/custom-forms/{form_id}")
+async def get_custom_form(
+    form_id: str,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Get a single custom form"""
+    form = await db.custom_forms.find_one({
+        "id": form_id,
+        "organization_id": admin["organization_id"]
+    }, {"_id": 0})
+    
+    if not form:
+        raise HTTPException(status_code=404, detail="Custom form not found")
+    
+    return form
+
+
+@router.post("/custom-forms")
+async def create_custom_form(
+    data: CustomFormCreate,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Create a new custom form"""
+    form_id = str(uuid.uuid4())
+    
+    # Add IDs to fields if not present
+    fields = []
+    for i, field in enumerate(data.fields):
+        if not field.get("id"):
+            field["id"] = str(uuid.uuid4())
+        if "sort_order" not in field:
+            field["sort_order"] = i
+        fields.append(field)
+    
+    form = {
+        "id": form_id,
+        "organization_id": admin["organization_id"],
+        "name": data.name,
+        "description": data.description,
+        "form_type": data.form_type,
+        "fields": fields,
+        "is_active": data.is_active,
+        "created_at": datetime.now(timezone.utc),
+        "created_by": admin["id"]
+    }
+    
+    await db.custom_forms.insert_one(form)
+    
+    return {"id": form_id, "message": "Custom form created"}
+
+
+@router.put("/custom-forms/{form_id}")
+async def update_custom_form(
+    form_id: str,
+    data: CustomFormUpdate,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Update a custom form"""
+    form = await db.custom_forms.find_one({
+        "id": form_id,
+        "organization_id": admin["organization_id"]
+    })
+    
+    if not form:
+        raise HTTPException(status_code=404, detail="Custom form not found")
+    
+    update_data = {}
+    if data.name is not None:
+        update_data["name"] = data.name
+    if data.description is not None:
+        update_data["description"] = data.description
+    if data.form_type is not None:
+        update_data["form_type"] = data.form_type
+    if data.is_active is not None:
+        update_data["is_active"] = data.is_active
+    if data.fields is not None:
+        # Add IDs to fields if not present
+        fields = []
+        for i, field in enumerate(data.fields):
+            if not field.get("id"):
+                field["id"] = str(uuid.uuid4())
+            if "sort_order" not in field:
+                field["sort_order"] = i
+            fields.append(field)
+        update_data["fields"] = fields
+    
+    update_data["updated_at"] = datetime.now(timezone.utc)
+    update_data["updated_by"] = admin["id"]
+    
+    await db.custom_forms.update_one(
+        {"id": form_id},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Custom form updated"}
+
+
+@router.delete("/custom-forms/{form_id}")
+async def delete_custom_form(
+    form_id: str,
+    admin: dict = Depends(get_admin_from_token)
+):
+    """Delete a custom form"""
+    result = await db.custom_forms.delete_one({
+        "id": form_id,
+        "organization_id": admin["organization_id"]
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Custom form not found")
+    
+    return {"message": "Custom form deleted"}
