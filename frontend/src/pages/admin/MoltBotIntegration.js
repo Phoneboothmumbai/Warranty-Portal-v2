@@ -32,7 +32,13 @@ export default function MoltBotIntegration() {
     default_priority: 'medium',
     default_help_topic_id: '',
     greeting_message: '',
-    notification_channels: ['webhook']
+    notification_channels: ['webhook'],
+    // Bot Configuration
+    bot_instructions: '',
+    knowledge_base: '',
+    restrict_to_support_only: true,
+    restrict_to_employees: false,
+    allowed_topics: ['warranty', 'service', 'repair', 'support', 'device', 'amc']
   });
   const [orgInfo, setOrgInfo] = useState(null);
   const [helpTopics, setHelpTopics] = useState([]);
