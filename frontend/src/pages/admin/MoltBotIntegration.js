@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { 
   MessageSquare, Settings, Zap, Phone, Globe, Shield, 
   ToggleLeft, ToggleRight, Copy, RefreshCw, ExternalLink,
-  CheckCircle2, XCircle, AlertCircle, Bot, Send
+  CheckCircle2, XCircle, AlertCircle, Bot, Send, BookOpen, FileText, Lock
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
