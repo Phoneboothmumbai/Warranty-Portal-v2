@@ -7,7 +7,7 @@ import { Badge } from '../../components/ui/badge';
 import { 
   Settings, RefreshCw, Monitor, Server, Wifi, WifiOff,
   Play, RotateCcw, CheckCircle, XCircle, AlertTriangle,
-  ExternalLink, Loader2
+  ExternalLink, Loader2, Download, Building2, Laptop
 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
