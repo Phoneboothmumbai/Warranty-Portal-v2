@@ -307,8 +307,14 @@ class WatchTowerService:
             try:
                 client = await self.create_client(company_name)
             except Exception as e:
-                logger.error(f"Failed to create client {company_name}: {e}")
-                raise ValueError(f"Cannot create new client in WatchTower. Please create client '{company_name}' manually in WatchTower first.")
+                logger.warning(f"Failed to create client {company_name}: {e}")
+                # Fallback: Get the first available client in WatchTower
+                clients = await self.get_clients()
+                if clients:
+                    client = clients[0]
+                    logger.info(f"Using existing client '{client.get('name')}' as fallback")
+                else:
+                    raise ValueError(f"Cannot create new client in WatchTower and no existing clients found. Please create client '{company_name}' manually in WatchTower first.")
         
         client_id = client.get("id")
         actual_client_name = client.get("name", company_name)
