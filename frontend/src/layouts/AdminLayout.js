@@ -134,6 +134,10 @@ const AdminLayout = () => {
         if (item.path === '/admin/integrations/watchtower' && !featureFlags.watchtower) {
           return false;
         }
+        // Hide MoltBot if feature flag is disabled
+        if (item.path === '/admin/integrations/moltbot' && !featureFlags.moltbot) {
+          return false;
+        }
         // Hide TGMS if feature flag is disabled
         if (item.path === '/admin/integrations/tgms' && featureFlags.tgms === false) {
           return false;
