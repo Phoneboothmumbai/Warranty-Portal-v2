@@ -82,11 +82,16 @@ const WatchTowerAgentDownload = ({ token, variant = 'button', onSuccess }) => {
       );
       
       if (response.data.manual_download_required) {
-        // Manual download required - show instructions
-        setDownloadUrl(null);
-        toast.info('Please download the agent from the WatchTower web interface.');
-        if (response.data.web_ui_url) {
-          window.open(response.data.web_ui_url, '_blank');
+        // Manual download required - show instructions and open WatchTower
+        setDownloadUrl(response.data.download_url || response.data.web_ui_url);
+        toast.info(
+          'Opening WatchTower. Log in if prompted, then navigate to Agents > Download Agent.',
+          { duration: 6000 }
+        );
+        // Open the download URL or web UI
+        const urlToOpen = response.data.download_url || response.data.web_ui_url;
+        if (urlToOpen) {
+          window.open(urlToOpen, '_blank');
         }
         if (onSuccess) onSuccess(response.data);
       } else if (response.data.download_url) {
