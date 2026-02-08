@@ -833,3 +833,318 @@ async def get_clients_mapping(admin: dict = Depends(get_current_admin)):
     except Exception as e:
         logger.error(f"Error fetching clients mapping: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== SELF-SERVICE AGENT DOWNLOAD ====================
+
+class AgentDownloadRequest(BaseModel):
+    """Request body for generating agent download link"""
+    site_name: Optional[str] = "Default Site"
+    platform: str = "windows"  # windows or linux
+    arch: str = "64"  # 64 or 32
+
+
+class CompanyAgentDownloadRequest(BaseModel):
+    """Request for company portal agent download"""
+    site_id: Optional[str] = None  # Portal site ID (optional)
+    platform: str = "windows"
+    arch: str = "64"
+
+
+@router.post("/agent-download/{company_id}")
+async def generate_agent_download_for_company(
+    company_id: str,
+    request: AgentDownloadRequest,
+    admin: dict = Depends(get_current_admin)
+):
+    """
+    Admin endpoint: Generate WatchTower agent download link for a company.
+    This will auto-create the Client/Site in WatchTower if they don't exist.
+    """
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    
+    # Get company
+    company = await _db.companies.find_one({
+        "id": company_id,
+        "organization_id": org_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    service = get_global_watchtower_service()
+    if not service:
+        raise HTTPException(status_code=400, detail="WatchTower not configured. Please configure WatchTower integration first.")
+    
+    try:
+        # Provision company in WatchTower and get download link
+        result = await service.provision_company_for_agent(
+            company_name=company["name"],
+            site_name=request.site_name
+        )
+        
+        # Store the WatchTower mapping in the company record
+        await _db.companies.update_one(
+            {"id": company_id},
+            {"$set": {
+                "watchtower_client_id": result["client_id"],
+                "watchtower_site_id": result["site_id"],
+                "watchtower_site_name": result["site_name"],
+                "watchtower_provisioned_at": datetime.utcnow().isoformat()
+            }}
+        )
+        
+        return {
+            "success": True,
+            "company_id": company_id,
+            "company_name": company["name"],
+            "watchtower_client_id": result["client_id"],
+            "watchtower_site_id": result["site_id"],
+            "site_name": result["site_name"],
+            "download_url": result["download_url"],
+            "platform": request.platform,
+            "arch": request.arch,
+            "instructions": {
+                "windows": "Download the .exe file and run it as Administrator on the target device.",
+                "linux": "Download the installer and run with sudo: sudo bash ./installer.sh"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to generate agent download for company {company_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate download link: {str(e)}")
+
+
+@router.get("/agent-download/{company_id}/status")
+async def get_company_watchtower_status(
+    company_id: str,
+    admin: dict = Depends(get_current_admin)
+):
+    """
+    Admin endpoint: Check if a company is already provisioned in WatchTower.
+    """
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    
+    company = await _db.companies.find_one({
+        "id": company_id,
+        "organization_id": org_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0, "id": 1, "name": 1, "watchtower_client_id": 1, "watchtower_site_id": 1, 
+        "watchtower_site_name": 1, "watchtower_provisioned_at": 1})
+    
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    is_provisioned = bool(company.get("watchtower_client_id"))
+    
+    # If provisioned, get current agent count from WatchTower
+    agent_count = 0
+    if is_provisioned:
+        service = get_global_watchtower_service()
+        if service:
+            try:
+                agents = await service.get_agents()
+                # Count agents matching this company's client name
+                agent_count = len([
+                    a for a in agents 
+                    if a.get("client_name", "").lower().strip() == company["name"].lower().strip()
+                ])
+            except Exception as e:
+                logger.warning(f"Could not fetch agent count: {e}")
+    
+    return {
+        "company_id": company["id"],
+        "company_name": company["name"],
+        "is_provisioned": is_provisioned,
+        "watchtower_client_id": company.get("watchtower_client_id"),
+        "watchtower_site_id": company.get("watchtower_site_id"),
+        "watchtower_site_name": company.get("watchtower_site_name"),
+        "provisioned_at": company.get("watchtower_provisioned_at"),
+        "installed_agents": agent_count
+    }
+
+
+# ==================== COMPANY PORTAL SELF-SERVICE ====================
+
+@router.post("/company/agent-download")
+async def company_generate_agent_download(
+    request: CompanyAgentDownloadRequest,
+    user: dict = Depends(get_current_company_user)
+):
+    """
+    Company Portal endpoint: Self-service agent download.
+    Tenants can generate their own WatchTower agent installer.
+    """
+    company_id = user.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=403, detail="Company context required")
+    
+    # Get company info
+    company = await _db.companies.find_one({
+        "id": company_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0})
+    
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    service = get_global_watchtower_service()
+    if not service:
+        raise HTTPException(status_code=400, detail="WatchTower monitoring is not enabled for this organization.")
+    
+    # Determine site name
+    site_name = "Default Site"
+    if request.site_id:
+        site = await _db.sites.find_one({
+            "id": request.site_id,
+            "company_id": company_id,
+            "is_deleted": {"$ne": True}
+        }, {"_id": 0, "name": 1})
+        if site:
+            site_name = site["name"]
+    
+    try:
+        # Check if already provisioned
+        if company.get("watchtower_client_id") and company.get("watchtower_site_id"):
+            # Already provisioned, just regenerate download link
+            download_info = await service.get_agent_download_link(
+                site_id=company["watchtower_site_id"],
+                platform=request.platform,
+                arch=request.arch
+            )
+            download_url = download_info.get("download_url") or download_info.get("exe_url")
+        else:
+            # First time - provision and get link
+            result = await service.provision_company_for_agent(
+                company_name=company["name"],
+                site_name=site_name
+            )
+            download_url = result["download_url"]
+            
+            # Store WatchTower mapping
+            await _db.companies.update_one(
+                {"id": company_id},
+                {"$set": {
+                    "watchtower_client_id": result["client_id"],
+                    "watchtower_site_id": result["site_id"],
+                    "watchtower_site_name": result["site_name"],
+                    "watchtower_provisioned_at": datetime.utcnow().isoformat()
+                }}
+            )
+        
+        return {
+            "success": True,
+            "download_url": download_url,
+            "company_name": company["name"],
+            "site_name": site_name,
+            "platform": request.platform,
+            "instructions": get_installation_instructions(request.platform)
+        }
+        
+    except Exception as e:
+        logger.error(f"Company agent download failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate download link: {str(e)}")
+
+
+@router.get("/company/agent-status")
+async def company_get_agent_status(user: dict = Depends(get_current_company_user)):
+    """
+    Company Portal: Get WatchTower provisioning status and agent count.
+    """
+    company_id = user.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=403, detail="Company context required")
+    
+    company = await _db.companies.find_one({
+        "id": company_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0, "name": 1, "watchtower_client_id": 1, "watchtower_site_id": 1,
+        "watchtower_site_name": 1, "watchtower_provisioned_at": 1})
+    
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    service = get_global_watchtower_service()
+    watchtower_enabled = service is not None
+    is_provisioned = bool(company.get("watchtower_client_id"))
+    
+    # Get agent count for this company
+    agent_count = 0
+    online_count = 0
+    if is_provisioned and service:
+        try:
+            agents = await service.get_agents()
+            company_agents = [
+                a for a in agents 
+                if a.get("client_name", "").lower().strip() == company["name"].lower().strip()
+            ]
+            agent_count = len(company_agents)
+            online_count = len([a for a in company_agents if a.get("status") == "online"])
+        except Exception as e:
+            logger.warning(f"Could not fetch agent count for company: {e}")
+    
+    return {
+        "watchtower_enabled": watchtower_enabled,
+        "is_provisioned": is_provisioned,
+        "watchtower_client_id": company.get("watchtower_client_id"),
+        "watchtower_site_name": company.get("watchtower_site_name"),
+        "provisioned_at": company.get("watchtower_provisioned_at"),
+        "total_agents": agent_count,
+        "online_agents": online_count,
+        "offline_agents": agent_count - online_count
+    }
+
+
+@router.get("/company/sites-for-agent")
+async def company_get_sites_for_agent(user: dict = Depends(get_current_company_user)):
+    """
+    Company Portal: Get list of portal sites for agent deployment selection.
+    """
+    company_id = user.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=403, detail="Company context required")
+    
+    sites = await _db.sites.find({
+        "company_id": company_id,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0, "id": 1, "name": 1, "address": 1}).to_list(100)
+    
+    return {
+        "sites": sites,
+        "total": len(sites)
+    }
+
+
+def get_installation_instructions(platform: str) -> dict:
+    """Get platform-specific installation instructions"""
+    if platform == "windows":
+        return {
+            "title": "Windows Installation",
+            "steps": [
+                "Download the .exe installer file",
+                "Right-click the file and select 'Run as Administrator'",
+                "Follow the on-screen prompts to complete installation",
+                "The agent will automatically connect to WatchTower after installation"
+            ],
+            "notes": [
+                "Administrator privileges are required",
+                "The installation may take 1-2 minutes",
+                "A system restart is not usually required"
+            ]
+        }
+    else:
+        return {
+            "title": "Linux Installation", 
+            "steps": [
+                "Download the installer script",
+                "Open a terminal and navigate to the download folder",
+                "Make the script executable: chmod +x installer.sh",
+                "Run with sudo: sudo ./installer.sh",
+                "The agent will automatically connect after installation"
+            ],
+            "notes": [
+                "Root/sudo privileges are required",
+                "Supported distributions: Ubuntu, Debian, CentOS, RHEL"
+            ]
+        }
