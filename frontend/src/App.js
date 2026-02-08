@@ -48,7 +48,7 @@ import DeviceModelCatalog from "./pages/admin/DeviceModelCatalog";
 import AdminAMCRequests from "./pages/admin/AdminAMCRequests";
 import AdminAMCRequestDetail from "./pages/admin/AdminAMCRequestDetail";
 import OrganizationSettings from "./pages/admin/OrganizationSettings";
-import TacticalRMMIntegration from "./pages/admin/TacticalRMMIntegration";
+import WatchTowerIntegration from "./pages/admin/WatchTowerIntegration";
 import KnowledgeBase from "./pages/admin/KnowledgeBase";
 import TeamMembers from "./pages/admin/TeamMembers";
 import StaffManagement from "./pages/admin/StaffManagement";
