@@ -1016,13 +1016,17 @@ async def company_generate_agent_download(
                 arch=request.arch
             )
             download_url = download_info.get("download_url") or download_info.get("exe_url")
+            manual_download = download_info.get("manual_download_required", False)
+            web_ui_url = download_info.get("web_ui_url")
         else:
             # First time - provision and get link
             result = await service.provision_company_for_agent(
                 company_name=company["name"],
                 site_name=site_name
             )
-            download_url = result["download_url"]
+            download_url = result.get("download_url")
+            manual_download = result.get("manual_download_required", False)
+            web_ui_url = result.get("web_ui_url")
             
             # Store WatchTower mapping
             await _db.companies.update_one(
@@ -1035,7 +1039,7 @@ async def company_generate_agent_download(
                 }}
             )
         
-        return {
+        response = {
             "success": True,
             "download_url": download_url,
             "company_name": company["name"],
@@ -1043,6 +1047,13 @@ async def company_generate_agent_download(
             "platform": request.platform,
             "instructions": get_installation_instructions(request.platform)
         }
+        
+        if manual_download:
+            response["manual_download_required"] = True
+            response["web_ui_url"] = web_ui_url
+            response["message"] = f"Automatic download link generation is not available. Please log into WatchTower to generate the installer manually."
+        
+        return response
         
     except Exception as e:
         logger.error(f"Company agent download failed: {str(e)}")
