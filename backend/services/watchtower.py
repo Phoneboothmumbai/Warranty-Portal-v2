@@ -146,7 +146,7 @@ class WatchTowerService:
         """
         Create a new client (organization) in WatchTower.
         Returns the created client with its ID.
-        Note: This may fail on some Tactical RMM configurations - use get_or_create_client instead.
+        Note: This may fail on some WatchTower configurations - use get_or_create_client instead.
         """
         data = {"name": name}
         try:
