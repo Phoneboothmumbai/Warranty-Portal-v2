@@ -516,6 +516,7 @@ function OrganizationDetailModal({ org, onClose, token }) {
 
   const FEATURE_LABELS = {
     watchtower: { label: 'WatchTower Integration', description: 'Allow tenant to connect WatchTower' },
+    moltbot: { label: 'MoltBot Chat', description: 'WhatsApp/Telegram chat integration for ticket creation' },
     tgms: { label: 'TGMS Remote Management', description: 'Remote device management system' },
     white_labeling: { label: 'White Labeling', description: 'Custom branding and domain' },
     api_access: { label: 'API Access', description: 'External API integration access' },
