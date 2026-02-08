@@ -172,8 +172,8 @@ const TacticalRMMIntegration = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Tactical RMM Integration</h1>
-          <p className="text-slate-600">Sync agents and manage devices from your Tactical RMM instance</p>
+          <h1 className="text-2xl font-bold text-slate-900">WatchTower Integration</h1>
+          <p className="text-slate-600">Sync agents and manage devices from your WatchTower (Tactical RMM) instance</p>
         </div>
         {config?.configured && (
           <div className="flex items-center gap-2">
@@ -194,10 +194,10 @@ const TacticalRMMIntegration = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Server className="h-5 w-5" />
-              {config?.configured ? 'Update Configuration' : 'Setup Tactical RMM'}
+              {config?.configured ? 'Update Configuration' : 'Setup WatchTower'}
             </CardTitle>
             <CardDescription>
-              Connect your Tactical RMM instance to sync agents as devices
+              Connect your WatchTower (Tactical RMM) instance to sync agents as devices
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -211,7 +211,7 @@ const TacticalRMMIntegration = () => {
                   onChange={(e) => setSetupForm({ ...setupForm, api_url: e.target.value })}
                   required
                 />
-                <p className="text-xs text-slate-500">Your Tactical RMM API endpoint (usually https://api.yourdomain.com)</p>
+                <p className="text-xs text-slate-500">Your WatchTower API endpoint (usually https://api.yourdomain.com)</p>
               </div>
               
               <div className="space-y-2">
