@@ -191,6 +191,7 @@ function App() {
                     <Route path="usage" element={<UsageDashboard />} />
                     <Route path="company-domains" element={<CompanyDomains />} />
                     <Route path="integrations/watchtower" element={<WatchTowerIntegration />} />
+                    <Route path="integrations/moltbot" element={<MoltBotIntegration />} />
                     <Route path="integrations/tgms" element={<TGMSIntegration />} />
                     <Route path="knowledge-base" element={<KnowledgeBase />} />
                     <Route path="team" element={<TeamMembers />} />
