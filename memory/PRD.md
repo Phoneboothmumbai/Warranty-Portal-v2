@@ -168,11 +168,13 @@ A comprehensive MSP-grade service ticket system with:
 - ✅ Customer Portal Quotations
 - ✅ Strict Ticket Workflow Enforcement
 - ✅ Engineer Portal (all 9 features)
+- ✅ **Critical Bug Fixes (Feb 2026)** - See "Recent Bug Fixes" section below
 
 ### P1 - Next Sprint
 - **Email Notifications** - Assignment, quotation events
 - **Quotation PDF Generation**
 - **Admin Device Dashboard** - Same dashboard view for admin panel
+- **WatchTower Shared Deployment Links** - Admin creates a deployment link in WatchTower and stores it for seamless tenant downloads
 
 ### P2 - Future
 - Razorpay payments finalization
@@ -180,15 +182,37 @@ A comprehensive MSP-grade service ticket system with:
 - Backend model unification
 - server.py refactoring
 
+## Recent Bug Fixes (Feb 9, 2026)
+
+### ✅ Bug 1: Engineer Accept/Decline Workflow
+**Issue:** Tickets were assigned but engineers couldn't accept/decline them via API.
+**Fix:** Added two new endpoints in `/app/backend/routes/engineer_portal.py`:
+- `POST /api/engineer/tickets/{id}/accept` - Engineer accepts ticket, moves to 'assigned' status
+- `POST /api/engineer/tickets/{id}/decline` - Engineer declines with reason, moves back to 'new' status
+
+### ✅ Bug 2: Multiple Visits Prevention
+**Issue:** System allowed scheduling multiple visits for a single ticket simultaneously.
+**Fix:** Updated `create_visit()` in `/app/backend/routes/service_visits.py` to check for existing active visits (scheduled/in_progress) before creating a new one.
+
+### ✅ Bug 3: Workflow Lock Enforcement
+**Issue:** Actions were possible when they should be disabled (e.g., starting work on unassigned tickets).
+**Fix:** Updated `start_timer()` in `/app/backend/routes/service_visits.py` to validate ticket status before allowing work to start. Only tickets in 'assigned', 'in_progress', or 'pending_parts' states can have work started.
+
+### ✅ Bug 4: Service History Display
+**Issue:** Device page showed "No service history" even when tickets existed.
+**Fix:** Updated `get_device_service_history()` in `/app/backend/server.py` to query BOTH `service_tickets` (old) AND `service_tickets_new` (new) collections.
+
 ## Test Reports
 - `/app/test_reports/iteration_36.json` - Quotation & Workflow tests (100% pass)
 - `/app/test_reports/iteration_37.json` - Device Dashboard & Company Tickets (100% pass)
 - `/app/test_reports/iteration_38.json` - WatchTower Agent Download Feature (100% backend, 100% company portal UI)
+- `/app/test_reports/iteration_39.json` - Critical Bug Fixes (100% pass - 20/20 tests)
 
 ## Test Files
 - `/app/backend/tests/test_quotation_workflow.py`
 - `/app/backend/tests/test_device_dashboard_company_tickets.py`
 - `/app/backend/tests/test_watchtower_agent_download.py`
+- `/app/backend/tests/test_bug_fixes_iteration_39.py`
 
 ## Credentials (Preview Environment)
 - Admin: `ck@motta.in` / `Charu@123@`
