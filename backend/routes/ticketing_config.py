@@ -822,8 +822,6 @@ class CannedResponseUpdate(BaseModel):
     is_active: Optional[bool] = None
     sort_order: Optional[int] = None
 
-from pydantic import BaseModel
-
 
 @router.get("/canned-responses")
 async def list_canned_responses(
