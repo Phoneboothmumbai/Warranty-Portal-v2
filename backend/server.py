@@ -3474,8 +3474,8 @@ async def get_device_timeline(device_id: str, admin: dict = Depends(get_current_
             "icon": "shield"
         })
     
-    # Sort by date descending
-    timeline.sort(key=lambda x: x.get("date", ""), reverse=True)
+    # Sort by date descending (handle None dates)
+    timeline.sort(key=lambda x: x.get("date") or "", reverse=True)
     
     return timeline
 
