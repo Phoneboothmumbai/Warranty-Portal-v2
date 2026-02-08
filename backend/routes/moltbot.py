@@ -186,6 +186,88 @@ async def delete_moltbot_config(admin: dict = Depends(get_admin_from_token)):
 
 
 # =============================================================================
+# BOT CONTEXT ENDPOINT (For OpenClaw to fetch instructions)
+# =============================================================================
+
+@router.get("/context/{org_id}")
+async def get_bot_context(org_id: str, phone: Optional[str] = None):
+    """
+    Public endpoint for OpenClaw to fetch bot instructions and context.
+    Returns the bot configuration including instructions, KB, and restrictions.
+    """
+    # Verify organization exists
+    org = await db.organizations.find_one({"id": org_id})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    config = await db.moltbot_config.find_one(
+        {"organization_id": org_id},
+        {"_id": 0, "api_key": 0, "webhook_secret": 0}  # Don't expose secrets
+    )
+    
+    if not config:
+        return {
+            "organization_name": org.get("name"),
+            "bot_instructions": None,
+            "knowledge_base": None,
+            "restrict_to_support_only": True,
+            "allowed_topics": ["warranty", "service", "repair", "support", "device", "amc"],
+            "off_topic_response": "I can only help with warranty and service-related questions.",
+            "is_employee": False
+        }
+    
+    # Check if phone is registered as an employee
+    is_employee = False
+    employee_info = None
+    if phone:
+        # Clean phone number
+        clean_phone = phone.replace("+", "").replace(" ", "").replace("-", "")
+        
+        # Check in company users/employees
+        employee = await db.company_users.find_one({
+            "organization_id": org_id,
+            "$or": [
+                {"phone": {"$regex": clean_phone}},
+                {"mobile": {"$regex": clean_phone}}
+            ]
+        })
+        if employee:
+            is_employee = True
+            employee_info = {
+                "name": employee.get("name"),
+                "company_id": employee.get("company_id"),
+                "role": employee.get("role")
+            }
+            
+            # Get company info
+            if employee.get("company_id"):
+                company = await db.companies.find_one({"id": employee["company_id"]})
+                if company:
+                    employee_info["company_name"] = company.get("name")
+    
+    # Build context response
+    context = {
+        "organization_name": org.get("name"),
+        "bot_instructions": config.get("bot_instructions"),
+        "knowledge_base": config.get("knowledge_base"),
+        "restrict_to_support_only": config.get("restrict_to_support_only", True),
+        "restrict_to_employees": config.get("restrict_to_employees", False),
+        "allowed_topics": config.get("allowed_topics", ["warranty", "service", "repair", "support", "device", "amc"]),
+        "off_topic_response": config.get("off_topic_response", "I can only help with warranty and service-related questions. Please contact our office for other inquiries."),
+        "is_employee": is_employee,
+        "employee_info": employee_info,
+        "default_priority": config.get("default_priority", "medium")
+    }
+    
+    # If restricted to employees and user is not an employee, indicate access denied
+    if config.get("restrict_to_employees") and not is_employee:
+        context["access_denied"] = True
+        context["access_denied_message"] = "This support bot is only available for registered employees. Please contact our office directly."
+    
+    return context
+
+
+# =============================================================================
 # WEBHOOK ENDPOINTS
 # =============================================================================
 
