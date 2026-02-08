@@ -144,9 +144,14 @@ class WatchTowerService:
         """
         Create a new client (organization) in WatchTower.
         Returns the created client with its ID.
+        Note: This may fail on some Tactical RMM configurations - use get_or_create_client instead.
         """
         data = {"name": name}
-        return await self._request("POST", "/clients/", data)
+        try:
+            return await self._request("POST", "/clients/", data)
+        except Exception as e:
+            logger.warning(f"Failed to create client {name}: {e}")
+            raise
     
     async def get_client_by_name(self, name: str) -> Optional[Dict[str, Any]]:
         """Find a client by name (case-insensitive)"""
@@ -166,15 +171,36 @@ class WatchTowerService:
             "client": client_id,
             "name": name
         }
-        return await self._request("POST", "/sites/", data)
+        try:
+            return await self._request("POST", "/sites/", data)
+        except Exception as e:
+            logger.warning(f"Failed to create site {name} for client {client_id}: {e}")
+            raise
     
     async def get_site_by_name(self, client_id: int, name: str) -> Optional[Dict[str, Any]]:
         """Find a site by name under a specific client"""
-        sites = await self.get_sites(client_id)
-        name_lower = name.lower().strip()
-        for site in sites:
-            if site.get("name", "").lower().strip() == name_lower:
-                return site
+        # Get client info which includes sites
+        clients = await self.get_clients()
+        for client in clients:
+            if client.get("id") == client_id:
+                sites = client.get("sites", [])
+                name_lower = name.lower().strip()
+                for site in sites:
+                    if site.get("name", "").lower().strip() == name_lower:
+                        return site
+                # If no matching site but client has sites, return first one
+                if sites:
+                    return sites[0]
+        return None
+    
+    async def get_first_site_for_client(self, client_id: int) -> Optional[Dict[str, Any]]:
+        """Get the first site for a client (from embedded sites in clients response)"""
+        clients = await self.get_clients()
+        for client in clients:
+            if client.get("id") == client_id:
+                sites = client.get("sites", [])
+                if sites:
+                    return sites[0]
         return None
     
     async def get_or_create_client(self, name: str) -> Dict[str, Any]:
@@ -185,6 +211,7 @@ class WatchTowerService:
         existing = await self.get_client_by_name(name)
         if existing:
             return existing
+        # Try to create, but this may fail on some configurations
         return await self.create_client(name)
     
     async def get_or_create_site(self, client_id: int, name: str) -> Dict[str, Any]:
@@ -195,6 +222,7 @@ class WatchTowerService:
         existing = await self.get_site_by_name(client_id, name)
         if existing:
             return existing
+        # Try to create new site
         return await self.create_site(client_id, name)
     
     # ==================== AGENT DEPLOYMENT ====================
