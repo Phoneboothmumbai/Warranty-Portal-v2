@@ -187,13 +187,29 @@ async def moltbot_webhook(
     This endpoint is called by MoltBot when a message is received.
     Smart ticket creation: Ask customer before creating ticket.
     """
-    # Get organization config
+    # Verify organization exists
+    org = await db.organizations.find_one({"id": org_id})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    # Get organization config - auto-create if not exists (for easier setup)
     config = await db.moltbot_config.find_one({"organization_id": org_id})
     
     if not config:
-        raise HTTPException(status_code=404, detail="MoltBot not configured for this organization")
+        # Auto-create default config for first-time setup
+        config = {
+            "id": str(uuid.uuid4()),
+            "organization_id": org_id,
+            "api_key": "",
+            "enabled": True,
+            "auto_create_tickets": False,  # Start with manual confirmation
+            "default_priority": "medium",
+            "created_at": datetime.now(timezone.utc)
+        }
+        await db.moltbot_config.insert_one(config)
+        logger.info(f"Auto-created MoltBot config for org {org_id}")
     
-    if not config.get("enabled"):
+    if not config.get("enabled", True):
         raise HTTPException(status_code=400, detail="MoltBot integration disabled")
     
     # Verify webhook secret if configured
