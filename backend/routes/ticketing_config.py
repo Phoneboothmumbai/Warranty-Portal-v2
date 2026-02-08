@@ -275,7 +275,7 @@ async def list_help_topics(
     is_public: Optional[bool] = None,
     admin: dict = Depends(get_admin_from_token)
 ):
-    """List all help topics"""
+    """List all help topics with linked form details"""
     query = {"organization_id": admin["organization_id"]}
     
     if is_active is not None:
@@ -285,13 +285,48 @@ async def list_help_topics(
     
     topics = await db.help_topics.find(query, {"_id": 0}).sort("sort_order", 1).to_list(200)
     
-    # Build hierarchy
+    # Get all custom forms for this org to join
+    forms = await db.custom_forms.find(
+        {"organization_id": admin["organization_id"]},
+        {"_id": 0, "id": 1, "name": 1, "fields": 1}
+    ).to_list(100)
+    forms_map = {f["id"]: f for f in forms}
+    
+    # Get all SLA policies
+    sla_policies = await db.sla_policies.find(
+        {"organization_id": admin["organization_id"]},
+        {"_id": 0, "id": 1, "name": 1}
+    ).to_list(50)
+    sla_map = {s["id"]: s for s in sla_policies}
+    
+    # Get all departments
+    departments = await db.departments.find(
+        {"organization_id": admin["organization_id"]},
+        {"_id": 0, "id": 1, "name": 1}
+    ).to_list(50)
+    dept_map = {d["id"]: d for d in departments}
+    
+    # Build hierarchy and enrich with linked data
     topic_map = {}
     root_topics = []
     
     for t in topics:
         t["id"] = str(t.get("_id", t.get("id")))
         t["children"] = []
+        
+        # Add linked form name
+        if t.get("custom_form_id") and t["custom_form_id"] in forms_map:
+            t["custom_form_name"] = forms_map[t["custom_form_id"]]["name"]
+            t["custom_form_fields"] = forms_map[t["custom_form_id"]].get("fields", [])
+        
+        # Add linked SLA name
+        if t.get("sla_policy_id") and t["sla_policy_id"] in sla_map:
+            t["sla_policy_name"] = sla_map[t["sla_policy_id"]]["name"]
+        
+        # Add linked department name
+        if t.get("auto_assign_department_id") and t["auto_assign_department_id"] in dept_map:
+            t["department_name"] = dept_map[t["auto_assign_department_id"]]["name"]
+        
         topic_map[t["id"]] = t
     
     for t in topics:
@@ -313,12 +348,38 @@ async def get_help_topic(
     topic = await db.help_topics.find_one({
         "id": topic_id,
         "organization_id": admin["organization_id"]
-    })
+    }, {"_id": 0})
     
     if not topic:
         raise HTTPException(status_code=404, detail="Help topic not found")
     
-    topic["id"] = str(topic.get("_id", topic.get("id")))
+    # Get linked custom form if any
+    if topic.get("custom_form_id"):
+        form = await db.custom_forms.find_one(
+            {"id": topic["custom_form_id"]},
+            {"_id": 0}
+        )
+        if form:
+            topic["custom_form"] = form
+    
+    # Get linked SLA policy if any
+    if topic.get("sla_policy_id"):
+        sla = await db.sla_policies.find_one(
+            {"id": topic["sla_policy_id"]},
+            {"_id": 0, "id": 1, "name": 1, "response_time_hours": 1, "resolution_time_hours": 1}
+        )
+        if sla:
+            topic["sla_policy"] = sla
+    
+    # Get linked department if any
+    if topic.get("auto_assign_department_id"):
+        dept = await db.departments.find_one(
+            {"id": topic["auto_assign_department_id"]},
+            {"_id": 0, "id": 1, "name": 1}
+        )
+        if dept:
+            topic["department"] = dept
+    
     return topic
 
 
