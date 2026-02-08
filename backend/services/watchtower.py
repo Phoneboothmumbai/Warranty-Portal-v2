@@ -275,29 +275,58 @@ class WatchTowerService:
         Returns:
             Dict with client_id, site_id, and download_url
         """
-        # Step 1: Get or create client
-        client = await self.get_or_create_client(company_name)
+        # Step 1: Try to find existing client by name first
+        client = await self.get_client_by_name(company_name)
+        
+        if not client:
+            # Try to create new client
+            try:
+                client = await self.create_client(company_name)
+            except Exception as e:
+                logger.error(f"Failed to create client {company_name}: {e}")
+                raise ValueError(f"Cannot create new client in WatchTower. Please create client '{company_name}' manually in WatchTower first.")
+        
         client_id = client.get("id")
+        actual_client_name = client.get("name", company_name)
         
         if not client_id:
-            raise ValueError(f"Failed to get/create client for {company_name}")
+            raise ValueError(f"Failed to get client ID for {company_name}")
         
-        # Step 2: Get or create site
-        site = await self.get_or_create_site(client_id, site_name)
+        # Step 2: Try to find existing site or use first available
+        site = await self.get_site_by_name(client_id, site_name)
+        
+        if not site:
+            # Try to create new site
+            try:
+                site = await self.create_site(client_id, site_name)
+            except Exception as e:
+                logger.warning(f"Failed to create site, trying to get first available: {e}")
+                # Try to get first available site for this client
+                site = await self.get_first_site_for_client(client_id)
+                if not site:
+                    raise ValueError(f"No sites available for client '{actual_client_name}'. Please create a site in WatchTower first.")
+        
         site_id = site.get("id")
+        actual_site_name = site.get("name", site_name)
         
         if not site_id:
-            raise ValueError(f"Failed to get/create site for {site_name}")
+            raise ValueError(f"Failed to get site ID for {site_name}")
         
         # Step 3: Generate download link
-        download_info = await self.get_agent_download_link(site_id)
+        try:
+            download_info = await self.get_agent_download_link(site_id)
+        except Exception as e:
+            logger.error(f"Failed to generate download link: {e}")
+            raise ValueError(f"Failed to generate agent download link. Please check WatchTower configuration.")
+        
+        download_url = download_info.get("download_url") or download_info.get("exe_url") or download_info.get("download")
         
         return {
             "client_id": client_id,
-            "client_name": company_name,
+            "client_name": actual_client_name,
             "site_id": site_id,
-            "site_name": site_name,
-            "download_url": download_info.get("download_url") or download_info.get("exe_url"),
+            "site_name": actual_site_name,
+            "download_url": download_url,
             "download_info": download_info
         }
 
