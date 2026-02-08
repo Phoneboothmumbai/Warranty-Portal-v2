@@ -8,10 +8,13 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 import uuid
+import logging
 
-from services.auth import get_current_admin
+from services.auth import get_current_admin, get_current_company_user
 from utils.tenant_scope import get_admin_org_id, scope_query
 from services.watchtower import WatchTowerService, WatchTowerConfig, map_agent_to_device
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/watchtower", tags=["WatchTower Integration"])
 
