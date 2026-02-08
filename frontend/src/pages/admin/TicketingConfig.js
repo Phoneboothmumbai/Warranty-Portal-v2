@@ -843,6 +843,222 @@ export default function TicketingConfig() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Canned Responses Tab */}
+        <TabsContent value="canned" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Canned Responses</CardTitle>
+                <CardDescription>Pre-defined replies for common inquiries. Use variables like {'{{customer_name}}'}, {'{{ticket_number}}'}</CardDescription>
+              </div>
+              <Button onClick={() => { setEditingCanned(null); setCannedForm({ title: '', category: '', content: '', is_personal: false, is_active: true }); setShowCannedModal(true); }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Response
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {cannedResponses.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <MessageSquare className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                  <p>No canned responses yet. Create one to get started.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {cannedResponses.map((item) => (
+                    <div key={item.id} className="flex items-start gap-3 p-4 border rounded-lg hover:bg-slate-50 group">
+                      <MessageSquare className="h-5 w-5 text-blue-500 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-slate-900">{item.title}</p>
+                          {item.category && <Badge variant="outline" className="text-xs">{item.category}</Badge>}
+                          {item.is_personal && <Badge variant="secondary" className="text-xs">Personal</Badge>}
+                        </div>
+                        <p className="text-sm text-slate-500 mt-1 truncate">{item.content}</p>
+                      </div>
+                      <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditingCanned(item); setCannedForm(item); setShowCannedModal(true); }}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={() => deleteCanned(item.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Departments Tab */}
+        <TabsContent value="departments" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Departments</CardTitle>
+                <CardDescription>Organize tickets by department for better routing</CardDescription>
+              </div>
+              <Button onClick={() => { setEditingDept(null); setDeptForm({ name: '', description: '', email: '', is_active: true, is_public: true }); setShowDeptModal(true); }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Department
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {departments.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <Users className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                  <p>No departments yet. Create one to get started.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {departments.map((dept) => (
+                    <div key={dept.id} className="p-4 border rounded-lg hover:bg-slate-50 group">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium">{dept.name}</h3>
+                            {!dept.is_active && <Badge variant="outline" className="text-xs text-red-500">Inactive</Badge>}
+                            {dept.is_public && <Badge variant="secondary" className="text-xs">Public</Badge>}
+                          </div>
+                          <p className="text-sm text-slate-500 mt-1">{dept.description || 'No description'}</p>
+                          {dept.email && <p className="text-xs text-slate-400 mt-1">{dept.email}</p>}
+                        </div>
+                        <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditingDept(dept); setDeptForm(dept); setShowDeptModal(true); }}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={() => deleteDept(dept.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex gap-4 mt-3 text-xs text-slate-500">
+                        <span>{dept.member_count || 0} members</span>
+                        <span>{dept.open_tickets || 0} open tickets</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* SLA Policies Tab */}
+        <TabsContent value="sla" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>SLA Policies</CardTitle>
+                <CardDescription>Define response and resolution time targets for tickets</CardDescription>
+              </div>
+              <Button onClick={() => { setEditingSLA(null); setSlaForm({ name: '', description: '', response_time_hours: 4, resolution_time_hours: 24, response_time_business_hours: true, resolution_time_business_hours: true, escalation_enabled: true, escalation_after_hours: 2, is_active: true, is_default: false }); setShowSLAModal(true); }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add SLA Policy
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {slaPolicies.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <Clock className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                  <p>No SLA policies yet. Click "Seed Defaults" to create standard policies.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {slaPolicies.map((sla) => (
+                    <div key={sla.id} className="flex items-center gap-4 p-4 border rounded-lg hover:bg-slate-50 group">
+                      <Clock className="h-8 w-8 text-blue-500" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium">{sla.name}</h3>
+                          {sla.is_default && <Badge className="bg-green-500">Default</Badge>}
+                          {!sla.is_active && <Badge variant="outline" className="text-red-500">Inactive</Badge>}
+                        </div>
+                        <p className="text-sm text-slate-500">{sla.description}</p>
+                        <div className="flex gap-4 mt-2 text-xs">
+                          <span className="flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3 text-yellow-500" />
+                            Response: {sla.response_time_hours}h
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3 text-green-500" />
+                            Resolution: {sla.resolution_time_hours}h
+                          </span>
+                          {sla.escalation_enabled && (
+                            <span className="flex items-center gap-1">
+                              <Zap className="h-3 w-3 text-orange-500" />
+                              Escalate at {sla.escalation_after_hours}h
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditingSLA(sla); setSlaForm(sla); setShowSLAModal(true); }}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={() => deleteSLA(sla.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Custom Forms Tab */}
+        <TabsContent value="forms" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Custom Forms</CardTitle>
+                <CardDescription>Create custom forms to collect additional information for tickets</CardDescription>
+              </div>
+              <Button onClick={() => { setEditingForm(null); setFormForm({ name: '', description: '', form_type: 'ticket', fields: [], is_active: true }); setShowFormModal(true); }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Form
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {customForms.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <FileText className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                  <p>No custom forms yet. Click "Add Form" to create one.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {customForms.map((form) => (
+                    <div key={form.id} className="p-4 border rounded-lg hover:bg-slate-50 group">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-blue-500" />
+                            <h3 className="font-medium">{form.name}</h3>
+                            <Badge variant="outline" className="text-xs capitalize">{form.form_type}</Badge>
+                          </div>
+                          <p className="text-sm text-slate-500 mt-1">{form.description || 'No description'}</p>
+                          <p className="text-xs text-slate-400 mt-2">{form.fields?.length || 0} fields</p>
+                        </div>
+                        <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditingForm(form); setFormForm(form); setShowFormModal(true); }}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={() => deleteForm(form.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Master Modal */}
