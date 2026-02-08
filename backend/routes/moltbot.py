@@ -185,6 +185,7 @@ async def moltbot_webhook(
     """
     Receive webhook events from MoltBot.
     This endpoint is called by MoltBot when a message is received.
+    Smart ticket creation: Ask customer before creating ticket.
     """
     # Get organization config
     config = await db.moltbot_config.find_one({"organization_id": org_id})
@@ -214,10 +215,10 @@ async def moltbot_webhook(
     await db.moltbot_events.insert_one(event_log)
     
     # Process event based on type
-    if payload.event_type == "message_received" and config.get("auto_create_tickets"):
-        # Auto-create ticket from message
+    if payload.event_type == "message_received":
+        # Smart ticket flow - check conversation state
         background_tasks.add_task(
-            create_ticket_from_message,
+            handle_incoming_message,
             org_id,
             payload,
             event_log["id"]
@@ -226,74 +227,290 @@ async def moltbot_webhook(
     return {"status": "received", "event_id": event_log["id"]}
 
 
-async def create_ticket_from_message(org_id: str, payload: MoltBotWebhookPayload, event_id: str):
-    """Background task to create ticket from MoltBot message"""
+async def handle_incoming_message(org_id: str, payload: MoltBotWebhookPayload, event_id: str):
+    """
+    Smart message handling:
+    1. Check if there's an ongoing conversation/ticket
+    2. If new conversation, ask if they want to create a ticket
+    3. Collect details before creating ticket
+    4. Only create ticket after confirmation
+    """
     try:
         config = await db.moltbot_config.find_one({"organization_id": org_id})
+        conversation_id = payload.conversation_id or f"{payload.sender_phone}_{org_id}"
         
-        # Find or create contact
-        contact = None
-        if payload.sender_phone:
-            contact = await db.contacts.find_one({
+        # Check conversation state
+        conversation = await db.moltbot_conversations.find_one({
+            "conversation_id": conversation_id,
+            "organization_id": org_id
+        })
+        
+        message_lower = (payload.message_content or "").lower().strip()
+        
+        if not conversation:
+            # New conversation - greet and ask intent
+            conversation = {
+                "id": str(uuid.uuid4()),
+                "conversation_id": conversation_id,
                 "organization_id": org_id,
-                "phone": payload.sender_phone
-            })
-        elif payload.sender_email:
-            contact = await db.contacts.find_one({
-                "organization_id": org_id,
-                "email": payload.sender_email
-            })
-        
-        # Create ticket
-        ticket_id = str(uuid.uuid4())
-        ticket_number = f"MB{datetime.now().strftime('%y%m%d')}{str(uuid.uuid4())[:4].upper()}"
-        
-        ticket = {
-            "id": ticket_id,
-            "ticket_number": ticket_number,
-            "organization_id": org_id,
-            "title": f"Message from {payload.sender_name or payload.sender_phone or 'Customer'}",
-            "description": payload.message_content or "",
-            "status": "new",
-            "priority": config.get("default_priority", "medium"),
-            "source": f"moltbot_{payload.channel or 'message'}",
-            "help_topic_id": config.get("default_help_topic_id"),
-            "contact_id": contact["id"] if contact else None,
-            "contact_name": payload.sender_name or contact.get("name") if contact else None,
-            "contact_phone": payload.sender_phone,
-            "contact_email": payload.sender_email,
-            "moltbot_conversation_id": payload.conversation_id,
-            "moltbot_message_id": payload.message_id,
-            "created_at": datetime.now(timezone.utc),
-            "created_via": "moltbot_webhook",
-            "is_deleted": False
-        }
-        
-        await db.service_tickets_new.insert_one(ticket)
-        
-        # Mark event as processed
-        await db.moltbot_events.update_one(
-            {"id": event_id},
-            {"$set": {
-                "processed": True,
-                "processed_at": datetime.now(timezone.utc),
-                "ticket_id": ticket_id,
-                "ticket_number": ticket_number
-            }}
-        )
-        
-        logger.info(f"Created ticket {ticket_number} from MoltBot message")
-        
-        # Send acknowledgement back to customer
-        if payload.sender_phone or payload.sender_email:
+                "sender_phone": payload.sender_phone,
+                "sender_email": payload.sender_email,
+                "sender_name": payload.sender_name,
+                "channel": payload.channel,
+                "state": "greeting",
+                "ticket_data": {},
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            }
+            await db.moltbot_conversations.insert_one(conversation)
+            
+            # Send greeting
             await send_moltbot_message(org_id, {
                 "recipient": payload.sender_phone or payload.sender_email,
                 "channel": payload.channel,
-                "message": f"Thank you for contacting us! Your ticket number is {ticket_number}. We will get back to you shortly."
+                "message": f"👋 Hello{' ' + payload.sender_name if payload.sender_name else ''}! Welcome to our support.\n\nHow can I help you today?\n\n1️⃣ Report an issue / Create a support ticket\n2️⃣ Check existing ticket status\n3️⃣ General inquiry\n\nPlease reply with 1, 2, or 3."
             })
+            
+        elif conversation.get("state") == "greeting":
+            # User responded to greeting
+            if message_lower in ["1", "one", "issue", "ticket", "problem", "help"]:
+                await db.moltbot_conversations.update_one(
+                    {"id": conversation["id"]},
+                    {"$set": {"state": "collecting_name", "updated_at": datetime.now(timezone.utc)}}
+                )
+                await send_moltbot_message(org_id, {
+                    "recipient": payload.sender_phone or payload.sender_email,
+                    "channel": payload.channel,
+                    "message": "I'll help you create a support ticket. Let me collect some details.\n\n📝 Please provide your **full name**:"
+                })
+                
+            elif message_lower in ["2", "two", "status", "check"]:
+                await db.moltbot_conversations.update_one(
+                    {"id": conversation["id"]},
+                    {"$set": {"state": "checking_status", "updated_at": datetime.now(timezone.utc)}}
+                )
+                await send_moltbot_message(org_id, {
+                    "recipient": payload.sender_phone or payload.sender_email,
+                    "channel": payload.channel,
+                    "message": "📋 Please provide your **ticket number** (e.g., TKT-123456):"
+                })
+                
+            elif message_lower in ["3", "three", "inquiry", "question"]:
+                await db.moltbot_conversations.update_one(
+                    {"id": conversation["id"]},
+                    {"$set": {"state": "general_inquiry", "updated_at": datetime.now(timezone.utc)}}
+                )
+                await send_moltbot_message(org_id, {
+                    "recipient": payload.sender_phone or payload.sender_email,
+                    "channel": payload.channel,
+                    "message": "💬 Please describe your inquiry and our team will get back to you:\n\n(Type your question or message)"
+                })
+            else:
+                await send_moltbot_message(org_id, {
+                    "recipient": payload.sender_phone or payload.sender_email,
+                    "channel": payload.channel,
+                    "message": "Please reply with:\n1️⃣ for creating a support ticket\n2️⃣ for checking ticket status\n3️⃣ for general inquiry"
+                })
+                
+        elif conversation.get("state") == "collecting_name":
+            # Save name and ask for issue
+            await db.moltbot_conversations.update_one(
+                {"id": conversation["id"]},
+                {"$set": {
+                    "state": "collecting_issue",
+                    "ticket_data.customer_name": payload.message_content,
+                    "updated_at": datetime.now(timezone.utc)
+                }}
+            )
+            await send_moltbot_message(org_id, {
+                "recipient": payload.sender_phone or payload.sender_email,
+                "channel": payload.channel,
+                "message": f"Thanks, {payload.message_content}! 👍\n\n🔧 Please describe your **issue or problem** in detail:"
+            })
+            
+        elif conversation.get("state") == "collecting_issue":
+            # Save issue and ask for confirmation
+            ticket_data = conversation.get("ticket_data", {})
+            ticket_data["issue_description"] = payload.message_content
+            
+            await db.moltbot_conversations.update_one(
+                {"id": conversation["id"]},
+                {"$set": {
+                    "state": "confirming_ticket",
+                    "ticket_data": ticket_data,
+                    "updated_at": datetime.now(timezone.utc)
+                }}
+            )
+            
+            await send_moltbot_message(org_id, {
+                "recipient": payload.sender_phone or payload.sender_email,
+                "channel": payload.channel,
+                "message": f"📋 **Ticket Summary**\n\n👤 Name: {ticket_data.get('customer_name')}\n📞 Contact: {payload.sender_phone or payload.sender_email}\n🔧 Issue: {payload.message_content[:200]}{'...' if len(payload.message_content) > 200 else ''}\n\n✅ Should I create this ticket? Reply **YES** to confirm or **NO** to cancel."
+            })
+            
+        elif conversation.get("state") == "confirming_ticket":
+            if message_lower in ["yes", "y", "confirm", "ok", "proceed"]:
+                # Create the ticket
+                ticket_data = conversation.get("ticket_data", {})
+                ticket_id = str(uuid.uuid4())
+                ticket_number = f"TKT{datetime.now().strftime('%y%m%d')}{str(uuid.uuid4())[:4].upper()}"
+                
+                ticket = {
+                    "id": ticket_id,
+                    "ticket_number": ticket_number,
+                    "organization_id": org_id,
+                    "title": f"Support Request from {ticket_data.get('customer_name', 'Customer')}",
+                    "description": ticket_data.get("issue_description", ""),
+                    "status": "new",
+                    "priority": config.get("default_priority", "medium"),
+                    "source": f"moltbot_{payload.channel or 'chat'}",
+                    "contact_name": ticket_data.get("customer_name"),
+                    "contact_phone": payload.sender_phone,
+                    "contact_email": payload.sender_email,
+                    "moltbot_conversation_id": conversation_id,
+                    "created_at": datetime.now(timezone.utc),
+                    "created_via": "moltbot_smart_flow",
+                    "is_deleted": False
+                }
+                
+                await db.service_tickets_new.insert_one(ticket)
+                
+                # Update conversation
+                await db.moltbot_conversations.update_one(
+                    {"id": conversation["id"]},
+                    {"$set": {
+                        "state": "ticket_created",
+                        "ticket_id": ticket_id,
+                        "ticket_number": ticket_number,
+                        "updated_at": datetime.now(timezone.utc)
+                    }}
+                )
+                
+                await send_moltbot_message(org_id, {
+                    "recipient": payload.sender_phone or payload.sender_email,
+                    "channel": payload.channel,
+                    "message": f"✅ **Ticket Created Successfully!**\n\n🎫 Ticket Number: **{ticket_number}**\n\nOur support team will review your request and get back to you shortly.\n\nYou can reply to this chat to add more information to your ticket."
+                })
+                
+                # Mark event as processed
+                await db.moltbot_events.update_one(
+                    {"id": event_id},
+                    {"$set": {
+                        "processed": True,
+                        "processed_at": datetime.now(timezone.utc),
+                        "ticket_id": ticket_id,
+                        "ticket_number": ticket_number
+                    }}
+                )
+                
+                logger.info(f"Created ticket {ticket_number} via MoltBot smart flow")
+                
+            elif message_lower in ["no", "n", "cancel", "stop"]:
+                # Reset conversation
+                await db.moltbot_conversations.update_one(
+                    {"id": conversation["id"]},
+                    {"$set": {
+                        "state": "greeting",
+                        "ticket_data": {},
+                        "updated_at": datetime.now(timezone.utc)
+                    }}
+                )
+                await send_moltbot_message(org_id, {
+                    "recipient": payload.sender_phone or payload.sender_email,
+                    "channel": payload.channel,
+                    "message": "❌ Ticket creation cancelled.\n\nIs there anything else I can help you with?\n\n1️⃣ Report an issue\n2️⃣ Check ticket status\n3️⃣ General inquiry"
+                })
+            else:
+                await send_moltbot_message(org_id, {
+                    "recipient": payload.sender_phone or payload.sender_email,
+                    "channel": payload.channel,
+                    "message": "Please reply **YES** to create the ticket or **NO** to cancel."
+                })
+                
+        elif conversation.get("state") == "ticket_created":
+            # Add message to existing ticket
+            ticket_id = conversation.get("ticket_id")
+            if ticket_id:
+                # Add as a comment/note to the ticket
+                await db.ticket_comments.insert_one({
+                    "id": str(uuid.uuid4()),
+                    "ticket_id": ticket_id,
+                    "organization_id": org_id,
+                    "content": payload.message_content,
+                    "author_name": conversation.get("sender_name") or "Customer",
+                    "author_type": "customer",
+                    "source": "moltbot",
+                    "created_at": datetime.now(timezone.utc)
+                })
+                
+                await send_moltbot_message(org_id, {
+                    "recipient": payload.sender_phone or payload.sender_email,
+                    "channel": payload.channel,
+                    "message": f"📝 Your message has been added to ticket **{conversation.get('ticket_number')}**.\n\nOur team will review it shortly."
+                })
+                
+        elif conversation.get("state") == "checking_status":
+            # Look up ticket by number
+            ticket = await db.service_tickets_new.find_one({
+                "ticket_number": payload.message_content.upper().strip(),
+                "organization_id": org_id
+            })
+            
+            if ticket:
+                status_emoji = {
+                    "new": "🆕",
+                    "pending_acceptance": "⏳",
+                    "assigned": "👤",
+                    "in_progress": "🔧",
+                    "pending_parts": "📦",
+                    "completed": "✅",
+                    "closed": "🔒"
+                }.get(ticket.get("status"), "📋")
+                
+                await send_moltbot_message(org_id, {
+                    "recipient": payload.sender_phone or payload.sender_email,
+                    "channel": payload.channel,
+                    "message": f"📋 **Ticket Status**\n\n🎫 Number: {ticket.get('ticket_number')}\n{status_emoji} Status: {ticket.get('status', 'Unknown').replace('_', ' ').title()}\n📅 Created: {ticket.get('created_at', 'N/A')}\n\nNeed more help? Reply with:\n1️⃣ Create new ticket\n3️⃣ General inquiry"
+                })
+            else:
+                await send_moltbot_message(org_id, {
+                    "recipient": payload.sender_phone or payload.sender_email,
+                    "channel": payload.channel,
+                    "message": "❌ Ticket not found. Please check the ticket number and try again.\n\nExample format: TKT240209ABCD"
+                })
+            
+            # Reset to greeting state
+            await db.moltbot_conversations.update_one(
+                {"id": conversation["id"]},
+                {"$set": {"state": "greeting", "updated_at": datetime.now(timezone.utc)}}
+            )
+            
+        elif conversation.get("state") == "general_inquiry":
+            # Log inquiry and respond
+            await db.moltbot_inquiries.insert_one({
+                "id": str(uuid.uuid4()),
+                "organization_id": org_id,
+                "sender_phone": payload.sender_phone,
+                "sender_email": payload.sender_email,
+                "sender_name": payload.sender_name,
+                "inquiry": payload.message_content,
+                "channel": payload.channel,
+                "created_at": datetime.now(timezone.utc)
+            })
+            
+            await send_moltbot_message(org_id, {
+                "recipient": payload.sender_phone or payload.sender_email,
+                "channel": payload.channel,
+                "message": "📩 Thank you for your inquiry! Our team will review and respond soon.\n\nWould you like to create a support ticket for tracking? Reply **YES** or continue chatting."
+            })
+            
+            await db.moltbot_conversations.update_one(
+                {"id": conversation["id"]},
+                {"$set": {"state": "greeting", "updated_at": datetime.now(timezone.utc)}}
+            )
         
     except Exception as e:
-        logger.error(f"Failed to create ticket from MoltBot message: {e}")
+        logger.error(f"Error handling MoltBot message: {e}")
         await db.moltbot_events.update_one(
             {"id": event_id},
             {"$set": {
