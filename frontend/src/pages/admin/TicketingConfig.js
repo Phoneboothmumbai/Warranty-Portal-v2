@@ -1326,6 +1326,7 @@ export default function TicketingConfig() {
                 </div>
               )}
             </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTopicModal(false)}>Cancel</Button>
