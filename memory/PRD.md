@@ -200,7 +200,7 @@ A comprehensive MSP-grade service ticket system with:
 - **OpenAI GPT-4o-mini**: AI features (uses Emergent LLM Key)
 - **Razorpay**: Payments (partial)
 - **Cloudflare**: DNS and SSL
-- **WatchTower (Tactical RMM)**: INTEGRATED - Self-service agent download feature complete
+- **WatchTower**: INTEGRATED - Self-service agent download feature complete
 
 ---
 Last Updated: February 2026
