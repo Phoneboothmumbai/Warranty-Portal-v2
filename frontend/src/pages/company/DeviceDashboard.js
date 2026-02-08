@@ -6,7 +6,7 @@ import {
   ChevronRight, Wrench, Package, ShoppingCart, TrendingUp, DollarSign,
   Activity, Cpu, HardDrive, Wifi, RefreshCw, User, Phone, Mail,
   BarChart3, PieChart, Timer, Settings, Monitor, Server, Zap,
-  ArrowUpRight, ArrowDownRight, Minus, History, CircleDot
+  ArrowUpRight, ArrowDownRight, Minus, History, CircleDot, Download
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -16,6 +16,7 @@ import { Progress } from '../../components/ui/progress';
 import { useCompanyAuth } from '../../context/CompanyAuthContext';
 import { toast } from 'sonner';
 import axios from 'axios';
+import WatchTowerAgentDownload from '../../components/WatchTowerAgentDownload';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
