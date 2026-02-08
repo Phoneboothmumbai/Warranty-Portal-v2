@@ -168,12 +168,12 @@ const WatchTowerIntegration = () => {
   }
 
   return (
-    <div className="space-y-6" data-testid="tactical-rmm-integration">
+    <div className="space-y-6" data-testid="watchtower-integration">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">WatchTower Integration</h1>
-          <p className="text-slate-600">Sync agents and manage devices from your WatchTower (Tactical RMM) instance</p>
+          <p className="text-slate-600">Sync agents and manage devices from your WatchTower instance</p>
         </div>
         {config?.configured && (
           <div className="flex items-center gap-2">
