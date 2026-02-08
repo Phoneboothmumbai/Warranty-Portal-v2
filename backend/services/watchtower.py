@@ -78,10 +78,12 @@ class WatchTowerService:
                 raise
     
     async def test_connection(self) -> bool:
-        """Test API connection with credentials check"""
+        """Test API connection by trying to list clients"""
         try:
-            await self._request("POST", "/v2/checkcreds/")
-            return True
+            # Try to get clients list as a connection test
+            result = await self._request("GET", "/clients/")
+            # If we get here without exception, connection works
+            return isinstance(result, list)
         except Exception as e:
             logger.error(f"WatchTower connection test failed: {str(e)}")
             return False
