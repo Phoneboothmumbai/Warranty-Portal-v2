@@ -38,7 +38,8 @@ export default function MoltBotIntegration() {
     knowledge_base: '',
     restrict_to_support_only: true,
     restrict_to_employees: false,
-    allowed_topics: ['warranty', 'service', 'repair', 'support', 'device', 'amc']
+    allowed_topics: ['warranty', 'service', 'repair', 'support', 'device', 'amc'],
+    off_topic_response: ''
   });
   const [orgInfo, setOrgInfo] = useState(null);
   const [helpTopics, setHelpTopics] = useState([]);
