@@ -213,6 +213,9 @@ const CompanyDashboard = () => {
           </div>
         </Link>
       </div>
+
+      {/* WatchTower Monitoring Card */}
+      <WatchTowerAgentDownload token={token} variant="card" />
     </div>
   );
 };
