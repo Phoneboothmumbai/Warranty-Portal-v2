@@ -27,6 +27,8 @@ const TacticalRMMIntegration = () => {
     api_url: '',
     api_key: ''
   });
+  const [downloadingFor, setDownloadingFor] = useState(null);
+  const [agentDownloadUrl, setAgentDownloadUrl] = useState(null);
   
   const token = localStorage.getItem('admin_token');
   const headers = { Authorization: `Bearer ${token}` };
@@ -38,13 +40,13 @@ const TacticalRMMIntegration = () => {
 
   const fetchConfig = async () => {
     try {
-      const res = await axios.get(`${API}/api/rmm/tactical/config`, { headers });
+      const res = await axios.get(`${API}/api/watchtower/config`, { headers });
       setConfig(res.data);
       if (res.data.configured && res.data.enabled) {
         fetchAgents();
       }
     } catch (error) {
-      toast.error('Failed to load RMM configuration');
+      toast.error('Failed to load WatchTower configuration');
     } finally {
       setLoading(false);
     }
@@ -65,10 +67,10 @@ const TacticalRMMIntegration = () => {
   const fetchAgents = async () => {
     setLoadingAgents(true);
     try {
-      const res = await axios.get(`${API}/api/rmm/tactical/agents`, { headers });
+      const res = await axios.get(`${API}/api/watchtower/agents`, { headers });
       setAgents(res.data);
     } catch (error) {
-      toast.error('Failed to load agents from Tactical RMM');
+      toast.error('Failed to load agents from WatchTower');
     } finally {
       setLoadingAgents(false);
     }
@@ -78,12 +80,12 @@ const TacticalRMMIntegration = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post(`${API}/api/rmm/tactical/config`, {
+      await axios.post(`${API}/api/watchtower/config`, {
         api_url: setupForm.api_url,
         api_key: setupForm.api_key,
         enabled: true
       }, { headers });
-      toast.success('Tactical RMM integration configured successfully');
+      toast.success('WatchTower integration configured successfully');
       setShowSetup(false);
       fetchConfig();
     } catch (error) {
@@ -101,12 +103,9 @@ const TacticalRMMIntegration = () => {
     
     setSyncing(true);
     try {
-      const res = await axios.post(`${API}/api/rmm/tactical/agents/sync`, {
-        company_id: selectedCompany,
-        sync_all: true
-      }, { headers });
+      const res = await axios.post(`${API}/api/watchtower/auto-sync`, {}, { headers });
       
-      toast.success(`Synced ${res.data.synced} new devices, updated ${res.data.updated} existing`);
+      toast.success(`Synced ${res.data.devices_created} new devices, updated ${res.data.devices_updated} existing`);
       fetchAgents();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to sync agents');
@@ -119,7 +118,7 @@ const TacticalRMMIntegration = () => {
     if (!window.confirm('Are you sure you want to reboot this device?')) return;
     
     try {
-      await axios.post(`${API}/api/rmm/tactical/agents/${agentId}/reboot`, {}, { headers });
+      await axios.post(`${API}/api/watchtower/agents/${agentId}/reboot`, {}, { headers });
       toast.success('Reboot command sent');
     } catch (error) {
       toast.error('Failed to send reboot command');
@@ -127,15 +126,36 @@ const TacticalRMMIntegration = () => {
   };
 
   const handleDisable = async () => {
-    if (!window.confirm('Are you sure you want to disable Tactical RMM integration?')) return;
+    if (!window.confirm('Are you sure you want to disable WatchTower integration?')) return;
     
     try {
-      await axios.delete(`${API}/api/rmm/tactical/config`, { headers });
+      await axios.delete(`${API}/api/watchtower/config`, { headers });
       toast.success('Integration disabled');
       setConfig({ configured: false });
       setAgents([]);
     } catch (error) {
       toast.error('Failed to disable integration');
+    }
+  };
+
+  const handleDownloadAgent = async (companyId, companyName) => {
+    setDownloadingFor(companyId);
+    try {
+      const res = await axios.post(`${API}/api/watchtower/agent-download/${companyId}`, {
+        site_name: 'Default Site',
+        platform: 'windows',
+        arch: '64'
+      }, { headers });
+      
+      if (res.data.download_url) {
+        setAgentDownloadUrl(res.data.download_url);
+        window.open(res.data.download_url, '_blank');
+        toast.success(`Agent download started for ${companyName}`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to generate download link');
+    } finally {
+      setDownloadingFor(null);
     }
   };
 
