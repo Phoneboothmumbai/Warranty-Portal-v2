@@ -527,6 +527,12 @@ export default function ServiceTicketDetail() {
               <MessageSquare className="h-4 w-4 mr-2" />
               Add Comment
             </Button>
+            {cannedResponses.length > 0 && (
+              <Button onClick={() => setShowCannedResponseModal(true)} variant="outline" className="text-purple-600 border-purple-300 hover:bg-purple-50">
+                <Zap className="h-4 w-4 mr-2" />
+                Canned Response
+              </Button>
+            )}
             {canCancel && (
               <Button onClick={handleCancel} variant="outline" className="text-red-600 hover:bg-red-50">
                 <XCircle className="h-4 w-4 mr-2" />
