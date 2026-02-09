@@ -854,6 +854,173 @@ export default function ServiceTicketDetail() {
         </CardContent>
       </Card>
 
+      {/* Job Lifecycle Actions */}
+      {ticket.status !== 'closed' && ticket.status !== 'cancelled' && (
+        <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <GitBranch className="h-5 w-5 text-indigo-600" />
+              Job Lifecycle Actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Status: In Progress - Need Diagnosis & Path Selection */}
+              {ticket.status === 'in_progress' && !ticket.diagnosis && (
+                <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-200">
+                  <div>
+                    <p className="font-medium text-amber-800">Step 1: Submit Diagnosis</p>
+                    <p className="text-sm text-amber-600">Document the problem identified during visit</p>
+                  </div>
+                  <Button onClick={() => setShowDiagnosisModal(true)} className="bg-amber-600 hover:bg-amber-700">
+                    <Clipboard className="h-4 w-4 mr-2" />
+                    Submit Diagnosis
+                  </Button>
+                </div>
+              )}
+
+              {ticket.status === 'in_progress' && ticket.diagnosis && !ticket.resolution_path && (
+                <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-purple-200">
+                  <div>
+                    <p className="font-medium text-purple-800">Step 2: Select Resolution Path (REQUIRED)</p>
+                    <p className="text-sm text-purple-600">Choose how this ticket will be resolved</p>
+                  </div>
+                  <Button onClick={() => setShowPathSelectionModal(true)} className="bg-purple-600 hover:bg-purple-700">
+                    <GitBranch className="h-4 w-4 mr-2" />
+                    Select Path
+                  </Button>
+                </div>
+              )}
+
+              {/* Status: Pending Parts - Can Resume */}
+              {ticket.status === 'pending_parts' && (
+                <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-orange-200">
+                  <div>
+                    <p className="font-medium text-orange-800">Waiting for Parts</p>
+                    <p className="text-sm text-orange-600">SLA is paused. Resume when parts arrive.</p>
+                  </div>
+                  <Button onClick={handleResumeFromParts} disabled={actionLoading} className="bg-orange-600 hover:bg-orange-700">
+                    <Play className="h-4 w-4 mr-2" />
+                    Parts Received - Resume
+                  </Button>
+                </div>
+              )}
+
+              {/* Status: Device Pickup - Need to record pickup */}
+              {ticket.status === 'device_pickup' && (
+                <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-indigo-200">
+                  <div>
+                    <p className="font-medium text-indigo-800">Record Device Pickup</p>
+                    <p className="text-sm text-indigo-600">Enter pickup details to move device to back office</p>
+                  </div>
+                  <Button onClick={() => setShowPickupModal(true)} className="bg-indigo-600 hover:bg-indigo-700">
+                    <Truck className="h-4 w-4 mr-2" />
+                    Record Pickup
+                  </Button>
+                </div>
+              )}
+
+              {/* Status: Device Under Repair - Need Warranty Decision */}
+              {ticket.status === 'device_under_repair' && !ticket.warranty_decision && (
+                <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-violet-200">
+                  <div>
+                    <p className="font-medium text-violet-800">Warranty Decision Required</p>
+                    <p className="text-sm text-violet-600">Classify as AMC, OEM Warranty, or Out of Warranty</p>
+                  </div>
+                  <Button onClick={() => setShowWarrantyModal(true)} className="bg-violet-600 hover:bg-violet-700">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Record Warranty Decision
+                  </Button>
+                </div>
+              )}
+
+              {/* Under Repair with AMC */}
+              {ticket.status === 'device_under_repair' && ticket.warranty_type === 'under_amc' && (
+                <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200">
+                  <div>
+                    <p className="font-medium text-blue-800">AMC Internal Repair</p>
+                    <p className="text-sm text-blue-600">
+                      {ticket.amc_repair ? 'Repair in progress' : 'Record repair details'}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => setShowAMCRepairModal(true)} variant="outline" className="border-blue-300">
+                      <Wrench className="h-4 w-4 mr-2" />
+                      {ticket.amc_repair ? 'Update Repair' : 'Start Repair'}
+                    </Button>
+                    {ticket.amc_repair && (
+                      <Button onClick={handleCompleteAMCRepair} disabled={actionLoading} className="bg-green-600 hover:bg-green-700">
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Complete Repair
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Under Repair with OEM */}
+              {ticket.status === 'device_under_repair' && ticket.warranty_type === 'under_oem' && (
+                <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-cyan-200">
+                  <div>
+                    <p className="font-medium text-cyan-800">OEM Warranty Repair</p>
+                    <p className="text-sm text-cyan-600">
+                      {ticket.oem_repair ? `OEM: ${ticket.oem_repair.oem_name}` : 'Record OEM repair details'}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => setShowOEMRepairModal(true)} variant="outline" className="border-cyan-300">
+                      <Factory className="h-4 w-4 mr-2" />
+                      {ticket.oem_repair ? 'Update OEM Details' : 'Record OEM Details'}
+                    </Button>
+                    {ticket.oem_repair?.received_back_date && (
+                      <Button onClick={handleCompleteOEMRepair} disabled={actionLoading} className="bg-green-600 hover:bg-green-700">
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Complete Repair
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Ready for Delivery */}
+              {(ticket.status === 'ready_for_delivery' || ticket.status === 'out_for_delivery') && (
+                <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-teal-200">
+                  <div>
+                    <p className="font-medium text-teal-800">Device Ready for Delivery</p>
+                    <p className="text-sm text-teal-600">Record delivery details to complete ticket</p>
+                  </div>
+                  <Button onClick={() => setShowDeliveryModal(true)} className="bg-teal-600 hover:bg-teal-700">
+                    <Home className="h-4 w-4 mr-2" />
+                    Record Delivery
+                  </Button>
+                </div>
+              )}
+
+              {/* Show current path if selected */}
+              {ticket.resolution_path && (
+                <div className="p-3 bg-slate-100 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-slate-600">Resolution Path:</span>
+                    <Badge variant="outline" className="font-medium">
+                      {ticket.resolution_path === 'resolved_on_visit' && '✅ Resolved On-Site'}
+                      {ticket.resolution_path === 'pending_for_part' && '🟡 Pending for Parts'}
+                      {ticket.resolution_path === 'device_to_backoffice' && '🔴 Device to Back Office'}
+                    </Badge>
+                    {ticket.warranty_type && (
+                      <Badge variant="outline" className="ml-2">
+                        {ticket.warranty_type === 'under_amc' && '📋 Under AMC'}
+                        {ticket.warranty_type === 'under_oem' && '🏭 Under OEM Warranty'}
+                        {ticket.warranty_type === 'out_of_warranty' && '⚠️ Out of Warranty'}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Main Content - Tabs */}
       <Tabs defaultValue="details" className="space-y-4">
         <TabsList>
