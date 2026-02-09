@@ -131,6 +131,118 @@ class StatusChange(BaseModel):
     notes: Optional[str] = None
 
 
+# ==================== JOB LIFECYCLE MODELS ====================
+
+class DiagnosisDetails(BaseModel):
+    """Diagnosis details captured during visit"""
+    problem_identified: str
+    root_cause: Optional[str] = None
+    observations: Optional[str] = None
+    time_spent_minutes: int = 0
+    diagnosed_by_id: str
+    diagnosed_by_name: str
+    diagnosed_at: str = Field(default_factory=get_ist_isoformat)
+
+
+class DevicePickup(BaseModel):
+    """Device pickup details (custody entry)"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    pickup_type: str  # engineer, office_boy, courier, customer_drop
+    pickup_person_id: Optional[str] = None
+    pickup_person_name: str
+    pickup_date: str
+    pickup_time: Optional[str] = None
+    pickup_location: str
+    device_condition: str  # Notes about device condition at pickup
+    accessories_taken: List[str] = Field(default_factory=list)  # charger, cable, etc.
+    customer_acknowledgement: bool = False
+    customer_name: Optional[str] = None
+    photos: List[str] = Field(default_factory=list)  # Photo URLs
+    notes: Optional[str] = None
+    created_at: str = Field(default_factory=get_ist_isoformat)
+    created_by_id: str
+    created_by_name: str
+
+
+class WarrantyDecision(BaseModel):
+    """Warranty classification decision"""
+    warranty_type: str  # under_amc, under_oem, out_of_warranty
+    decision_date: str = Field(default_factory=get_ist_isoformat)
+    decided_by_id: str
+    decided_by_name: str
+    amc_contract_id: Optional[str] = None  # Link to AMC contract if applicable
+    notes: Optional[str] = None
+
+
+class AMCRepairDetails(BaseModel):
+    """Internal repair details under AMC"""
+    repair_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    assigned_engineer_id: str
+    assigned_engineer_name: str
+    issue_identified: str
+    repair_actions: List[str] = Field(default_factory=list)
+    parts_replaced: List[Dict[str, Any]] = Field(default_factory=list)  # [{part_name, serial, quantity}]
+    repair_start_date: Optional[str] = None
+    repair_end_date: Optional[str] = None
+    internal_notes: Optional[str] = None
+    status: str = "pending"  # pending, in_progress, completed
+
+
+class OEMRepairDetails(BaseModel):
+    """OEM warranty repair tracking"""
+    repair_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    oem_name: str
+    oem_service_center: Optional[str] = None
+    oem_engineer_name: Optional[str] = None
+    oem_ticket_number: Optional[str] = None
+    other_reference_numbers: List[str] = Field(default_factory=list)
+    
+    # Dates
+    sent_to_oem_date: Optional[str] = None
+    repair_date: Optional[str] = None
+    received_back_date: Optional[str] = None
+    
+    # Repair details
+    repair_performed: Optional[str] = None
+    parts_replaced_by_oem: List[Dict[str, Any]] = Field(default_factory=list)
+    oem_notes: Optional[str] = None
+    status: str = "pending"  # pending, sent_to_oem, under_repair, completed
+
+
+class DeviceDelivery(BaseModel):
+    """Device return/delivery details"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    delivery_type: str  # engineer, office_boy, courier, customer_pickup
+    delivery_person_id: Optional[str] = None
+    delivery_person_name: str
+    delivery_date: str
+    delivery_time: Optional[str] = None
+    delivery_location: str
+    delivered_to_name: str
+    delivered_to_designation: Optional[str] = None
+    customer_confirmation: bool = False
+    customer_signature: Optional[str] = None  # Base64 signature image
+    photos: List[str] = Field(default_factory=list)
+    notes: Optional[str] = None
+    created_at: str = Field(default_factory=get_ist_isoformat)
+    created_by_id: str
+    created_by_name: str
+
+
+class CustodyLog(BaseModel):
+    """Track every custody change"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    action: str  # pickup, transfer, delivery, return
+    from_location: Optional[str] = None
+    to_location: Optional[str] = None
+    from_person_id: Optional[str] = None
+    from_person_name: Optional[str] = None
+    to_person_id: Optional[str] = None
+    to_person_name: Optional[str] = None
+    timestamp: str = Field(default_factory=get_ist_isoformat)
+    notes: Optional[str] = None
+
+
 # ==================== MAIN SERVICE TICKET ====================
 
 class ServiceTicketNew(BaseModel):
