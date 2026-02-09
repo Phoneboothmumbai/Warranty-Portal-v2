@@ -32,15 +32,45 @@ from utils.helpers import get_ist_isoformat
 # ==================== TICKET STATES ====================
 
 class TicketStatus(str, Enum):
-    """Ticket status (simplified from old 13-state FSM)"""
-    NEW = "new"                    # Ticket created, awaiting assignment
-    PENDING_ACCEPTANCE = "pending_acceptance"  # Assigned, awaiting engineer acceptance
-    ASSIGNED = "assigned"          # Assigned to technician (accepted)
-    IN_PROGRESS = "in_progress"    # Work has begun
-    PENDING_PARTS = "pending_parts"  # Waiting for parts
-    COMPLETED = "completed"        # Work done, awaiting closure
-    CLOSED = "closed"              # Ticket closed
-    CANCELLED = "cancelled"        # Ticket cancelled
+    """Ticket status - Full Job Lifecycle"""
+    NEW = "new"                              # Ticket created, awaiting assignment
+    PENDING_ACCEPTANCE = "pending_acceptance" # Assigned, awaiting engineer acceptance
+    ASSIGNED = "assigned"                    # Assigned to technician (accepted)
+    IN_PROGRESS = "in_progress"              # Work has begun / on-site visit
+    
+    # Path Selection States (after diagnosis)
+    PENDING_PARTS = "pending_parts"          # Path 2: Waiting for parts
+    DEVICE_PICKUP = "device_pickup"          # Path 3: Device being picked up
+    DEVICE_UNDER_REPAIR = "device_under_repair"  # Path 3: Device at back office
+    READY_FOR_DELIVERY = "ready_for_delivery"    # Path 3: Repair done, ready to return
+    OUT_FOR_DELIVERY = "out_for_delivery"        # Path 3: Device being delivered
+    
+    COMPLETED = "completed"                  # Work done, awaiting closure
+    CLOSED = "closed"                        # Ticket closed
+    CANCELLED = "cancelled"                  # Ticket cancelled
+
+
+class ResolutionPath(str, Enum):
+    """Mandatory path selection after diagnosis"""
+    RESOLVED_ON_VISIT = "resolved_on_visit"      # Path 1: Fixed on-site
+    PENDING_FOR_PART = "pending_for_part"        # Path 2: Need parts
+    DEVICE_TO_BACKOFFICE = "device_to_backoffice" # Path 3: Take device for repair
+
+
+class WarrantyType(str, Enum):
+    """Warranty classification for back office repair"""
+    UNDER_AMC = "under_amc"                  # Covered by AMC contract
+    UNDER_OEM = "under_oem"                  # Covered by OEM warranty
+    OUT_OF_WARRANTY = "out_of_warranty"      # No warranty coverage
+
+
+class PickupDeliveryType(str, Enum):
+    """Who handles device pickup/delivery"""
+    ENGINEER = "engineer"
+    OFFICE_BOY = "office_boy"
+    COURIER = "courier"
+    CUSTOMER_DROP = "customer_drop"          # Customer drops at office
+    CUSTOMER_PICKUP = "customer_pickup"      # Customer picks up from office
 
 
 class AssignmentStatus(str, Enum):
