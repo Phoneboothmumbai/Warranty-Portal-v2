@@ -10777,6 +10777,10 @@ app.include_router(ticketing_config_router, prefix="/api/admin", tags=["Ticketin
 from routes.engineer_portal import router as engineer_portal_router
 app.include_router(engineer_portal_router, tags=["Engineer Portal"])
 
+# Job Lifecycle Routes (complete custody and repair workflow)
+from routes.job_lifecycle import router as job_lifecycle_router
+app.include_router(job_lifecycle_router, tags=["Job Lifecycle"])
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
