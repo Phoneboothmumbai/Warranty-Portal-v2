@@ -979,6 +979,196 @@ export default function ServiceTicketDetail() {
               </Card>
             )}
           </div>
+
+          {/* Conversation Thread Section */}
+          <div className="mt-6">
+            <Card>
+              <CardHeader className="border-b">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Conversation & Activity Thread
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {/* Reply Input Section */}
+                <div className="p-4 bg-slate-50 border-b">
+                  <Tabs defaultValue="reply" className="w-full">
+                    <TabsList className="mb-3">
+                      <TabsTrigger value="reply" className="flex items-center gap-2">
+                        <Send className="h-4 w-4" />
+                        Reply to Customer
+                      </TabsTrigger>
+                      <TabsTrigger value="internal" className="flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4" />
+                        Internal Note
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="reply" className="space-y-3">
+                      <Textarea 
+                        placeholder="Type your reply to the customer..."
+                        value={commentText}
+                        onChange={(e) => {
+                          setCommentText(e.target.value);
+                          setIsInternalComment(false);
+                        }}
+                        rows={3}
+                        className="resize-none"
+                      />
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {cannedResponses.length > 0 && (
+                            <Select
+                              onValueChange={(value) => {
+                                const response = cannedResponses.find(r => r.id === value);
+                                if (response) {
+                                  setCommentText(response.content);
+                                  setIsInternalComment(false);
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="w-48">
+                                <SelectValue placeholder="Insert canned response..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {cannedResponses.map(r => (
+                                  <SelectItem key={r.id} value={r.id}>{r.title}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                        <Button 
+                          onClick={handleAddComment} 
+                          disabled={actionLoading || !commentText.trim()}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Send Reply
+                        </Button>
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="internal" className="space-y-3">
+                      <Textarea 
+                        placeholder="Add an internal note (not visible to customer)..."
+                        value={commentText}
+                        onChange={(e) => {
+                          setCommentText(e.target.value);
+                          setIsInternalComment(true);
+                        }}
+                        rows={3}
+                        className="resize-none bg-amber-50 border-amber-200"
+                      />
+                      <div className="flex items-center justify-end">
+                        <Button 
+                          onClick={handleAddComment} 
+                          disabled={actionLoading || !commentText.trim()}
+                          variant="outline"
+                          className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                        >
+                          <AlertCircle className="h-4 w-4 mr-2" />
+                          Add Internal Note
+                        </Button>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+
+                {/* Thread Timeline */}
+                <div className="divide-y">
+                  {/* Combine comments and status_history into a single timeline */}
+                  {(() => {
+                    const allEvents = [];
+                    
+                    // Add comments
+                    (ticket.comments || []).forEach(comment => {
+                      allEvents.push({
+                        type: 'comment',
+                        id: comment.id,
+                        created_at: comment.created_at,
+                        author_name: comment.author_name,
+                        text: comment.text,
+                        is_internal: comment.is_internal
+                      });
+                    });
+                    
+                    // Add status changes
+                    (ticket.status_history || []).forEach((change, idx) => {
+                      allEvents.push({
+                        type: 'status_change',
+                        id: `status-${idx}`,
+                        created_at: change.changed_at || change.timestamp,
+                        from_status: change.from_status,
+                        to_status: change.to_status || change.status,
+                        changed_by: change.changed_by_name || change.changed_by,
+                        notes: change.notes
+                      });
+                    });
+                    
+                    // Sort by date descending (newest first)
+                    allEvents.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                    
+                    if (allEvents.length === 0) {
+                      return (
+                        <div className="p-8 text-center text-slate-500">
+                          <MessageSquare className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                          <p>No conversation history yet</p>
+                          <p className="text-sm">Start the conversation by adding a comment above</p>
+                        </div>
+                      );
+                    }
+                    
+                    return allEvents.map((event) => (
+                      <div key={event.id} className={`p-4 ${event.type === 'comment' && event.is_internal ? 'bg-amber-50' : ''}`}>
+                        {event.type === 'comment' ? (
+                          <div>
+                            <div className="flex items-start gap-3">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-medium ${event.is_internal ? 'bg-amber-500' : 'bg-blue-500'}`}>
+                                {event.author_name?.charAt(0)?.toUpperCase() || 'U'}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-medium text-slate-900">{event.author_name}</span>
+                                  {event.is_internal && (
+                                    <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
+                                      Internal Note
+                                    </Badge>
+                                  )}
+                                  <span className="text-xs text-slate-500">{formatDate(event.created_at)}</span>
+                                </div>
+                                <p className="text-slate-700 whitespace-pre-wrap">{event.text}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-3 text-sm">
+                            <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
+                              <RefreshCw className="h-4 w-4 text-slate-500" />
+                            </div>
+                            <div className="flex-1">
+                              <span className="text-slate-600">
+                                <span className="font-medium">{event.changed_by || 'System'}</span>
+                                {' changed status '}
+                                {event.from_status && (
+                                  <>
+                                    from <Badge variant="outline" className="mx-1">{event.from_status}</Badge>
+                                  </>
+                                )}
+                                to <Badge variant="outline" className="mx-1">{event.to_status}</Badge>
+                              </span>
+                              {event.notes && (
+                                <p className="text-slate-500 mt-1 text-xs">{event.notes}</p>
+                              )}
+                              <span className="text-xs text-slate-400 block mt-1">{formatDate(event.created_at)}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Visits Tab */}
