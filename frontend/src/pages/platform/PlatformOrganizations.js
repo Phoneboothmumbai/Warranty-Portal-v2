@@ -219,45 +219,46 @@ export default function PlatformOrganizations() {
                       <td className="py-4 px-6 text-sm text-slate-600">
                         {new Date(org.created_at).toLocaleDateString()}
                       </td>
-                      <td className="py-4 px-6 text-right relative">
-                        <button
-                          onClick={() => setActionMenuOpen(actionMenuOpen === org.id ? null : org.id)}
-                          className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 hover:text-slate-900 transition-colors"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                        
-                        {actionMenuOpen === org.id && (
-                          <div className="absolute right-6 top-full mt-1 w-48 bg-slate-50 border border-slate-200 rounded-lg shadow-xl z-10">
-                            <button
-                              onClick={() => setSelectedOrg(org)}
-                              className="w-full px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-100 flex items-center gap-2"
-                            >
-                              <Eye className="w-4 h-4" />
-                              View Details
-                            </button>
-                            {org.status === 'suspended' ? (
+                      <td className="py-4 px-6 text-right">
+                        <div className="relative inline-block">
+                          <button
+                            onClick={() => setActionMenuOpen(actionMenuOpen === org.id ? null : org.id)}
+                            className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 hover:text-slate-900 transition-colors"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                          
+                          {actionMenuOpen === org.id && (
+                            <div className="absolute right-0 bottom-full mb-1 w-48 bg-white border border-slate-200 rounded-lg shadow-xl z-50">
                               <button
-                                onClick={() => handleReactivate(org.id)}
-                                className="w-full px-4 py-2.5 text-left text-sm text-emerald-400 hover:bg-slate-100 flex items-center gap-2"
+                                onClick={() => setSelectedOrg(org)}
+                                className="w-full px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-100 flex items-center gap-2 rounded-t-lg"
                               >
-                                <Play className="w-4 h-4" />
-                                Reactivate
+                                <Eye className="w-4 h-4" />
+                                View Details
                               </button>
-                            ) : (
+                              {org.status === 'suspended' ? (
+                                <button
+                                  onClick={() => handleReactivate(org.id)}
+                                  className="w-full px-4 py-2.5 text-left text-sm text-emerald-600 hover:bg-slate-100 flex items-center gap-2"
+                                >
+                                  <Play className="w-4 h-4" />
+                                  Reactivate
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleSuspend(org.id)}
+                                  className="w-full px-4 py-2.5 text-left text-sm text-amber-600 hover:bg-slate-100 flex items-center gap-2"
+                                >
+                                  <Pause className="w-4 h-4" />
+                                  Suspend
+                                </button>
+                              )}
                               <button
-                                onClick={() => handleSuspend(org.id)}
-                                className="w-full px-4 py-2.5 text-left text-sm text-amber-400 hover:bg-slate-100 flex items-center gap-2"
+                                onClick={() => handleDelete(org.id)}
+                                className="w-full px-4 py-2.5 text-left text-sm text-red-500 hover:bg-slate-100 flex items-center gap-2 rounded-b-lg"
                               >
-                                <Pause className="w-4 h-4" />
-                                Suspend
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleDelete(org.id)}
-                              className="w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-slate-100 flex items-center gap-2"
-                            >
-                              <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-4 h-4" />
                               Delete
                             </button>
                           </div>
