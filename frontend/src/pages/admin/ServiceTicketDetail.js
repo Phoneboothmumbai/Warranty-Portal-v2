@@ -1404,6 +1404,54 @@ export default function ServiceTicketDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Canned Response Modal */}
+      <Dialog open={showCannedResponseModal} onOpenChange={setShowCannedResponseModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-purple-600" />
+              Insert Canned Response
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {cannedResponses.length === 0 ? (
+              <p className="text-slate-500 text-center py-4">No canned responses available. Create them in Ticketing Config.</p>
+            ) : (
+              cannedResponses.map(response => (
+                <div 
+                  key={response.id} 
+                  className="p-4 border border-slate-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 cursor-pointer transition-colors"
+                  onClick={async () => {
+                    try {
+                      await axios.post(`${API_URL}/api/admin/service-tickets/${ticketId}/comments`, 
+                        { text: response.content, is_internal: false }, 
+                        { headers }
+                      );
+                      toast.success('Canned response added as comment');
+                      setShowCannedResponseModal(false);
+                      fetchTicket();
+                    } catch (e) {
+                      toast.error('Failed to add canned response');
+                    }
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-slate-900">{response.title}</h4>
+                    <Badge variant="outline" className="text-xs">
+                      {response.category || 'General'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-slate-600 line-clamp-3">{response.content}</p>
+                </div>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCannedResponseModal(false)}>Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
