@@ -1159,3 +1159,348 @@ async def get_ticket_revisits(
         "total_visits": len(visits),
         "has_revisits": len(visits) > 1
     }
+
+
+# ==================== JOB LIFECYCLE FOR ENGINEERS ====================
+
+class EngineerDiagnosisRequest(BaseModel):
+    """Diagnosis submission by engineer"""
+    problem_identified: str
+    root_cause: Optional[str] = None
+    observations: Optional[str] = None
+    time_spent_minutes: int = 0
+
+
+class EngineerPathSelectionRequest(BaseModel):
+    """Path selection by engineer"""
+    path: str  # resolved_on_visit, pending_for_part, device_to_backoffice
+    notes: Optional[str] = None
+    resolution_summary: Optional[str] = None  # For resolved_on_visit
+
+
+class EngineerPickupRequest(BaseModel):
+    """Device pickup by engineer"""
+    pickup_date: str
+    pickup_time: Optional[str] = None
+    pickup_location: str
+    device_condition: str
+    accessories_taken: List[str] = []
+    customer_acknowledgement: bool = False
+    customer_name: Optional[str] = None
+
+
+@router.post("/tickets/{ticket_id}/start-work")
+async def start_work_on_ticket(
+    ticket_id: str,
+    engineer: dict = Depends(get_current_engineer)
+):
+    """
+    Start working on ticket - moves from 'assigned' to 'in_progress'.
+    This indicates engineer has begun the actual work/visit.
+    """
+    engineer_id = engineer["id"]
+    
+    ticket = await db.service_tickets_new.find_one({
+        "id": ticket_id,
+        "assigned_to_id": engineer_id,
+        "is_deleted": {"$ne": True}
+    })
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found or not assigned to you")
+    
+    if ticket.get("status") not in ["assigned", "pending_acceptance"]:
+        if ticket.get("status") == "in_progress":
+            return {"success": True, "message": "Already in progress", "status": "in_progress"}
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot start work on ticket in '{ticket.get('status')}' status"
+        )
+    
+    now = get_ist_isoformat()
+    
+    status_change = {
+        "id": str(uuid.uuid4()),
+        "from_status": ticket.get("status"),
+        "to_status": "in_progress",
+        "changed_at": now,
+        "changed_by_id": engineer_id,
+        "changed_by_name": engineer.get("name"),
+        "notes": f"Work started by {engineer.get('name')}"
+    }
+    
+    await db.service_tickets_new.update_one(
+        {"id": ticket_id},
+        {
+            "$set": {
+                "status": "in_progress",
+                "work_started_at": now,
+                "updated_at": now
+            },
+            "$push": {"status_history": status_change}
+        }
+    )
+    
+    logger.info(f"Work started on ticket {ticket.get('ticket_number')} by {engineer.get('name')}")
+    return {"success": True, "message": "Work started", "status": "in_progress"}
+
+
+@router.post("/tickets/{ticket_id}/diagnosis")
+async def engineer_submit_diagnosis(
+    ticket_id: str,
+    data: EngineerDiagnosisRequest,
+    engineer: dict = Depends(get_current_engineer)
+):
+    """Submit diagnosis for a ticket"""
+    engineer_id = engineer["id"]
+    
+    ticket = await db.service_tickets_new.find_one({
+        "id": ticket_id,
+        "assigned_to_id": engineer_id,
+        "is_deleted": {"$ne": True}
+    })
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found or not assigned to you")
+    
+    if ticket.get("status") != "in_progress":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot submit diagnosis in '{ticket.get('status')}' status. Ticket must be In Progress."
+        )
+    
+    now = get_ist_isoformat()
+    
+    diagnosis = {
+        "problem_identified": data.problem_identified,
+        "root_cause": data.root_cause,
+        "observations": data.observations,
+        "time_spent_minutes": data.time_spent_minutes,
+        "diagnosed_by_id": engineer_id,
+        "diagnosed_by_name": engineer.get("name"),
+        "diagnosed_at": now
+    }
+    
+    await db.service_tickets_new.update_one(
+        {"id": ticket_id},
+        {
+            "$set": {
+                "diagnosis": diagnosis,
+                "total_time_minutes": ticket.get("total_time_minutes", 0) + data.time_spent_minutes,
+                "updated_at": now
+            }
+        }
+    )
+    
+    logger.info(f"Diagnosis submitted for ticket {ticket.get('ticket_number')} by {engineer.get('name')}")
+    return {"success": True, "message": "Diagnosis submitted. Please select a resolution path."}
+
+
+@router.post("/tickets/{ticket_id}/select-path")
+async def engineer_select_path(
+    ticket_id: str,
+    data: EngineerPathSelectionRequest,
+    engineer: dict = Depends(get_current_engineer)
+):
+    """Select resolution path after diagnosis"""
+    engineer_id = engineer["id"]
+    
+    ticket = await db.service_tickets_new.find_one({
+        "id": ticket_id,
+        "assigned_to_id": engineer_id,
+        "is_deleted": {"$ne": True}
+    })
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found or not assigned to you")
+    
+    if ticket.get("status") != "in_progress":
+        raise HTTPException(status_code=400, detail="Ticket must be in progress")
+    
+    if not ticket.get("diagnosis"):
+        raise HTTPException(status_code=400, detail="Diagnosis must be submitted before selecting a path")
+    
+    valid_paths = ["resolved_on_visit", "pending_for_part", "device_to_backoffice"]
+    if data.path not in valid_paths:
+        raise HTTPException(status_code=400, detail=f"Invalid path. Must be one of: {valid_paths}")
+    
+    now = get_ist_isoformat()
+    update_data = {
+        "resolution_path": data.path,
+        "path_selected_at": now,
+        "path_selected_by_id": engineer_id,
+        "path_selected_by_name": engineer.get("name"),
+        "updated_at": now
+    }
+    
+    new_status = None
+    if data.path == "resolved_on_visit":
+        if not data.resolution_summary:
+            raise HTTPException(status_code=400, detail="Resolution summary required")
+        new_status = "completed"
+        update_data["status"] = new_status
+        update_data["resolution_summary"] = data.resolution_summary
+        update_data["resolved_at"] = now
+        update_data["resolved_by_id"] = engineer_id
+        update_data["resolved_by_name"] = engineer.get("name")
+    elif data.path == "pending_for_part":
+        new_status = "pending_parts"
+        update_data["status"] = new_status
+        update_data["requires_parts"] = True
+        update_data["sla_paused"] = True
+        update_data["sla_paused_at"] = now
+    elif data.path == "device_to_backoffice":
+        new_status = "device_pickup"
+        update_data["status"] = new_status
+        update_data["device_in_custody"] = False
+    
+    status_change = {
+        "id": str(uuid.uuid4()),
+        "from_status": ticket.get("status"),
+        "to_status": new_status,
+        "changed_at": now,
+        "changed_by_id": engineer_id,
+        "changed_by_name": engineer.get("name"),
+        "notes": f"Path selected: {data.path}"
+    }
+    
+    await db.service_tickets_new.update_one(
+        {"id": ticket_id},
+        {
+            "$set": update_data,
+            "$push": {"status_history": status_change}
+        }
+    )
+    
+    logger.info(f"Path '{data.path}' selected for ticket {ticket.get('ticket_number')} by {engineer.get('name')}")
+    return {"success": True, "message": f"Path '{data.path}' selected", "status": new_status}
+
+
+@router.post("/tickets/{ticket_id}/device-pickup")
+async def engineer_record_pickup(
+    ticket_id: str,
+    data: EngineerPickupRequest,
+    engineer: dict = Depends(get_current_engineer)
+):
+    """Record device pickup by engineer"""
+    engineer_id = engineer["id"]
+    
+    ticket = await db.service_tickets_new.find_one({
+        "id": ticket_id,
+        "assigned_to_id": engineer_id,
+        "is_deleted": {"$ne": True}
+    })
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found or not assigned to you")
+    
+    if ticket.get("status") != "device_pickup":
+        raise HTTPException(status_code=400, detail="Ticket must be in device_pickup status")
+    
+    now = get_ist_isoformat()
+    
+    pickup = {
+        "id": str(uuid.uuid4()),
+        "pickup_type": "engineer",
+        "pickup_person_id": engineer_id,
+        "pickup_person_name": engineer.get("name"),
+        "pickup_date": data.pickup_date,
+        "pickup_time": data.pickup_time,
+        "pickup_location": data.pickup_location,
+        "device_condition": data.device_condition,
+        "accessories_taken": data.accessories_taken,
+        "customer_acknowledgement": data.customer_acknowledgement,
+        "customer_name": data.customer_name,
+        "created_at": now,
+        "created_by_id": engineer_id,
+        "created_by_name": engineer.get("name")
+    }
+    
+    custody_log = {
+        "id": str(uuid.uuid4()),
+        "action": "pickup",
+        "from_location": data.pickup_location,
+        "to_location": "Back Office",
+        "to_person_id": engineer_id,
+        "to_person_name": engineer.get("name"),
+        "timestamp": now,
+        "notes": f"Device picked up by {engineer.get('name')}"
+    }
+    
+    status_change = {
+        "id": str(uuid.uuid4()),
+        "from_status": "device_pickup",
+        "to_status": "device_under_repair",
+        "changed_at": now,
+        "changed_by_id": engineer_id,
+        "changed_by_name": engineer.get("name"),
+        "notes": "Device picked up for back office repair"
+    }
+    
+    await db.service_tickets_new.update_one(
+        {"id": ticket_id},
+        {
+            "$set": {
+                "status": "device_under_repair",
+                "device_in_custody": True,
+                "device_pickup": pickup,
+                "updated_at": now
+            },
+            "$push": {
+                "custody_log": custody_log,
+                "status_history": status_change
+            }
+        }
+    )
+    
+    logger.info(f"Device picked up for ticket {ticket.get('ticket_number')} by {engineer.get('name')}")
+    return {"success": True, "message": "Device pickup recorded", "status": "device_under_repair"}
+
+
+@router.get("/tickets/{ticket_id}/workflow-status")
+async def engineer_get_workflow_status(
+    ticket_id: str,
+    engineer: dict = Depends(get_current_engineer)
+):
+    """Get current workflow status and available actions for engineer"""
+    engineer_id = engineer["id"]
+    
+    ticket = await db.service_tickets_new.find_one({
+        "id": ticket_id,
+        "assigned_to_id": engineer_id,
+        "is_deleted": {"$ne": True}
+    })
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found or not assigned to you")
+    
+    status = ticket.get("status")
+    available_actions = []
+    required_actions = []
+    
+    if status == "pending_acceptance":
+        available_actions = ["accept", "decline"]
+        required_actions = ["accept_or_decline"]
+    elif status == "assigned":
+        available_actions = ["start_work"]
+    elif status == "in_progress":
+        if not ticket.get("diagnosis"):
+            required_actions = ["submit_diagnosis"]
+            available_actions = ["submit_diagnosis"]
+        elif not ticket.get("resolution_path"):
+            required_actions = ["select_path"]
+            available_actions = ["select_path"]
+    elif status == "device_pickup":
+        required_actions = ["record_pickup"]
+        available_actions = ["record_pickup"]
+    
+    return {
+        "ticket_id": ticket_id,
+        "ticket_number": ticket.get("ticket_number"),
+        "status": status,
+        "resolution_path": ticket.get("resolution_path"),
+        "has_diagnosis": bool(ticket.get("diagnosis")),
+        "device_in_custody": ticket.get("device_in_custody", False),
+        "available_actions": available_actions,
+        "required_actions": required_actions
+    }
