@@ -194,6 +194,10 @@ async def get_engineer_tickets(
         "assigned": [],
         "in_progress": [],
         "pending_parts": [],
+        "device_pickup": [],
+        "device_under_repair": [],
+        "ready_for_delivery": [],
+        "out_for_delivery": [],
         "completed": [],
         "closed": []
     }
