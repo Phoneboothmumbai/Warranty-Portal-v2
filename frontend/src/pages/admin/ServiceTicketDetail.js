@@ -661,6 +661,142 @@ export default function ServiceTicketDetail() {
               </CardContent>
             </Card>
 
+            {/* Ticket Configuration - osTicket Features */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Wrench className="h-4 w-4" />
+                  Ticket Configuration
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-slate-500">Help Topic</Label>
+                    <Select
+                      value={ticket.help_topic_id || 'none'}
+                      onValueChange={async (value) => {
+                        try {
+                          await axios.patch(`${API_URL}/api/admin/service-tickets/${ticketId}`, 
+                            { help_topic_id: value === 'none' ? null : value }, 
+                            { headers }
+                          );
+                          toast.success('Help topic updated');
+                          fetchTicket();
+                        } catch (e) {
+                          toast.error('Failed to update help topic');
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select help topic" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Help Topic</SelectItem>
+                        {helpTopics.map(topic => (
+                          <SelectItem key={topic.id} value={topic.id}>{topic.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-slate-500">Department</Label>
+                    <Select
+                      value={ticket.department_id || 'none'}
+                      onValueChange={async (value) => {
+                        try {
+                          await axios.patch(`${API_URL}/api/admin/service-tickets/${ticketId}`, 
+                            { department_id: value === 'none' ? null : value }, 
+                            { headers }
+                          );
+                          toast.success('Department updated');
+                          fetchTicket();
+                        } catch (e) {
+                          toast.error('Failed to update department');
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Department</SelectItem>
+                        {departments.map(dept => (
+                          <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-slate-500">SLA Policy</Label>
+                    <Select
+                      value={ticket.sla_policy_id || 'none'}
+                      onValueChange={async (value) => {
+                        try {
+                          await axios.patch(`${API_URL}/api/admin/service-tickets/${ticketId}`, 
+                            { sla_policy_id: value === 'none' ? null : value }, 
+                            { headers }
+                          );
+                          toast.success('SLA policy updated');
+                          fetchTicket();
+                        } catch (e) {
+                          toast.error('Failed to update SLA policy');
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select SLA policy" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No SLA Policy</SelectItem>
+                        {slaPolicies.map(sla => (
+                          <SelectItem key={sla.id} value={sla.id}>
+                            {sla.name} ({sla.response_time}h / {sla.resolution_time}h)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-slate-500">Priority</Label>
+                    <Select
+                      value={ticket.priority || 'medium'}
+                      onValueChange={async (value) => {
+                        try {
+                          await axios.patch(`${API_URL}/api/admin/service-tickets/${ticketId}`, 
+                            { priority: value }, 
+                            { headers }
+                          );
+                          toast.success('Priority updated');
+                          fetchTicket();
+                        } catch (e) {
+                          toast.error('Failed to update priority');
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {ticket.sla_policy_id && ticket.sla_due_at && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <Label className="text-amber-700 text-xs">SLA Due Date</Label>
+                    <p className="text-amber-900 font-medium">{formatDate(ticket.sla_due_at)}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Customer Info */}
             <Card>
               <CardHeader>
