@@ -156,7 +156,7 @@ export default function PlatformOrganizations() {
       {/* Organizations Table */}
       <Card className="bg-slate-50/50 border-slate-200">
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="overflow-visible">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-200">
