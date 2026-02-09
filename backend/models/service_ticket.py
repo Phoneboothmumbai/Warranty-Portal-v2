@@ -345,6 +345,48 @@ class ServiceTicketNew(BaseModel):
     quotation_approved_at: Optional[str] = None
     quotation_approved_by: Optional[str] = None
     
+    # ==================== JOB LIFECYCLE FIELDS ====================
+    
+    # Path Selection (mandatory after diagnosis)
+    resolution_path: Optional[str] = None  # resolved_on_visit, pending_for_part, device_to_backoffice
+    path_selected_at: Optional[str] = None
+    path_selected_by_id: Optional[str] = None
+    path_selected_by_name: Optional[str] = None
+    
+    # Diagnosis (captured during first visit)
+    diagnosis: Optional[Dict[str, Any]] = None  # DiagnosisDetails as dict
+    
+    # Device Custody (Path 3)
+    device_in_custody: bool = False
+    device_pickup: Optional[Dict[str, Any]] = None  # DevicePickup as dict
+    device_delivery: Optional[Dict[str, Any]] = None  # DeviceDelivery as dict
+    custody_log: List[Dict[str, Any]] = Field(default_factory=list)  # List of CustodyLog
+    
+    # Warranty Decision (Path 3 - mandatory)
+    warranty_decision: Optional[Dict[str, Any]] = None  # WarrantyDecision as dict
+    warranty_type: Optional[str] = None  # under_amc, under_oem, out_of_warranty
+    
+    # AMC Repair (if under AMC)
+    amc_repair: Optional[Dict[str, Any]] = None  # AMCRepairDetails as dict
+    
+    # OEM Repair (if under OEM warranty)
+    oem_repair: Optional[Dict[str, Any]] = None  # OEMRepairDetails as dict
+    
+    # SLA Pause (for pending parts)
+    sla_paused: bool = False
+    sla_paused_at: Optional[str] = None
+    sla_resumed_at: Optional[str] = None
+    total_sla_paused_minutes: int = 0
+    
+    # Ticketing Config References
+    help_topic_id: Optional[str] = None
+    help_topic_name: Optional[str] = None
+    department_id: Optional[str] = None
+    department_name: Optional[str] = None
+    sla_policy_id: Optional[str] = None
+    sla_policy_name: Optional[str] = None
+    sla_due_at: Optional[str] = None
+    
     # Customer feedback
     customer_rating: Optional[int] = None  # 1-5
     customer_feedback: Optional[str] = None
