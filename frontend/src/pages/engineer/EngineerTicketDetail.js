@@ -38,6 +38,33 @@ const EngineerTicketDetail = () => {
   // Modal states
   const [showDeclineModal, setShowDeclineModal] = useState(false);
   const [declineReason, setDeclineReason] = useState('');
+  
+  // Job Lifecycle Modals
+  const [showDiagnosisModal, setShowDiagnosisModal] = useState(false);
+  const [showPathModal, setShowPathModal] = useState(false);
+  const [showPickupModal, setShowPickupModal] = useState(false);
+  
+  // Job Lifecycle Form Data
+  const [diagnosisData, setDiagnosisData] = useState({
+    problem_identified: '',
+    root_cause: '',
+    observations: '',
+    time_spent_minutes: 30
+  });
+  const [pathData, setPathData] = useState({
+    path: '',
+    resolution_summary: '',
+    notes: ''
+  });
+  const [pickupData, setPickupData] = useState({
+    pickup_date: new Date().toISOString().split('T')[0],
+    pickup_time: '',
+    pickup_location: '',
+    device_condition: '',
+    accessories_taken: [],
+    customer_acknowledgement: false,
+    customer_name: ''
+  });
 
   // Redirect if not authenticated
   useEffect(() => {
