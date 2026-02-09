@@ -13,20 +13,25 @@ import {
   ArrowLeft, Clock, User, Building2, Laptop, Calendar, 
   CheckCircle2, XCircle, Play, Pause, UserPlus, Package,
   FileText, MessageSquare, History, Timer, Plus, RefreshCw,
-  Phone, Mail, MapPin, AlertCircle, Send, Wrench, Zap
+  Phone, Mail, MapPin, AlertCircle, Send, Wrench, Zap,
+  Truck, Shield, Factory, Home, Clipboard, GitBranch
 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-// Status configuration
+// Status configuration - Extended for Job Lifecycle
 const STATUS_CONFIG = {
   new: { label: 'New', color: 'bg-slate-100 text-slate-800 border-slate-300', icon: FileText },
   pending_acceptance: { label: 'Pending Acceptance', color: 'bg-purple-100 text-purple-800 border-purple-300', icon: Clock },
   assigned: { label: 'Assigned', color: 'bg-blue-100 text-blue-800 border-blue-300', icon: UserPlus },
   in_progress: { label: 'In Progress', color: 'bg-amber-100 text-amber-800 border-amber-300', icon: Play },
   pending_parts: { label: 'Pending Parts', color: 'bg-orange-100 text-orange-800 border-orange-300', icon: Package },
+  device_pickup: { label: 'Device Pickup', color: 'bg-indigo-100 text-indigo-800 border-indigo-300', icon: Truck },
+  device_under_repair: { label: 'Under Repair', color: 'bg-violet-100 text-violet-800 border-violet-300', icon: Wrench },
+  ready_for_delivery: { label: 'Ready for Delivery', color: 'bg-cyan-100 text-cyan-800 border-cyan-300', icon: Package },
+  out_for_delivery: { label: 'Out for Delivery', color: 'bg-teal-100 text-teal-800 border-teal-300', icon: Truck },
   completed: { label: 'Completed', color: 'bg-green-100 text-green-800 border-green-300', icon: CheckCircle2 },
   closed: { label: 'Closed', color: 'bg-emerald-100 text-emerald-800 border-emerald-300', icon: CheckCircle2 },
   cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-500 border-red-300', icon: XCircle }
