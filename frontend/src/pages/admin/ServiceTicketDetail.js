@@ -71,12 +71,19 @@ export default function ServiceTicketDetail() {
   const [items, setItems] = useState([]);
   const [locations, setLocations] = useState([]);
   
+  // Ticketing config data
+  const [helpTopics, setHelpTopics] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [slaPolicies, setSlaPolicies] = useState([]);
+  const [cannedResponses, setCannedResponses] = useState([]);
+  
   // Modal states
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showVisitModal, setShowVisitModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [showPartsRequestModal, setShowPartsRequestModal] = useState(false);
+  const [showCannedResponseModal, setShowCannedResponseModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   
   // Form data
