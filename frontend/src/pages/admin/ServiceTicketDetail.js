@@ -431,6 +431,188 @@ export default function ServiceTicketDetail() {
     }
   };
 
+  // ==================== JOB LIFECYCLE HANDLERS ====================
+
+  // Submit Diagnosis
+  const handleSubmitDiagnosis = async () => {
+    if (!diagnosisData.problem_identified) {
+      toast.error('Please identify the problem');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await axios.post(`${API_URL}/api/admin/job-lifecycle/${ticketId}/diagnosis`, diagnosisData, { headers });
+      toast.success('Diagnosis submitted');
+      setShowDiagnosisModal(false);
+      setShowPathSelectionModal(true); // Immediately show path selection
+      fetchTicket();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to submit diagnosis');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Select Resolution Path
+  const handleSelectPath = async () => {
+    if (!pathSelectionData.path) {
+      toast.error('Please select a resolution path');
+      return;
+    }
+    if (pathSelectionData.path === 'resolved_on_visit' && !pathSelectionData.resolution_summary) {
+      toast.error('Please provide resolution summary');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await axios.post(`${API_URL}/api/admin/job-lifecycle/${ticketId}/select-path`, pathSelectionData, { headers });
+      toast.success('Path selected');
+      setShowPathSelectionModal(false);
+      fetchTicket();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to select path');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Record Device Pickup
+  const handleRecordPickup = async () => {
+    if (!pickupData.pickup_person_name || !pickupData.pickup_date || !pickupData.device_condition) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await axios.post(`${API_URL}/api/admin/job-lifecycle/${ticketId}/device-pickup`, pickupData, { headers });
+      toast.success('Device pickup recorded');
+      setShowPickupModal(false);
+      fetchTicket();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to record pickup');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Record Warranty Decision
+  const handleWarrantyDecision = async () => {
+    if (!warrantyData.warranty_type) {
+      toast.error('Please select warranty type');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await axios.post(`${API_URL}/api/admin/job-lifecycle/${ticketId}/warranty-decision`, warrantyData, { headers });
+      toast.success('Warranty decision recorded');
+      setShowWarrantyModal(false);
+      fetchTicket();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to record warranty decision');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Record AMC Repair
+  const handleAMCRepair = async () => {
+    if (!amcRepairData.issue_identified) {
+      toast.error('Please identify the issue');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await axios.post(`${API_URL}/api/admin/job-lifecycle/${ticketId}/amc-repair`, amcRepairData, { headers });
+      toast.success('AMC repair details saved');
+      setShowAMCRepairModal(false);
+      fetchTicket();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to record AMC repair');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Complete AMC Repair
+  const handleCompleteAMCRepair = async () => {
+    setActionLoading(true);
+    try {
+      await axios.post(`${API_URL}/api/admin/job-lifecycle/${ticketId}/amc-repair/complete`, {}, { headers });
+      toast.success('AMC repair completed - Device ready for delivery');
+      fetchTicket();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to complete AMC repair');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Record OEM Repair
+  const handleOEMRepair = async () => {
+    if (!oemRepairData.oem_name) {
+      toast.error('Please provide OEM name');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await axios.post(`${API_URL}/api/admin/job-lifecycle/${ticketId}/oem-repair`, oemRepairData, { headers });
+      toast.success('OEM repair details saved');
+      setShowOEMRepairModal(false);
+      fetchTicket();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to record OEM repair');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Complete OEM Repair
+  const handleCompleteOEMRepair = async () => {
+    setActionLoading(true);
+    try {
+      await axios.post(`${API_URL}/api/admin/job-lifecycle/${ticketId}/oem-repair/complete`, {}, { headers });
+      toast.success('OEM repair completed - Device ready for delivery');
+      fetchTicket();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to complete OEM repair');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Record Device Delivery
+  const handleRecordDelivery = async () => {
+    if (!deliveryData.delivery_person_name || !deliveryData.delivery_date || !deliveryData.delivered_to_name) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await axios.post(`${API_URL}/api/admin/job-lifecycle/${ticketId}/device-delivery`, deliveryData, { headers });
+      toast.success('Device delivered - Ticket completed');
+      setShowDeliveryModal(false);
+      fetchTicket();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to record delivery');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Resume from Parts
+  const handleResumeFromParts = async () => {
+    setActionLoading(true);
+    try {
+      await axios.post(`${API_URL}/api/admin/job-lifecycle/${ticketId}/resume-from-parts`, { notes: 'Parts received' }, { headers });
+      toast.success('Ticket resumed');
+      fetchTicket();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to resume ticket');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Format date
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
