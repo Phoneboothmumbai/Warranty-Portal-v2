@@ -259,10 +259,11 @@ export default function PlatformOrganizations() {
                                 className="w-full px-4 py-2.5 text-left text-sm text-red-500 hover:bg-slate-100 flex items-center gap-2 rounded-b-lg"
                               >
                                 <Trash2 className="w-4 h-4" />
-                              Delete
-                            </button>
-                          </div>
-                        )}
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
