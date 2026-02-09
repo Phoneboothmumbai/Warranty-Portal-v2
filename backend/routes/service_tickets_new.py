@@ -412,27 +412,6 @@ async def update_ticket(
     return await db.service_tickets_new.find_one({"id": ticket_id}, {"_id": 0})
 
 
-@router.patch("/{ticket_id}")
-async def patch_ticket(
-    ticket_id: str,
-    admin: dict = Depends(get_current_admin),
-    help_topic_id: Optional[str] = None,
-    department_id: Optional[str] = None,
-    sla_policy_id: Optional[str] = None,
-    priority: Optional[str] = None
-):
-    """Partial update for ticket configuration (Help Topic, Department, SLA, Priority)"""
-    from pydantic import BaseModel
-    
-    class PatchData(BaseModel):
-        help_topic_id: Optional[str] = None
-        department_id: Optional[str] = None
-        sla_policy_id: Optional[str] = None
-        priority: Optional[str] = None
-    
-    # This is handled via request body in practice
-    pass
-
 from pydantic import BaseModel
 from typing import Optional as Opt
 
