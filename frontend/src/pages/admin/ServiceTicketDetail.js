@@ -91,6 +91,69 @@ export default function ServiceTicketDetail() {
   const [showCannedResponseModal, setShowCannedResponseModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   
+  // Job Lifecycle Modals
+  const [showDiagnosisModal, setShowDiagnosisModal] = useState(false);
+  const [showPathSelectionModal, setShowPathSelectionModal] = useState(false);
+  const [showPickupModal, setShowPickupModal] = useState(false);
+  const [showWarrantyModal, setShowWarrantyModal] = useState(false);
+  const [showAMCRepairModal, setShowAMCRepairModal] = useState(false);
+  const [showOEMRepairModal, setShowOEMRepairModal] = useState(false);
+  const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+  
+  // Job Lifecycle Form Data
+  const [diagnosisData, setDiagnosisData] = useState({
+    problem_identified: '',
+    root_cause: '',
+    observations: '',
+    time_spent_minutes: 0
+  });
+  const [pathSelectionData, setPathSelectionData] = useState({
+    path: '',
+    notes: '',
+    resolution_summary: ''
+  });
+  const [pickupData, setPickupData] = useState({
+    pickup_type: 'engineer',
+    pickup_person_name: '',
+    pickup_date: '',
+    pickup_time: '',
+    pickup_location: '',
+    device_condition: '',
+    accessories_taken: [],
+    customer_acknowledgement: false,
+    customer_name: ''
+  });
+  const [warrantyData, setWarrantyData] = useState({
+    warranty_type: '',
+    amc_contract_id: '',
+    notes: ''
+  });
+  const [amcRepairData, setAmcRepairData] = useState({
+    assigned_engineer_id: '',
+    assigned_engineer_name: '',
+    issue_identified: '',
+    repair_actions: [],
+    parts_replaced: [],
+    internal_notes: ''
+  });
+  const [oemRepairData, setOemRepairData] = useState({
+    oem_name: '',
+    oem_service_center: '',
+    oem_ticket_number: '',
+    sent_to_oem_date: '',
+    repair_performed: '',
+    received_back_date: ''
+  });
+  const [deliveryData, setDeliveryData] = useState({
+    delivery_type: 'engineer',
+    delivery_person_name: '',
+    delivery_date: '',
+    delivery_time: '',
+    delivery_location: '',
+    delivered_to_name: '',
+    customer_confirmation: false
+  });
+  
   // Form data
   const [selectedTechnician, setSelectedTechnician] = useState('');
   const [assignNotes, setAssignNotes] = useState('');
