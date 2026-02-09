@@ -170,6 +170,22 @@ export default function ServiceTicketDetail() {
       } catch (e) {
         console.log('Items/Locations fetch failed (optional):', e.message);
       }
+      
+      // Fetch ticketing config data (Help Topics, Departments, SLA, Canned Responses)
+      try {
+        const [topicsRes, deptsRes, slaRes, cannedRes] = await Promise.all([
+          axios.get(`${API_URL}/api/admin/ticketing-config/help-topics`, { headers: authHeaders }).catch(() => ({ data: { topics: [] } })),
+          axios.get(`${API_URL}/api/admin/ticketing-config/departments`, { headers: authHeaders }).catch(() => ({ data: { departments: [] } })),
+          axios.get(`${API_URL}/api/admin/ticketing-config/sla-policies`, { headers: authHeaders }).catch(() => ({ data: { policies: [] } })),
+          axios.get(`${API_URL}/api/admin/ticketing-config/canned-responses`, { headers: authHeaders }).catch(() => ({ data: { responses: [] } }))
+        ]);
+        setHelpTopics(topicsRes.data?.topics || []);
+        setDepartments(deptsRes.data?.departments || []);
+        setSlaPolicies(slaRes.data?.policies || []);
+        setCannedResponses(cannedRes.data?.responses || []);
+      } catch (e) {
+        console.log('Ticketing config fetch failed (optional):', e.message);
+      }
     } catch (error) {
       console.error('Failed to fetch staff users:', error);
     }
