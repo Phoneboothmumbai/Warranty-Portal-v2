@@ -2059,6 +2059,535 @@ export default function ServiceTicketDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ==================== JOB LIFECYCLE MODALS ==================== */}
+
+      {/* Diagnosis Modal */}
+      <Dialog open={showDiagnosisModal} onOpenChange={setShowDiagnosisModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clipboard className="h-5 w-5 text-amber-600" />
+              Submit Diagnosis
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="required">Problem Identified *</Label>
+              <Textarea
+                value={diagnosisData.problem_identified}
+                onChange={(e) => setDiagnosisData({...diagnosisData, problem_identified: e.target.value})}
+                placeholder="Describe the problem found during diagnosis..."
+                rows={3}
+              />
+            </div>
+            <div>
+              <Label>Root Cause</Label>
+              <Textarea
+                value={diagnosisData.root_cause}
+                onChange={(e) => setDiagnosisData({...diagnosisData, root_cause: e.target.value})}
+                placeholder="What caused this problem?"
+                rows={2}
+              />
+            </div>
+            <div>
+              <Label>Observations</Label>
+              <Textarea
+                value={diagnosisData.observations}
+                onChange={(e) => setDiagnosisData({...diagnosisData, observations: e.target.value})}
+                placeholder="Additional observations..."
+                rows={2}
+              />
+            </div>
+            <div>
+              <Label>Time Spent (minutes)</Label>
+              <Input
+                type="number"
+                value={diagnosisData.time_spent_minutes}
+                onChange={(e) => setDiagnosisData({...diagnosisData, time_spent_minutes: parseInt(e.target.value) || 0})}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDiagnosisModal(false)}>Cancel</Button>
+            <Button onClick={handleSubmitDiagnosis} disabled={actionLoading} className="bg-amber-600 hover:bg-amber-700">
+              {actionLoading ? 'Submitting...' : 'Submit Diagnosis'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Path Selection Modal */}
+      <Dialog open={showPathSelectionModal} onOpenChange={setShowPathSelectionModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GitBranch className="h-5 w-5 text-purple-600" />
+              Select Resolution Path
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">Based on the diagnosis, select how this ticket will be resolved:</p>
+            
+            <div className="space-y-3">
+              <div 
+                className={`p-4 border rounded-lg cursor-pointer transition-colors ${pathSelectionData.path === 'resolved_on_visit' ? 'border-green-500 bg-green-50' : 'border-slate-200 hover:border-green-300'}`}
+                onClick={() => setPathSelectionData({...pathSelectionData, path: 'resolved_on_visit'})}
+              >
+                <div className="flex items-center gap-2 font-medium text-green-800">
+                  <CheckCircle2 className="h-5 w-5" />
+                  Path 1: Resolved On-Site
+                </div>
+                <p className="text-sm text-slate-600 mt-1">Issue fixed during visit. Ticket moves to Completed.</p>
+              </div>
+
+              <div 
+                className={`p-4 border rounded-lg cursor-pointer transition-colors ${pathSelectionData.path === 'pending_for_part' ? 'border-orange-500 bg-orange-50' : 'border-slate-200 hover:border-orange-300'}`}
+                onClick={() => setPathSelectionData({...pathSelectionData, path: 'pending_for_part'})}
+              >
+                <div className="flex items-center gap-2 font-medium text-orange-800">
+                  <Package className="h-5 w-5" />
+                  Path 2: Pending for Parts
+                </div>
+                <p className="text-sm text-slate-600 mt-1">Parts required. SLA will be paused until parts arrive.</p>
+              </div>
+
+              <div 
+                className={`p-4 border rounded-lg cursor-pointer transition-colors ${pathSelectionData.path === 'device_to_backoffice' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-indigo-300'}`}
+                onClick={() => setPathSelectionData({...pathSelectionData, path: 'device_to_backoffice'})}
+              >
+                <div className="flex items-center gap-2 font-medium text-indigo-800">
+                  <Truck className="h-5 w-5" />
+                  Path 3: Take Device to Back Office
+                </div>
+                <p className="text-sm text-slate-600 mt-1">Device needs back office repair. Full custody tracking enabled.</p>
+              </div>
+            </div>
+
+            {pathSelectionData.path === 'resolved_on_visit' && (
+              <div>
+                <Label className="required">Resolution Summary *</Label>
+                <Textarea
+                  value={pathSelectionData.resolution_summary}
+                  onChange={(e) => setPathSelectionData({...pathSelectionData, resolution_summary: e.target.value})}
+                  placeholder="Describe what was done to resolve the issue..."
+                  rows={3}
+                />
+              </div>
+            )}
+
+            <div>
+              <Label>Notes</Label>
+              <Textarea
+                value={pathSelectionData.notes}
+                onChange={(e) => setPathSelectionData({...pathSelectionData, notes: e.target.value})}
+                placeholder="Additional notes..."
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPathSelectionModal(false)}>Cancel</Button>
+            <Button onClick={handleSelectPath} disabled={actionLoading || !pathSelectionData.path} className="bg-purple-600 hover:bg-purple-700">
+              {actionLoading ? 'Processing...' : 'Confirm Path'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Device Pickup Modal */}
+      <Dialog open={showPickupModal} onOpenChange={setShowPickupModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Truck className="h-5 w-5 text-indigo-600" />
+              Record Device Pickup
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Pickup Type *</Label>
+                <Select value={pickupData.pickup_type} onValueChange={(v) => setPickupData({...pickupData, pickup_type: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="engineer">Engineer</SelectItem>
+                    <SelectItem value="office_boy">Office Boy</SelectItem>
+                    <SelectItem value="courier">Courier</SelectItem>
+                    <SelectItem value="customer_drop">Customer Drop</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Pickup Person Name *</Label>
+                <Input
+                  value={pickupData.pickup_person_name}
+                  onChange={(e) => setPickupData({...pickupData, pickup_person_name: e.target.value})}
+                  placeholder="Name of person picking up"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Pickup Date *</Label>
+                <Input
+                  type="date"
+                  value={pickupData.pickup_date}
+                  onChange={(e) => setPickupData({...pickupData, pickup_date: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label>Pickup Time</Label>
+                <Input
+                  type="time"
+                  value={pickupData.pickup_time}
+                  onChange={(e) => setPickupData({...pickupData, pickup_time: e.target.value})}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Pickup Location *</Label>
+              <Input
+                value={pickupData.pickup_location}
+                onChange={(e) => setPickupData({...pickupData, pickup_location: e.target.value})}
+                placeholder="Address where device was picked up"
+              />
+            </div>
+            <div>
+              <Label>Device Condition *</Label>
+              <Textarea
+                value={pickupData.device_condition}
+                onChange={(e) => setPickupData({...pickupData, device_condition: e.target.value})}
+                placeholder="Describe device condition at pickup (scratches, damages, etc.)"
+                rows={2}
+              />
+            </div>
+            <div>
+              <Label>Accessories Taken (comma separated)</Label>
+              <Input
+                value={pickupData.accessories_taken.join(', ')}
+                onChange={(e) => setPickupData({...pickupData, accessories_taken: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})}
+                placeholder="Charger, Cable, Mouse, etc."
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="customer_ack"
+                checked={pickupData.customer_acknowledgement}
+                onChange={(e) => setPickupData({...pickupData, customer_acknowledgement: e.target.checked})}
+                className="rounded"
+              />
+              <Label htmlFor="customer_ack">Customer acknowledged pickup</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPickupModal(false)}>Cancel</Button>
+            <Button onClick={handleRecordPickup} disabled={actionLoading} className="bg-indigo-600 hover:bg-indigo-700">
+              {actionLoading ? 'Recording...' : 'Record Pickup'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Warranty Decision Modal */}
+      <Dialog open={showWarrantyModal} onOpenChange={setShowWarrantyModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-violet-600" />
+              Warranty Decision
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">Classify the warranty status for this device:</p>
+            
+            <div className="space-y-3">
+              <div 
+                className={`p-4 border rounded-lg cursor-pointer transition-colors ${warrantyData.warranty_type === 'under_amc' ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-blue-300'}`}
+                onClick={() => setWarrantyData({...warrantyData, warranty_type: 'under_amc'})}
+              >
+                <div className="flex items-center gap-2 font-medium text-blue-800">
+                  <FileText className="h-5 w-5" />
+                  Under AMC Contract
+                </div>
+                <p className="text-sm text-slate-600 mt-1">Device is covered by an Annual Maintenance Contract. Internal repair.</p>
+              </div>
+
+              <div 
+                className={`p-4 border rounded-lg cursor-pointer transition-colors ${warrantyData.warranty_type === 'under_oem' ? 'border-cyan-500 bg-cyan-50' : 'border-slate-200 hover:border-cyan-300'}`}
+                onClick={() => setWarrantyData({...warrantyData, warranty_type: 'under_oem'})}
+              >
+                <div className="flex items-center gap-2 font-medium text-cyan-800">
+                  <Factory className="h-5 w-5" />
+                  Under OEM Warranty
+                </div>
+                <p className="text-sm text-slate-600 mt-1">Device is under manufacturer warranty. OEM will handle repair.</p>
+              </div>
+
+              <div 
+                className={`p-4 border rounded-lg cursor-pointer transition-colors ${warrantyData.warranty_type === 'out_of_warranty' ? 'border-red-500 bg-red-50' : 'border-slate-200 hover:border-red-300'}`}
+                onClick={() => setWarrantyData({...warrantyData, warranty_type: 'out_of_warranty'})}
+              >
+                <div className="flex items-center gap-2 font-medium text-red-800">
+                  <AlertCircle className="h-5 w-5" />
+                  Out of Warranty
+                </div>
+                <p className="text-sm text-slate-600 mt-1">No warranty coverage. Customer will be charged for repair.</p>
+              </div>
+            </div>
+
+            <div>
+              <Label>Notes</Label>
+              <Textarea
+                value={warrantyData.notes}
+                onChange={(e) => setWarrantyData({...warrantyData, notes: e.target.value})}
+                placeholder="Additional notes about warranty decision..."
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowWarrantyModal(false)}>Cancel</Button>
+            <Button onClick={handleWarrantyDecision} disabled={actionLoading || !warrantyData.warranty_type} className="bg-violet-600 hover:bg-violet-700">
+              {actionLoading ? 'Recording...' : 'Confirm Decision'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AMC Repair Modal */}
+      <Dialog open={showAMCRepairModal} onOpenChange={setShowAMCRepairModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wrench className="h-5 w-5 text-blue-600" />
+              AMC Internal Repair
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Assigned Engineer *</Label>
+              <Select 
+                value={amcRepairData.assigned_engineer_id} 
+                onValueChange={(v) => {
+                  const eng = staff.find(s => s.id === v);
+                  setAmcRepairData({...amcRepairData, assigned_engineer_id: v, assigned_engineer_name: eng?.name || ''});
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Select engineer" /></SelectTrigger>
+                <SelectContent>
+                  {staff.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Issue Identified *</Label>
+              <Textarea
+                value={amcRepairData.issue_identified}
+                onChange={(e) => setAmcRepairData({...amcRepairData, issue_identified: e.target.value})}
+                placeholder="Detailed issue found during repair..."
+                rows={2}
+              />
+            </div>
+            <div>
+              <Label>Repair Actions (one per line)</Label>
+              <Textarea
+                value={amcRepairData.repair_actions.join('\n')}
+                onChange={(e) => setAmcRepairData({...amcRepairData, repair_actions: e.target.value.split('\n').filter(Boolean)})}
+                placeholder="Replaced HDD&#10;Updated BIOS&#10;Cleaned fans"
+                rows={3}
+              />
+            </div>
+            <div>
+              <Label>Internal Notes</Label>
+              <Textarea
+                value={amcRepairData.internal_notes}
+                onChange={(e) => setAmcRepairData({...amcRepairData, internal_notes: e.target.value})}
+                placeholder="Internal notes..."
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAMCRepairModal(false)}>Cancel</Button>
+            <Button onClick={handleAMCRepair} disabled={actionLoading} className="bg-blue-600 hover:bg-blue-700">
+              {actionLoading ? 'Saving...' : 'Save Repair Details'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* OEM Repair Modal */}
+      <Dialog open={showOEMRepairModal} onOpenChange={setShowOEMRepairModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Factory className="h-5 w-5 text-cyan-600" />
+              OEM Warranty Repair
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>OEM Name *</Label>
+                <Input
+                  value={oemRepairData.oem_name}
+                  onChange={(e) => setOemRepairData({...oemRepairData, oem_name: e.target.value})}
+                  placeholder="Dell, HP, Lenovo, etc."
+                />
+              </div>
+              <div>
+                <Label>OEM Ticket Number</Label>
+                <Input
+                  value={oemRepairData.oem_ticket_number}
+                  onChange={(e) => setOemRepairData({...oemRepairData, oem_ticket_number: e.target.value})}
+                  placeholder="OEM reference number"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>OEM Service Center</Label>
+              <Input
+                value={oemRepairData.oem_service_center}
+                onChange={(e) => setOemRepairData({...oemRepairData, oem_service_center: e.target.value})}
+                placeholder="Service center name/location"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Sent to OEM Date</Label>
+                <Input
+                  type="date"
+                  value={oemRepairData.sent_to_oem_date}
+                  onChange={(e) => setOemRepairData({...oemRepairData, sent_to_oem_date: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label>Received Back Date</Label>
+                <Input
+                  type="date"
+                  value={oemRepairData.received_back_date}
+                  onChange={(e) => setOemRepairData({...oemRepairData, received_back_date: e.target.value})}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Repair Performed by OEM</Label>
+              <Textarea
+                value={oemRepairData.repair_performed}
+                onChange={(e) => setOemRepairData({...oemRepairData, repair_performed: e.target.value})}
+                placeholder="Details of repair performed by OEM..."
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOEMRepairModal(false)}>Cancel</Button>
+            <Button onClick={handleOEMRepair} disabled={actionLoading} className="bg-cyan-600 hover:bg-cyan-700">
+              {actionLoading ? 'Saving...' : 'Save OEM Details'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Device Delivery Modal */}
+      <Dialog open={showDeliveryModal} onOpenChange={setShowDeliveryModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Home className="h-5 w-5 text-teal-600" />
+              Record Device Delivery
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Delivery Type *</Label>
+                <Select value={deliveryData.delivery_type} onValueChange={(v) => setDeliveryData({...deliveryData, delivery_type: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="engineer">Engineer</SelectItem>
+                    <SelectItem value="office_boy">Office Boy</SelectItem>
+                    <SelectItem value="courier">Courier</SelectItem>
+                    <SelectItem value="customer_pickup">Customer Pickup</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Delivery Person Name *</Label>
+                <Input
+                  value={deliveryData.delivery_person_name}
+                  onChange={(e) => setDeliveryData({...deliveryData, delivery_person_name: e.target.value})}
+                  placeholder="Name of person delivering"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Delivery Date *</Label>
+                <Input
+                  type="date"
+                  value={deliveryData.delivery_date}
+                  onChange={(e) => setDeliveryData({...deliveryData, delivery_date: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label>Delivery Time</Label>
+                <Input
+                  type="time"
+                  value={deliveryData.delivery_time}
+                  onChange={(e) => setDeliveryData({...deliveryData, delivery_time: e.target.value})}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Delivery Location *</Label>
+              <Input
+                value={deliveryData.delivery_location}
+                onChange={(e) => setDeliveryData({...deliveryData, delivery_location: e.target.value})}
+                placeholder="Address where device was delivered"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Delivered To (Name) *</Label>
+                <Input
+                  value={deliveryData.delivered_to_name}
+                  onChange={(e) => setDeliveryData({...deliveryData, delivered_to_name: e.target.value})}
+                  placeholder="Name of recipient"
+                />
+              </div>
+              <div>
+                <Label>Designation</Label>
+                <Input
+                  value={deliveryData.delivered_to_designation}
+                  onChange={(e) => setDeliveryData({...deliveryData, delivered_to_designation: e.target.value})}
+                  placeholder="e.g., IT Manager"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="customer_confirm"
+                checked={deliveryData.customer_confirmation}
+                onChange={(e) => setDeliveryData({...deliveryData, customer_confirmation: e.target.checked})}
+                className="rounded"
+              />
+              <Label htmlFor="customer_confirm">Customer confirmed receipt</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeliveryModal(false)}>Cancel</Button>
+            <Button onClick={handleRecordDelivery} disabled={actionLoading} className="bg-teal-600 hover:bg-teal-700">
+              {actionLoading ? 'Recording...' : 'Record Delivery'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
