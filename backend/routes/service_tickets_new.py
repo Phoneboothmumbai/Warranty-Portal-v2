@@ -412,6 +412,119 @@ async def update_ticket(
     return await db.service_tickets_new.find_one({"id": ticket_id}, {"_id": 0})
 
 
+@router.patch("/{ticket_id}")
+async def patch_ticket(
+    ticket_id: str,
+    admin: dict = Depends(get_current_admin),
+    help_topic_id: Optional[str] = None,
+    department_id: Optional[str] = None,
+    sla_policy_id: Optional[str] = None,
+    priority: Optional[str] = None
+):
+    """Partial update for ticket configuration (Help Topic, Department, SLA, Priority)"""
+    from pydantic import BaseModel
+    
+    class PatchData(BaseModel):
+        help_topic_id: Optional[str] = None
+        department_id: Optional[str] = None
+        sla_policy_id: Optional[str] = None
+        priority: Optional[str] = None
+    
+    # This is handled via request body in practice
+    pass
+
+from pydantic import BaseModel
+from typing import Optional as Opt
+
+class TicketConfigPatch(BaseModel):
+    help_topic_id: Opt[str] = None
+    department_id: Opt[str] = None
+    sla_policy_id: Opt[str] = None
+    priority: Opt[str] = None
+
+@router.patch("/{ticket_id}")
+async def patch_ticket_config(
+    ticket_id: str,
+    data: TicketConfigPatch,
+    admin: dict = Depends(get_current_admin)
+):
+    """Partial update for ticket configuration (Help Topic, Department, SLA, Priority)"""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    
+    existing = await db.service_tickets_new.find_one({
+        "id": ticket_id,
+        "organization_id": org_id,
+        "is_deleted": {"$ne": True}
+    })
+    if not existing:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    update_dict = {}
+    
+    # Handle help_topic_id
+    if data.help_topic_id is not None:
+        if data.help_topic_id:
+            topic = await db.help_topics.find_one({"id": data.help_topic_id, "organization_id": org_id})
+            if topic:
+                update_dict["help_topic_id"] = data.help_topic_id
+                update_dict["help_topic_name"] = topic.get("name")
+        else:
+            update_dict["help_topic_id"] = None
+            update_dict["help_topic_name"] = None
+    
+    # Handle department_id
+    if data.department_id is not None:
+        if data.department_id:
+            dept = await db.departments.find_one({"id": data.department_id, "organization_id": org_id})
+            if dept:
+                update_dict["department_id"] = data.department_id
+                update_dict["department_name"] = dept.get("name")
+        else:
+            update_dict["department_id"] = None
+            update_dict["department_name"] = None
+    
+    # Handle sla_policy_id
+    if data.sla_policy_id is not None:
+        if data.sla_policy_id:
+            sla = await db.sla_policies.find_one({"id": data.sla_policy_id, "organization_id": org_id})
+            if sla:
+                update_dict["sla_policy_id"] = data.sla_policy_id
+                update_dict["sla_policy_name"] = sla.get("name")
+                # Calculate SLA due dates
+                from datetime import datetime, timezone, timedelta
+                now = datetime.now(timezone.utc)
+                response_hours = sla.get("response_time", 4)
+                resolution_hours = sla.get("resolution_time", 24)
+                update_dict["sla_response_due"] = (now + timedelta(hours=response_hours)).isoformat()
+                update_dict["sla_resolution_due"] = (now + timedelta(hours=resolution_hours)).isoformat()
+                update_dict["sla_due_at"] = update_dict["sla_resolution_due"]
+        else:
+            update_dict["sla_policy_id"] = None
+            update_dict["sla_policy_name"] = None
+            update_dict["sla_response_due"] = None
+            update_dict["sla_resolution_due"] = None
+            update_dict["sla_due_at"] = None
+    
+    # Handle priority
+    if data.priority is not None:
+        if data.priority in ["low", "medium", "high", "critical"]:
+            update_dict["priority"] = data.priority
+    
+    if not update_dict:
+        return existing
+    
+    update_dict["updated_at"] = get_ist_isoformat()
+    
+    await db.service_tickets_new.update_one(
+        {"id": ticket_id},
+        {"$set": update_dict}
+    )
+    
+    return await db.service_tickets_new.find_one({"id": ticket_id}, {"_id": 0})
+
+
 @router.delete("/{ticket_id}")
 async def delete_ticket(ticket_id: str, admin: dict = Depends(get_current_admin)):
     """Soft delete a ticket"""
