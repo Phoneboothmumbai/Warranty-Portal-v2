@@ -73,6 +73,7 @@ const navGroups = [
     icon: Settings,
     items: [
       { path: '/admin/organization', label: 'Organization', icon: Building2 },
+      { path: '/admin/ticket-types', label: 'Ticket Types', icon: Layers },
       { path: '/admin/ticketing-config', label: 'Ticketing Config', icon: ClipboardList },
       { path: '/admin/custom-domains', label: 'Custom Domains', icon: Globe },
       { path: '/admin/knowledge-base', label: 'Knowledge Base', icon: BookOpen },
