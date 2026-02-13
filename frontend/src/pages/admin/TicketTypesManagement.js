@@ -63,7 +63,7 @@ export default function TicketTypesManagement() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [seeding, setSeeding] = useState(false);
   
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('admin_token');
   const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
