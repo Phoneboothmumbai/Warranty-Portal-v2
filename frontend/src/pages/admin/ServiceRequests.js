@@ -138,20 +138,45 @@ export default function ServiceRequests() {
   const fetchSupportingData = useCallback(async () => {
     const headers = { Authorization: `Bearer ${token}` };
     try {
-      const [companiesRes, staffRes, problemsRes] = await Promise.all([
+      const [companiesRes, staffRes, problemsRes, ticketTypesRes] = await Promise.all([
         axios.get(`${API_URL}/api/admin/companies?limit=500`, { headers }),
         axios.get(`${API_URL}/api/admin/staff/users?limit=100`, { headers }),
-        axios.get(`${API_URL}/api/admin/problems`, { headers })
+        axios.get(`${API_URL}/api/admin/problems`, { headers }),
+        axios.get(`${API_URL}/api/admin/ticket-types`, { headers })
       ]);
       // Companies API returns array directly, not { companies: [...] }
       const companiesData = Array.isArray(companiesRes.data) ? companiesRes.data : (companiesRes.data.companies || []);
       setCompanies(companiesData);
       setStaff(staffRes.data.users || staffRes.data || []);
       setProblems(problemsRes.data.problems || problemsRes.data || []);
+      setTicketTypes(Array.isArray(ticketTypesRes.data) ? ticketTypesRes.data : []);
     } catch (error) {
       console.error('Failed to fetch supporting data:', error);
     }
   }, [token]);
+
+  // Handle ticket type selection
+  const handleTicketTypeChange = (typeId) => {
+    const ticketType = ticketTypes.find(t => t.id === typeId);
+    setSelectedTicketType(ticketType);
+    setFormData({
+      ...formData,
+      ticket_type_id: typeId,
+      priority: ticketType?.default_priority || 'medium',
+      custom_field_values: {}
+    });
+  };
+
+  // Handle custom field value change
+  const handleCustomFieldChange = (fieldSlug, value) => {
+    setFormData({
+      ...formData,
+      custom_field_values: {
+        ...formData.custom_field_values,
+        [fieldSlug]: value
+      }
+    });
+  };
 
   // Fetch company contacts when company changes
   const fetchCompanyContacts = useCallback(async (companyId) => {
