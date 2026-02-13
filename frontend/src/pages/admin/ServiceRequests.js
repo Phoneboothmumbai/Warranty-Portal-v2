@@ -608,138 +608,283 @@ export default function ServiceRequests() {
 
       {/* Create Ticket Modal */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Create Service Ticket</DialogTitle>
+            <DialogTitle>Create New Ticket</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-            <div>
-              <Label>Company *</Label>
-              <Select value={formData.company_id} onValueChange={handleCompanyChange}>
-                <SelectTrigger data-testid="company-select">
-                  <SelectValue placeholder="Select company" />
+            {/* Ticket Type Selection - Primary Choice */}
+            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+              <Label className="font-semibold text-blue-900 mb-2 block">Ticket Type *</Label>
+              <Select value={formData.ticket_type_id} onValueChange={handleTicketTypeChange}>
+                <SelectTrigger className="bg-white" data-testid="ticket-type-select">
+                  <SelectValue placeholder="Select ticket type..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {companies.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
+                  {/* Group by category */}
+                  {['sales', 'support', 'operations', 'finance', 'general'].map(category => {
+                    const categoryTypes = ticketTypes.filter(t => t.category === category);
+                    if (categoryTypes.length === 0) return null;
+                    return (
+                      <div key={category}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 uppercase bg-slate-50">
+                          {category}
+                        </div>
+                        {categoryTypes.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
+                              {t.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
-              <Label>Title *</Label>
-              <Input
-                value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
-                placeholder="Brief description of the issue"
-                data-testid="title-input"
-              />
-            </div>
-            <div>
-              <Label>Description</Label>
-              <Textarea
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-                placeholder="Detailed description..."
-                rows={3}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Priority</Label>
-                <Select value={formData.priority} onValueChange={(val) => setFormData({...formData, priority: val})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="critical">Critical</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Problem Type</Label>
-                <Select value={formData.problem_id} onValueChange={(val) => setFormData({...formData, problem_id: val})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {problems.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            {/* Contact Person Section */}
-            <div className="space-y-3 p-3 bg-slate-50 rounded-lg">
-              <Label className="font-medium">Contact Person</Label>
-              {companyContacts.length > 0 ? (
-                <Select onValueChange={handleContactSelect}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select from company contacts" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companyContacts.map((contact) => (
-                      <SelectItem key={contact.id} value={contact.id}>
-                        {contact.name} {contact.phone ? `(${contact.phone})` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : formData.company_id ? (
-                <p className="text-sm text-slate-500">No contacts found for this company</p>
-              ) : (
-                <p className="text-sm text-slate-500">Select a company to see contacts</p>
+              {selectedTicketType && (
+                <p className="text-xs text-blue-600 mt-1">{selectedTicketType.description}</p>
               )}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs text-slate-500">Name</Label>
-                  <Input
-                    value={formData.contact_name}
-                    onChange={(e) => setFormData({...formData, contact_name: e.target.value})}
-                    placeholder="Contact name"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-slate-500">Phone</Label>
-                  <Input
-                    value={formData.contact_phone}
-                    onChange={(e) => setFormData({...formData, contact_phone: e.target.value})}
-                    placeholder="Phone number"
-                  />
-                </div>
-              </div>
             </div>
 
-            {/* Notes/Comments */}
-            <div>
-              <Label>Internal Notes</Label>
-              <Textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                placeholder="Add any internal notes or comments..."
-                rows={2}
-              />
-            </div>
+            {/* Show rest of form only after ticket type is selected */}
+            {selectedTicketType && (
+              <>
+                {/* Company Selection (if required by type) */}
+                {selectedTicketType.requires_company && (
+                  <div>
+                    <Label>Company *</Label>
+                    <Select value={formData.company_id} onValueChange={handleCompanyChange}>
+                      <SelectTrigger data-testid="company-select">
+                        <SelectValue placeholder="Select company" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {companies.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="is_urgent"
-                checked={formData.is_urgent}
-                onChange={(e) => setFormData({...formData, is_urgent: e.target.checked})}
-                className="rounded"
-              />
-              <Label htmlFor="is_urgent" className="text-sm font-normal">Mark as Urgent</Label>
-            </div>
+                <div>
+                  <Label>Title *</Label>
+                  <Input
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    placeholder="Brief description"
+                    data-testid="title-input"
+                  />
+                </div>
+                
+                <div>
+                  <Label>Description</Label>
+                  <Textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    placeholder="Detailed description..."
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Priority</Label>
+                    <Select value={formData.priority} onValueChange={(val) => setFormData({...formData, priority: val})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* Only show problem type for technical support */}
+                  {selectedTicketType.requires_job_lifecycle && (
+                    <div>
+                      <Label>Problem Type</Label>
+                      <Select value={formData.problem_id} onValueChange={(val) => setFormData({...formData, problem_id: val})}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {problems.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Custom Fields based on Ticket Type */}
+                {selectedTicketType.custom_fields && selectedTicketType.custom_fields.length > 0 && (
+                  <div className="space-y-3 p-4 bg-slate-50 rounded-lg border">
+                    <Label className="font-semibold flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      {selectedTicketType.name} Details
+                    </Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {selectedTicketType.custom_fields
+                        .filter(f => f.show_in_create !== false)
+                        .sort((a, b) => (a.order || 0) - (b.order || 0))
+                        .map((field) => (
+                          <div key={field.id} className={field.field_type === 'textarea' ? 'col-span-2' : ''}>
+                            <Label className="text-xs text-slate-600">
+                              {field.name} {field.required && '*'}
+                            </Label>
+                            {field.field_type === 'select' ? (
+                              <Select 
+                                value={formData.custom_field_values[field.slug] || ''} 
+                                onValueChange={(val) => handleCustomFieldChange(field.slug, val)}
+                              >
+                                <SelectTrigger className="bg-white">
+                                  <SelectValue placeholder={field.placeholder || `Select ${field.name.toLowerCase()}`} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(field.options || []).map(opt => (
+                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : field.field_type === 'multiselect' ? (
+                              <Select 
+                                value={formData.custom_field_values[field.slug]?.[0] || ''} 
+                                onValueChange={(val) => handleCustomFieldChange(field.slug, [val])}
+                              >
+                                <SelectTrigger className="bg-white">
+                                  <SelectValue placeholder={field.placeholder || `Select ${field.name.toLowerCase()}`} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(field.options || []).map(opt => (
+                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : field.field_type === 'textarea' ? (
+                              <Textarea
+                                value={formData.custom_field_values[field.slug] || ''}
+                                onChange={(e) => handleCustomFieldChange(field.slug, e.target.value)}
+                                placeholder={field.placeholder}
+                                rows={2}
+                                className="bg-white"
+                              />
+                            ) : field.field_type === 'number' || field.field_type === 'currency' ? (
+                              <Input
+                                type="number"
+                                value={formData.custom_field_values[field.slug] || ''}
+                                onChange={(e) => handleCustomFieldChange(field.slug, e.target.value)}
+                                placeholder={field.placeholder}
+                                className="bg-white"
+                              />
+                            ) : field.field_type === 'date' ? (
+                              <Input
+                                type="date"
+                                value={formData.custom_field_values[field.slug] || ''}
+                                onChange={(e) => handleCustomFieldChange(field.slug, e.target.value)}
+                                className="bg-white"
+                              />
+                            ) : field.field_type === 'checkbox' ? (
+                              <div className="flex items-center gap-2 mt-1">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.custom_field_values[field.slug] || false}
+                                  onChange={(e) => handleCustomFieldChange(field.slug, e.target.checked)}
+                                  className="rounded"
+                                />
+                                <span className="text-sm text-slate-600">{field.help_text || 'Yes'}</span>
+                              </div>
+                            ) : (
+                              <Input
+                                type={field.field_type === 'email' ? 'email' : field.field_type === 'phone' ? 'tel' : 'text'}
+                                value={formData.custom_field_values[field.slug] || ''}
+                                onChange={(e) => handleCustomFieldChange(field.slug, e.target.value)}
+                                placeholder={field.placeholder}
+                                className="bg-white"
+                              />
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+            
+                {/* Contact Person Section */}
+                {selectedTicketType.requires_contact && (
+                  <div className="space-y-3 p-3 bg-slate-50 rounded-lg">
+                    <Label className="font-medium">Contact Person</Label>
+                    {companyContacts.length > 0 ? (
+                      <Select onValueChange={handleContactSelect}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select from company contacts" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {companyContacts.map((contact) => (
+                            <SelectItem key={contact.id} value={contact.id}>
+                              {contact.name} {contact.phone ? `(${contact.phone})` : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : formData.company_id ? (
+                      <p className="text-sm text-slate-500">No contacts found for this company</p>
+                    ) : null}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs text-slate-500">Name</Label>
+                        <Input
+                          value={formData.contact_name}
+                          onChange={(e) => setFormData({...formData, contact_name: e.target.value})}
+                          placeholder="Contact name"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-slate-500">Phone</Label>
+                        <Input
+                          value={formData.contact_phone}
+                          onChange={(e) => setFormData({...formData, contact_phone: e.target.value})}
+                          placeholder="Phone number"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Notes/Comments */}
+                <div>
+                  <Label>Internal Notes</Label>
+                  <Textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                    placeholder="Add any internal notes or comments..."
+                    rows={2}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="is_urgent"
+                    checked={formData.is_urgent}
+                    onChange={(e) => setFormData({...formData, is_urgent: e.target.checked})}
+                    className="rounded"
+                  />
+                  <Label htmlFor="is_urgent" className="text-sm font-normal">Mark as Urgent</Label>
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-            <Button onClick={handleCreateTicket} disabled={creating} data-testid="create-btn">
+            <Button variant="outline" onClick={() => { setShowCreateModal(false); resetForm(); }}>Cancel</Button>
+            <Button 
+              onClick={handleCreateTicket} 
+              disabled={creating || !formData.ticket_type_id} 
+              data-testid="create-btn"
+            >
               {creating ? 'Creating...' : 'Create Ticket'}
             </Button>
           </DialogFooter>
