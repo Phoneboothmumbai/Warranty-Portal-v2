@@ -245,11 +245,11 @@ async def create_ticket(
     
     # Build contact
     contact = None
-    if data.contact_name or company.get("contact_name"):
+    if data.contact_name or (company and company.get("contact_name")):
         contact = TicketContact(
-            name=data.contact_name or company.get("contact_name", ""),
-            phone=data.contact_phone or company.get("contact_phone"),
-            email=data.contact_email or company.get("contact_email")
+            name=data.contact_name or (company.get("contact_name", "") if company else ""),
+            phone=data.contact_phone or (company.get("contact_phone") if company else None),
+            email=data.contact_email or (company.get("contact_email") if company else None)
         )
     
     # Build location
