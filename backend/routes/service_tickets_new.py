@@ -302,8 +302,15 @@ async def create_ticket(
     ticket = ServiceTicketNew(
         organization_id=org_id,
         ticket_number=ticket_number,
+        # Ticket Type
+        ticket_type_id=data.ticket_type_id,
+        ticket_type_slug=ticket_type_slug,
+        ticket_type_name=ticket_type_name,
+        workflow_status=workflow_status or "new",
+        custom_field_values=data.custom_field_values or {},
+        # Company
         company_id=data.company_id,
-        company_name=company["name"],
+        company_name=company_name,
         contact=contact,
         location=location,
         device_id=data.device_id,
@@ -326,10 +333,10 @@ async def create_ticket(
     
     # Add initial status history
     initial_status = StatusChange(
-        to_status=TicketStatus.NEW.value,
+        to_status=workflow_status or TicketStatus.NEW.value,
         changed_by_id=admin.get("id", ""),
         changed_by_name=admin.get("name", ""),
-        notes="Ticket created"
+        notes=f"Ticket created ({ticket_type_name or 'Technical Support'})"
     )
     ticket.status_history = [initial_status.model_dump()]
     
