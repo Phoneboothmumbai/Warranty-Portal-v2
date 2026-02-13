@@ -60,6 +60,7 @@ import ServiceTicketDetail from "./pages/admin/ServiceTicketDetail";
 import Quotations from "./pages/admin/Quotations";
 import TGMSIntegration from "./pages/admin/TGMSIntegration";
 import TicketingConfig from "./pages/admin/TicketingConfig";
+import TicketTypesManagement from "./pages/admin/TicketTypesManagement";
 
 // Platform Super Admin Pages
 import PlatformLogin from "./pages/platform/PlatformLogin";
