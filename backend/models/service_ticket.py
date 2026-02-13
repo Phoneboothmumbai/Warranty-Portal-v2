@@ -510,10 +510,14 @@ class Quotation(BaseModel):
 
 class ServiceTicketCreate(BaseModel):
     """Create a new service ticket"""
-    company_id: str
+    company_id: Optional[str] = None  # Optional for some ticket types
     title: str
     description: Optional[str] = None
     priority: str = TicketPriority.MEDIUM.value
+    
+    # Ticket Type (for multi-workflow support)
+    ticket_type_id: Optional[str] = None
+    custom_field_values: Dict[str, Any] = Field(default_factory=dict)
     
     # Contact
     contact_name: Optional[str] = None
