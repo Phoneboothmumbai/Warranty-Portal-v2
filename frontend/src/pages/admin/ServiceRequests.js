@@ -73,6 +73,8 @@ export default function ServiceRequests() {
   const [staff, setStaff] = useState([]);
   const [problems, setProblems] = useState([]);
   const [companyContacts, setCompanyContacts] = useState([]);
+  const [ticketTypes, setTicketTypes] = useState([]);
+  const [selectedTicketType, setSelectedTicketType] = useState(null);
   
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,6 +91,7 @@ export default function ServiceRequests() {
   
   // Form state
   const [formData, setFormData] = useState({
+    ticket_type_id: '',
     company_id: '',
     title: '',
     description: '',
@@ -98,7 +101,8 @@ export default function ServiceRequests() {
     contact_phone: '',
     contact_email: '',
     is_urgent: false,
-    notes: ''
+    notes: '',
+    custom_field_values: {}
   });
 
   // Fetch tickets
