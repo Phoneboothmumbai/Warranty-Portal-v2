@@ -10781,6 +10781,11 @@ app.include_router(engineer_portal_router, tags=["Engineer Portal"])
 from routes.job_lifecycle import router as job_lifecycle_router
 app.include_router(job_lifecycle_router, tags=["Job Lifecycle"])
 
+# Ticket Types Routes (multi-workflow ticket system)
+from routes.ticket_types import router as ticket_types_router, init_db as init_ticket_types_db
+init_ticket_types_db(db)
+app.include_router(ticket_types_router, prefix="/api/admin", tags=["Ticket Types"])
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
