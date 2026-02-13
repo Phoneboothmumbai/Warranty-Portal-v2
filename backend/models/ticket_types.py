@@ -180,6 +180,9 @@ def get_default_ticket_types(organization_id: str) -> List[Dict]:
         "requires_contact": True,
         "default_priority": "high",
         "is_system": True,
+        "is_active": True,
+        "is_deleted": False,
+        "enable_customer_portal": True,
         "workflow_statuses": [
             {"id": str(uuid.uuid4()), "name": "New", "slug": "new", "color": "#6B7280", "order": 0, "is_initial": True, "can_transition_to": ["assigned", "cancelled"]},
             {"id": str(uuid.uuid4()), "name": "Assigned", "slug": "assigned", "color": "#3B82F6", "order": 1, "can_transition_to": ["in_progress", "new", "cancelled"]},
