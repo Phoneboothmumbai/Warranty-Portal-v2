@@ -292,6 +292,7 @@ export default function ServiceRequests() {
   // Reset form
   const resetForm = () => {
     setFormData({
+      ticket_type_id: '',
       company_id: '',
       title: '',
       description: '',
@@ -301,8 +302,10 @@ export default function ServiceRequests() {
       contact_phone: '',
       contact_email: '',
       is_urgent: false,
-      notes: ''
+      notes: '',
+      custom_field_values: {}
     });
+    setSelectedTicketType(null);
     setCompanyContacts([]);
   };
 
