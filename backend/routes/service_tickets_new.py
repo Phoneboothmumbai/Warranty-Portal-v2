@@ -210,13 +210,35 @@ async def create_ticket(
     if not org_id:
         raise HTTPException(status_code=403, detail="Organization context required")
     
-    # Get company details
-    company = await db.companies.find_one(
-        {"id": data.company_id, "organization_id": org_id, "is_deleted": {"$ne": True}},
-        {"_id": 0, "name": 1, "contact_name": 1, "contact_phone": 1, "contact_email": 1}
-    )
-    if not company:
-        raise HTTPException(status_code=404, detail="Company not found")
+    # Get ticket type details if provided
+    ticket_type = None
+    ticket_type_slug = None
+    ticket_type_name = None
+    workflow_status = None
+    if data.ticket_type_id:
+        ticket_type = await db.ticket_types.find_one(
+            {"id": data.ticket_type_id, "organization_id": org_id, "is_deleted": {"$ne": True}},
+            {"_id": 0}
+        )
+        if ticket_type:
+            ticket_type_slug = ticket_type.get("slug")
+            ticket_type_name = ticket_type.get("name")
+            # Get initial status from workflow
+            for status in ticket_type.get("workflow_statuses", []):
+                if status.get("is_initial"):
+                    workflow_status = status.get("slug")
+                    break
+    
+    # Get company details (optional for some ticket types)
+    company = None
+    company_name = None
+    if data.company_id:
+        company = await db.companies.find_one(
+            {"id": data.company_id, "organization_id": org_id, "is_deleted": {"$ne": True}},
+            {"_id": 0, "name": 1, "contact_name": 1, "contact_phone": 1, "contact_email": 1}
+        )
+        if company:
+            company_name = company.get("name")
     
     # Generate ticket number
     ticket_number = await generate_unique_ticket_number(db, org_id)
