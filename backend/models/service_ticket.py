@@ -259,7 +259,14 @@ class ServiceTicketNew(BaseModel):
     # Ticket identification
     ticket_number: str  # 6-char alphanumeric, immutable
     
-    # Status
+    # Ticket Type (for multi-workflow support)
+    ticket_type_id: Optional[str] = None  # Reference to TicketType
+    ticket_type_slug: Optional[str] = None  # e.g., "technical-support", "sales-inquiry"
+    ticket_type_name: Optional[str] = None  # Denormalized for display
+    workflow_status: Optional[str] = None  # Current status in the ticket type's workflow
+    custom_field_values: Dict[str, Any] = Field(default_factory=dict)  # Values for ticket type's custom fields
+    
+    # Status (for backward compatibility with technical support tickets)
     status: str = TicketStatus.NEW.value
     priority: str = TicketPriority.MEDIUM.value
     
