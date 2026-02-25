@@ -1340,7 +1340,7 @@ async def list_engineers(admin: dict = Depends(get_current_admin)):
     # Get engineers from engineers collection
     engineers = await _db.engineers.find(
         {"organization_id": org_id, "is_active": {"$ne": False}, "is_deleted": {"$ne": True}},
-        {"_id": 0, "id": 1, "name": 1, "email": 1, "phone": 1, "specialization": 1, "skills": 1}
+        {"_id": 0, "password_hash": 0}
     ).to_list(100)
     
     # For each engineer, get their current workload and last visit info
