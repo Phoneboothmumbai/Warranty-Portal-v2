@@ -63,7 +63,7 @@ export default function EngineerCalendar() {
     setLoading(true);
     try {
       const res = await fetch(
-        `${API}/api/calendar/my-schedule?date_from=${dateRange.from}&date_to=${dateRange.to}`,
+        `${API}/api/engineer/calendar/my-schedule?date_from=${dateRange.from}&date_to=${dateRange.to}`,
         { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
       );
       if (!res.ok) throw new Error('Failed');
