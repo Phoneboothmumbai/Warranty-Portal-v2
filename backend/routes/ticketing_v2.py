@@ -441,22 +441,58 @@ async def add_team_member(team_id: str, data: dict = Body(...), admin: dict = De
     return await _db.ticket_teams.find_one({"id": team_id}, {"_id": 0})
 
 
+@router.post("/ticketing/teams")
+async def create_team(data: dict = Body(...), admin: dict = Depends(get_current_admin)):
+    org_id = admin.get("organization_id")
+    if not org_id: raise HTTPException(status_code=403, detail="Organization context required")
+    team = {"id": str(uuid.uuid4()), "organization_id": org_id, "created_at": get_ist_isoformat(), "is_active": True, "members": [], **data}
+    await _db.ticket_teams.insert_one(team)
+    return await _db.ticket_teams.find_one({"id": team["id"]}, {"_id": 0})
+
+
+@router.delete("/ticketing/teams/{team_id}")
+async def delete_team(team_id: str, admin: dict = Depends(get_current_admin)):
+    org_id = admin.get("organization_id")
+    if not org_id: raise HTTPException(status_code=403, detail="Organization context required")
+    await _db.ticket_teams.delete_one({"id": team_id, "organization_id": org_id})
+    return {"message": "Deleted"}
+
+
 # ============================================================
 # ROLES
 # ============================================================
 
 @router.get("/ticketing/roles")
 async def list_roles(admin: dict = Depends(get_current_admin)):
-    """List all roles"""
     org_id = admin.get("organization_id")
-    if not org_id:
-        raise HTTPException(status_code=403, detail="Organization context required")
-    
-    roles = await _db.ticket_roles.find(
-        {"organization_id": org_id, "is_active": True},
-        {"_id": 0}
-    ).sort("name", 1).to_list(100)
-    return roles
+    if not org_id: raise HTTPException(status_code=403, detail="Organization context required")
+    return await _db.ticket_roles.find({"organization_id": org_id, "is_active": True}, {"_id": 0}).sort("name", 1).to_list(100)
+
+
+@router.post("/ticketing/roles")
+async def create_role(data: dict = Body(...), admin: dict = Depends(get_current_admin)):
+    org_id = admin.get("organization_id")
+    if not org_id: raise HTTPException(status_code=403, detail="Organization context required")
+    role = {"id": str(uuid.uuid4()), "organization_id": org_id, "created_at": get_ist_isoformat(), "is_active": True, "permissions": [], **data}
+    await _db.ticket_roles.insert_one(role)
+    return await _db.ticket_roles.find_one({"id": role["id"]}, {"_id": 0})
+
+
+@router.put("/ticketing/roles/{role_id}")
+async def update_role(role_id: str, data: dict = Body(...), admin: dict = Depends(get_current_admin)):
+    org_id = admin.get("organization_id")
+    if not org_id: raise HTTPException(status_code=403, detail="Organization context required")
+    data["updated_at"] = get_ist_isoformat()
+    await _db.ticket_roles.update_one({"id": role_id, "organization_id": org_id}, {"$set": data})
+    return await _db.ticket_roles.find_one({"id": role_id}, {"_id": 0})
+
+
+@router.delete("/ticketing/roles/{role_id}")
+async def delete_role(role_id: str, admin: dict = Depends(get_current_admin)):
+    org_id = admin.get("organization_id")
+    if not org_id: raise HTTPException(status_code=403, detail="Organization context required")
+    await _db.ticket_roles.delete_one({"id": role_id, "organization_id": org_id})
+    return {"message": "Deleted"}
 
 
 # ============================================================
