@@ -103,11 +103,8 @@ import CompanyAMCRequests from "./pages/company/CompanyAMCRequests";
 import NewAMCRequest from "./pages/company/NewAMCRequest";
 import CompanyAMCOnboarding from "./pages/company/CompanyAMCOnboarding";
 
-// Engineer Portal Pages
+// Engineer Portal - Login only (V2 uses task-based system)
 import EngineerLogin from "./pages/engineer/EngineerLogin";
-import TechnicianDashboard from "./pages/engineer/TechnicianDashboard";
-import TechnicianVisitDetail from "./pages/engineer/TechnicianVisitDetail";
-import EngineerTicketDetail from "./pages/engineer/EngineerTicketDetail";
 
 // Contexts
 import { BrandingProvider } from "./contexts/BrandingContext";
