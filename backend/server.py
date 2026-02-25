@@ -940,9 +940,9 @@ async def osticket_webhook(
     
     logger.info(f"osTicket webhook received: ticket_id={payload.ticket_id}, event={payload.event_type}, status={payload.status}")
     
-    # Find ticket in our system by osticket_id
-    ticket = await db.service_tickets.find_one(
-        {"osticket_id": payload.ticket_id},
+    # Find ticket in our system (V2) by source_reference
+    ticket = await db.tickets_v2.find_one(
+        {"source_reference": payload.ticket_id, "source": "osticket"},
         {"_id": 0}
     )
     
@@ -955,9 +955,8 @@ async def osticket_webhook(
         )
     
     if not ticket and not quick_request:
-        # Try to find by ticket number if provided
         if payload.ticket_number:
-            ticket = await db.service_tickets.find_one(
+            ticket = await db.tickets_v2.find_one(
                 {"ticket_number": {"$regex": payload.ticket_number, "$options": "i"}},
                 {"_id": 0}
             )
@@ -966,52 +965,27 @@ async def osticket_webhook(
             logger.warning(f"osTicket webhook: Ticket not found for osticket_id={payload.ticket_id}")
             return {"success": False, "message": "Ticket not found in portal"}
     
-    # Map osTicket status to our status
-    status_mapping = {
-        "open": "open",
-        "new": "open",
-        "in progress": "in_progress",
-        "in-progress": "in_progress",
-        "pending": "pending",
-        "on hold": "on_hold",
-        "resolved": "resolved",
-        "closed": "closed",
-        "answered": "in_progress",
-        "overdue": "overdue"
-    }
-    
-    new_status = status_mapping.get(payload.status.lower() if payload.status else "", None)
-    
     update_data = {
         "updated_at": get_ist_isoformat()
     }
     
-    if new_status:
-        update_data["status"] = new_status
-        
-        # Set resolved/closed timestamps
-        if new_status == "resolved":
-            update_data["resolved_at"] = get_ist_isoformat()
-        elif new_status == "closed":
-            update_data["closed_at"] = get_ist_isoformat()
-    
-    # Add the reply/message as a comment if provided
+    # Add the reply/message as a timeline entry if provided
     if payload.last_message and payload.last_responder:
-        comment = {
+        timeline_entry = {
             "id": str(uuid.uuid4()),
-            "text": payload.last_message,
-            "author": payload.last_responder,
-            "author_type": "osticket_staff",
-            "created_at": get_ist_isoformat(),
-            "source": "osticket_webhook"
+            "type": "comment",
+            "description": payload.last_message,
+            "user_name": payload.last_responder,
+            "is_internal": False,
+            "created_at": get_ist_isoformat()
         }
         
         if ticket:
-            await db.service_tickets.update_one(
+            await db.tickets_v2.update_one(
                 {"id": ticket["id"]},
                 {
                     "$set": update_data,
-                    "$push": {"comments": comment}
+                    "$push": {"timeline": timeline_entry}
                 }
             )
         elif quick_request:
@@ -1020,9 +994,8 @@ async def osticket_webhook(
                 {"$set": {**update_data, "last_response": payload.last_message}}
             )
     else:
-        # Just update status
         if ticket:
-            await db.service_tickets.update_one(
+            await db.tickets_v2.update_one(
                 {"id": ticket["id"]},
                 {"$set": update_data}
             )
