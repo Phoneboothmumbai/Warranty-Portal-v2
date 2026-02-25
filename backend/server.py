@@ -8083,15 +8083,15 @@ async def ai_support_chat(data: AISupportMessage, user: dict = Depends(get_curre
                 "is_deleted": {"$ne": True}
             }, {"_id": 0})
             
-            # Get recent service tickets for this device
-            recent_tickets = await db.service_tickets.find({
+            # Get recent service tickets for this device (V2)
+            recent_tickets = await db.tickets_v2.find({
                 "device_id": data.device_id,
                 "is_deleted": {"$ne": True}
-            }, {"_id": 0, "subject": 1, "status": 1, "created_at": 1}).sort("created_at", -1).limit(3).to_list(3)
+            }, {"_id": 0, "subject": 1, "current_stage_name": 1, "created_at": 1}).sort("created_at", -1).limit(3).to_list(3)
             
             service_history = ""
             if recent_tickets:
-                history_items = [f"{t.get('subject', 'Issue')} ({t.get('status', 'unknown')})" for t in recent_tickets]
+                history_items = [f"{t.get('subject', 'Issue')} ({t.get('current_stage_name', 'New')})" for t in recent_tickets]
                 service_history = "; ".join(history_items)
             
             # Build comprehensive device context
