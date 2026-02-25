@@ -1175,3 +1175,199 @@ async def get_ticketing_stats(admin: dict = Depends(get_current_admin)):
         "by_topic": by_topic,
         "pending_tasks": pending_tasks
     }
+
+
+# ============================================================
+# ENGINEERS & CALENDAR
+# ============================================================
+
+@router.get("/ticketing/engineers")
+async def list_engineers(admin: dict = Depends(get_current_admin)):
+    """List all engineers/technicians available for assignment"""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    
+    # Get engineers from engineers collection
+    engineers = await _db.engineers.find(
+        {"organization_id": org_id, "is_active": {"$ne": False}, "is_deleted": {"$ne": True}},
+        {"_id": 0, "id": 1, "name": 1, "email": 1, "phone": 1, "specialization": 1, "skills": 1}
+    ).to_list(100)
+    
+    # For each engineer, get their current workload and last visit info
+    for eng in engineers:
+        # Count open assigned tickets
+        eng["open_tickets"] = await _db.tickets_v2.count_documents({
+            "organization_id": org_id,
+            "assigned_to_id": eng["id"],
+            "is_open": True,
+            "is_deleted": {"$ne": True}
+        })
+        
+        # Get last scheduled visit
+        last_schedule = await _db.ticket_schedules.find_one(
+            {"engineer_id": eng["id"], "organization_id": org_id},
+            {"_id": 0, "scheduled_at": 1, "ticket_number": 1, "company_name": 1, "status": 1},
+            sort=[("scheduled_at", -1)]
+        )
+        eng["last_visit"] = last_schedule
+        
+        # Get last assigned ticket for this device/company context
+        last_ticket = await _db.tickets_v2.find_one(
+            {"assigned_to_id": eng["id"], "organization_id": org_id, "is_deleted": {"$ne": True}},
+            {"_id": 0, "ticket_number": 1, "company_name": 1, "subject": 1, "created_at": 1},
+            sort=[("created_at", -1)]
+        )
+        eng["last_ticket"] = last_ticket
+    
+    return engineers
+
+
+@router.get("/ticketing/engineers/{engineer_id}/schedule")
+async def get_engineer_schedule(
+    engineer_id: str,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    admin: dict = Depends(get_current_admin)
+):
+    """Get an engineer's schedule for calendar view (to avoid clashes)"""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    
+    # Default: show next 14 days
+    if not date_from:
+        now = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+        date_from = now.strftime("%Y-%m-%d")
+    if not date_to:
+        from_date = datetime.strptime(date_from, "%Y-%m-%d")
+        date_to = (from_date + timedelta(days=14)).strftime("%Y-%m-%d")
+    
+    # Get scheduled visits from ticket_schedules
+    schedules = await _db.ticket_schedules.find({
+        "engineer_id": engineer_id,
+        "organization_id": org_id,
+        "scheduled_at": {"$gte": date_from, "$lte": date_to + "T23:59:59"},
+        "status": {"$ne": "cancelled"}
+    }, {"_id": 0}).sort("scheduled_at", 1).to_list(100)
+    
+    # Also check tickets with scheduled_at that don't have schedule records
+    scheduled_tickets = await _db.tickets_v2.find({
+        "assigned_to_id": engineer_id,
+        "organization_id": org_id,
+        "scheduled_at": {"$gte": date_from, "$lte": date_to + "T23:59:59"},
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0, "id": 1, "ticket_number": 1, "subject": 1, "company_name": 1, "scheduled_at": 1, "scheduled_end_at": 1, "current_stage_name": 1}).to_list(100)
+    
+    # Get engineer details
+    engineer = await _db.engineers.find_one(
+        {"id": engineer_id},
+        {"_id": 0, "id": 1, "name": 1, "email": 1}
+    )
+    
+    return {
+        "engineer": engineer,
+        "schedules": schedules,
+        "tickets": scheduled_tickets,
+        "date_from": date_from,
+        "date_to": date_to
+    }
+
+
+@router.get("/ticketing/engineers/{engineer_id}/device-history")
+async def get_engineer_device_history(
+    engineer_id: str,
+    device_id: Optional[str] = None,
+    company_id: Optional[str] = None,
+    admin: dict = Depends(get_current_admin)
+):
+    """Get history of an engineer's visits to a specific device/company"""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    
+    query = {
+        "assigned_to_id": engineer_id,
+        "organization_id": org_id,
+        "is_deleted": {"$ne": True}
+    }
+    if device_id:
+        query["device_id"] = device_id
+    if company_id:
+        query["company_id"] = company_id
+    
+    history = await _db.tickets_v2.find(
+        query,
+        {"_id": 0, "id": 1, "ticket_number": 1, "subject": 1, "current_stage_name": 1, 
+         "company_name": 1, "scheduled_at": 1, "created_at": 1, "resolved_at": 1, "diagnosis": 1}
+    ).sort("created_at", -1).to_list(20)
+    
+    return history
+
+
+# ============================================================
+# TECHNICIAN DASHBOARD
+# ============================================================
+
+@router.get("/ticketing/technician/dashboard")
+async def technician_dashboard(admin: dict = Depends(get_current_admin)):
+    """Dashboard for field technicians - shows their assigned work"""
+    user_id = admin.get("id")
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    
+    # Get engineer record for this user
+    engineer = await _db.engineers.find_one(
+        {"$or": [{"id": user_id}, {"email": admin.get("email")}], "organization_id": org_id},
+        {"_id": 0}
+    )
+    engineer_id = engineer["id"] if engineer else user_id
+    
+    # Assigned tickets
+    assigned_tickets = await _db.tickets_v2.find({
+        "assigned_to_id": engineer_id,
+        "organization_id": org_id,
+        "is_open": True,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0, "timeline": 0}).sort("created_at", -1).to_list(50)
+    
+    # Assigned tasks
+    assigned_tasks = await _db.ticket_tasks.find({
+        "assigned_to_id": engineer_id,
+        "organization_id": org_id,
+        "status": {"$ne": "completed"}
+    }, {"_id": 0}).sort("due_at", 1).to_list(50)
+    
+    # Upcoming scheduled visits
+    now = datetime.now(timezone(timedelta(hours=5, minutes=30))).isoformat()
+    upcoming_schedules = await _db.ticket_schedules.find({
+        "engineer_id": engineer_id,
+        "organization_id": org_id,
+        "scheduled_at": {"$gte": now[:10]},
+        "status": {"$ne": "cancelled"}
+    }, {"_id": 0}).sort("scheduled_at", 1).to_list(20)
+    
+    # Stats
+    total_assigned = len(assigned_tickets)
+    visits_today = len([s for s in upcoming_schedules if s.get("scheduled_at", "").startswith(now[:10])])
+    pending_diagnosis = len([t for t in assigned_tickets if t.get("current_stage_name") in ["Visit Scheduled", "Session Scheduled"]])
+    completed_this_week = await _db.tickets_v2.count_documents({
+        "assigned_to_id": engineer_id,
+        "organization_id": org_id,
+        "resolved_at": {"$gte": (datetime.now(timezone(timedelta(hours=5, minutes=30))) - timedelta(days=7)).isoformat()},
+        "is_deleted": {"$ne": True}
+    })
+    
+    return {
+        "engineer": engineer,
+        "assigned_tickets": assigned_tickets,
+        "assigned_tasks": assigned_tasks,
+        "upcoming_schedules": upcoming_schedules,
+        "stats": {
+            "total_assigned": total_assigned,
+            "visits_today": visits_today,
+            "pending_diagnosis": pending_diagnosis,
+            "completed_this_week": completed_this_week
+        }
+    }
