@@ -113,6 +113,57 @@ async def log_audit(entity_type: str, entity_id: str, action: str, changes: dict
         logger.error(f"Audit log failed: {e}")
 
 
+async def get_admin_from_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Extract admin from JWT token - supports both org_member and legacy admin tokens"""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        token_type = payload.get("type", "admin")
+        organization_id = payload.get("organization_id")
+
+        if token_type == "org_member":
+            member_id = payload.get("org_member_id")
+            email = payload.get("sub")
+            return {
+                "id": member_id,
+                "email": email,
+                "organization_id": organization_id,
+                "role": payload.get("role"),
+                "name": email
+            }
+        else:
+            admin_id = payload.get("sub")
+            admin = await db.admins.find_one({"id": admin_id})
+            if admin:
+                return {
+                    "id": admin["id"],
+                    "organization_id": admin.get("organization_id"),
+                    "email": admin.get("email"),
+                    "name": admin.get("name")
+                }
+            admin = await db.admins.find_one({"email": admin_id})
+            if admin:
+                org_member = await db.organization_members.find_one(
+                    {"email": admin.get("email"), "is_active": True, "is_deleted": {"$ne": True}},
+                    {"_id": 0, "organization_id": 1}
+                )
+                return {
+                    "id": admin.get("id", admin_id),
+                    "organization_id": org_member.get("organization_id") if org_member else admin.get("organization_id", organization_id),
+                    "email": admin.get("email", admin_id),
+                    "name": admin.get("name", admin_id)
+                }
+            return {
+                "id": admin_id,
+                "email": admin_id,
+                "organization_id": organization_id,
+                "name": admin_id
+            }
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
 async def get_current_engineer(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Get current engineer from JWT token - supports both engineers and staff_users"""
     credentials_exception = HTTPException(
