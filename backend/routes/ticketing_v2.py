@@ -1455,7 +1455,18 @@ async def get_available_slots(
     day_name = date_obj.strftime("%A").lower()
 
     working_hours = engineer.get("working_hours", {})
-    day_schedule = working_hours.get(day_name, {"is_working": False})
+    if not working_hours:
+        # Default working hours if not configured
+        working_hours = {
+            "monday": {"is_working": True, "start": "09:00", "end": "18:00"},
+            "tuesday": {"is_working": True, "start": "09:00", "end": "18:00"},
+            "wednesday": {"is_working": True, "start": "09:00", "end": "18:00"},
+            "thursday": {"is_working": True, "start": "09:00", "end": "18:00"},
+            "friday": {"is_working": True, "start": "09:00", "end": "18:00"},
+            "saturday": {"is_working": True, "start": "09:00", "end": "14:00"},
+            "sunday": {"is_working": False, "start": "09:00", "end": "18:00"},
+        }
+    day_schedule = working_hours.get(day_name, {"is_working": True, "start": "09:00", "end": "18:00"})
 
     if not day_schedule.get("is_working", False):
         return {"date": date, "is_holiday": False, "is_working_day": False, "slots": [], "message": f"Not a working day ({day_name.title()})"}
