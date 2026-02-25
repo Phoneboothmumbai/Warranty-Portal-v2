@@ -107,6 +107,9 @@ import CompanyAMCOnboarding from "./pages/company/CompanyAMCOnboarding";
 
 // Engineer Portal - Login only (V2 uses task-based system)
 import EngineerLogin from "./pages/engineer/EngineerLogin";
+import EngineerLayout from "./layouts/EngineerLayout";
+import EngineerDashboard from "./pages/engineer/EngineerDashboard";
+import EngineerCalendar from "./pages/engineer/EngineerCalendar";
 
 // Contexts
 import { BrandingProvider } from "./contexts/BrandingContext";
