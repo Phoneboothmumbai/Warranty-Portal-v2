@@ -1,35 +1,25 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="17" failures="0" skipped="0" tests="17" time="2.519" timestamp="2026-02-25T15:16:21.487700+00:00" hostname="agent-env-23cb2a06-2573-4c6d-8733-05736273b9c0"><testcase classname="backend.tests.test_ticketing_v2.TestAuthSetup" name="test_login_works" time="0.327"><error message="failed on setup with &quot;AssertionError: Login failed: {&quot;detail&quot;:&quot;Not Found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code&quot;">backend/tests/test_ticketing_v2.py:30: in auth_token
-    assert response.status_code == 200, f"Login failed: {response.text}"
-E   AssertionError: Login failed: {"detail":"Not Found"}
-E   assert 404 == 200
-E    +  where 404 = &lt;Response [404]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestHelpTopics" name="test_list_help_topics" time="0.251"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:52: in auth_headers
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="14" failures="0" skipped="0" tests="17" time="3.077" timestamp="2026-02-25T15:17:00.026518+00:00" hostname="agent-env-23cb2a06-2573-4c6d-8733-05736273b9c0"><testcase classname="backend.tests.test_ticketing_v2.TestAuthSetup" name="test_login_works" time="0.466" /><testcase classname="backend.tests.test_ticketing_v2.TestHelpTopics" name="test_list_help_topics" time="0.455" /><testcase classname="backend.tests.test_ticketing_v2.TestHelpTopics" name="test_get_single_help_topic" time="0.398" /><testcase classname="backend.tests.test_ticketing_v2.TestForms" name="test_list_forms" time="0.177"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:100: in auth_headers
     token = response.json()["token"]
             ^^^^^^^^^^^^^^^^^^^^^^^^
-E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestHelpTopics" name="test_get_single_help_topic" time="0.000"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:52: in auth_headers
+E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestWorkflows" name="test_list_workflows" time="0.130"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:130: in auth_headers
     token = response.json()["token"]
             ^^^^^^^^^^^^^^^^^^^^^^^^
-E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestForms" name="test_list_forms" time="0.185"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:100: in auth_headers
+E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestTeams" name="test_list_teams" time="0.166"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:159: in auth_headers
     token = response.json()["token"]
             ^^^^^^^^^^^^^^^^^^^^^^^^
-E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestWorkflows" name="test_list_workflows" time="0.124"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:130: in auth_headers
+E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestRoles" name="test_list_roles" time="0.121"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:186: in auth_headers
     token = response.json()["token"]
             ^^^^^^^^^^^^^^^^^^^^^^^^
-E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestTeams" name="test_list_teams" time="0.150"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:159: in auth_headers
+E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestSLAPolicies" name="test_list_sla_policies" time="0.151"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:214: in auth_headers
     token = response.json()["token"]
             ^^^^^^^^^^^^^^^^^^^^^^^^
-E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestRoles" name="test_list_roles" time="0.145"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:186: in auth_headers
+E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestPriorities" name="test_list_priorities" time="0.110"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:241: in auth_headers
     token = response.json()["token"]
             ^^^^^^^^^^^^^^^^^^^^^^^^
-E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestSLAPolicies" name="test_list_sla_policies" time="0.163"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:214: in auth_headers
+E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestCannedResponses" name="test_list_canned_responses" time="0.149"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:268: in auth_headers
     token = response.json()["token"]
             ^^^^^^^^^^^^^^^^^^^^^^^^
-E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestPriorities" name="test_list_priorities" time="0.246"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:241: in auth_headers
-    token = response.json()["token"]
-            ^^^^^^^^^^^^^^^^^^^^^^^^
-E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestCannedResponses" name="test_list_canned_responses" time="0.120"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:268: in auth_headers
-    token = response.json()["token"]
-            ^^^^^^^^^^^^^^^^^^^^^^^^
-E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestTickets" name="test_list_tickets" time="0.129"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:296: in auth_headers
+E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestTickets" name="test_list_tickets" time="0.143"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:296: in auth_headers
     token = response.json()["token"]
             ^^^^^^^^^^^^^^^^^^^^^^^^
 E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestTickets" name="test_create_ticket" time="0.000"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:296: in auth_headers
@@ -38,16 +28,16 @@ E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_
 E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestTickets" name="test_get_ticket_detail" time="0.000"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:296: in auth_headers
     token = response.json()["token"]
             ^^^^^^^^^^^^^^^^^^^^^^^^
-E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestTicketComments" name="test_add_comment" time="0.148"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:385: in auth_headers
+E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestTicketComments" name="test_add_comment" time="0.151"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:385: in auth_headers
     token = response.json()["token"]
             ^^^^^^^^^^^^^^^^^^^^^^^^
 E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestTicketComments" name="test_add_internal_comment" time="0.000"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:385: in auth_headers
     token = response.json()["token"]
             ^^^^^^^^^^^^^^^^^^^^^^^^
-E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestTicketTransitions" name="test_transition_ticket" time="0.145"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:453: in auth_headers
+E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestTicketTransitions" name="test_transition_ticket" time="0.123"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:453: in auth_headers
     token = response.json()["token"]
             ^^^^^^^^^^^^^^^^^^^^^^^^
-E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestTicketStats" name="test_get_stats" time="0.115"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:530: in auth_headers
+E   KeyError: 'token'</error></testcase><testcase classname="backend.tests.test_ticketing_v2.TestTicketStats" name="test_get_stats" time="0.149"><error message="failed on setup with &quot;KeyError: 'token'&quot;">backend/tests/test_ticketing_v2.py:530: in auth_headers
     token = response.json()["token"]
             ^^^^^^^^^^^^^^^^^^^^^^^^
 E   KeyError: 'token'</error></testcase></testsuite></testsuites>
