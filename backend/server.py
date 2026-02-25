@@ -7296,21 +7296,21 @@ async def get_company_device(device_id: str, user: dict = Depends(get_current_co
         "is_deleted": {"$ne": True}
     }, {"_id": 0}).sort("service_date", -1).to_list(50)
     
-    # Get service tickets for this device
-    tickets = await db.service_tickets.find({
+    # Get tickets for this device (V2)
+    tickets = await db.tickets_v2.find({
         "device_id": device_id,
         "is_deleted": {"$ne": True}
-    }, {"_id": 0, "id": 1, "ticket_number": 1, "subject": 1, "status": 1, "priority": 1, "created_at": 1, "resolved_at": 1}).sort("created_at", -1).to_list(50)
+    }, {"_id": 0, "id": 1, "ticket_number": 1, "subject": 1, "current_stage_name": 1, "priority_name": 1, "created_at": 1, "resolved_at": 1, "help_topic_name": 1}).sort("created_at", -1).to_list(50)
     
     # Format tickets as service history entries
     for ticket in tickets:
         services.append({
             "id": ticket.get("id"),
             "type": "service_ticket",
-            "service_type": "Service Ticket",
+            "service_type": ticket.get("help_topic_name", "Service Ticket"),
             "description": ticket.get("subject", "Service Request"),
-            "status": ticket.get("status"),
-            "priority": ticket.get("priority"),
+            "status": ticket.get("current_stage_name", "New"),
+            "priority": ticket.get("priority_name"),
             "ticket_number": ticket.get("ticket_number"),
             "service_date": ticket.get("created_at"),
             "resolved_date": ticket.get("resolved_at")
