@@ -17,6 +17,7 @@ const tabs = [
   { id: 'help-topics', label: 'Help Topics', icon: Ticket },
   { id: 'forms', label: 'Forms', icon: FileText },
   { id: 'workflows', label: 'Workflows', icon: GitBranch },
+  { id: 'technicians', label: 'Technicians', icon: UserCog },
   { id: 'teams', label: 'Teams', icon: Users },
   { id: 'roles', label: 'Roles', icon: Shield },
   { id: 'sla', label: 'SLA Policies', icon: Clock },
