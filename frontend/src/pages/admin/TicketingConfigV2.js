@@ -675,6 +675,222 @@ const PrioritiesTab = () => {
   );
 };
 
+// ========== TECHNICIANS TAB ==========
+const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+const DEFAULT_HOURS = DAYS.reduce((acc, d) => {
+  acc[d] = { is_working: d !== 'sunday', start: '09:00', end: d === 'saturday' ? '14:00' : '18:00' };
+  return acc;
+}, {});
+
+const TechniciansTab = () => {
+  const [engineers, setEngineers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(null);
+
+  const fetch_ = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/ticketing/engineers`, { headers: headers() });
+      setEngineers(await res.json());
+    } catch { toast.error('Failed to load'); }
+    finally { setLoading(false); }
+  }, []);
+  useEffect(() => { fetch_(); }, [fetch_]);
+
+  const handleSave = async (data) => {
+    try {
+      if (editing?.id) {
+        await fetch(`${API}/api/admin/engineers/${editing.id}`, { method: 'PUT', headers: headers(), body: JSON.stringify(data) });
+      } else {
+        const res = await fetch(`${API}/api/admin/engineers`, { method: 'POST', headers: headers(), body: JSON.stringify(data) });
+        if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Failed'); }
+      }
+      toast.success('Saved'); setEditing(null); fetch_();
+    } catch (e) { toast.error(e.message || 'Failed to save'); }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this technician?')) return;
+    await fetch(`${API}/api/admin/engineers/${id}`, { method: 'DELETE', headers: headers() });
+    toast.success('Deleted'); fetch_();
+  };
+
+  if (editing !== null) return <TechnicianEditor tech={editing} onSave={handleSave} onCancel={() => setEditing(null)} />;
+
+  return (
+    <div data-testid="technicians-tab">
+      <div className="flex justify-between items-center mb-4">
+        <p className="text-sm text-slate-500">{engineers.length} technicians</p>
+        <Button size="sm" onClick={() => setEditing({})} data-testid="add-technician"><Plus className="w-4 h-4 mr-1" /> Add Technician</Button>
+      </div>
+      {loading ? <p className="text-center py-8 text-slate-400">Loading...</p> : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {engineers.map(eng => (
+            <div key={eng.id} className="border rounded-lg p-4 bg-white hover:border-blue-200 transition-colors" data-testid={`tech-card-${eng.id}`}>
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-sm font-semibold text-blue-700">
+                    {eng.name?.charAt(0) || 'T'}
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-800">{eng.name}</h4>
+                    <p className="text-xs text-slate-400 flex items-center gap-1"><Mail className="w-3 h-3" />{eng.email}</p>
+                    {eng.phone && <p className="text-xs text-slate-400 flex items-center gap-1"><Phone className="w-3 h-3" />{eng.phone}</p>}
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <button onClick={() => setEditing(eng)} className="p-1 hover:bg-slate-100 rounded"><Edit2 className="w-3.5 h-3.5 text-slate-400" /></button>
+                  <button onClick={() => handleDelete(eng.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5 text-red-400" /></button>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {eng.specialization && <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded">{eng.specialization}</span>}
+                <span className={`text-xs px-2 py-0.5 rounded ${eng.open_tickets > 3 ? 'bg-red-50 text-red-600' : eng.open_tickets > 0 ? 'bg-yellow-50 text-yellow-600' : 'bg-green-50 text-green-600'}`}>
+                  {eng.open_tickets || 0} active tickets
+                </span>
+                {eng.salary && <span className="text-xs bg-slate-50 text-slate-600 px-2 py-0.5 rounded flex items-center gap-0.5"><DollarSign className="w-3 h-3" />{eng.salary.toLocaleString()}/mo</span>}
+              </div>
+              {eng.working_hours && (
+                <div className="mt-2 flex gap-1">
+                  {DAYS.map(d => {
+                    const dh = eng.working_hours[d];
+                    return (
+                      <span key={d} className={`text-[10px] px-1.5 py-0.5 rounded ${dh?.is_working ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-400'}`}>
+                        {d.charAt(0).toUpperCase() + d.slice(1, 3)}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              {eng.holidays?.length > 0 && (
+                <p className="mt-1 text-xs text-slate-400">{eng.holidays.length} holidays configured</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const TechnicianEditor = ({ tech, onSave, onCancel }) => {
+  const isNew = !tech.id;
+  const [form, setForm] = useState({
+    name: tech.name || '', email: tech.email || '', phone: tech.phone || '',
+    password: '', specialization: tech.specialization || '',
+    skills: (tech.skills || []).join(', '), salary: tech.salary || '',
+    working_hours: tech.working_hours || { ...DEFAULT_HOURS },
+    holidays: tech.holidays || [],
+  });
+  const [newHoliday, setNewHoliday] = useState('');
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const setDay = (day, key, val) => setForm(f => ({
+    ...f, working_hours: { ...f.working_hours, [day]: { ...f.working_hours[day], [key]: val } }
+  }));
+
+  const addHoliday = () => {
+    if (!newHoliday) return;
+    if (form.holidays.includes(newHoliday)) { toast.error('Already added'); return; }
+    set('holidays', [...form.holidays, newHoliday].sort());
+    setNewHoliday('');
+  };
+  const removeHoliday = (h) => set('holidays', form.holidays.filter(x => x !== h));
+
+  const handleSubmit = () => {
+    if (!form.name || !form.email) { toast.error('Name and email are required'); return; }
+    if (isNew && !form.password) { toast.error('Password is required'); return; }
+    const data = {
+      name: form.name, email: form.email, phone: form.phone,
+      specialization: form.specialization || null,
+      skills: form.skills ? form.skills.split(',').map(s => s.trim()).filter(Boolean) : [],
+      salary: form.salary ? parseFloat(form.salary) : null,
+      working_hours: form.working_hours,
+      holidays: form.holidays,
+    };
+    if (isNew) data.password = form.password;
+    onSave(data);
+  };
+
+  return (
+    <div className="bg-white border rounded-lg" data-testid="technician-editor">
+      <div className="flex justify-between items-center p-5 border-b">
+        <h3 className="text-lg font-semibold">{isNew ? 'Add' : 'Edit'} Technician</h3>
+        <button onClick={onCancel}><X className="w-5 h-5 text-slate-400" /></button>
+      </div>
+      <div className="p-5 space-y-5">
+        {/* Basic Info */}
+        <div className="grid grid-cols-3 gap-4">
+          <div><label className="text-sm font-medium block mb-1">Name *</label><Input value={form.name} onChange={e => set('name', e.target.value)} data-testid="tech-name" /></div>
+          <div><label className="text-sm font-medium block mb-1">Email *</label><Input type="email" value={form.email} onChange={e => set('email', e.target.value)} data-testid="tech-email" /></div>
+          <div><label className="text-sm font-medium block mb-1">Phone</label><Input value={form.phone} onChange={e => set('phone', e.target.value)} /></div>
+        </div>
+        {isNew && (
+          <div className="grid grid-cols-3 gap-4">
+            <div><label className="text-sm font-medium block mb-1">Password *</label><Input type="password" value={form.password} onChange={e => set('password', e.target.value)} data-testid="tech-password" /></div>
+          </div>
+        )}
+        <div className="grid grid-cols-3 gap-4">
+          <div><label className="text-sm font-medium block mb-1">Specialization</label><Input value={form.specialization} onChange={e => set('specialization', e.target.value)} placeholder="e.g., Printers, Networking" /></div>
+          <div><label className="text-sm font-medium block mb-1">Skills (comma separated)</label><Input value={form.skills} onChange={e => set('skills', e.target.value)} placeholder="Printer repair, Network setup" /></div>
+          <div><label className="text-sm font-medium block mb-1">Monthly Salary</label><Input type="number" value={form.salary} onChange={e => set('salary', e.target.value)} placeholder="0" data-testid="tech-salary" /></div>
+        </div>
+
+        {/* Working Hours */}
+        <div className="border-t pt-4">
+          <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-1"><Clock className="w-4 h-4" /> Working Hours</h4>
+          <div className="space-y-2">
+            {DAYS.map(day => {
+              const dh = form.working_hours[day] || { is_working: false, start: '09:00', end: '18:00' };
+              return (
+                <div key={day} className="flex items-center gap-3" data-testid={`wh-${day}`}>
+                  <label className="flex items-center gap-2 w-28">
+                    <input type="checkbox" checked={dh.is_working} onChange={e => setDay(day, 'is_working', e.target.checked)} className="rounded" />
+                    <span className="text-sm capitalize font-medium">{day}</span>
+                  </label>
+                  {dh.is_working ? (
+                    <>
+                      <Input className="w-28 text-sm" type="time" value={dh.start} onChange={e => setDay(day, 'start', e.target.value)} />
+                      <span className="text-xs text-slate-400">to</span>
+                      <Input className="w-28 text-sm" type="time" value={dh.end} onChange={e => setDay(day, 'end', e.target.value)} />
+                    </>
+                  ) : (
+                    <span className="text-xs text-slate-400 italic">Day off</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Holidays */}
+        <div className="border-t pt-4">
+          <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-1"><Calendar className="w-4 h-4" /> Holidays</h4>
+          <div className="flex items-center gap-2 mb-3">
+            <Input type="date" className="w-44 text-sm" value={newHoliday} onChange={e => setNewHoliday(e.target.value)} data-testid="add-holiday-date" />
+            <Button size="sm" variant="outline" onClick={addHoliday} data-testid="add-holiday-btn"><Plus className="w-3.5 h-3.5 mr-1" /> Add</Button>
+          </div>
+          {form.holidays.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {form.holidays.map(h => (
+                <span key={h} className="flex items-center gap-1 text-xs bg-red-50 text-red-600 px-2 py-1 rounded">
+                  {h}
+                  <button onClick={() => removeHoliday(h)} className="hover:text-red-800"><X className="w-3 h-3" /></button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400">No holidays configured</p>
+          )}
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 p-5 border-t">
+        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button onClick={handleSubmit} data-testid="save-technician"><Save className="w-4 h-4 mr-1" /> {isNew ? 'Create' : 'Update'} Technician</Button>
+      </div>
+    </div>
+  );
+};
+
 // ========== EMAIL INBOX TAB ==========
 const EmailInboxTab = () => {
   const [config, setConfig] = useState(null);
