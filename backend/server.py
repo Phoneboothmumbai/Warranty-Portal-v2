@@ -6048,8 +6048,15 @@ async def create_engineer(engineer_data: EngineerCreate, admin: dict = Depends(g
         name=engineer_data.name,
         email=engineer_data.email,
         phone=engineer_data.phone,
-        password_hash=get_password_hash(engineer_data.password)
+        password_hash=get_password_hash(engineer_data.password),
+        specialization=engineer_data.specialization,
+        skills=engineer_data.skills or [],
+        salary=engineer_data.salary,
     )
+    if engineer_data.working_hours:
+        engineer.working_hours = engineer_data.working_hours
+    if engineer_data.holidays:
+        engineer.holidays = engineer_data.holidays
     
     # Add organization_id
     engineer_dict = engineer.model_dump()
@@ -6058,12 +6065,8 @@ async def create_engineer(engineer_data: EngineerCreate, admin: dict = Depends(g
     
     await db.engineers.insert_one(engineer_dict)
     
-    return {
-        "id": engineer.id,
-        "name": engineer.name,
-        "email": engineer.email,
-        "phone": engineer.phone
-    }
+    result = {k: v for k, v in engineer_dict.items() if k not in ("password_hash", "_id")}
+    return result
 
 
 @api_router.put("/admin/engineers/{engineer_id}")
