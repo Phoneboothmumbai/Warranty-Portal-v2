@@ -21,6 +21,7 @@ const tabs = [
   { id: 'sla', label: 'SLA Policies', icon: Clock },
   { id: 'canned', label: 'Canned Responses', icon: MessageSquare },
   { id: 'priorities', label: 'Priorities', icon: AlertTriangle },
+  { id: 'email', label: 'Email Inbox', icon: Mail },
 ];
 
 const ConfigCard = ({ item, onEdit, onDelete, children }) => (
