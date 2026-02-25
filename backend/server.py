@@ -9133,6 +9133,10 @@ from routes.email_inbox import router as email_inbox_router, init_db as init_ema
 init_email_inbox_db(db)
 app.include_router(email_inbox_router, prefix="/api", tags=["Email Inbox"])
 
+from routes.calendar import router as calendar_router, init_db as init_calendar_db
+init_calendar_db(db)
+app.include_router(calendar_router, prefix="/api", tags=["Calendar"])
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
