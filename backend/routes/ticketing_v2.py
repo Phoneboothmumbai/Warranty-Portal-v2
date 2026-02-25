@@ -575,6 +575,32 @@ async def list_priorities(admin: dict = Depends(get_current_admin)):
     return priorities
 
 
+@router.post("/ticketing/priorities")
+async def create_priority(data: dict = Body(...), admin: dict = Depends(get_current_admin)):
+    org_id = admin.get("organization_id")
+    if not org_id: raise HTTPException(status_code=403, detail="Organization context required")
+    prio = {"id": str(uuid.uuid4()), "organization_id": org_id, "created_at": get_ist_isoformat(), "is_active": True, **data}
+    await _db.ticket_priorities.insert_one(prio)
+    return await _db.ticket_priorities.find_one({"id": prio["id"]}, {"_id": 0})
+
+
+@router.put("/ticketing/priorities/{priority_id}")
+async def update_priority(priority_id: str, data: dict = Body(...), admin: dict = Depends(get_current_admin)):
+    org_id = admin.get("organization_id")
+    if not org_id: raise HTTPException(status_code=403, detail="Organization context required")
+    data["updated_at"] = get_ist_isoformat()
+    await _db.ticket_priorities.update_one({"id": priority_id, "organization_id": org_id}, {"$set": data})
+    return await _db.ticket_priorities.find_one({"id": priority_id}, {"_id": 0})
+
+
+@router.delete("/ticketing/priorities/{priority_id}")
+async def delete_priority(priority_id: str, admin: dict = Depends(get_current_admin)):
+    org_id = admin.get("organization_id")
+    if not org_id: raise HTTPException(status_code=403, detail="Organization context required")
+    await _db.ticket_priorities.delete_one({"id": priority_id, "organization_id": org_id})
+    return {"message": "Deleted"}
+
+
 # ============================================================
 # CANNED RESPONSES
 # ============================================================
