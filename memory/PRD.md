@@ -80,7 +80,8 @@ Enterprise-grade Warranty & Asset Tracking Portal with a fully configurable, mas
 ## Testing Status
 - V2 Backend: 17/17 tests passed (100%)
 - Technicians & Slots: 12/12 backend tests passed (100%), Frontend 100% verified
-- Test reports: `/app/test_reports/iteration_41.json`, `/app/test_reports/iteration_42.json`
+- Central Calendar: 17/17 backend tests passed (100%), Frontend 95% verified (engineer portal partial)
+- Test reports: `/app/test_reports/iteration_41.json`, `/app/test_reports/iteration_42.json`, `/app/test_reports/iteration_43.json`
 
 ## Pending/Backlog
 
