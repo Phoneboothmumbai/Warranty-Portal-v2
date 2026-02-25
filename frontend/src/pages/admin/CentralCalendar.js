@@ -391,7 +391,13 @@ export default function CentralCalendar() {
     return { from: d, to: d };
   }, [view, year, month, currentDate]);
 
-  // Assign colors to engineers
+  // Assign colors to engineers (helper function, not a dependency)
+  const getEngineerColor = useCallback((engineerId, engineersList) => {
+    const idx = engineersList.findIndex(e => e.id === engineerId);
+    return idx >= 0 ? COLORS[idx % COLORS.length] : '#3b82f6';
+  }, []);
+
+  // Engineer colors map (for legend display only)
   const engineerColors = useMemo(() => {
     const map = {};
     engineers.forEach((e, i) => { map[e.id] = COLORS[i % COLORS.length]; });
@@ -406,18 +412,19 @@ export default function CentralCalendar() {
       if (filterEngineer) params.append('engineer_id', filterEngineer);
       const res = await fetch(`${API}/api/calendar/events?${params}`, { headers: headers() });
       const data = await res.json();
-      // Apply engineer colors to schedule/ticket events
+      const fetchedEngineers = data.engineers || [];
+      // Apply engineer colors to schedule/ticket events using fetched engineers list
       const colored = (data.events || []).map(e => {
-        if (e.engineer_id && engineerColors[e.engineer_id]) {
-          return { ...e, color: engineerColors[e.engineer_id] };
+        if (e.engineer_id) {
+          return { ...e, color: getEngineerColor(e.engineer_id, fetchedEngineers) };
         }
         return e;
       });
       setEvents(colored);
-      setEngineers(data.engineers || []);
+      setEngineers(fetchedEngineers);
     } catch { toast.error('Failed to load calendar'); }
     finally { setLoading(false); }
-  }, [dateRange, filterEngineer, engineerColors]);
+  }, [dateRange, filterEngineer, getEngineerColor]);
 
   // Fetch holidays + standard hours + emergency hours
   const fetchConfig = useCallback(async () => {
