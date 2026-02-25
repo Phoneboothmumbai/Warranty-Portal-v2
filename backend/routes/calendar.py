@@ -10,7 +10,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Optional, List, Dict
 from pydantic import BaseModel, Field
-from services.auth import get_current_admin
+from services.auth import get_current_admin, get_current_engineer
 
 router = APIRouter()
 _db = None
