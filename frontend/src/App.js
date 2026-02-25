@@ -223,11 +223,8 @@ function App() {
                     <Route path="profile" element={<CompanyProfile />} />
                   </Route>
 
-                  {/* Engineer/Technician Portal Routes */}
+                  {/* Engineer/Technician Portal */}
                   <Route path="/engineer" element={<EngineerLogin />} />
-                  <Route path="/engineer/dashboard" element={<TechnicianDashboard />} />
-                  <Route path="/engineer/ticket/:ticketId" element={<EngineerTicketDetail />} />
-                  <Route path="/engineer/visit/:visitId" element={<TechnicianVisitDetail />} />
                 </Routes>
               </div>
               <Toaster position="top-right" richColors />
