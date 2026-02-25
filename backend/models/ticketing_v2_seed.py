@@ -703,14 +703,14 @@ def generate_seed_data(organization_id: str):
         {"id": s_new, "name": "New", "slug": "new", "stage_type": "initial", "color": "#6B7280", "order": 0,
          "assigned_team_id": team_ids["support_desk"],
          "transitions": [
-             {"id": str(uuid.uuid4()), "to_stage_id": s_assigned, "label": "Assign Technician", "color": "primary", "order": 0}
+             {"id": str(uuid.uuid4()), "to_stage_id": s_assigned, "label": "Assign Technician", "color": "primary", "order": 0, "requires_input": "assign_engineer"}
          ],
          "entry_actions": []},
         
         {"id": s_assigned, "name": "Assigned", "slug": "assigned", "stage_type": "in_progress", "color": "#3B82F6", "order": 1,
          "assigned_team_id": team_ids["field_technicians"],
          "transitions": [
-             {"id": str(uuid.uuid4()), "to_stage_id": s_visit_scheduled, "label": "Schedule Visit", "color": "primary", "order": 0}
+             {"id": str(uuid.uuid4()), "to_stage_id": s_visit_scheduled, "label": "Schedule Visit", "color": "primary", "order": 0, "requires_input": "schedule_visit"}
          ],
          "entry_actions": [
              {"id": str(uuid.uuid4()), "action_type": "create_task", "config": {"task_type_slug": "schedule_visit"}, "order": 0},
@@ -720,7 +720,7 @@ def generate_seed_data(organization_id: str):
         {"id": s_visit_scheduled, "name": "Visit Scheduled", "slug": "visit_scheduled", "stage_type": "in_progress", "color": "#8B5CF6", "order": 2,
          "assigned_team_id": team_ids["field_technicians"],
          "transitions": [
-             {"id": str(uuid.uuid4()), "to_stage_id": s_diagnosed, "label": "Submit Diagnosis", "color": "primary", "order": 0}
+             {"id": str(uuid.uuid4()), "to_stage_id": s_diagnosed, "label": "Submit Diagnosis", "color": "primary", "order": 0, "requires_input": "diagnosis", "allowed_roles": ["field_technician"]}
          ],
          "entry_actions": [
              {"id": str(uuid.uuid4()), "action_type": "create_task", "config": {"task_type_slug": "site_visit"}, "order": 0},
@@ -729,8 +729,8 @@ def generate_seed_data(organization_id: str):
         
         {"id": s_diagnosed, "name": "Diagnosed", "slug": "diagnosed", "stage_type": "in_progress", "color": "#F59E0B", "order": 3,
          "transitions": [
-             {"id": str(uuid.uuid4()), "to_stage_id": s_fixed_onsite, "label": "Fixed On-Site", "color": "success", "order": 0},
-             {"id": str(uuid.uuid4()), "to_stage_id": s_parts_required, "label": "Parts Required", "color": "warning", "order": 1}
+             {"id": str(uuid.uuid4()), "to_stage_id": s_fixed_onsite, "label": "Fixed On-Site", "color": "success", "order": 0, "requires_input": "resolution"},
+             {"id": str(uuid.uuid4()), "to_stage_id": s_parts_required, "label": "Parts Required", "color": "warning", "order": 1, "requires_input": "parts_list"}
          ],
          "entry_actions": []},
         
@@ -745,7 +745,7 @@ def generate_seed_data(organization_id: str):
         {"id": s_parts_required, "name": "Parts Required", "slug": "parts_required", "stage_type": "waiting", "color": "#EC4899", "order": 5,
          "assigned_team_id": team_ids["back_office"],
          "transitions": [
-             {"id": str(uuid.uuid4()), "to_stage_id": s_quote_sent, "label": "Send Quotation", "color": "primary", "order": 0}
+             {"id": str(uuid.uuid4()), "to_stage_id": s_quote_sent, "label": "Send Quotation", "color": "primary", "order": 0, "requires_input": "quotation"}
          ],
          "entry_actions": [
              {"id": str(uuid.uuid4()), "action_type": "create_task", "config": {"task_type_slug": "prepare_quote"}, "order": 0},
@@ -783,7 +783,7 @@ def generate_seed_data(organization_id: str):
         {"id": s_parts_received, "name": "Parts Received", "slug": "parts_received", "stage_type": "in_progress", "color": "#8B5CF6", "order": 9,
          "assigned_team_id": team_ids["field_technicians"],
          "transitions": [
-             {"id": str(uuid.uuid4()), "to_stage_id": s_installation_scheduled, "label": "Schedule Installation", "color": "primary", "order": 0}
+             {"id": str(uuid.uuid4()), "to_stage_id": s_installation_scheduled, "label": "Schedule Installation", "color": "primary", "order": 0, "requires_input": "schedule_visit"}
          ],
          "entry_actions": [
              {"id": str(uuid.uuid4()), "action_type": "send_notification", "config": {"event": "parts_received", "recipients": ["assignee", "customer"]}, "order": 0}
@@ -836,11 +836,11 @@ def generate_seed_data(organization_id: str):
     remote_stages = [
         {"id": rs_new, "name": "New", "slug": "new", "stage_type": "initial", "color": "#6B7280", "order": 0,
          "assigned_team_id": team_ids["remote_support"],
-         "transitions": [{"id": str(uuid.uuid4()), "to_stage_id": rs_assigned, "label": "Assign Agent", "color": "primary", "order": 0}],
+         "transitions": [{"id": str(uuid.uuid4()), "to_stage_id": rs_assigned, "label": "Assign Agent", "color": "primary", "order": 0, "requires_input": "assign_engineer"}],
          "entry_actions": []},
         
         {"id": rs_assigned, "name": "Assigned", "slug": "assigned", "stage_type": "in_progress", "color": "#3B82F6", "order": 1,
-         "transitions": [{"id": str(uuid.uuid4()), "to_stage_id": rs_session_scheduled, "label": "Schedule Session", "color": "primary", "order": 0}],
+         "transitions": [{"id": str(uuid.uuid4()), "to_stage_id": rs_session_scheduled, "label": "Schedule Session", "color": "primary", "order": 0, "requires_input": "schedule_visit"}],
          "entry_actions": [
              {"id": str(uuid.uuid4()), "action_type": "send_notification", "config": {"event": "ticket_assigned", "recipients": ["assignee"]}, "order": 0}
          ]},
