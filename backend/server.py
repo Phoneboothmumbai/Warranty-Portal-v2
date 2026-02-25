@@ -7148,18 +7148,18 @@ async def get_company_dashboard(user: dict = Depends(get_current_company_user)):
         "end_date": {"$gte": today.isoformat()}
     })
     
-    # Open service tickets
-    open_tickets = await db.service_tickets.count_documents({
+    # Open service tickets (V2)
+    open_tickets = await db.tickets_v2.count_documents({
         "company_id": company_id,
-        "status": {"$in": ["open", "in_progress"]},
+        "is_open": True,
         "is_deleted": {"$ne": True}
     })
     
-    # Recent tickets
-    recent_tickets = await db.service_tickets.find({
+    # Recent tickets (V2)
+    recent_tickets = await db.tickets_v2.find({
         "company_id": company_id,
         "is_deleted": {"$ne": True}
-    }, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
+    }, {"_id": 0, "timeline": 0}).sort("created_at", -1).limit(5).to_list(5)
     
     return {
         "total_devices": total_devices,
