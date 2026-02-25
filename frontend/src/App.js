@@ -173,6 +173,7 @@ function App() {
                     <Route path="service-requests" element={<ServiceRequests />} />
                     <Route path="service-requests/:ticketId" element={<ServiceTicketDetail />} />
                     <Route path="ticketing-config" element={<TicketingConfig />} />
+                    <Route path="technician-dashboard" element={<TechnicianDashboard />} />
                     <Route path="sites" element={<Sites />} />
                     <Route path="deployments" element={<Deployments />} />
                     <Route path="licenses" element={<Licenses />} />
