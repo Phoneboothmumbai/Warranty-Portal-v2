@@ -550,21 +550,7 @@ const RolesTab = () => {
   const handleDelete = async (id) => { if (!window.confirm('Delete?')) return; await fetch(`${API}/api/ticketing/roles/${id}`, { method: 'DELETE', headers: headers() }); toast.success('Deleted'); fetch_(); };
 
   if (editing !== null) {
-    const [perms, setPerms] = useState(editing.permissions || []);
-    return (
-      <div className="bg-white border rounded-lg p-5" data-testid="role-editor">
-        <div className="flex justify-between mb-4"><h3 className="text-lg font-semibold">{editing.id ? 'Edit' : 'New'} Role</h3><button onClick={() => setEditing(null)}><X className="w-5 h-5 text-slate-400" /></button></div>
-        <GenericEditorInner title="Role" fields={[
-          { key: 'name', label: 'Name *', type: 'text', value: editing.name || '' },
-          { key: 'description', label: 'Description', type: 'textarea', value: editing.description || '' },
-        ]} extraContent={
-          <div className="mt-4"><label className="text-sm font-medium block mb-2">Permissions</label>
-            <div className="grid grid-cols-3 gap-2">{PERMISSIONS.map(p => (
-              <label key={p} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={perms.includes(p)} onChange={e => setPerms(prev => e.target.checked ? [...prev, p] : prev.filter(x => x !== p))} />{p}</label>
-            ))}</div></div>
-        } onSave={(data) => handleSave({ ...data, permissions: perms })} onCancel={() => setEditing(null)} />
-      </div>
-    );
+    return <RoleEditor role={editing} onSave={handleSave} onCancel={() => setEditing(null)} />;
   }
   return (
     <div data-testid="roles-tab">
