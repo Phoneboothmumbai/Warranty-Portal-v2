@@ -45,11 +45,11 @@ class TestHelpTopics:
     @pytest.fixture(scope="class")
     def auth_headers(self):
         """Get auth headers"""
-        response = requests.post(f"{BASE_URL}/api/admin/login", json={
+        response = requests.post(f"{BASE_URL}/api/auth/login", json={
             "email": TEST_EMAIL,
             "password": TEST_PASSWORD
         })
-        token = response.json()["token"]
+        token = response.json()["access_token"]
         return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
     def test_list_help_topics(self, auth_headers):
