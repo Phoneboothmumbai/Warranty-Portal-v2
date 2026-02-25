@@ -21,6 +21,7 @@ const navGroups = [
       { path: '/admin/service-requests', label: 'Tickets', icon: Wrench },
       { path: '/admin/technician-dashboard', label: 'Technician View', icon: User },
       { path: '/admin/ticketing-config', label: 'Ticketing Setup', icon: ClipboardList },
+      { path: '/admin/calendar', label: 'Calendar', icon: Calendar },
       { path: '/admin/renewal-alerts', label: 'Renewal Alerts', icon: AlertTriangle },
       { path: '/admin/credentials', label: 'Credentials', icon: Lock },
     ]
