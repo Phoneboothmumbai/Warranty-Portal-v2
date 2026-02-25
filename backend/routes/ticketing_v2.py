@@ -778,7 +778,7 @@ async def assign_ticket(ticket_id: str, data: dict = Body(...), admin: dict = De
 
 @router.post("/ticketing/tickets/{ticket_id}/transition")
 async def transition_ticket(ticket_id: str, data: StageTransitionRequest, admin: dict = Depends(get_current_admin)):
-    """Transition a ticket to a new stage"""
+    """Transition a ticket to a new stage with context-specific data"""
     org_id = admin.get("organization_id")
     if not org_id:
         raise HTTPException(status_code=403, detail="Organization context required")
@@ -805,11 +805,9 @@ async def transition_ticket(ticket_id: str, data: StageTransitionRequest, admin:
     for stage in workflow.get("stages", []):
         if stage["id"] == ticket.get("current_stage_id"):
             current_stage = stage
-            # Find the transition
             for t in stage.get("transitions", []):
                 if t["id"] == data.transition_id:
                     transition = t
-                    # Find target stage
                     for s in workflow.get("stages", []):
                         if s["id"] == t["to_stage_id"]:
                             target_stage = s
@@ -819,12 +817,80 @@ async def transition_ticket(ticket_id: str, data: StageTransitionRequest, admin:
     if not transition or not target_stage:
         raise HTTPException(status_code=400, detail="Invalid transition")
     
+    # Get transition requires_input config
+    requires = transition.get("requires_input", "")
+    
+    # Validate required inputs
+    if requires == "assign_engineer" and not data.assigned_to_id:
+        raise HTTPException(status_code=400, detail="Please select an engineer/technician to assign")
+    if requires == "schedule_visit" and not data.scheduled_at:
+        raise HTTPException(status_code=400, detail="Please select a date and time for the visit")
+    if requires == "diagnosis" and not data.diagnosis_findings:
+        raise HTTPException(status_code=400, detail="Please provide diagnosis findings")
+    
     # Update ticket
     update_data = {
         "current_stage_id": target_stage["id"],
         "current_stage_name": target_stage["name"],
         "updated_at": get_ist_isoformat()
     }
+    
+    # Handle engineer assignment
+    if data.assigned_to_id:
+        engineer = await _db.engineers.find_one(
+            {"id": data.assigned_to_id},
+            {"_id": 0, "name": 1, "email": 1, "phone": 1}
+        )
+        if not engineer:
+            # Try organization members
+            engineer = await _db.organization_members.find_one(
+                {"id": data.assigned_to_id},
+                {"_id": 0, "name": 1, "email": 1}
+            )
+        if engineer:
+            update_data["assigned_to_id"] = data.assigned_to_id
+            update_data["assigned_to_name"] = engineer.get("name", engineer.get("email", ""))
+    
+    # Handle visit scheduling
+    if data.scheduled_at:
+        update_data["scheduled_at"] = data.scheduled_at
+        update_data["scheduled_end_at"] = data.scheduled_end_at
+        update_data["schedule_notes"] = data.schedule_notes
+        # Create a schedule record for calendar
+        schedule_record = {
+            "id": str(uuid.uuid4()),
+            "organization_id": org_id,
+            "ticket_id": ticket_id,
+            "ticket_number": ticket["ticket_number"],
+            "engineer_id": ticket.get("assigned_to_id") or data.assigned_to_id,
+            "engineer_name": ticket.get("assigned_to_name") or data.assigned_to_name,
+            "company_name": ticket.get("company_name"),
+            "subject": ticket.get("subject"),
+            "scheduled_at": data.scheduled_at,
+            "scheduled_end_at": data.scheduled_end_at,
+            "notes": data.schedule_notes,
+            "status": "scheduled",
+            "created_at": get_ist_isoformat()
+        }
+        await _db.ticket_schedules.insert_one(schedule_record)
+    
+    # Handle diagnosis
+    if data.diagnosis_findings:
+        diagnosis_data = {
+            "findings": data.diagnosis_findings,
+            "recommendation": data.diagnosis_recommendation,
+            "diagnosed_by": admin.get("name"),
+            "diagnosed_at": get_ist_isoformat()
+        }
+        update_data["diagnosis"] = diagnosis_data
+    
+    # Handle parts list
+    if data.parts_list:
+        update_data["parts_required"] = data.parts_list
+    
+    # Handle resolution
+    if data.resolution_notes:
+        update_data["resolution_notes"] = data.resolution_notes
     
     # Update field values if provided
     if data.field_values:
@@ -844,15 +910,30 @@ async def transition_ticket(ticket_id: str, data: StageTransitionRequest, admin:
             update_data["assigned_team_id"] = target_stage["assigned_team_id"]
             update_data["assigned_team_name"] = team["name"]
     
-    # Create timeline entry
+    # Build timeline description
+    desc_parts = [f"Moved to {target_stage['name']}"]
+    if data.assigned_to_id and update_data.get("assigned_to_name"):
+        desc_parts.append(f"Assigned to {update_data['assigned_to_name']}")
+    if data.scheduled_at:
+        desc_parts.append(f"Scheduled: {data.scheduled_at}")
+    if data.diagnosis_findings:
+        desc_parts.append(f"Diagnosis: {data.diagnosis_findings[:100]}")
+    if data.resolution_notes:
+        desc_parts.append(f"Resolution: {data.resolution_notes[:100]}")
+    if data.notes:
+        desc_parts.append(data.notes)
+    
     timeline_entry = {
         "id": str(uuid.uuid4()),
         "type": "stage_change",
-        "description": f"Moved to {target_stage['name']}" + (f" - {data.notes}" if data.notes else ""),
+        "description": " | ".join(desc_parts),
         "details": {
             "from_stage": current_stage["name"] if current_stage else None,
             "to_stage": target_stage["name"],
-            "transition_label": transition.get("label")
+            "transition_label": transition.get("label"),
+            "assigned_to": update_data.get("assigned_to_name"),
+            "scheduled_at": data.scheduled_at,
+            "diagnosis": data.diagnosis_findings,
         },
         "user_id": admin.get("id"),
         "user_name": admin.get("name"),
@@ -871,7 +952,6 @@ async def transition_ticket(ticket_id: str, data: StageTransitionRequest, admin:
     # Execute entry actions for the new stage
     for action in target_stage.get("entry_actions", []):
         if action.get("action_type") == "create_task":
-            # Create task from task type
             task_type_slug = action.get("config", {}).get("task_type_slug")
             if task_type_slug:
                 task_type = await _db.ticket_task_types.find_one(
@@ -879,7 +959,6 @@ async def transition_ticket(ticket_id: str, data: StageTransitionRequest, admin:
                     {"_id": 0}
                 )
                 if task_type:
-                    # Calculate due date
                     due_hours = task_type.get("default_due_hours", 24)
                     due_at = (datetime.now(timezone.utc) + timedelta(hours=due_hours)).isoformat()
                     
@@ -892,20 +971,19 @@ async def transition_ticket(ticket_id: str, data: StageTransitionRequest, admin:
                         name=task_type["name"],
                         description=task_type.get("description"),
                         assigned_team_id=task_type.get("default_team_id"),
+                        assigned_to_id=data.assigned_to_id or ticket.get("assigned_to_id"),
+                        assigned_to_name=update_data.get("assigned_to_name") or ticket.get("assigned_to_name"),
                         due_at=due_at,
                         checklist=[{"id": c["id"], "text": c["text"], "required": c.get("required", False), "completed": False} for c in task_type.get("checklist", [])],
                         created_by_id=admin.get("id")
                     )
                     
-                    # Get team name
                     if task.assigned_team_id:
                         team = await _db.ticket_teams.find_one({"id": task.assigned_team_id}, {"_id": 0, "name": 1})
                         if team:
                             task.assigned_team_name = team["name"]
                     
                     await _db.ticket_tasks.insert_one(task.model_dump())
-                    
-                    # Add task ID to ticket
                     await _db.tickets_v2.update_one(
                         {"id": ticket_id},
                         {"$push": {"task_ids": task.id}}
