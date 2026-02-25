@@ -531,6 +531,32 @@ async def list_sla_policies(admin: dict = Depends(get_current_admin)):
     return policies
 
 
+@router.post("/ticketing/sla-policies")
+async def create_sla_policy(data: dict = Body(...), admin: dict = Depends(get_current_admin)):
+    org_id = admin.get("organization_id")
+    if not org_id: raise HTTPException(status_code=403, detail="Organization context required")
+    sla = {"id": str(uuid.uuid4()), "organization_id": org_id, "created_at": get_ist_isoformat(), "is_active": True, **data}
+    await _db.ticket_sla_policies.insert_one(sla)
+    return await _db.ticket_sla_policies.find_one({"id": sla["id"]}, {"_id": 0})
+
+
+@router.put("/ticketing/sla-policies/{sla_id}")
+async def update_sla_policy(sla_id: str, data: dict = Body(...), admin: dict = Depends(get_current_admin)):
+    org_id = admin.get("organization_id")
+    if not org_id: raise HTTPException(status_code=403, detail="Organization context required")
+    data["updated_at"] = get_ist_isoformat()
+    await _db.ticket_sla_policies.update_one({"id": sla_id, "organization_id": org_id}, {"$set": data})
+    return await _db.ticket_sla_policies.find_one({"id": sla_id}, {"_id": 0})
+
+
+@router.delete("/ticketing/sla-policies/{sla_id}")
+async def delete_sla_policy(sla_id: str, admin: dict = Depends(get_current_admin)):
+    org_id = admin.get("organization_id")
+    if not org_id: raise HTTPException(status_code=403, detail="Organization context required")
+    await _db.ticket_sla_policies.delete_one({"id": sla_id, "organization_id": org_id})
+    return {"message": "Deleted"}
+
+
 # ============================================================
 # PRIORITIES
 # ============================================================
