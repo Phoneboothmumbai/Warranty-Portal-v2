@@ -14,7 +14,7 @@ import os
 import uuid
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://warranty-tracker-24.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://workflow-hub-270.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 ADMIN_EMAIL = "ck@motta.in"
