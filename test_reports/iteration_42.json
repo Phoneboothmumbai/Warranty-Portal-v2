@@ -1,0 +1,141 @@
+{
+  "summary": "Technicians & Time Slots Feature Testing Complete - All features verified. Backend: 12/12 tests passed (100%). Frontend: All UI elements and interactions verified.",
+  "test_date": "2026-02-25",
+  "features_tested": {
+    "backend_apis": {
+      "list_engineers": {
+        "status": "PASS",
+        "endpoint": "GET /api/ticketing/engineers",
+        "tests": ["Returns list of engineers", "Excludes password_hash", "Shows open_tickets count"]
+      },
+      "create_engineer": {
+        "status": "PASS",
+        "endpoint": "POST /api/admin/engineers",
+        "tests": ["Creates with all fields (name, email, phone, password, specialization, skills)", "Creates with working_hours dict", "Creates with holidays array", "Creates with salary"]
+      },
+      "update_engineer": {
+        "status": "PASS",
+        "endpoint": "PUT /api/admin/engineers/{id}",
+        "tests": ["Updates working_hours", "Updates holidays", "Updates salary", "Verifies data persisted"]
+      },
+      "delete_engineer": {
+        "status": "PASS",
+        "endpoint": "DELETE /api/admin/engineers/{id}",
+        "tests": ["Soft delete (sets is_deleted=true)"]
+      },
+      "available_slots": {
+        "status": "PASS",
+        "endpoint": "GET /api/ticketing/engineers/{id}/available-slots?date=YYYY-MM-DD",
+        "tests": [
+          "Returns 30-minute interval slots",
+          "Returns work_start and work_end times",
+          "Returns is_working_day=true for working days",
+          "Returns is_working_day=false for non-working days (e.g., Sunday)",
+          "Returns is_holiday=true for configured holidays",
+          "Verified slots are exactly 30 minutes apart"
+        ]
+      }
+    },
+    "frontend_pages": {
+      "technicians_tab": {
+        "status": "PASS",
+        "location": "/admin/ticketing-config > Technicians tab",
+        "verified_elements": [
+          "Tab present in Ticketing Setup page",
+          "Technicians list displayed with cards",
+          "Each card shows: name, email, phone, avatar",
+          "Active tickets count badge (colored: green/yellow/red)",
+          "Working days displayed (Mon-Sun with colors)",
+          "Edit and Delete buttons on each card",
+          "Add Technician button"
+        ]
+      },
+      "add_technician_form": {
+        "status": "PASS",
+        "verified_elements": [
+          "Name * (required)",
+          "Email * (required)",
+          "Phone",
+          "Password * (required for new)",
+          "Specialization",
+          "Skills (comma separated)",
+          "Monthly Salary",
+          "Working Hours section: checkbox + start/end time pickers for each day",
+          "Holidays section: date picker + Add button + list of added holidays with X to remove",
+          "Cancel and Create/Update Technician buttons"
+        ]
+      },
+      "edit_technician_form": {
+        "status": "PASS",
+        "verified_elements": [
+          "Form pre-populated with existing data",
+          "Name, Email, Phone fields populated",
+          "Working hours checkboxes and times populated",
+          "Holidays list populated (if any)",
+          "Update Technician button"
+        ]
+      },
+      "schedule_visit_modal": {
+        "status": "PASS",
+        "location": "Ticket Detail page > Schedule Visit button",
+        "verified_elements": [
+          "Modal opens with technician name displayed",
+          "Date picker (Select Date *)",
+          "30-minute time slot grid (6 columns)",
+          "Slots displayed: 09:00, 09:30, 10:00, 10:30, etc.",
+          "Working hours displayed (e.g., 09:00 - 18:00)",
+          "Available slots shown with hover effect",
+          "Selected slot highlighted in blue (bg-blue-600)",
+          "Blocked slots styled differently (red/line-through when blocked)",
+          "Notes textarea",
+          "Cancel and Schedule buttons"
+        ]
+      }
+    }
+  },
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Technicians Tab",
+        "issue": "Salary not displayed on technician cards for some engineers (only shows when configured)",
+        "priority": "LOW",
+        "note": "This is expected behavior - salary is optional"
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_technicians_slots.py",
+    "/app/test_reports/pytest/technicians_slots_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Engineer model properly includes working_hours (Dict), holidays (List[str]), and salary (float) fields",
+    "EngineerCreate and EngineerUpdate models support all new fields",
+    "Available-slots API correctly generates 30-min intervals within working hours",
+    "Available-slots API properly returns is_working_day=false for non-working days and holidays",
+    "Blocked slots include 1-hour buffer after existing bookings (booking_end + 60 mins)",
+    "TechniciansTab component properly displays edit/delete for each technician",
+    "TechnicianEditor form includes working hours with per-day checkboxes and time pickers",
+    "ScheduleVisitModal correctly fetches and displays available slots from API"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_technicians_slots.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 tests passed)",
+    "frontend": "100% (All pages and features verified)"
+  },
+  "test_credentials": {
+    "admin": {"email": "ck@motta.in", "password": "Charu@123@"}
+  },
+  "seed_data_creation": "Created test engineer with working_hours, holidays, and salary during backend testing. Engineer cleaned up after tests.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Technicians feature fully implemented: CRUD at /api/admin/engineers, list at /api/ticketing/engineers, available-slots at /api/ticketing/engineers/{id}/available-slots?date=YYYY-MM-DD. Frontend: Technicians tab in /admin/ticketing-config, ScheduleVisitModal in ticket detail page. Working hours stored as Dict[day, {is_working, start, end}], holidays as List[YYYY-MM-DD]. Slots are 30-min intervals with 1-hour buffer after existing bookings."
+}
