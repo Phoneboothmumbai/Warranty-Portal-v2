@@ -7382,32 +7382,24 @@ async def get_device_analytics(device_id: str, user: dict = Depends(get_current_
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     
-    # Get ALL tickets for this device from service_tickets_new
-    tickets = await db.service_tickets_new.find({
+    # Get ALL tickets for this device from V2
+    all_tickets = await db.tickets_v2.find({
         "device_id": device_id,
         "is_deleted": {"$ne": True}
-    }, {"_id": 0}).sort("created_at", -1).to_list(200)
-    
-    # Also check old service_tickets collection
-    old_tickets = await db.service_tickets.find({
-        "device_id": device_id,
-        "is_deleted": {"$ne": True}
-    }, {"_id": 0}).sort("created_at", -1).to_list(200)
-    
-    all_tickets = tickets + old_tickets
+    }, {"_id": 0, "timeline": 0}).sort("created_at", -1).to_list(200)
     
     # Calculate ticket analytics
     total_tickets = len(all_tickets)
-    open_tickets = len([t for t in all_tickets if t.get("status") in ["new", "pending_acceptance", "assigned", "in_progress", "pending_parts"]])
-    resolved_tickets = len([t for t in all_tickets if t.get("status") in ["completed", "closed", "resolved"]])
+    open_tickets = len([t for t in all_tickets if t.get("is_open", True)])
+    resolved_tickets = len([t for t in all_tickets if not t.get("is_open", True)])
     
     # Calculate average TAT (Turn Around Time) for resolved tickets
     tat_times = []
     for t in all_tickets:
-        if t.get("created_at") and t.get("completed_at"):
+        if t.get("created_at") and t.get("resolved_at"):
             try:
                 created = datetime.fromisoformat(t["created_at"].replace("Z", "+00:00")) if isinstance(t["created_at"], str) else t["created_at"]
-                completed = datetime.fromisoformat(t["completed_at"].replace("Z", "+00:00")) if isinstance(t["completed_at"], str) else t["completed_at"]
+                completed = datetime.fromisoformat(t["resolved_at"].replace("Z", "+00:00")) if isinstance(t["resolved_at"], str) else t["resolved_at"]
                 tat_hours = (completed - created).total_seconds() / 3600
                 tat_times.append(tat_hours)
             except:
