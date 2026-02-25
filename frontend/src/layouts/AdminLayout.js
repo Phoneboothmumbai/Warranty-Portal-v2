@@ -18,8 +18,8 @@ const navGroups = [
     items: [
       { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { path: '/admin/usage', label: 'Usage & Limits', icon: Layers },
-      { path: '/admin/service-requests', label: 'Service Tickets', icon: Wrench },
-      { path: '/admin/quotations', label: 'Quotations', icon: FileText },
+      { path: '/admin/service-requests', label: 'Tickets', icon: Wrench },
+      { path: '/admin/ticketing-config', label: 'Ticketing Setup', icon: ClipboardList },
       { path: '/admin/renewal-alerts', label: 'Renewal Alerts', icon: AlertTriangle },
       { path: '/admin/credentials', label: 'Credentials', icon: Lock },
     ]
