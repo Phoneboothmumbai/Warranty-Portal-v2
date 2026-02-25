@@ -331,23 +331,40 @@ async def get_my_schedule(
     date_to: str = Query(...),
     admin: dict = Depends(get_current_admin)
 ):
-    """Get current user's schedule - for technician's personal calendar."""
-    org_id = admin.get("organization_id")
-    user_email = admin.get("email", admin.get("sub", ""))
+    """Get current user's schedule - for admin viewing their own calendar."""
+    return await _get_engineer_schedule(admin, date_from, date_to)
 
-    # Find engineer by email
+
+@router.get("/engineer/calendar/my-schedule")
+async def get_engineer_own_schedule(
+    date_from: str = Query(...),
+    date_to: str = Query(...),
+    engineer: dict = Depends(get_current_engineer)
+):
+    """Get engineer's own schedule via engineer auth token."""
+    return await _get_engineer_schedule(engineer, date_from, date_to)
+
+
+async def _get_engineer_schedule(user: dict, date_from: str, date_to: str):
+    """Shared logic: fetch schedule for a given user (admin or engineer)."""
+    org_id = user.get("organization_id")
+    user_email = user.get("email", user.get("sub", ""))
+    user_id = user.get("id", user.get("sub", ""))
+
+    # Find engineer by email or id
     engineer = await _db.engineers.find_one(
-        {"email": user_email, "organization_id": org_id, "is_deleted": {"$ne": True}},
-        {"_id": 0, "id": 1, "name": 1, "working_hours": 1, "holidays": 1}
+        {"$or": [{"email": user_email}, {"id": user_id}], "is_deleted": {"$ne": True}},
+        {"_id": 0, "id": 1, "name": 1, "working_hours": 1, "holidays": 1, "organization_id": 1}
     )
     if not engineer:
         raise HTTPException(status_code=404, detail="Engineer profile not found")
 
     eng_id = engineer["id"]
+    eng_org = engineer.get("organization_id", org_id)
 
     # Get org holidays
     holidays = await _db.org_holidays.find(
-        {"organization_id": org_id, "date": {"$gte": date_from, "$lte": date_to}},
+        {"organization_id": eng_org, "date": {"$gte": date_from, "$lte": date_to}},
         {"_id": 0}
     ).to_list(200)
 
