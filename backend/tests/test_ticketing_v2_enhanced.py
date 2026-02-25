@@ -55,7 +55,9 @@ class TestEngineersEndpoint:
             
             print(f"✓ Found {len(engineers)} engineers")
             for e in engineers[:3]:
-                print(f"  - {e.get('name')}: {e.get('open_tickets')} open tickets, last_ticket: {e.get('last_ticket', {}).get('ticket_number', 'None')}")
+                last_ticket = e.get('last_ticket')
+                last_ticket_num = last_ticket.get('ticket_number', 'N/A') if last_ticket else 'None'
+                print(f"  - {e.get('name')}: {e.get('open_tickets')} open tickets, last_ticket: {last_ticket_num}")
         else:
             print("✓ Engineers endpoint working (no engineers found - may need engineers seeded)")
 
