@@ -69,6 +69,14 @@ Enterprise-grade Warranty & Asset Tracking Portal with a fully configurable, mas
   - Respects holidays and non-working days
 - **Schedule Visit Modal**: Revamped with visual 30-min time slot grid, blocked slots shown in red
 
+### Central Calendar & Engineer Portal (Feb 25, 2026)
+- **Admin Central Calendar** (`/admin/calendar`): Month/Week/Day views with all technician schedules
+- **Sidebar panels**: Events, Org Holidays (CRUD), Standard Working Hours, Emergency Working Hours (CRUD)
+- **Technician filter**: Filter calendar by specific engineer with color-coded legend
+- **Engineer Portal**: `/engineer/dashboard` + `/engineer/calendar` with personal schedule view
+- **Backend APIs**: `/api/calendar/holidays`, `/api/calendar/standard-hours`, `/api/calendar/emergency-hours`, `/api/calendar/events`, `/api/engineer/calendar/my-schedule`
+- **New DB collections**: `org_holidays`, `org_standard_hours`, `org_emergency_hours`
+
 ## Testing Status
 - V2 Backend: 17/17 tests passed (100%)
 - Technicians & Slots: 12/12 backend tests passed (100%), Frontend 100% verified
