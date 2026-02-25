@@ -344,6 +344,27 @@ async def update_workflow(workflow_id: str, data: dict = Body(...), admin: dict 
     return await _db.ticket_workflows.find_one({"id": workflow_id}, {"_id": 0})
 
 
+@router.post("/ticketing/workflows")
+async def create_workflow(data: dict = Body(...), admin: dict = Depends(get_current_admin)):
+    """Create a new workflow"""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    wf = {"id": str(uuid.uuid4()), "organization_id": org_id, "created_at": get_ist_isoformat(), "updated_at": get_ist_isoformat(), "is_active": True, **data}
+    await _db.ticket_workflows.insert_one(wf)
+    return await _db.ticket_workflows.find_one({"id": wf["id"]}, {"_id": 0})
+
+
+@router.delete("/ticketing/workflows/{workflow_id}")
+async def delete_workflow(workflow_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete a workflow"""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    await _db.ticket_workflows.delete_one({"id": workflow_id, "organization_id": org_id})
+    return {"message": "Deleted"}
+
+
 # ============================================================
 # TEAMS
 # ============================================================
