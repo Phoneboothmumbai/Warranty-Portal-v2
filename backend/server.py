@@ -9125,6 +9125,11 @@ from routes.ticketing_v2 import router as ticketing_v2_router, init_db as init_t
 init_ticketing_v2_db(db)
 app.include_router(ticketing_v2_router, prefix="/api", tags=["Ticketing V2"])
 
+# Email Inbox Integration
+from routes.email_inbox import router as email_inbox_router, init_db as init_email_inbox_db
+init_email_inbox_db(db)
+app.include_router(email_inbox_router, prefix="/api", tags=["Email Inbox"])
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
