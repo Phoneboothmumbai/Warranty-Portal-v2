@@ -10752,39 +10752,10 @@ app.include_router(inventory_router, tags=["Inventory"])
 from routes.vendor_master import router as vendor_router
 app.include_router(vendor_router, tags=["Vendor Master"])
 
-# Service Tickets (New)
-from routes.service_tickets_new import router as tickets_new_router
-app.include_router(tickets_new_router, tags=["Service Tickets (New)"])
-
-# Service Visits
-from routes.service_visits import router as visits_router
-app.include_router(visits_router, tags=["Service Visits"])
-
-# Quotations
-from routes.quotations import router as quotations_router, company_router as company_quotations_router, company_tickets_router
-app.include_router(quotations_router, tags=["Quotations"])
-app.include_router(company_quotations_router, tags=["Company Quotations"])
-app.include_router(company_tickets_router, tags=["Company Service Tickets"])
-
-# Ticket Parts (Requests & Issues)
-from routes.ticket_parts import router as ticket_parts_router
-app.include_router(ticket_parts_router, tags=["Ticket Parts"])
-
-from routes.ticketing_config import router as ticketing_config_router
-app.include_router(ticketing_config_router, prefix="/api/admin", tags=["Ticketing Config"])
-
-# Engineer Portal Routes (new comprehensive API)
-from routes.engineer_portal import router as engineer_portal_router
-app.include_router(engineer_portal_router, tags=["Engineer Portal"])
-
-# Job Lifecycle Routes (complete custody and repair workflow)
-from routes.job_lifecycle import router as job_lifecycle_router
-app.include_router(job_lifecycle_router, tags=["Job Lifecycle"])
-
-# Ticket Types Routes (multi-workflow ticket system)
-from routes.ticket_types import router as ticket_types_router, init_db as init_ticket_types_db
-init_ticket_types_db(db)
-app.include_router(ticket_types_router, prefix="/api/admin", tags=["Ticket Types"])
+# Ticketing V2 (New configurable system)
+from routes.ticketing_v2 import router as ticketing_v2_router, init_db as init_ticketing_v2_db
+init_ticketing_v2_db(db)
+app.include_router(ticketing_v2_router, prefix="/api", tags=["Ticketing V2"])
 
 app.add_middleware(
     CORSMiddleware,
