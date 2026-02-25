@@ -55,12 +55,10 @@ import TeamMembers from "./pages/admin/TeamMembers";
 import StaffManagement from "./pages/admin/StaffManagement";
 import CustomDomains from "./pages/admin/CustomDomains";
 import EmailWhitelabel from "./pages/admin/EmailWhitelabel";
-import ServiceRequests from "./pages/admin/ServiceRequests";
-import ServiceTicketDetail from "./pages/admin/ServiceTicketDetail";
-import Quotations from "./pages/admin/Quotations";
+import ServiceRequests from "./pages/admin/ServiceRequestsV2";
+import ServiceTicketDetail from "./pages/admin/ServiceTicketDetailV2";
+import TicketingConfig from "./pages/admin/TicketingConfigV2";
 import TGMSIntegration from "./pages/admin/TGMSIntegration";
-import TicketingConfig from "./pages/admin/TicketingConfig";
-import TicketTypesManagement from "./pages/admin/TicketTypesManagement";
 
 // Platform Super Admin Pages
 import PlatformLogin from "./pages/platform/PlatformLogin";
