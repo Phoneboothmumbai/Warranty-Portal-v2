@@ -13,7 +13,7 @@ import httpx
 import logging
 
 from database import db
-from routes.ticketing_config import get_admin_from_token
+from services.auth import get_admin_from_token
 
 router = APIRouter(prefix="/moltbot", tags=["moltbot"])
 logger = logging.getLogger(__name__)

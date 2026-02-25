@@ -20,7 +20,7 @@ from models.ticketing_v2 import (
     TicketTimelineEntry, TicketContact, StageTransitionRequest
 )
 from models.ticketing_v2_seed import generate_seed_data
-from routes.service_tickets_new import get_current_admin
+from services.auth import get_current_admin
 
 router = APIRouter()
 
