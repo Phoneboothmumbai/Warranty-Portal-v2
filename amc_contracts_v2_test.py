@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 
 class AMCContractsV2Tester:
-    def __init__(self, base_url="https://workflow-hub-270.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://config-forge-1.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.token = None
         self.test_data = {}
