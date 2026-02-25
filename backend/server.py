@@ -55,8 +55,6 @@ from models.device import (
     ConsumableOrderItem, ConsumableOrder
 )
 from models.service import (
-    ServiceTicket, ServiceTicketCreate, ServiceTicketComment,
-    RenewalRequest, RenewalRequestCreate,
     ServiceAttachment, ServiceHistory, ServiceHistoryCreate, ServiceHistoryUpdate,
     ServicePartUsed
 )
