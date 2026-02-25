@@ -58,21 +58,32 @@ Enterprise-grade Warranty & Asset Tracking Portal with a fully configurable, mas
 - WatchTower RMM integration
 - AI Chat (GPT-4o-mini via Emergent key)
 
+### Technician Management & Smart Scheduling (Feb 25, 2026)
+- **Technicians Tab**: New tab in Ticketing Setup for managing technicians (CRUD)
+- **Working Hours**: Per-day schedule config (Mon-Sun, start/end times, working day toggle)
+- **Holidays**: Date-based holiday management per technician
+- **Salary**: Monthly salary field
+- **Smart Time Slots**: `GET /api/ticketing/engineers/{id}/available-slots?date=YYYY-MM-DD`
+  - 30-minute interval time slot generation within working hours
+  - Blocks slots for existing bookings + 1-hour buffer
+  - Respects holidays and non-working days
+- **Schedule Visit Modal**: Revamped with visual 30-min time slot grid, blocked slots shown in red
+
 ## Testing Status
 - V2 Backend: 17/17 tests passed (100%)
-- V2 Frontend: All pages and features verified (100%)
-- Test report: `/app/test_reports/iteration_41.json`
+- Technicians & Slots: 12/12 backend tests passed (100%), Frontend 100% verified
+- Test reports: `/app/test_reports/iteration_41.json`, `/app/test_reports/iteration_42.json`
 
 ## Pending/Backlog
 
 ### P0 - High Priority
+- Email Inbox Integration (backend API exists, frontend UI pending)
 - Build Form Builder UI (drag/drop field editor in Ticketing Setup)
 - Build Workflow Designer (visual stage/transition editor)
 - Role-Based Dashboards (Technician, Back Office views)
 
 ### P1 - Medium Priority
 - Notification Engine (email/in-app for ticket events)
-- Email-to-Ticket integration (Resend)
 - Quotation PDF Generation
 - Full CRUD for all master entities in admin UI
 - Razorpay finalization
