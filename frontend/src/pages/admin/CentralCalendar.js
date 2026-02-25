@@ -448,11 +448,14 @@ export default function CentralCalendar() {
     const d = new Date(currentDate);
     if (view === 'month') d.setMonth(d.getMonth() + dir);
     else if (view === 'week') d.setDate(d.getDate() + 7 * dir);
-    else d.setDate(d.getDate() + dir);
+    else {
+      d.setDate(d.getDate() + dir);
+      setSelectedDate(d.toISOString().split('T')[0]);
+    }
     setCurrentDate(d);
   };
-  const goToday = () => setCurrentDate(new Date());
-  const onDateClick = (date) => { setSelectedDate(date); setActivePanel('events'); };
+  const goToday = () => { setCurrentDate(new Date()); setSelectedDate(new Date().toISOString().split('T')[0]); };
+  const onDateClick = (date) => { setSelectedDate(date); setActivePanel('events'); if (view === 'day') { setCurrentDate(new Date(date + 'T00:00:00')); } };
 
   // CRUD handlers
   const addHoliday = async (form) => {
