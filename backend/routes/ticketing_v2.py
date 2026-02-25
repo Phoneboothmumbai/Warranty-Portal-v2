@@ -623,6 +623,32 @@ async def list_canned_responses(
     return responses
 
 
+@router.post("/ticketing/canned-responses")
+async def create_canned_response(data: dict = Body(...), admin: dict = Depends(get_current_admin)):
+    org_id = admin.get("organization_id")
+    if not org_id: raise HTTPException(status_code=403, detail="Organization context required")
+    resp = {"id": str(uuid.uuid4()), "organization_id": org_id, "created_at": get_ist_isoformat(), "is_active": True, **data}
+    await _db.ticket_canned_responses.insert_one(resp)
+    return await _db.ticket_canned_responses.find_one({"id": resp["id"]}, {"_id": 0})
+
+
+@router.put("/ticketing/canned-responses/{response_id}")
+async def update_canned_response(response_id: str, data: dict = Body(...), admin: dict = Depends(get_current_admin)):
+    org_id = admin.get("organization_id")
+    if not org_id: raise HTTPException(status_code=403, detail="Organization context required")
+    data["updated_at"] = get_ist_isoformat()
+    await _db.ticket_canned_responses.update_one({"id": response_id, "organization_id": org_id}, {"$set": data})
+    return await _db.ticket_canned_responses.find_one({"id": response_id}, {"_id": 0})
+
+
+@router.delete("/ticketing/canned-responses/{response_id}")
+async def delete_canned_response(response_id: str, admin: dict = Depends(get_current_admin)):
+    org_id = admin.get("organization_id")
+    if not org_id: raise HTTPException(status_code=403, detail="Organization context required")
+    await _db.ticket_canned_responses.delete_one({"id": response_id, "organization_id": org_id})
+    return {"message": "Deleted"}
+
+
 # ============================================================
 # TICKETS (NEW)
 # ============================================================
