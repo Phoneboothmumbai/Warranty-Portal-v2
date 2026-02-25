@@ -929,7 +929,7 @@ const GenericEditorInner = GenericEditor;
 // ========== MAIN COMPONENT ==========
 export default function TicketingConfigV2() {
   const [activeTab, setActiveTab] = useState('help-topics');
-  const tabComponents = { 'help-topics': HelpTopicsTab, 'forms': FormsTab, 'workflows': WorkflowsTab, 'teams': TeamsTab, 'roles': RolesTab, 'sla': SLATab, 'canned': CannedTab, 'priorities': PrioritiesTab };
+  const tabComponents = { 'help-topics': HelpTopicsTab, 'forms': FormsTab, 'workflows': WorkflowsTab, 'technicians': TechniciansTab, 'teams': TeamsTab, 'roles': RolesTab, 'sla': SLATab, 'canned': CannedTab, 'priorities': PrioritiesTab, 'email': EmailInboxTab };
   const ActiveComponent = tabComponents[activeTab];
   return (
     <div className="space-y-6" data-testid="ticketing-config-page">
@@ -940,7 +940,7 @@ export default function TicketingConfigV2() {
           return <button key={tab.id} className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-md whitespace-nowrap transition-colors ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-sm font-medium' : 'text-slate-500 hover:text-slate-700'}`} onClick={() => setActiveTab(tab.id)} data-testid={`tab-${tab.id}`}><Icon className="w-4 h-4" />{tab.label}</button>;
         })}
       </div>
-      <ActiveComponent />
+      {ActiveComponent ? <ActiveComponent /> : null}
     </div>
   );
 }
