@@ -59,6 +59,7 @@ import ServiceRequests from "./pages/admin/ServiceRequestsV2";
 import ServiceTicketDetail from "./pages/admin/ServiceTicketDetailV2";
 import TicketingConfig from "./pages/admin/TicketingConfigV2";
 import TechnicianDashboard from "./pages/admin/TechnicianDashboard";
+import CentralCalendar from "./pages/admin/CentralCalendar";
 import TGMSIntegration from "./pages/admin/TGMSIntegration";
 
 // Platform Super Admin Pages
