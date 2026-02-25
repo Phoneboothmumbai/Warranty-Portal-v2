@@ -537,6 +537,30 @@ const TeamsTab = () => {
 };
 
 // ========== ROLES TAB ==========
+const RoleEditor = ({ role, onSave, onCancel }) => {
+  const [name, setName] = useState(role.name || '');
+  const [description, setDescription] = useState(role.description || '');
+  const [perms, setPerms] = useState(role.permissions || []);
+  return (
+    <div className="bg-white border rounded-lg p-5" data-testid="role-editor">
+      <div className="flex justify-between mb-4"><h3 className="text-lg font-semibold">{role.id ? 'Edit' : 'New'} Role</h3><button onClick={onCancel}><X className="w-5 h-5 text-slate-400" /></button></div>
+      <div className="grid grid-cols-2 gap-4">
+        <div><label className="text-sm font-medium block mb-1">Name *</label><Input value={name} onChange={e => setName(e.target.value)} /></div>
+        <div className="col-span-2"><label className="text-sm font-medium block mb-1">Description</label><textarea className="w-full border rounded-lg px-3 py-2 text-sm" value={description} onChange={e => setDescription(e.target.value)} /></div>
+      </div>
+      <div className="mt-4"><label className="text-sm font-medium block mb-2">Permissions</label>
+        <div className="grid grid-cols-3 gap-2">{PERMISSIONS.map(p => (
+          <label key={p} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={perms.includes(p)} onChange={e => setPerms(prev => e.target.checked ? [...prev, p] : prev.filter(x => x !== p))} />{p}</label>
+        ))}</div>
+      </div>
+      <div className="flex justify-end gap-2 mt-5 pt-4 border-t">
+        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button onClick={() => onSave({ name, description, permissions: perms })}><Save className="w-4 h-4 mr-1" /> Save</Button>
+      </div>
+    </div>
+  );
+};
+
 const PERMISSIONS = ['tickets.view', 'tickets.create', 'tickets.edit', 'tickets.delete', 'tickets.assign', 'tickets.close', 'tickets.transfer', 'tasks.view', 'tasks.edit', 'tasks.complete', 'config.manage', 'reports.view'];
 const RolesTab = () => {
   const [roles, setRoles] = useState([]); const [loading, setLoading] = useState(true); const [editing, setEditing] = useState(null);
