@@ -23,14 +23,14 @@ class TestAuthSetup:
     @pytest.fixture(scope="class")
     def auth_token(self):
         """Login and get authentication token"""
-        response = requests.post(f"{BASE_URL}/api/admin/login", json={
+        response = requests.post(f"{BASE_URL}/api/auth/login", json={
             "email": TEST_EMAIL,
             "password": TEST_PASSWORD
         })
         assert response.status_code == 200, f"Login failed: {response.text}"
         data = response.json()
-        assert "token" in data, "No token in response"
-        return data["token"]
+        assert "access_token" in data, "No access_token in response"
+        return data["access_token"]
     
     def test_login_works(self, auth_token):
         """Verify we can login"""
