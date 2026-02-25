@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Ticket, FileText, GitBranch, Users, Shield, Clock, MessageSquare, Bell,
   Plus, Edit2, Trash2, ChevronRight, Save, X, AlertTriangle, CheckCircle,
-  GripVertical, ArrowUp, ArrowDown, Settings, Copy
+  GripVertical, ArrowUp, ArrowDown, Settings, Copy, Mail, RefreshCw
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
