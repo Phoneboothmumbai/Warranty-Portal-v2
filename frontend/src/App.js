@@ -232,6 +232,10 @@ function App() {
 
                   {/* Engineer/Technician Portal */}
                   <Route path="/engineer" element={<EngineerLogin />} />
+                  <Route path="/engineer" element={<EngineerLayout />}>
+                    <Route path="dashboard" element={<EngineerDashboard />} />
+                    <Route path="calendar" element={<EngineerCalendar />} />
+                  </Route>
                 </Routes>
               </div>
               <Toaster position="top-right" richColors />
