@@ -5956,7 +5956,7 @@ async def get_dashboard_alerts(admin: dict = Depends(get_current_admin)):
 
 # ==================== ENGINEER PORTAL ENDPOINTS ====================
 
-from models.engineer import Engineer, EngineerCreate, EngineerUpdate, EngineerLogin, FieldVisit, ServiceReportSubmit
+from models.engineer import Engineer, EngineerCreate, EngineerUpdate, EngineerLogin
 from services.auth import get_current_engineer
 
 # --- Engineer Auth ---
