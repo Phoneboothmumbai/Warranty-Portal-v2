@@ -371,14 +371,14 @@ async def _get_engineer_schedule(user: dict, date_from: str, date_to: str):
     # Get personal schedules
     schedules = await _db.ticket_schedules.find({
         "engineer_id": eng_id,
-        "organization_id": org_id,
+        "organization_id": eng_org,
         "scheduled_at": {"$gte": f"{date_from}T00:00:00", "$lte": f"{date_to}T23:59:59"},
         "status": {"$ne": "cancelled"},
     }, {"_id": 0}).sort("scheduled_at", 1).to_list(200)
 
     tickets = await _db.tickets_v2.find({
         "assigned_to_id": eng_id,
-        "organization_id": org_id,
+        "organization_id": eng_org,
         "scheduled_at": {"$gte": f"{date_from}T00:00:00", "$lte": f"{date_to}T23:59:59"},
         "is_deleted": {"$ne": True},
     }, {"_id": 0, "id": 1, "ticket_number": 1, "subject": 1, "company_name": 1,
