@@ -191,9 +191,10 @@ function App() {
                     <Route path="integrations/tgms" element={<TGMSIntegration />} />
                     <Route path="knowledge-base" element={<KnowledgeBase />} />
                     <Route path="team" element={<TeamMembers />} />
+                    <Route path="staff" element={<StaffManagement />} />
+                    <Route path="custom-domains" element={<CustomDomains />} />
+                    <Route path="email-whitelabel" element={<EmailWhitelabel />} />
                   </Route>
-
-                  {/* Company Portal Routes */}
                   <Route path="/company/login" element={<CompanyLogin />} />
                   <Route path="/company/register" element={<CompanyRegister />} />
                   
