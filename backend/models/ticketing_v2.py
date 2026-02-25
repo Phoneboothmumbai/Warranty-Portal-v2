@@ -671,3 +671,17 @@ class StageTransitionRequest(BaseModel):
     transition_id: str
     notes: Optional[str] = None
     field_values: Optional[Dict[str, Any]] = None
+    # Engineer assignment
+    assigned_to_id: Optional[str] = None
+    assigned_to_name: Optional[str] = None
+    # Visit scheduling
+    scheduled_at: Optional[str] = None
+    scheduled_end_at: Optional[str] = None
+    schedule_notes: Optional[str] = None
+    # Diagnosis
+    diagnosis_findings: Optional[str] = None
+    diagnosis_recommendation: Optional[str] = None
+    # Parts
+    parts_list: Optional[List[Dict[str, Any]]] = None
+    # Resolution
+    resolution_notes: Optional[str] = None
