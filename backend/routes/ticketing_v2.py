@@ -1423,6 +1423,151 @@ async def get_engineer_schedule(
     }
 
 
+@router.get("/ticketing/engineers/{engineer_id}/available-slots")
+async def get_available_slots(
+    engineer_id: str,
+    date: str = Query(..., description="Date in YYYY-MM-DD format"),
+    admin: dict = Depends(get_current_admin)
+):
+    """Get available 30-min time slots for an engineer on a given date.
+    Each existing booking blocks its start time + 1 hour (buffer).
+    """
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+
+    # Get engineer details including working hours and holidays
+    engineer = await _db.engineers.find_one(
+        {"id": engineer_id, "organization_id": org_id},
+        {"_id": 0, "id": 1, "name": 1, "working_hours": 1, "holidays": 1}
+    )
+    if not engineer:
+        raise HTTPException(status_code=404, detail="Engineer not found")
+
+    # Check if date is a holiday
+    holidays = engineer.get("holidays", [])
+    if date in holidays:
+        return {"date": date, "is_holiday": True, "is_working_day": False, "slots": [], "message": "This is a holiday for this technician"}
+
+    # Check working hours for the day of week
+    from datetime import datetime as dt_cls
+    date_obj = dt_cls.strptime(date, "%Y-%m-%d")
+    day_name = date_obj.strftime("%A").lower()
+
+    working_hours = engineer.get("working_hours", {})
+    day_schedule = working_hours.get(day_name, {"is_working": False})
+
+    if not day_schedule.get("is_working", False):
+        return {"date": date, "is_holiday": False, "is_working_day": False, "slots": [], "message": f"Not a working day ({day_name.title()})"}
+
+    work_start = day_schedule.get("start", "09:00")
+    work_end = day_schedule.get("end", "18:00")
+
+    # Parse working hours into minutes from midnight
+    ws_h, ws_m = map(int, work_start.split(":"))
+    we_h, we_m = map(int, work_end.split(":"))
+    work_start_mins = ws_h * 60 + ws_m
+    work_end_mins = we_h * 60 + we_m
+
+    # Generate 30-min slots within working hours
+    all_slots = []
+    t = work_start_mins
+    while t < work_end_mins:
+        h, m = divmod(t, 60)
+        all_slots.append(f"{h:02d}:{m:02d}")
+        t += 30
+
+    # Get existing bookings for this date
+    date_start = f"{date}T00:00:00"
+    date_end = f"{date}T23:59:59"
+
+    schedules = await _db.ticket_schedules.find({
+        "engineer_id": engineer_id,
+        "organization_id": org_id,
+        "scheduled_at": {"$gte": date_start, "$lte": date_end},
+        "status": {"$ne": "cancelled"}
+    }, {"_id": 0, "scheduled_at": 1, "scheduled_end_at": 1, "ticket_number": 1, "company_name": 1, "subject": 1}).to_list(100)
+
+    scheduled_tickets = await _db.tickets_v2.find({
+        "assigned_to_id": engineer_id,
+        "organization_id": org_id,
+        "scheduled_at": {"$gte": date_start, "$lte": date_end},
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0, "scheduled_at": 1, "scheduled_end_at": 1, "ticket_number": 1, "company_name": 1, "subject": 1}).to_list(100)
+
+    # Collect all booked time ranges (start_mins, end_mins_with_buffer)
+    blocked_ranges = []
+    bookings_info = []
+    for booking in schedules + scheduled_tickets:
+        sched_at = booking.get("scheduled_at", "")
+        if not sched_at or not sched_at.startswith(date):
+            continue
+        # Parse start time
+        try:
+            time_part = sched_at[11:16]  # HH:MM
+            bh, bm = map(int, time_part.split(":"))
+            booking_start = bh * 60 + bm
+        except (ValueError, IndexError):
+            continue
+
+        # Parse end time if available, else assume booking_start + 1hr
+        sched_end = booking.get("scheduled_end_at", "")
+        if sched_end and sched_end.startswith(date):
+            try:
+                eh, em = map(int, sched_end[11:16].split(":"))
+                booking_end = eh * 60 + em
+            except (ValueError, IndexError):
+                booking_end = booking_start + 60
+        else:
+            booking_end = booking_start + 60
+
+        # Block from booking_start to booking_end + 60 mins (1hr gap)
+        blocked_end = booking_end + 60
+        blocked_ranges.append((booking_start, blocked_end))
+        bookings_info.append({
+            "time": time_part,
+            "ticket_number": booking.get("ticket_number", ""),
+            "company_name": booking.get("company_name", ""),
+            "subject": booking.get("subject", ""),
+            "start_mins": booking_start,
+            "end_mins": booking_end
+        })
+
+    # Build slot list with availability
+    slots = []
+    for slot_time in all_slots:
+        sh, sm = map(int, slot_time.split(":"))
+        slot_mins = sh * 60 + sm
+
+        available = True
+        blocked_by = None
+        for bstart, bend in blocked_ranges:
+            if bstart <= slot_mins < bend:
+                available = False
+                # Find which booking blocked it
+                for bi in bookings_info:
+                    if bi["start_mins"] <= slot_mins < bi["end_mins"] + 60:
+                        blocked_by = f"#{bi['ticket_number']} - {bi['company_name'] or bi['subject']}"
+                        break
+                break
+
+        slots.append({
+            "time": slot_time,
+            "available": available,
+            "blocked_by": blocked_by
+        })
+
+    return {
+        "date": date,
+        "is_holiday": False,
+        "is_working_day": True,
+        "work_start": work_start,
+        "work_end": work_end,
+        "slots": slots,
+        "bookings": bookings_info
+    }
+
+
 @router.get("/ticketing/engineers/{engineer_id}/device-history")
 async def get_engineer_device_history(
     engineer_id: str,
