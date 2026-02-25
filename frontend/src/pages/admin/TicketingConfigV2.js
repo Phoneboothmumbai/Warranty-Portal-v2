@@ -673,6 +673,225 @@ const PrioritiesTab = () => {
   );
 };
 
+// ========== EMAIL INBOX TAB ==========
+const EmailInboxTab = () => {
+  const [config, setConfig] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [testResults, setTestResults] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [helpTopics, setHelpTopics] = useState([]);
+
+  const [form, setForm] = useState({
+    email_address: '', display_name: '',
+    imap_host: '', imap_port: 993, imap_username: '', imap_password: '', imap_use_ssl: true, imap_folder: 'INBOX',
+    smtp_host: '', smtp_port: 587, smtp_username: '', smtp_password: '', smtp_use_tls: true,
+    poll_interval_minutes: 5, is_active: true, auto_create_tickets: true, default_help_topic_id: '',
+  });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`${API}/api/ticketing/email-inbox`, { headers: headers() }).then(r => r.json()),
+      fetch(`${API}/api/ticketing/email-inbox/logs`, { headers: headers() }).then(r => r.json()).catch(() => []),
+      fetch(`${API}/api/ticketing/help-topics`, { headers: headers() }).then(r => r.json()),
+    ]).then(([cfg, syncLogs, topics]) => {
+      if (cfg.configured) {
+        setConfig(cfg);
+        setForm(f => ({ ...f, ...cfg, imap_password: '', smtp_password: '' }));
+      }
+      setLogs(Array.isArray(syncLogs) ? syncLogs : []);
+      setHelpTopics(Array.isArray(topics) ? topics : []);
+      setLoading(false);
+    });
+  }, []);
+
+  const handleSave = async () => {
+    if (!form.email_address || !form.imap_host || !form.smtp_host) {
+      toast.error('Email address, IMAP host, and SMTP host are required');
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(`${API}/api/ticketing/email-inbox/configure`, {
+        method: 'POST', headers: headers(), body: JSON.stringify(form)
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
+      toast.success('Email inbox configured');
+      const cfg = await fetch(`${API}/api/ticketing/email-inbox`, { headers: headers() }).then(r => r.json());
+      setConfig(cfg);
+    } catch (e) { toast.error(e.message); }
+    finally { setSaving(false); }
+  };
+
+  const handleTest = async () => {
+    setTesting(true); setTestResults(null);
+    try {
+      const res = await fetch(`${API}/api/ticketing/email-inbox/test`, {
+        method: 'POST', headers: headers(), body: JSON.stringify(form)
+      });
+      setTestResults(await res.json());
+    } catch { toast.error('Test failed'); }
+    finally { setTesting(false); }
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch(`${API}/api/ticketing/email-inbox/sync`, {
+        method: 'POST', headers: headers()
+      });
+      const result = await res.json();
+      toast.success(`Synced: ${result.fetched} fetched, ${result.new_tickets} new tickets, ${result.updated_tickets} updated`);
+      const syncLogs = await fetch(`${API}/api/ticketing/email-inbox/logs`, { headers: headers() }).then(r => r.json());
+      setLogs(Array.isArray(syncLogs) ? syncLogs : []);
+    } catch (e) { toast.error('Sync failed'); }
+    finally { setSyncing(false); }
+  };
+
+  if (loading) return <p className="text-center py-8 text-slate-400">Loading...</p>;
+
+  const presets = [
+    { label: 'Gmail', imap_host: 'imap.gmail.com', imap_port: 993, smtp_host: 'smtp.gmail.com', smtp_port: 587 },
+    { label: 'Outlook/365', imap_host: 'outlook.office365.com', imap_port: 993, smtp_host: 'smtp.office365.com', smtp_port: 587 },
+    { label: 'Yahoo', imap_host: 'imap.mail.yahoo.com', imap_port: 993, smtp_host: 'smtp.mail.yahoo.com', smtp_port: 587 },
+    { label: 'Zoho', imap_host: 'imap.zoho.com', imap_port: 993, smtp_host: 'smtp.zoho.com', smtp_port: 587 },
+  ];
+
+  return (
+    <div data-testid="email-inbox-tab" className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-slate-500">Connect your email inbox to automatically create and thread tickets from incoming emails</p>
+          {config?.last_sync_at && (
+            <p className="text-xs text-slate-400 mt-1">
+              Last sync: {new Date(config.last_sync_at).toLocaleString()} ({config.last_sync_status})
+              {config.total_emails_fetched > 0 && ` | ${config.total_emails_fetched} emails fetched, ${config.total_tickets_created} tickets created`}
+            </p>
+          )}
+        </div>
+        {config?.configured && (
+          <Button size="sm" variant="outline" onClick={handleSync} disabled={syncing} data-testid="sync-now-btn">
+            <RefreshCw className={`w-4 h-4 mr-1 ${syncing ? 'animate-spin' : ''}`} /> {syncing ? 'Syncing...' : 'Sync Now'}
+          </Button>
+        )}
+      </div>
+
+      <div className="bg-white border rounded-lg p-5 space-y-5">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-700 mb-2">Quick Setup</h3>
+          <div className="flex gap-2">
+            {presets.map(p => (
+              <Button key={p.label} size="sm" variant="outline" onClick={() => setForm(f => ({ ...f, imap_host: p.imap_host, imap_port: p.imap_port, smtp_host: p.smtp_host, smtp_port: p.smtp_port }))} data-testid={`preset-${p.label.toLowerCase()}`}>
+                {p.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div><label className="text-sm font-medium block mb-1">Email Address *</label><Input value={form.email_address} onChange={e => set('email_address', e.target.value)} placeholder="support@yourcompany.com" data-testid="email-address" /></div>
+          <div><label className="text-sm font-medium block mb-1">Display Name</label><Input value={form.display_name} onChange={e => set('display_name', e.target.value)} placeholder="Support Team" /></div>
+        </div>
+
+        <div className="border-t pt-4">
+          <h3 className="text-sm font-semibold text-slate-700 mb-3">IMAP Settings (Incoming)</h3>
+          <div className="grid grid-cols-4 gap-3">
+            <div><label className="text-xs text-slate-500 block mb-0.5">IMAP Host *</label><Input className="text-sm" value={form.imap_host} onChange={e => set('imap_host', e.target.value)} placeholder="imap.gmail.com" data-testid="imap-host" /></div>
+            <div><label className="text-xs text-slate-500 block mb-0.5">Port</label><Input className="text-sm" type="number" value={form.imap_port} onChange={e => set('imap_port', parseInt(e.target.value))} /></div>
+            <div><label className="text-xs text-slate-500 block mb-0.5">Username</label><Input className="text-sm" value={form.imap_username} onChange={e => set('imap_username', e.target.value)} placeholder="Same as email" /></div>
+            <div><label className="text-xs text-slate-500 block mb-0.5">Password / App Password *</label><Input className="text-sm" type="password" value={form.imap_password} onChange={e => set('imap_password', e.target.value)} placeholder={config?.imap_password_set ? '(saved)' : 'Enter password'} data-testid="imap-password" /></div>
+          </div>
+          <div className="flex gap-4 mt-2">
+            <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={form.imap_use_ssl} onChange={e => set('imap_use_ssl', e.target.checked)} /> Use SSL</label>
+            <div className="flex items-center gap-2"><label className="text-xs text-slate-500">Folder:</label><Input className="text-xs w-24 h-7" value={form.imap_folder} onChange={e => set('imap_folder', e.target.value)} /></div>
+          </div>
+        </div>
+
+        <div className="border-t pt-4">
+          <h3 className="text-sm font-semibold text-slate-700 mb-3">SMTP Settings (Outgoing)</h3>
+          <div className="grid grid-cols-4 gap-3">
+            <div><label className="text-xs text-slate-500 block mb-0.5">SMTP Host *</label><Input className="text-sm" value={form.smtp_host} onChange={e => set('smtp_host', e.target.value)} placeholder="smtp.gmail.com" data-testid="smtp-host" /></div>
+            <div><label className="text-xs text-slate-500 block mb-0.5">Port</label><Input className="text-sm" type="number" value={form.smtp_port} onChange={e => set('smtp_port', parseInt(e.target.value))} /></div>
+            <div><label className="text-xs text-slate-500 block mb-0.5">Username</label><Input className="text-sm" value={form.smtp_username} onChange={e => set('smtp_username', e.target.value)} placeholder="Same as email" /></div>
+            <div><label className="text-xs text-slate-500 block mb-0.5">Password / App Password *</label><Input className="text-sm" type="password" value={form.smtp_password} onChange={e => set('smtp_password', e.target.value)} placeholder={config?.smtp_password_set ? '(saved)' : 'Enter password'} data-testid="smtp-password" /></div>
+          </div>
+          <label className="flex items-center gap-2 text-xs mt-2"><input type="checkbox" checked={form.smtp_use_tls} onChange={e => set('smtp_use_tls', e.target.checked)} /> Use TLS (STARTTLS)</label>
+        </div>
+
+        <div className="border-t pt-4">
+          <h3 className="text-sm font-semibold text-slate-700 mb-3">Ticket Settings</h3>
+          <div className="grid grid-cols-3 gap-3">
+            <div><label className="text-xs text-slate-500 block mb-0.5">Default Help Topic</label>
+              <select className="w-full border rounded-lg px-3 py-1.5 text-sm" value={form.default_help_topic_id} onChange={e => set('default_help_topic_id', e.target.value)}>
+                <option value="">Auto (first active topic)</option>
+                {helpTopics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select></div>
+            <div><label className="text-xs text-slate-500 block mb-0.5">Poll Interval (minutes)</label>
+              <Input className="text-sm" type="number" min="1" max="60" value={form.poll_interval_minutes} onChange={e => set('poll_interval_minutes', parseInt(e.target.value))} /></div>
+            <div className="flex flex-col justify-end gap-2">
+              <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={form.auto_create_tickets} onChange={e => set('auto_create_tickets', e.target.checked)} /> Auto-create tickets from emails</label>
+              <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={form.is_active} onChange={e => set('is_active', e.target.checked)} /> Active (enable polling)</label>
+            </div>
+          </div>
+        </div>
+
+        {testResults && (
+          <div className="border-t pt-4" data-testid="test-results">
+            <h3 className="text-sm font-semibold text-slate-700 mb-2">Connection Test Results</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className={`border rounded-lg p-3 ${testResults.imap?.status === 'success' ? 'bg-green-50 border-green-200' : testResults.imap?.status === 'error' ? 'bg-red-50 border-red-200' : 'bg-slate-50'}`}>
+                <p className="text-sm font-medium flex items-center gap-1">
+                  {testResults.imap?.status === 'success' ? <CheckCircle className="w-4 h-4 text-green-500" /> : testResults.imap?.status === 'error' ? <AlertTriangle className="w-4 h-4 text-red-500" /> : null}
+                  IMAP: {testResults.imap?.status}
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">{testResults.imap?.message}</p>
+              </div>
+              <div className={`border rounded-lg p-3 ${testResults.smtp?.status === 'success' ? 'bg-green-50 border-green-200' : testResults.smtp?.status === 'error' ? 'bg-red-50 border-red-200' : 'bg-slate-50'}`}>
+                <p className="text-sm font-medium flex items-center gap-1">
+                  {testResults.smtp?.status === 'success' ? <CheckCircle className="w-4 h-4 text-green-500" /> : testResults.smtp?.status === 'error' ? <AlertTriangle className="w-4 h-4 text-red-500" /> : null}
+                  SMTP: {testResults.smtp?.status}
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">{testResults.smtp?.message}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 border-t pt-4">
+          <Button variant="outline" onClick={handleTest} disabled={testing} data-testid="test-connection-btn">
+            {testing ? 'Testing...' : 'Test Connection'}
+          </Button>
+          <Button onClick={handleSave} disabled={saving} data-testid="save-email-config-btn">
+            <Save className="w-4 h-4 mr-1" /> {saving ? 'Saving...' : 'Save Configuration'}
+          </Button>
+        </div>
+      </div>
+
+      {logs.length > 0 && (
+        <div className="bg-white border rounded-lg p-4" data-testid="sync-logs">
+          <h3 className="text-sm font-semibold text-slate-700 mb-3">Sync History</h3>
+          <div className="space-y-2">
+            {logs.map(log => (
+              <div key={log.id} className="flex items-center gap-3 text-sm border-b pb-2 last:border-0">
+                <span className={`w-2 h-2 rounded-full ${log.status === 'success' ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span className="text-xs text-slate-400">{new Date(log.synced_at).toLocaleString()}</span>
+                {log.status === 'success' ? (
+                  <span className="text-xs text-slate-500">{log.fetched} fetched, {log.new_tickets} new, {log.updated_tickets} updated</span>
+                ) : (
+                  <span className="text-xs text-red-500">{log.error}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ========== GENERIC EDITOR HELPER ==========
 const GenericEditor = ({ title, fields, onSave, onCancel, extraContent }) => {
   const [values, setValues] = useState(() => {
