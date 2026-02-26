@@ -20,7 +20,7 @@ const navGroups = [
       { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { path: '/admin/usage', label: 'Usage & Limits', icon: Layers },
       { path: '/admin/service-requests', label: 'Tickets', icon: Wrench },
-      { path: '/admin/technician-dashboard', label: 'Technician View', icon: User },
+      { path: '/admin/technician-dashboard', label: 'Workforce', icon: User },
       { path: '/admin/ticketing-config', label: 'Ticketing Setup', icon: ClipboardList },
       { path: '/admin/calendar', label: 'Calendar', icon: Calendar },
       { path: '/admin/renewal-alerts', label: 'Renewal Alerts', icon: AlertTriangle },
