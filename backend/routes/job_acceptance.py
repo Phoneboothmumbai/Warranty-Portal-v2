@@ -612,3 +612,344 @@ async def check_escalations(admin: dict = Depends(get_current_admin)):
         "escalation_threshold_hours": AUTO_ESCALATION_HOURS,
         "count": len(overdue)
     }
+
+
+# ═══════════════════════════════════════════════════════════════
+# ENGINEER PORTAL ENDPOINTS (uses get_current_engineer auth)
+# ═══════════════════════════════════════════════════════════════
+
+async def _resolve_engineer(user: dict):
+    """Resolve engineer record from auth token data."""
+    eng_id = user.get("id")
+    email = user.get("email", user.get("sub", ""))
+    org_id = user.get("organization_id")
+    engineer = await _db.engineers.find_one(
+        {"$or": [{"id": eng_id}, {"email": email}], "is_deleted": {"$ne": True}},
+        {"_id": 0, "id": 1, "name": 1, "organization_id": 1}
+    )
+    if not engineer:
+        raise HTTPException(status_code=404, detail="Engineer profile not found")
+    return engineer
+
+
+@router.get("/engineer/assignment/pending")
+async def engineer_get_pending(engineer: dict = Depends(get_current_engineer)):
+    """Get pending assignments for logged-in engineer."""
+    eng = await _resolve_engineer(engineer)
+    tickets = await _db.tickets_v2.find({
+        "assigned_to_id": eng["id"],
+        "organization_id": eng["organization_id"],
+        "assignment_status": "pending",
+        "is_open": True,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0, "timeline": 0}).sort("assigned_at", -1).to_list(50)
+    return {"tickets": tickets, "decline_reasons": DECLINE_REASONS}
+
+
+@router.post("/engineer/assignment/accept")
+async def engineer_accept(data: AcceptJobRequest, engineer: dict = Depends(get_current_engineer)):
+    """Engineer accepts job."""
+    eng = await _resolve_engineer(engineer)
+    ticket = await _db.tickets_v2.find_one({
+        "id": data.ticket_id, "assigned_to_id": eng["id"],
+        "assignment_status": "pending", "is_deleted": {"$ne": True}
+    })
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Pending assignment not found")
+
+    update = {
+        "assignment_status": "accepted",
+        "assignment_responded_at": now_ist(),
+        "updated_at": now_ist(),
+    }
+    timeline_entry = {
+        "id": str(uuid.uuid4()), "type": "assignment_accepted",
+        "description": f"{eng['name']} accepted the assignment",
+        "user_name": eng["name"], "created_at": now_ist(),
+    }
+    if data.proposed_time:
+        update["scheduled_at"] = data.proposed_time
+        timeline_entry["description"] += f" (rescheduled to {data.proposed_time[:16]})"
+
+    await _db.tickets_v2.update_one(
+        {"id": data.ticket_id},
+        {"$set": update, "$push": {"timeline": timeline_entry}}
+    )
+    await _db.ticket_schedules.update_many(
+        {"ticket_id": data.ticket_id, "engineer_id": eng["id"], "status": "scheduled"},
+        {"$set": {"status": "accepted"}}
+    )
+    # SLA log
+    if ticket.get("assigned_at"):
+        await _db.assignment_sla_logs.insert_one({
+            "id": str(uuid.uuid4()), "organization_id": eng["organization_id"],
+            "engineer_id": eng["id"], "engineer_name": eng["name"],
+            "ticket_id": data.ticket_id, "ticket_number": ticket.get("ticket_number"),
+            "assigned_at": ticket["assigned_at"], "responded_at": now_ist(),
+            "response": "accepted", "created_at": now_ist(),
+        })
+    return {"status": "accepted", "ticket_id": data.ticket_id}
+
+
+@router.post("/engineer/assignment/decline")
+async def engineer_decline(data: DeclineJobRequest, engineer: dict = Depends(get_current_engineer)):
+    """Engineer declines job."""
+    eng = await _resolve_engineer(engineer)
+    ticket = await _db.tickets_v2.find_one({
+        "id": data.ticket_id, "assigned_to_id": eng["id"],
+        "assignment_status": "pending", "is_deleted": {"$ne": True}
+    })
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Pending assignment not found")
+
+    reason_label = next((r["label"] for r in DECLINE_REASONS if r["id"] == data.reason_id), data.reason_id)
+
+    update = {
+        "assignment_status": "declined",
+        "assignment_responded_at": now_ist(),
+        "decline_reason": data.reason_id,
+        "decline_reason_label": reason_label,
+        "decline_detail": data.reason_detail,
+        "updated_at": now_ist(),
+    }
+    timeline_entry = {
+        "id": str(uuid.uuid4()), "type": "assignment_declined",
+        "description": f"{eng['name']} declined: {reason_label}" + (f" — {data.reason_detail}" if data.reason_detail else ""),
+        "user_name": eng["name"], "created_at": now_ist(),
+    }
+    await _db.tickets_v2.update_one(
+        {"id": data.ticket_id},
+        {"$set": update, "$push": {"timeline": timeline_entry}}
+    )
+    await _db.ticket_schedules.update_many(
+        {"ticket_id": data.ticket_id, "engineer_id": eng["id"]},
+        {"$set": {"status": "cancelled"}}
+    )
+    await create_notification(
+        org_id=eng["organization_id"], notif_type="assignment_declined",
+        title=f"Job Declined — #{ticket.get('ticket_number')}",
+        message=f"{eng['name']} declined #{ticket.get('ticket_number')} ({ticket.get('subject', '')[:60]}). Reason: {reason_label}. Please reassign.",
+        ticket_id=data.ticket_id,
+        metadata={"engineer_id": eng["id"], "engineer_name": eng["name"],
+                  "ticket_number": ticket.get("ticket_number"), "reason_id": data.reason_id,
+                  "reason_label": reason_label, "reason_detail": data.reason_detail},
+    )
+    if ticket.get("assigned_at"):
+        await _db.assignment_sla_logs.insert_one({
+            "id": str(uuid.uuid4()), "organization_id": eng["organization_id"],
+            "engineer_id": eng["id"], "engineer_name": eng["name"],
+            "ticket_id": data.ticket_id, "ticket_number": ticket.get("ticket_number"),
+            "assigned_at": ticket["assigned_at"], "responded_at": now_ist(),
+            "response": "declined", "reason_id": data.reason_id, "created_at": now_ist(),
+        })
+    return {"status": "declined", "ticket_id": data.ticket_id}
+
+
+@router.post("/engineer/assignment/reschedule")
+async def engineer_reschedule(data: RescheduleJobRequest, engineer: dict = Depends(get_current_engineer)):
+    """Engineer accepts but proposes different time."""
+    eng = await _resolve_engineer(engineer)
+    ticket = await _db.tickets_v2.find_one({
+        "id": data.ticket_id, "assigned_to_id": eng["id"],
+        "assignment_status": "pending", "is_deleted": {"$ne": True}
+    })
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Pending assignment not found")
+
+    update = {
+        "assignment_status": "accepted",
+        "assignment_responded_at": now_ist(),
+        "scheduled_at": data.proposed_time,
+        "scheduled_end_at": data.proposed_end_time,
+        "schedule_notes": data.notes,
+        "updated_at": now_ist(),
+    }
+    timeline_entry = {
+        "id": str(uuid.uuid4()), "type": "assignment_rescheduled",
+        "description": f"{eng['name']} accepted & rescheduled to {data.proposed_time[:16]}",
+        "user_name": eng["name"], "created_at": now_ist(),
+    }
+    await _db.tickets_v2.update_one(
+        {"id": data.ticket_id},
+        {"$set": update, "$push": {"timeline": timeline_entry}}
+    )
+    await _db.ticket_schedules.update_many(
+        {"ticket_id": data.ticket_id, "engineer_id": eng["id"]},
+        {"$set": {"status": "cancelled"}}
+    )
+    await _db.ticket_schedules.insert_one({
+        "id": str(uuid.uuid4()), "organization_id": eng["organization_id"],
+        "ticket_id": data.ticket_id, "ticket_number": ticket.get("ticket_number"),
+        "engineer_id": eng["id"], "engineer_name": eng["name"],
+        "company_name": ticket.get("company_name"), "subject": ticket.get("subject"),
+        "scheduled_at": data.proposed_time, "scheduled_end_at": data.proposed_end_time,
+        "notes": data.notes, "status": "accepted", "created_at": now_ist(),
+    })
+    return {"status": "rescheduled", "ticket_id": data.ticket_id}
+
+
+@router.get("/engineer/dashboard")
+async def engineer_dashboard(engineer: dict = Depends(get_current_engineer)):
+    """Engineer's own dashboard data."""
+    eng = await _resolve_engineer(engineer)
+    org_id = eng["organization_id"]
+    eng_id = eng["id"]
+
+    # Pending acceptance
+    pending = await _db.tickets_v2.find({
+        "assigned_to_id": eng_id, "organization_id": org_id,
+        "assignment_status": "pending", "is_open": True, "is_deleted": {"$ne": True}
+    }, {"_id": 0, "timeline": 0}).sort("assigned_at", -1).to_list(20)
+
+    # Accepted / active tickets
+    active = await _db.tickets_v2.find({
+        "assigned_to_id": eng_id, "organization_id": org_id,
+        "is_open": True, "is_deleted": {"$ne": True},
+        "assignment_status": {"$ne": "pending"}
+    }, {"_id": 0, "timeline": 0}).sort("updated_at", -1).to_list(30)
+
+    # Upcoming schedules
+    from datetime import datetime as dt_cls
+    now = dt_cls.now(IST).isoformat()
+    schedules = await _db.ticket_schedules.find({
+        "engineer_id": eng_id, "organization_id": org_id,
+        "scheduled_at": {"$gte": now}, "status": {"$nin": ["cancelled"]}
+    }, {"_id": 0}).sort("scheduled_at", 1).to_list(10)
+
+    # Stats
+    total_assigned = await _db.tickets_v2.count_documents({
+        "assigned_to_id": eng_id, "organization_id": org_id,
+        "is_open": True, "is_deleted": {"$ne": True}
+    })
+    today_str = dt_cls.now(IST).strftime("%Y-%m-%d")
+    visits_today = await _db.ticket_schedules.count_documents({
+        "engineer_id": eng_id, "organization_id": org_id,
+        "scheduled_at": {"$gte": f"{today_str}T00:00:00", "$lte": f"{today_str}T23:59:59"},
+        "status": {"$nin": ["cancelled"]}
+    })
+
+    return {
+        "engineer": {"id": eng_id, "name": eng["name"]},
+        "pending_tickets": pending,
+        "active_tickets": active,
+        "upcoming_schedules": schedules,
+        "decline_reasons": DECLINE_REASONS,
+        "stats": {
+            "total_assigned": total_assigned,
+            "pending_count": len(pending),
+            "visits_today": visits_today,
+            "active_count": len(active),
+        }
+    }
+
+
+# ── Admin Workforce Overview ──
+
+@router.get("/ticketing/workforce/overview")
+async def workforce_overview(admin: dict = Depends(get_current_admin)):
+    """Admin-level workforce overview: all technicians, workloads, SLA, escalations."""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+
+    engineers = await _db.engineers.find(
+        {"organization_id": org_id, "is_active": {"$ne": False}, "is_deleted": {"$ne": True}},
+        {"_id": 0, "password_hash": 0}
+    ).to_list(50)
+
+    from datetime import datetime as dt_cls
+    now = dt_cls.now(IST)
+    today_str = now.strftime("%Y-%m-%d")
+    cutoff = (now - timedelta(hours=AUTO_ESCALATION_HOURS)).isoformat()
+
+    workforce = []
+    total_pending = 0
+    total_overdue = 0
+
+    for eng in engineers:
+        eid = eng["id"]
+
+        open_count = await _db.tickets_v2.count_documents({
+            "assigned_to_id": eid, "organization_id": org_id,
+            "is_open": True, "is_deleted": {"$ne": True}
+        })
+        pending_count = await _db.tickets_v2.count_documents({
+            "assigned_to_id": eid, "organization_id": org_id,
+            "assignment_status": "pending", "is_open": True, "is_deleted": {"$ne": True}
+        })
+        declined_count = await _db.tickets_v2.count_documents({
+            "assigned_to_id": eid, "organization_id": org_id,
+            "assignment_status": "declined", "is_deleted": {"$ne": True}
+        })
+        visits_today = await _db.ticket_schedules.count_documents({
+            "engineer_id": eid, "organization_id": org_id,
+            "scheduled_at": {"$gte": f"{today_str}T00:00:00", "$lte": f"{today_str}T23:59:59"},
+            "status": {"$nin": ["cancelled"]}
+        })
+
+        # SLA
+        sla_logs = await _db.assignment_sla_logs.find(
+            {"engineer_id": eid, "organization_id": org_id}, {"_id": 0}
+        ).sort("created_at", -1).to_list(50)
+        total_sla = len(sla_logs)
+        accepted_sla = len([s for s in sla_logs if s.get("response") == "accepted"])
+        acceptance_rate = round(accepted_sla / total_sla * 100, 1) if total_sla > 0 else None
+
+        # Overdue pending
+        overdue = await _db.tickets_v2.count_documents({
+            "assigned_to_id": eid, "organization_id": org_id,
+            "assignment_status": "pending", "assigned_at": {"$lte": cutoff},
+            "is_open": True, "is_deleted": {"$ne": True}
+        })
+
+        total_pending += pending_count
+        total_overdue += overdue
+
+        workforce.append({
+            "id": eid,
+            "name": eng.get("name"),
+            "email": eng.get("email"),
+            "specialization": eng.get("specialization"),
+            "is_active": eng.get("is_active", True),
+            "open_tickets": open_count,
+            "pending_acceptance": pending_count,
+            "declined": declined_count,
+            "visits_today": visits_today,
+            "acceptance_rate": acceptance_rate,
+            "overdue_pending": overdue,
+            "salary": eng.get("salary"),
+        })
+
+    # Tickets needing reassignment (declined + unassigned)
+    needs_reassignment = await _db.tickets_v2.find({
+        "organization_id": org_id,
+        "assignment_status": "declined",
+        "is_open": True,
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0, "id": 1, "ticket_number": 1, "subject": 1, "company_name": 1,
+        "assigned_to_name": 1, "decline_reason_label": 1, "decline_detail": 1,
+        "updated_at": 1, "priority_name": 1}).sort("updated_at", -1).to_list(20)
+
+    # Overdue escalations
+    escalations = await _db.tickets_v2.find({
+        "organization_id": org_id,
+        "assignment_status": "pending",
+        "assigned_at": {"$lte": cutoff},
+        "is_open": True,
+        "is_deleted": {"$ne": True},
+    }, {"_id": 0, "id": 1, "ticket_number": 1, "subject": 1, "company_name": 1,
+        "assigned_to_id": 1, "assigned_to_name": 1, "assigned_at": 1,
+        "priority_name": 1}).sort("assigned_at", 1).to_list(20)
+
+    return {
+        "workforce": workforce,
+        "needs_reassignment": needs_reassignment,
+        "escalations": escalations,
+        "summary": {
+            "total_technicians": len(workforce),
+            "total_pending": total_pending,
+            "total_overdue": total_overdue,
+            "total_declined": len(needs_reassignment),
+        },
+        "escalation_threshold_hours": AUTO_ESCALATION_HOURS,
+    }
