@@ -516,7 +516,28 @@ export default function ServiceTicketDetailV2() {
   };
 
   const handleAssignEngineer = (engineerId, engineerName) => {
-    executeTransition(pendingTransitionId, { assigned_to_id: engineerId, assigned_to_name: engineerName });
+    if (activeModal === 'reassign_engineer') {
+      handleReassignEngineer(engineerId, engineerName);
+    } else {
+      executeTransition(pendingTransitionId, { assigned_to_id: engineerId, assigned_to_name: engineerName });
+    }
+  };
+
+  const handleReassignEngineer = async (engineerId, engineerName) => {
+    try {
+      const res = await fetch(`${API}/api/ticketing/assignment/reassign`, {
+        method: 'POST', headers: authHeaders(),
+        body: JSON.stringify({ ticket_id: ticketId, new_engineer_id: engineerId }),
+      });
+      if (res.ok) {
+        toast.success(`Reassigned to ${engineerName}`);
+        setActiveModal(null);
+        fetchTicket();
+      } else {
+        const err = await res.json();
+        toast.error(err.detail || 'Reassignment failed');
+      }
+    } catch { toast.error('Failed to reassign'); }
   };
 
   const handleScheduleVisit = (scheduledAt, scheduledEnd, notes) => {
