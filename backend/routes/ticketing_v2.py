@@ -53,6 +53,39 @@ async def generate_ticket_number(db, org_id: str) -> str:
 # SEED DATA
 # ============================================================
 
+@router.post("/ticketing/deduplicate")
+async def deduplicate_ticketing_data(admin: dict = Depends(get_current_admin)):
+    """Remove duplicate seed data by keeping only one entry per slug"""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    
+    collections = [
+        ("ticket_help_topics", "slug"), ("ticket_forms", "slug"), ("ticket_workflows", "slug"),
+        ("ticket_teams", "slug"), ("ticket_roles", "slug"), ("ticket_sla_policies", "name"),
+        ("ticket_canned_responses", "slug"), ("ticket_priorities", "slug"),
+        ("ticket_task_types", "slug"), ("ticket_notification_templates", "slug"),
+        ("ticket_business_hours", "name"),
+    ]
+    removed = {}
+    for coll_name, key_field in collections:
+        coll = _db[coll_name]
+        docs = await coll.find({"organization_id": org_id}, {"_id": 0, "id": 1, key_field: 1, "created_at": 1}).to_list(1000)
+        seen = {}
+        to_delete = []
+        for doc in docs:
+            k = doc.get(key_field, doc.get("id"))
+            if k in seen:
+                to_delete.append(doc["id"])
+            else:
+                seen[k] = doc["id"]
+        if to_delete:
+            await coll.delete_many({"id": {"$in": to_delete}, "organization_id": org_id})
+            removed[coll_name] = len(to_delete)
+    
+    return {"message": "Deduplication complete", "removed": removed}
+
+
 @router.post("/ticketing/seed")
 async def seed_ticketing_system(admin: dict = Depends(get_current_admin)):
     """Seed all ticketing system data for the organization"""
@@ -60,7 +93,7 @@ async def seed_ticketing_system(admin: dict = Depends(get_current_admin)):
     if not org_id:
         raise HTTPException(status_code=403, detail="Organization context required")
     
-    # Check if already seeded
+    # Check if already seeded by looking for help topics with known slugs
     existing = await _db.ticket_help_topics.count_documents({"organization_id": org_id})
     if existing > 0:
         return {"message": f"Ticketing system already seeded ({existing} help topics found)", "seeded": False}
@@ -220,9 +253,6 @@ async def delete_help_topic(topic_id: str, admin: dict = Depends(get_current_adm
     topic = await _db.ticket_help_topics.find_one({"id": topic_id, "organization_id": org_id})
     if not topic:
         raise HTTPException(status_code=404, detail="Help topic not found")
-    
-    if topic.get("is_system"):
-        raise HTTPException(status_code=400, detail="Cannot delete system help topic")
     
     await _db.ticket_help_topics.delete_one({"id": topic_id})
     return {"message": "Help topic deleted"}
