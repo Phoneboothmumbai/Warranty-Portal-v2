@@ -1,0 +1,115 @@
+{
+  "summary": "Testing for Bug Fixes - Engineer Ticket Detail & Calendar Sync. Both bugs are VERIFIED FIXED. Backend: 13/14 tests passed (93%). Frontend: All flows verified via Playwright.",
+  "test_date": "2026-02-26",
+  "bugs_tested": {
+    "bug_1_technician_cant_view_job_details": {
+      "status": "FIXED",
+      "description": "Technician can now view full job details when clicking on a ticket",
+      "verification": {
+        "endpoint_tested": "GET /api/engineer/ticket/{ticket_id}",
+        "response_includes": ["ticket", "company", "site", "employee", "device", "repair_history", "schedules"],
+        "frontend_page": "/engineer/ticket/:ticketId shows all sections: Job Details, Device Information, Company, Contact Person, Timeline, Scheduled Visits"
+      }
+    },
+    "bug_2_calendar_not_syncing_after_job_acceptance": {
+      "status": "FIXED",
+      "description": "Schedule records are now created when engineer accepts a job",
+      "verification": {
+        "endpoint_tested": "POST /api/engineer/assignment/accept",
+        "database_check": "ticket_schedules collection contains record with status 'accepted'",
+        "engineer_calendar": "/engineer/calendar shows accepted job with time slot",
+        "admin_calendar": "/admin/calendar shows technician's accepted job with color coding"
+      }
+    }
+  },
+  "features_verified": {
+    "engineer_ticket_detail_page": {
+      "url": "/engineer/ticket/:ticketId",
+      "sections_present": ["Job Details with description/fault", "Device Information (model, serial, warranty)", "Company info with address", "Contact Person", "Scheduled Visits with status", "Timeline with acceptance event", "Back button to dashboard"],
+      "navigation": "Clicking active ticket in dashboard → navigates to detail page ✓",
+      "data_testid_used": "active-{ticket_number} for clickable rows"
+    },
+    "engineer_dashboard": {
+      "url": "/engineer/dashboard",
+      "stats_cards": ["Total Assigned", "Pending Accept", "Visits Today", "Active Tickets"],
+      "sections": ["Jobs Awaiting Your Response (pending)", "Active Tickets (accepted)"],
+      "click_navigation": "Active ticket rows are clickable and navigate to detail"
+    },
+    "engineer_calendar": {
+      "url": "/engineer/calendar",
+      "shows_accepted_jobs": true,
+      "event_display": "Shows ticket number, company name, time slot"
+    },
+    "admin_calendar": {
+      "url": "/admin/calendar",
+      "shows_technician_jobs": true,
+      "filter_by_technician": "Dropdown 'All Technicians' with color-coded legend",
+      "event_display": "Shows ticket info with colored dots per technician"
+    },
+    "job_acceptance_workflow": {
+      "accept_endpoint": "POST /api/engineer/assignment/accept",
+      "creates_schedule": true,
+      "updates_ticket_status": "assignment_status: pending → accepted",
+      "adds_timeline_entry": "'{engineer_name} accepted the assignment'"
+    }
+  },
+  "backend_tests": {
+    "file": "/app/backend/tests/test_engineer_ticket_detail_calendar_sync.py",
+    "results": {
+      "passed": 13,
+      "skipped": 1,
+      "failed": 0,
+      "total": 14
+    },
+    "test_classes": [
+      "TestEngineerAuth - login validation",
+      "TestEngineerDashboard - dashboard data structure",
+      "TestEngineerTicketDetail - ticket detail endpoint",
+      "TestJobAcceptanceWithCalendarSync - schedule creation",
+      "TestEngineerCalendar - calendar endpoint",
+      "TestAdminCalendar - admin calendar",
+      "TestEngineerAcceptDeclineReschedule - all response endpoints"
+    ]
+  },
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_engineer_ticket_detail_calendar_sync.py",
+    "/app/test_reports/pytest/engineer_ticket_detail_calendar_sync_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "EngineerTicketDetail.js correctly fetches full ticket data including company, device, repair_history",
+    "job_acceptance.py engineer_accept() creates schedule record when none exists (line 707-739)",
+    "Schedule status is 'accepted' when job is accepted, appearing in calendar",
+    "Timeline entry added with acceptance event",
+    "EngineerDashboard.js has clickable rows with onClick navigate to /engineer/ticket/{id}",
+    "App.js route /engineer/ticket/:ticketId correctly configured (line 239)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_engineer_ticket_detail_calendar_sync.py"
+  ],
+  "success_rate": {
+    "backend": "93% (13/14 passed, 1 skipped)",
+    "frontend": "100% (All UI flows verified)"
+  },
+  "test_credentials": {
+    "admin": {"email": "ck@motta.in", "password": "Charu@123@"},
+    "engineer": {"email": "t1_test_engineer@test.com", "password": "Test@123"}
+  },
+  "seed_data_creation": "Created test engineer (t1_test_engineer@test.com) and test ticket (#T1TESTB37A) for verification",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Both bug fixes verified working: (1) Engineer ticket detail page at /engineer/ticket/:ticketId shows full info including company, device, repair history, schedules. (2) Job acceptance creates schedule record in ticket_schedules collection, visible in both engineer calendar (/engineer/calendar) and admin calendar (/admin/calendar). Test engineer: t1_test_engineer@test.com / Test@123. Test ticket: #T1TESTB37A (now accepted).",
+  "rca_of_the_issues": {
+    "bug_1": "Missing endpoint - GET /api/engineer/ticket/{id} was not implemented. Fix added the endpoint at line 905 in job_acceptance.py which fetches ticket with related company, site, employee, device, and repair_history data.",
+    "bug_2": "Schedule records not created - The engineer_accept() function only updated existing schedules but didn't create new ones. Fix added logic at lines 707-739 to create a new ticket_schedules record with status 'accepted' when none exists."
+  }
+}
