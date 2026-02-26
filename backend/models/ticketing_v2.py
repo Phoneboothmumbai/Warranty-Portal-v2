@@ -647,10 +647,16 @@ class TicketCreateV2(BaseModel):
     description: Optional[str] = None
     form_values: Dict[str, Any] = Field(default_factory=dict)
     company_id: Optional[str] = None
+    site_id: Optional[str] = None
+    site_name: Optional[str] = None
+    custom_location: Optional[str] = None  # For "another location" not in list
+    employee_id: Optional[str] = None
+    employee_name: Optional[str] = None
     contact_name: Optional[str] = None
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
     device_id: Optional[str] = None
+    device_description: Optional[str] = None  # Free-text for unlisted device
     priority_id: Optional[str] = None
     source: str = "web"
 
