@@ -69,6 +69,12 @@ Enterprise-grade Warranty & Asset Tracking Portal with a fully configurable, mas
   - Respects holidays and non-working days
 - **Schedule Visit Modal**: Revamped with visual 30-min time slot grid, blocked slots shown in red
 
+### Workforce Overview & Role Separation (Feb 26, 2026)
+- **Admin Workforce Overview** (renamed from "Technician View"): All technicians table with open tickets, pending acceptance, declined, visits today, acceptance rate, status. Summary cards, escalation alerts, declined reassignment section.
+- **Engineer Portal Accept/Decline**: Accept/Decline/Reschedule buttons now ONLY in engineer portal (`/engineer/dashboard`), not admin panel
+- **Admin Reassignment Controls**: One-click reassign with smart suggestions for declined/overdue tickets
+- **Notification Bell**: Added to admin header showing real-time unread count
+
 ### Job Acceptance/Decline Workflow (Feb 26, 2026)
 - **Assignment Status**: When technician is assigned, status is "pending" (not auto-accepted)
 - **Accept/Decline/Reschedule**: Technician can accept, decline (with 6 reason categories), or accept & reschedule
