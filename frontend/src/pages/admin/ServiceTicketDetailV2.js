@@ -824,7 +824,7 @@ export default function ServiceTicketDetailV2() {
       </div>
 
       {/* Transition Modals */}
-      <AssignEngineerModal open={activeModal === 'assign_engineer'} onClose={() => { setActiveModal(null); setPendingTransitionId(null); }} onConfirm={handleAssignEngineer} ticket={ticket} />
+      <AssignEngineerModal open={activeModal === 'assign_engineer' || activeModal === 'reassign_engineer'} onClose={() => { setActiveModal(null); setPendingTransitionId(null); }} onConfirm={handleAssignEngineer} ticket={ticket} />
       <ScheduleVisitModal open={activeModal === 'schedule_visit'} onClose={() => { setActiveModal(null); setPendingTransitionId(null); }} onConfirm={handleScheduleVisit} ticket={ticket} />
       <DiagnosisModal open={activeModal === 'diagnosis'} onClose={() => { setActiveModal(null); setPendingTransitionId(null); }} onConfirm={handleDiagnosis} />
       <PartsListModal open={activeModal === 'parts_list'} onClose={() => { setActiveModal(null); setPendingTransitionId(null); }} onConfirm={handlePartsRequired} />
