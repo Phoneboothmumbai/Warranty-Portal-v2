@@ -11,7 +11,7 @@ import requests
 import os
 import io
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://config-forge-1.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://asset-warranty-hub.preview.emergentagent.com')
 
 # Test credentials
 ADMIN_EMAIL = "admin@demo.com"
