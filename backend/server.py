@@ -9170,26 +9170,36 @@ async def startup_event():
             org_id = org.get("id")
             if not org_id:
                 continue
-            existing = await db.ticket_help_topics.count_documents({"organization_id": org_id})
-            if existing > 0:
+            # Check by slug to avoid duplicates
+            existing_slugs = set()
+            async for doc in db.ticket_help_topics.find({"organization_id": org_id}, {"slug": 1, "_id": 0}):
+                existing_slugs.add(doc.get("slug"))
+            if len(existing_slugs) >= 10:
                 continue
             data = generate_seed_data(org_id)
-            for collection_name, collection_key in [
-                ("ticket_priorities", "priorities"),
-                ("ticket_business_hours", "business_hours"),
-                ("ticket_sla_policies", "sla_policies"),
-                ("ticket_roles", "roles"),
-                ("ticket_teams", "teams"),
-                ("ticket_task_types", "task_types"),
-                ("ticket_forms", "forms"),
-                ("ticket_workflows", "workflows"),
-                ("ticket_help_topics", "help_topics"),
-                ("ticket_canned_responses", "canned_responses"),
-                ("ticket_notification_templates", "notification_templates"),
+            # Only insert items that don't already exist (by slug/name)
+            for collection_name, collection_key, dedup_field in [
+                ("ticket_priorities", "priorities", "slug"),
+                ("ticket_business_hours", "business_hours", "name"),
+                ("ticket_sla_policies", "sla_policies", "name"),
+                ("ticket_roles", "roles", "slug"),
+                ("ticket_teams", "teams", "slug"),
+                ("ticket_task_types", "task_types", "slug"),
+                ("ticket_forms", "forms", "slug"),
+                ("ticket_workflows", "workflows", "slug"),
+                ("ticket_help_topics", "help_topics", "slug"),
+                ("ticket_canned_responses", "canned_responses", "slug"),
+                ("ticket_notification_templates", "notification_templates", "slug"),
             ]:
                 items = data.get(collection_key, [])
-                if items:
-                    await db[collection_name].insert_many(items)
+                if not items:
+                    continue
+                existing = set()
+                async for doc in db[collection_name].find({"organization_id": org_id}, {dedup_field: 1, "_id": 0}):
+                    existing.add(doc.get(dedup_field))
+                new_items = [i for i in items if i.get(dedup_field) not in existing]
+                if new_items:
+                    await db[collection_name].insert_many(new_items)
             print(f"Auto-seeded ticketing system for org: {org.get('name', org_id)}")
     except Exception as e:
         print(f"Ticketing auto-seed error (non-fatal): {e}")
