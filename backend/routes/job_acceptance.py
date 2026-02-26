@@ -622,7 +622,6 @@ async def _resolve_engineer(user: dict):
     """Resolve engineer record from auth token data."""
     eng_id = user.get("id")
     email = user.get("email", user.get("sub", ""))
-    org_id = user.get("organization_id")
     engineer = await _db.engineers.find_one(
         {"$or": [{"id": eng_id}, {"email": email}], "is_deleted": {"$ne": True}},
         {"_id": 0, "id": 1, "name": 1, "organization_id": 1}
