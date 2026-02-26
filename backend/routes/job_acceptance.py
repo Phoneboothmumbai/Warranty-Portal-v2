@@ -552,8 +552,8 @@ async def assignment_sla_stats(admin: dict = Depends(get_current_admin)):
         ).sort("created_at", -1).to_list(100)
 
         total = len(logs)
-        accepted = len([l for l in logs if l.get("response") == "accepted"])
-        declined = len([l for l in logs if l.get("response") == "declined"])
+        accepted = len([entry for entry in logs if entry.get("response") == "accepted"])
+        declined = len([entry for entry in logs if entry.get("response") == "declined"])
 
         # Calculate avg response time
         response_times = []
