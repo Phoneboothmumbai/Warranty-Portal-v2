@@ -110,6 +110,7 @@ import EngineerLogin from "./pages/engineer/EngineerLogin";
 import EngineerLayout from "./layouts/EngineerLayout";
 import EngineerDashboard from "./pages/engineer/EngineerDashboard";
 import EngineerCalendar from "./pages/engineer/EngineerCalendar";
+import EngineerTicketDetail from "./pages/engineer/EngineerTicketDetail";
 
 // Contexts
 import { BrandingProvider } from "./contexts/BrandingContext";
