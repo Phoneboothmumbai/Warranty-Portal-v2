@@ -9162,45 +9162,63 @@ async def startup_event():
     # Seed default supply categories and products
     await seed_default_supplies()
     
-    # Auto-seed ticketing system for all organizations that don't have it yet
+    # Auto-deduplicate and seed ticketing system for all organizations
     try:
         from models.ticketing_v2_seed import generate_seed_data
         orgs = await db.organizations.find({"is_deleted": {"$ne": True}}, {"_id": 0, "id": 1, "name": 1}).to_list(100)
+        
+        collections_config = [
+            ("ticket_priorities", "priorities", "slug"),
+            ("ticket_business_hours", "business_hours", "name"),
+            ("ticket_sla_policies", "sla_policies", "name"),
+            ("ticket_roles", "roles", "slug"),
+            ("ticket_teams", "teams", "slug"),
+            ("ticket_task_types", "task_types", "slug"),
+            ("ticket_forms", "forms", "slug"),
+            ("ticket_workflows", "workflows", "slug"),
+            ("ticket_help_topics", "help_topics", "slug"),
+            ("ticket_canned_responses", "canned_responses", "slug"),
+            ("ticket_notification_templates", "notification_templates", "slug"),
+        ]
+        
         for org in orgs:
             org_id = org.get("id")
             if not org_id:
                 continue
-            # Check by slug to avoid duplicates
-            existing_slugs = set()
-            async for doc in db.ticket_help_topics.find({"organization_id": org_id}, {"slug": 1, "_id": 0}):
-                existing_slugs.add(doc.get("slug"))
-            if len(existing_slugs) >= 10:
-                continue
+            
+            # Step 1: Deduplicate existing data
+            for coll_name, _, dedup_field in collections_config:
+                docs = await db[coll_name].find(
+                    {"organization_id": org_id}, {"_id": 0, "id": 1, dedup_field: 1}
+                ).to_list(1000)
+                seen = {}
+                to_delete = []
+                for doc in docs:
+                    k = doc.get(dedup_field, doc.get("id"))
+                    if k in seen:
+                        to_delete.append(doc["id"])
+                    else:
+                        seen[k] = doc["id"]
+                if to_delete:
+                    await db[coll_name].delete_many({"id": {"$in": to_delete}, "organization_id": org_id})
+                    print(f"Deduped {len(to_delete)} items from {coll_name} for org {org.get('name', org_id)}")
+            
+            # Step 2: Seed missing data
             data = generate_seed_data(org_id)
-            # Only insert items that don't already exist (by slug/name)
-            for collection_name, collection_key, dedup_field in [
-                ("ticket_priorities", "priorities", "slug"),
-                ("ticket_business_hours", "business_hours", "name"),
-                ("ticket_sla_policies", "sla_policies", "name"),
-                ("ticket_roles", "roles", "slug"),
-                ("ticket_teams", "teams", "slug"),
-                ("ticket_task_types", "task_types", "slug"),
-                ("ticket_forms", "forms", "slug"),
-                ("ticket_workflows", "workflows", "slug"),
-                ("ticket_help_topics", "help_topics", "slug"),
-                ("ticket_canned_responses", "canned_responses", "slug"),
-                ("ticket_notification_templates", "notification_templates", "slug"),
-            ]:
+            seeded_any = False
+            for coll_name, collection_key, dedup_field in collections_config:
                 items = data.get(collection_key, [])
                 if not items:
                     continue
                 existing = set()
-                async for doc in db[collection_name].find({"organization_id": org_id}, {dedup_field: 1, "_id": 0}):
+                async for doc in db[coll_name].find({"organization_id": org_id}, {dedup_field: 1, "_id": 0}):
                     existing.add(doc.get(dedup_field))
                 new_items = [i for i in items if i.get(dedup_field) not in existing]
                 if new_items:
-                    await db[collection_name].insert_many(new_items)
-            print(f"Auto-seeded ticketing system for org: {org.get('name', org_id)}")
+                    await db[coll_name].insert_many(new_items)
+                    seeded_any = True
+            if seeded_any:
+                print(f"Auto-seeded ticketing system for org: {org.get('name', org_id)}")
     except Exception as e:
         print(f"Ticketing auto-seed error (non-fatal): {e}")
 
