@@ -69,6 +69,17 @@ Enterprise-grade Warranty & Asset Tracking Portal with a fully configurable, mas
   - Respects holidays and non-working days
 - **Schedule Visit Modal**: Revamped with visual 30-min time slot grid, blocked slots shown in red
 
+### Job Acceptance/Decline Workflow (Feb 26, 2026)
+- **Assignment Status**: When technician is assigned, status is "pending" (not auto-accepted)
+- **Accept/Decline/Reschedule**: Technician can accept, decline (with 6 reason categories), or accept & reschedule
+- **Decline Notifications**: On decline, admin back office gets in-app notification with one-click reassignment
+- **Smart Reassignment**: Suggests best available technician based on skills, workload, recent decline history, and schedule availability
+- **Acceptance SLA Tracking**: Records response times, acceptance rates, decline reason breakdown per engineer
+- **Auto-Escalation**: Flags pending assignments that exceed 4-hour response threshold
+- **Notification Bell**: Admin header shows real-time unread notification count with dropdown panel
+- **Backend APIs**: `/api/ticketing/assignment/*` (pending, accept, decline, reschedule, reassign, suggest-reassign, sla-stats, check-escalations) + `/api/notifications`
+- **New DB collections**: `notifications`, `assignment_sla_logs`
+
 ### Central Calendar & Engineer Portal (Feb 25, 2026)
 - **Admin Central Calendar** (`/admin/calendar`): Month/Week/Day views with all technician schedules
 - **Sidebar panels**: Events, Org Holidays (CRUD), Standard Working Hours, Emergency Working Hours (CRUD)
