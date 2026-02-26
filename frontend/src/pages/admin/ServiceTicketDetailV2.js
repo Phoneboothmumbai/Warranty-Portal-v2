@@ -711,10 +711,50 @@ export default function ServiceTicketDetailV2() {
               <h3 className="text-sm font-semibold text-slate-700">Assignment</h3>
               <Button variant="ghost" size="sm" onClick={() => setShowAssign(!showAssign)} data-testid="edit-assign-btn"><Edit2 className="w-3 h-3" /></Button>
             </div>
+
+            {/* Assignment Status Badge */}
+            {ticket.assignment_status === 'declined' && (
+              <div className="mb-3 bg-red-50 border border-red-200 rounded-lg p-3" data-testid="reassignment-pending-banner">
+                <div className="flex items-center gap-2 mb-1">
+                  <AlertTriangle className="w-4 h-4 text-red-600" />
+                  <span className="text-sm font-semibold text-red-700">Reassignment Pending</span>
+                </div>
+                <p className="text-xs text-red-600 ml-6">
+                  {ticket.assigned_to_name} declined this job{ticket.decline_reason ? `: ${ticket.decline_reason}` : ''}.
+                </p>
+                {ticket.decline_detail && <p className="text-xs text-red-500 ml-6 mt-0.5">{ticket.decline_detail}</p>}
+              </div>
+            )}
+            {ticket.assignment_status === 'pending' && (
+              <div className="mb-3 bg-amber-50 border border-amber-200 rounded-lg p-2.5" data-testid="pending-acceptance-banner">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-amber-600" />
+                  <span className="text-xs font-medium text-amber-700">Pending Acceptance by {ticket.assigned_to_name}</span>
+                </div>
+              </div>
+            )}
+            {ticket.assignment_status === 'accepted' && (
+              <div className="mb-3 bg-green-50 border border-green-200 rounded-lg p-2.5" data-testid="accepted-banner">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <span className="text-xs font-medium text-green-700">Accepted by {ticket.assigned_to_name}</span>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <div className="flex items-center gap-2"><Users className="w-4 h-4 text-slate-400" /><span className="text-sm text-slate-700">{ticket.assigned_team_name || 'Unassigned'}</span></div>
               <div className="flex items-center gap-2"><User className="w-4 h-4 text-slate-400" /><span className="text-sm text-slate-700">{ticket.assigned_to_name || 'Unassigned'}</span></div>
             </div>
+
+            {/* Reassign Button for declined tickets */}
+            {ticket.assignment_status === 'declined' && (
+              <Button size="sm" variant="outline" className="w-full mt-3 text-red-600 border-red-200 hover:bg-red-50"
+                onClick={() => setActiveModal('reassign_engineer')} data-testid="reassign-btn">
+                <RefreshCw className="w-3.5 h-3.5 mr-1" /> Reassign to Another Engineer
+              </Button>
+            )}
+
             {showAssign && (
               <div className="mt-3 pt-3 border-t space-y-2" data-testid="assign-form">
                 <select className="w-full border rounded-lg px-3 py-1.5 text-sm" value={assignTeamId} onChange={e => setAssignTeamId(e.target.value)}>
