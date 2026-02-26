@@ -557,11 +557,11 @@ async def assignment_sla_stats(admin: dict = Depends(get_current_admin)):
 
         # Calculate avg response time
         response_times = []
-        for l in logs:
-            if l.get("assigned_at") and l.get("responded_at"):
+        for log in logs:
+            if log.get("assigned_at") and log.get("responded_at"):
                 try:
-                    a = datetime.fromisoformat(l["assigned_at"])
-                    r = datetime.fromisoformat(l["responded_at"])
+                    a = datetime.fromisoformat(log["assigned_at"])
+                    r = datetime.fromisoformat(log["responded_at"])
                     diff_mins = (r - a).total_seconds() / 60
                     response_times.append(diff_mins)
                 except (ValueError, TypeError):
@@ -571,9 +571,9 @@ async def assignment_sla_stats(admin: dict = Depends(get_current_admin)):
 
         # Get decline reasons breakdown
         reasons = {}
-        for l in logs:
-            if l.get("response") == "declined" and l.get("reason_id"):
-                reasons[l["reason_id"]] = reasons.get(l["reason_id"], 0) + 1
+        for log in logs:
+            if log.get("response") == "declined" and log.get("reason_id"):
+                reasons[log["reason_id"]] = reasons.get(log["reason_id"], 0) + 1
 
         stats.append({
             "engineer_id": eng["id"],
