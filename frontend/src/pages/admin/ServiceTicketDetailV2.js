@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Clock, User, Building2, MessageSquare, CheckCircle, AlertTriangle,
   ChevronRight, Send, Lock, Tag, Edit2, Users, Calendar, Wrench, FileText,
-  X, Clipboard, Package, MapPin
+  X, Clipboard, Package, MapPin, RefreshCw
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
