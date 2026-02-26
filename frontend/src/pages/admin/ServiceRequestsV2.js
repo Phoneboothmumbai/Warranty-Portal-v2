@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, Ticket, Clock, AlertTriangle, CheckCircle, ChevronDown, X, RefreshCw } from 'lucide-react';
+import { Plus, Search, Filter, Ticket, Clock, AlertTriangle, CheckCircle, ChevronDown, X, RefreshCw, MapPin, User, Monitor, Building2 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { toast } from 'sonner';
@@ -28,66 +28,188 @@ const StatsCard = ({ label, value, icon: Icon, color }) => (
   </div>
 );
 
+// ── Searchable Dropdown ──
+const SearchSelect = ({ options, value, onChange, placeholder, renderOption, searchKeys, emptyText, testId }) => {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!q.trim()) return options;
+    const lower = q.toLowerCase();
+    return options.filter(o => (searchKeys || ['name']).some(k => (o[k] || '').toLowerCase().includes(lower)));
+  }, [options, q, searchKeys]);
+
+  const selected = options.find(o => o.id === value);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        className={`w-full border rounded-lg px-3 py-2 text-sm text-left flex items-center justify-between ${!value ? 'text-slate-400' : 'text-slate-800'}`}
+        onClick={() => setOpen(!open)}
+        data-testid={testId}
+      >
+        <span className="truncate">{selected ? (renderOption ? renderOption(selected, true) : selected.name) : placeholder}</span>
+        <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-hidden">
+          <div className="p-2 border-b">
+            <Input
+              autoFocus
+              placeholder={`Search...`}
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              className="text-sm h-8"
+              data-testid={`${testId}-search`}
+            />
+          </div>
+          <div className="overflow-auto max-h-48">
+            {filtered.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-3">{emptyText || 'No results'}</p>
+            ) : (
+              filtered.map(o => (
+                <button
+                  key={o.id}
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors ${value === o.id ? 'bg-blue-50 text-blue-700 font-medium' : ''}`}
+                  onClick={() => { onChange(o.id, o); setOpen(false); setQ(''); }}
+                  data-testid={`${testId}-opt-${o.id}`}
+                >
+                  {renderOption ? renderOption(o) : o.name}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Create Ticket Modal ──
 const CreateTicketModal = ({ open, onClose, onCreated }) => {
+  const token = localStorage.getItem('admin_token');
+  const hdrs = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  // Core state
   const [helpTopics, setHelpTopics] = useState([]);
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [topicDetails, setTopicDetails] = useState(null);
   const [formValues, setFormValues] = useState({});
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
-  const [companies, setCompanies] = useState([]);
-  const [selectedCompany, setSelectedCompany] = useState('');
-  const [contactName, setContactName] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [priorities, setPriorities] = useState([]);
   const [selectedPriority, setSelectedPriority] = useState('');
 
+  // Company flow
+  const [companies, setCompanies] = useState([]);
+  const [selectedCompany, setSelectedCompany] = useState('');
+  const [sites, setSites] = useState([]);
+  const [selectedSite, setSelectedSite] = useState('');
+  const [useCustomLocation, setUseCustomLocation] = useState(false);
+  const [customLocation, setCustomLocation] = useState('');
+  const [employees, setEmployees] = useState([]);
+  const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [useCustomEmployee, setUseCustomEmployee] = useState(false);
+  const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+
+  // Device
+  const [devices, setDevices] = useState([]);
+  const [deviceSearch, setDeviceSearch] = useState('');
+  const [selectedDevice, setSelectedDevice] = useState('');
+  const [useCustomDevice, setUseCustomDevice] = useState(false);
+  const [deviceDescription, setDeviceDescription] = useState('');
+
+  const [submitting, setSubmitting] = useState(false);
+
+  // Init data
   useEffect(() => {
     if (!open) return;
-    const token = localStorage.getItem('admin_token');
     Promise.all([
-      fetch(`${API}/api/ticketing/help-topics`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-      fetch(`${API}/api/admin/companies`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-      fetch(`${API}/api/ticketing/priorities`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`${API}/api/ticketing/help-topics`, { headers: hdrs }).then(r => r.json()),
+      fetch(`${API}/api/admin/companies`, { headers: hdrs }).then(r => r.json()),
+      fetch(`${API}/api/ticketing/priorities`, { headers: hdrs }).then(r => r.json()),
     ]).then(([topics, comps, prios]) => {
       setHelpTopics(Array.isArray(topics) ? topics : []);
       setCompanies(Array.isArray(comps) ? comps : []);
       setPriorities(Array.isArray(prios) ? prios : []);
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // Fetch topic details
   useEffect(() => {
     if (!selectedTopic) { setTopicDetails(null); return; }
-    const token = localStorage.getItem('admin_token');
-    fetch(`${API}/api/ticketing/help-topics/${selectedTopic}`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API}/api/ticketing/help-topics/${selectedTopic}`, { headers: hdrs })
       .then(r => r.json()).then(setTopicDetails);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTopic]);
 
-  const handleSubmit = async () => {
-    if (!selectedTopic || !subject.trim()) {
-      toast.error('Please select a help topic and enter a subject');
-      return;
+  // Fetch sites when company changes
+  useEffect(() => {
+    setSites([]); setSelectedSite(''); setEmployees([]); setSelectedEmployee('');
+    setDevices([]); setSelectedDevice(''); setUseCustomLocation(false); setUseCustomEmployee(false);
+    if (!selectedCompany) return;
+    fetch(`${API}/api/admin/sites?company_id=${selectedCompany}`, { headers: hdrs })
+      .then(r => r.json()).then(d => setSites(Array.isArray(d) ? d : d.sites || []));
+    fetch(`${API}/api/admin/company-employees?company_id=${selectedCompany}`, { headers: hdrs })
+      .then(r => r.json()).then(d => setEmployees(Array.isArray(d) ? d : d.employees || []));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCompany]);
+
+  // Fetch devices when site changes
+  useEffect(() => {
+    setDevices([]); setSelectedDevice(''); setUseCustomDevice(false);
+    if (!selectedCompany) return;
+    let url = `${API}/api/admin/devices?company_id=${selectedCompany}&limit=100`;
+    if (selectedSite) url += `&site_id=${selectedSite}`;
+    if (deviceSearch.trim()) url += `&q=${encodeURIComponent(deviceSearch)}`;
+    fetch(url, { headers: hdrs })
+      .then(r => r.json())
+      .then(d => setDevices(Array.isArray(d) ? d : d.devices || []));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCompany, selectedSite, deviceSearch]);
+
+  // When employee is selected, autofill contact
+  const onEmployeeSelect = (id, emp) => {
+    setSelectedEmployee(id);
+    if (emp) {
+      setContactName(emp.name || '');
+      setContactPhone(emp.phone || '');
+      setContactEmail(emp.email || '');
     }
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedTopic || !subject.trim()) { toast.error('Please select a help topic and enter a subject'); return; }
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('admin_token');
-      const res = await fetch(`${API}/api/ticketing/tickets`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          help_topic_id: selectedTopic,
-          subject,
-          description,
-          form_values: formValues,
-          company_id: selectedCompany || undefined,
-          contact_name: contactName || undefined,
-          contact_email: contactEmail || undefined,
-          contact_phone: contactPhone || undefined,
-          priority_id: selectedPriority || undefined,
-        }),
-      });
+      const body = {
+        help_topic_id: selectedTopic,
+        subject, description,
+        form_values: formValues,
+        company_id: selectedCompany || undefined,
+        site_id: (!useCustomLocation && selectedSite) || undefined,
+        custom_location: useCustomLocation ? customLocation : undefined,
+        employee_id: (!useCustomEmployee && selectedEmployee) || undefined,
+        employee_name: useCustomEmployee ? contactName : undefined,
+        contact_name: contactName || undefined,
+        contact_email: contactEmail || undefined,
+        contact_phone: contactPhone || undefined,
+        device_id: (!useCustomDevice && selectedDevice) || undefined,
+        device_description: useCustomDevice ? deviceDescription : undefined,
+        priority_id: selectedPriority || undefined,
+      };
+      const res = await fetch(`${API}/api/ticketing/tickets`, { method: 'POST', headers: hdrs, body: JSON.stringify(body) });
       if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
       const ticket = await res.json();
       toast.success(`Ticket ${ticket.ticket_number} created`);
@@ -102,32 +224,21 @@ const CreateTicketModal = ({ open, onClose, onCreated }) => {
   const formFields = topicDetails?.form?.fields || [];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center pt-10 overflow-y-auto" data-testid="create-ticket-modal">
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center pt-6 overflow-y-auto" data-testid="create-ticket-modal">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 mb-10">
         <div className="flex items-center justify-between p-5 border-b">
           <h2 className="text-lg font-semibold">Create New Ticket</h2>
           <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded"><X className="w-5 h-5" /></button>
         </div>
-        <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
-          <div>
-            <label className="text-sm font-medium text-slate-700 block mb-1.5">Help Topic *</label>
-            <select
-              data-testid="help-topic-select"
-              className="w-full border rounded-lg px-3 py-2 text-sm"
-              value={selectedTopic || ''}
-              onChange={e => { setSelectedTopic(e.target.value); setFormValues({}); }}
-            >
-              <option value="">Select a help topic...</option>
-              {helpTopics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-          </div>
+        <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
 
+          {/* Help Topic & Priority */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1.5">Company</label>
-              <select className="w-full border rounded-lg px-3 py-2 text-sm" value={selectedCompany} onChange={e => setSelectedCompany(e.target.value)} data-testid="company-select">
-                <option value="">Select company...</option>
-                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              <label className="text-sm font-medium text-slate-700 block mb-1.5">Help Topic *</label>
+              <select data-testid="help-topic-select" className="w-full border rounded-lg px-3 py-2 text-sm" value={selectedTopic || ''} onChange={e => { setSelectedTopic(e.target.value); setFormValues({}); }}>
+                <option value="">Select a help topic...</option>
+                {helpTopics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </div>
             <div>
@@ -139,31 +250,163 @@ const CreateTicketModal = ({ open, onClose, onCreated }) => {
             </div>
           </div>
 
+          {/* Company */}
+          <div className="border rounded-lg p-4 space-y-3 bg-slate-50/50">
+            <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-1"><Building2 className="w-4 h-4" /> Company & Location</h3>
+            <div>
+              <label className="text-xs font-medium text-slate-600 block mb-1">Company</label>
+              <SearchSelect
+                options={companies}
+                value={selectedCompany}
+                onChange={(id) => setSelectedCompany(id)}
+                placeholder="Search & select company..."
+                searchKeys={['name', 'email', 'phone']}
+                renderOption={(c, isLabel) => isLabel ? c.name : (
+                  <div><p className="font-medium">{c.name}</p>{c.city && <p className="text-[10px] text-slate-400">{c.city}</p>}</div>
+                )}
+                testId="company-select"
+              />
+            </div>
+
+            {/* Site / Location */}
+            {selectedCompany && (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-slate-600 flex items-center gap-1"><MapPin className="w-3 h-3" /> Site / Location</label>
+                  <button className="text-[10px] text-blue-600 hover:underline" onClick={() => { setUseCustomLocation(!useCustomLocation); setSelectedSite(''); }} data-testid="toggle-custom-location">
+                    {useCustomLocation ? 'Select from list' : '+ Another location'}
+                  </button>
+                </div>
+                {useCustomLocation ? (
+                  <Input placeholder="Type full address..." value={customLocation} onChange={e => setCustomLocation(e.target.value)} className="text-sm" data-testid="custom-location" />
+                ) : (
+                  <SearchSelect
+                    options={sites}
+                    value={selectedSite}
+                    onChange={(id) => setSelectedSite(id)}
+                    placeholder="Select site..."
+                    searchKeys={['name', 'address', 'city']}
+                    renderOption={(s, isLabel) => isLabel ? `${s.name}${s.city ? `, ${s.city}` : ''}` : (
+                      <div><p className="font-medium">{s.name}</p><p className="text-[10px] text-slate-400">{s.address}{s.city ? `, ${s.city}` : ''}</p></div>
+                    )}
+                    emptyText="No sites found"
+                    testId="site-select"
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Employee / Complainant */}
+            {selectedCompany && (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-slate-600 flex items-center gap-1"><User className="w-3 h-3" /> Complainant / Employee</label>
+                  <button className="text-[10px] text-blue-600 hover:underline" onClick={() => { setUseCustomEmployee(!useCustomEmployee); setSelectedEmployee(''); }} data-testid="toggle-custom-employee">
+                    {useCustomEmployee ? 'Select from list' : '+ Another person'}
+                  </button>
+                </div>
+                {useCustomEmployee ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    <Input placeholder="Name" value={contactName} onChange={e => setContactName(e.target.value)} className="text-sm" data-testid="custom-emp-name" />
+                    <Input placeholder="Phone" value={contactPhone} onChange={e => setContactPhone(e.target.value)} className="text-sm" data-testid="custom-emp-phone" />
+                    <Input placeholder="Email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} className="text-sm" data-testid="custom-emp-email" />
+                  </div>
+                ) : (
+                  <SearchSelect
+                    options={employees}
+                    value={selectedEmployee}
+                    onChange={onEmployeeSelect}
+                    placeholder="Search employee..."
+                    searchKeys={['name', 'email', 'phone', 'department']}
+                    renderOption={(e, isLabel) => isLabel ? `${e.name}${e.department ? ` (${e.department})` : ''}` : (
+                      <div className="flex items-center justify-between">
+                        <div><p className="font-medium">{e.name}</p>{e.department && <p className="text-[10px] text-slate-400">{e.department}</p>}</div>
+                        {e.phone && <span className="text-[10px] text-slate-400">{e.phone}</span>}
+                      </div>
+                    )}
+                    emptyText="No employees found"
+                    testId="employee-select"
+                  />
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Device / Asset */}
+          {selectedCompany && (
+            <div className="border rounded-lg p-4 space-y-3 bg-slate-50/50">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-1"><Monitor className="w-4 h-4" /> Device / Asset <span className="text-[10px] text-slate-400 font-normal">(optional)</span></h3>
+                <button className="text-[10px] text-blue-600 hover:underline" onClick={() => { setUseCustomDevice(!useCustomDevice); setSelectedDevice(''); }} data-testid="toggle-custom-device">
+                  {useCustomDevice ? 'Select from list' : '+ Type manually'}
+                </button>
+              </div>
+              {useCustomDevice ? (
+                <textarea
+                  className="w-full border rounded-lg px-3 py-2 text-sm min-h-[60px]"
+                  placeholder="Describe the device (name, model, serial number, etc.)..."
+                  value={deviceDescription}
+                  onChange={e => setDeviceDescription(e.target.value)}
+                  data-testid="custom-device-desc"
+                />
+              ) : (
+                <SearchSelect
+                  options={devices}
+                  value={selectedDevice}
+                  onChange={(id) => setSelectedDevice(id)}
+                  placeholder="Search by name, model, serial number..."
+                  searchKeys={['display_name', 'brand', 'model', 'serial_number', 'asset_tag', 'device_type', 'name']}
+                  renderOption={(d, isLabel) => {
+                    const label = d.display_name || `${d.brand || ''} ${d.model || ''}`.trim() || d.device_type || d.name;
+                    if (isLabel) return `${label}${d.serial_number ? ` (S/N: ${d.serial_number})` : ''}`;
+                    return (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{label}</p>
+                          <p className="text-[10px] text-slate-400">
+                            {d.device_type}{d.serial_number ? ` | S/N: ${d.serial_number}` : ''}{d.asset_tag ? ` | Tag: ${d.asset_tag}` : ''}
+                          </p>
+                        </div>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${d.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{d.status || 'active'}</span>
+                      </div>
+                    );
+                  }}
+                  emptyText="No devices found"
+                  testId="device-select"
+                />
+              )}
+            </div>
+          )}
+
+          {/* Subject & Description */}
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1.5">Subject *</label>
             <Input data-testid="ticket-subject" value={subject} onChange={e => setSubject(e.target.value)} placeholder="Brief description of the issue" />
           </div>
-
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1.5">Description</label>
             <textarea data-testid="ticket-description" className="w-full border rounded-lg px-3 py-2 text-sm min-h-[80px]" value={description} onChange={e => setDescription(e.target.value)} placeholder="Detailed description..." />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1.5">Contact Name</label>
-              <Input data-testid="contact-name" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Name" />
+          {/* Contact override (if employee was selected) */}
+          {selectedEmployee && !useCustomEmployee && (
+            <div className="grid grid-cols-3 gap-3">
+              <div><label className="text-xs font-medium text-slate-600 block mb-1">Contact Name</label><Input className="text-sm" value={contactName} onChange={e => setContactName(e.target.value)} /></div>
+              <div><label className="text-xs font-medium text-slate-600 block mb-1">Phone</label><Input className="text-sm" value={contactPhone} onChange={e => setContactPhone(e.target.value)} /></div>
+              <div><label className="text-xs font-medium text-slate-600 block mb-1">Email</label><Input className="text-sm" value={contactEmail} onChange={e => setContactEmail(e.target.value)} /></div>
             </div>
-            <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1.5">Contact Email</label>
-              <Input data-testid="contact-email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="Email" />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1.5">Contact Phone</label>
-              <Input data-testid="contact-phone" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="Phone" />
-            </div>
-          </div>
+          )}
 
+          {/* No company selected - manual contact */}
+          {!selectedCompany && (
+            <div className="grid grid-cols-3 gap-3">
+              <div><label className="text-sm font-medium text-slate-700 block mb-1.5">Contact Name</label><Input data-testid="contact-name" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Name" /></div>
+              <div><label className="text-sm font-medium text-slate-700 block mb-1.5">Contact Email</label><Input data-testid="contact-email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="Email" /></div>
+              <div><label className="text-sm font-medium text-slate-700 block mb-1.5">Contact Phone</label><Input data-testid="contact-phone" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="Phone" /></div>
+            </div>
+          )}
+
+          {/* Custom Form Fields */}
           {formFields.length > 0 && (
             <div className="border-t pt-4 mt-2">
               <h3 className="text-sm font-semibold text-slate-700 mb-3">Custom Fields - {topicDetails?.form?.name}</h3>
