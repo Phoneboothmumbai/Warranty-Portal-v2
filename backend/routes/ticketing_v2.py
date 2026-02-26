@@ -778,12 +778,28 @@ async def create_ticket(data: TicketCreateV2, admin: dict = Depends(get_current_
         if company:
             company_name = company["name"]
     
+    # Get site name if provided
+    site_name = data.site_name
+    if data.site_id and not site_name:
+        site = await _db.sites.find_one({"id": data.site_id}, {"_id": 0, "name": 1, "address": 1, "city": 1})
+        if site:
+            site_name = site.get("name", "")
+            if site.get("city"):
+                site_name += f", {site['city']}"
+    
+    # Get employee name if provided
+    employee_name = data.employee_name
+    if data.employee_id and not employee_name:
+        emp = await _db.company_employees.find_one({"id": data.employee_id}, {"_id": 0, "name": 1})
+        if emp:
+            employee_name = emp.get("name")
+    
     # Get device name if provided
     device_name = None
     if data.device_id:
-        device = await _db.devices.find_one({"id": data.device_id}, {"_id": 0, "name": 1, "display_name": 1})
+        device = await _db.devices.find_one({"id": data.device_id}, {"_id": 0, "name": 1, "display_name": 1, "brand": 1, "model": 1, "serial_number": 1})
         if device:
-            device_name = device.get("display_name") or device.get("name")
+            device_name = device.get("display_name") or f"{device.get('brand','')} {device.get('model','')}".strip() or device.get("name")
     
     # Get priority name
     priority_name = "medium"
