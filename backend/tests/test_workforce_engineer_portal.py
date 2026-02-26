@@ -199,12 +199,7 @@ class TestNotificationAPIs:
     @pytest.fixture(autouse=True)
     def setup(self):
         """Setup admin token."""
-        res = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "ck@motta.in", 
-            "password": "Charu@123@"
-        })
-        assert res.status_code == 200
-        self.admin_token = res.json().get("access_token")
+        self.admin_token = get_admin_token()
         self.admin_headers = {"Authorization": f"Bearer {self.admin_token}", "Content-Type": "application/json"}
         yield
     
