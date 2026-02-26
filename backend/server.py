@@ -3001,6 +3001,7 @@ async def download_employee_template(admin: dict = Depends(get_current_admin)):
 @api_router.get("/admin/devices")
 async def list_devices(
     company_id: Optional[str] = None, 
+    site_id: Optional[str] = None,
     status: Optional[str] = None,
     amc_status: Optional[str] = None,  # Filter by AMC status: active, none, expired
     q: Optional[str] = None,
@@ -3019,6 +3020,8 @@ async def list_devices(
     
     if company_id:
         query["company_id"] = company_id
+    if site_id:
+        query["site_id"] = site_id
     if status:
         query["status"] = status
     
