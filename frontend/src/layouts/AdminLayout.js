@@ -232,6 +232,7 @@ const AdminLayout = () => {
         </div>
         <div className="flex items-center gap-2">
           <UniversalSearch />
+          <NotificationBell />
           <Button 
             variant="ghost" 
             size="icon"
