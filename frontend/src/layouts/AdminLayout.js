@@ -10,6 +10,7 @@ import { useBranding } from '../contexts/BrandingContext';
 import { Button } from '../components/ui/button';
 import UniversalSearch from '../components/UniversalSearch';
 import CompanySwitcher from '../components/CompanySwitcher';
+import NotificationBell from '../components/NotificationBell';
 
 // Grouped navigation structure
 const navGroups = [
