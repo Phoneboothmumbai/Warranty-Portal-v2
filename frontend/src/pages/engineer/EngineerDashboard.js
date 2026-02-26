@@ -234,7 +234,7 @@ export default function EngineerDashboard() {
           </div>
           <div className="divide-y">
             {active_tickets.map(t => (
-              <div key={t.id} className="flex items-center justify-between p-4 hover:bg-slate-50" data-testid={`active-${t.ticket_number}`}>
+              <div key={t.id} className="flex items-center justify-between p-4 hover:bg-slate-50 cursor-pointer" onClick={() => navigate(`/engineer/ticket/${t.id}`)} data-testid={`active-${t.ticket_number}`}>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-sm font-semibold text-blue-600">#{t.ticket_number}</span>
