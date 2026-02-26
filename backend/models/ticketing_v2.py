@@ -528,11 +528,17 @@ class TicketV2(BaseModel):
     # Company & Contact
     company_id: Optional[str] = None
     company_name: Optional[str] = None
+    site_id: Optional[str] = None
+    site_name: Optional[str] = None
+    custom_location: Optional[str] = None
+    employee_id: Optional[str] = None
+    employee_name: Optional[str] = None
     contact: Optional[TicketContact] = None
     
     # Device (if applicable)
     device_id: Optional[str] = None
     device_name: Optional[str] = None
+    device_description: Optional[str] = None
     
     # Priority & SLA
     priority_id: Optional[str] = None
