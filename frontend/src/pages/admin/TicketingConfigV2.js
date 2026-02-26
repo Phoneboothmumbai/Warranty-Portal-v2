@@ -36,7 +36,7 @@ const ConfigCard = ({ item, onEdit, onDelete, children }) => (
       </div>
       <div className="flex gap-1 ml-2 shrink-0">
         {onEdit && <button onClick={() => onEdit(item)} className="p-1 hover:bg-slate-100 rounded" data-testid={`edit-${item.id}`}><Edit2 className="w-3.5 h-3.5 text-slate-400" /></button>}
-        {onDelete && !item.is_system && <button onClick={() => onDelete(item.id)} className="p-1 hover:bg-red-50 rounded" data-testid={`delete-${item.id}`}><Trash2 className="w-3.5 h-3.5 text-red-400" /></button>}
+        {onDelete && <button onClick={() => onDelete(item.id)} className="p-1 hover:bg-red-50 rounded" data-testid={`delete-${item.id}`}><Trash2 className="w-3.5 h-3.5 text-red-400" /></button>}
       </div>
     </div>
   </div>
@@ -350,7 +350,7 @@ const WorkflowsTab = () => {
                 <div><h4 className="text-sm font-semibold">{w.name}</h4><p className="text-xs text-slate-500">{w.stages?.length || 0} stages</p></div>
                 <div className="flex gap-1">
                   <button onClick={() => setEditing(w)} className="p-1 hover:bg-slate-100 rounded"><Edit2 className="w-4 h-4 text-slate-400" /></button>
-                  {!w.is_system && <button onClick={() => handleDelete(w.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-400" /></button>}
+                  <button onClick={() => handleDelete(w.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-400" /></button>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
