@@ -9161,6 +9161,38 @@ async def startup_event():
     
     # Seed default supply categories and products
     await seed_default_supplies()
+    
+    # Auto-seed ticketing system for all organizations that don't have it yet
+    try:
+        from models.ticketing_v2_seed import generate_seed_data
+        orgs = await db.organizations.find({"is_deleted": {"$ne": True}}, {"_id": 0, "id": 1, "name": 1}).to_list(100)
+        for org in orgs:
+            org_id = org.get("id")
+            if not org_id:
+                continue
+            existing = await db.ticket_help_topics.count_documents({"organization_id": org_id})
+            if existing > 0:
+                continue
+            data = generate_seed_data(org_id)
+            for collection_name, collection_key in [
+                ("ticket_priorities", "priorities"),
+                ("ticket_business_hours", "business_hours"),
+                ("ticket_sla_policies", "sla_policies"),
+                ("ticket_roles", "roles"),
+                ("ticket_teams", "teams"),
+                ("ticket_task_types", "task_types"),
+                ("ticket_forms", "forms"),
+                ("ticket_workflows", "workflows"),
+                ("ticket_help_topics", "help_topics"),
+                ("ticket_canned_responses", "canned_responses"),
+                ("ticket_notification_templates", "notification_templates"),
+            ]:
+                items = data.get(collection_key, [])
+                if items:
+                    await db[collection_name].insert_many(items)
+            print(f"Auto-seeded ticketing system for org: {org.get('name', org_id)}")
+    except Exception as e:
+        print(f"Ticketing auto-seed error (non-fatal): {e}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
