@@ -236,6 +236,7 @@ function App() {
                   <Route path="/engineer" element={<EngineerLayout />}>
                     <Route path="dashboard" element={<EngineerDashboard />} />
                     <Route path="calendar" element={<EngineerCalendar />} />
+                    <Route path="ticket/:ticketId" element={<EngineerTicketDetail />} />
                   </Route>
                 </Routes>
               </div>
