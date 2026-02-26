@@ -3040,6 +3040,8 @@ async def list_devices(
             {"brand": brand_regex},
             {"model": {"$regex": search_term, "$options": "i"}},
             {"device_type": synonym_regex},  # Smart search with synonyms
+            {"name": {"$regex": search_term, "$options": "i"}},
+            {"display_name": {"$regex": search_term, "$options": "i"}},
             {"notes": synonym_regex}
         ]
     
