@@ -527,7 +527,7 @@ export default function ServiceTicketDetailV2() {
     try {
       const res = await fetch(`${API}/api/ticketing/assignment/reassign`, {
         method: 'POST', headers: authHeaders(),
-        body: JSON.stringify({ ticket_id: ticketId, new_engineer_id: engineerId }),
+        body: JSON.stringify({ ticket_id: ticketId, engineer_id: engineerId }),
       });
       if (res.ok) {
         toast.success(`Reassigned to ${engineerName}`);
