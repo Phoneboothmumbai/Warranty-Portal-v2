@@ -999,6 +999,9 @@ async def transition_ticket(ticket_id: str, data: StageTransitionRequest, admin:
         if engineer:
             update_data["assigned_to_id"] = data.assigned_to_id
             update_data["assigned_to_name"] = engineer.get("name", engineer.get("email", ""))
+            update_data["assignment_status"] = "pending"
+            update_data["assigned_at"] = get_ist_isoformat()
+            update_data["assignment_responded_at"] = None
     
     # Handle visit scheduling
     if data.scheduled_at:
