@@ -409,6 +409,7 @@ const AdminLayout = () => {
           </div>
           <div className="flex items-center gap-4">
             <UniversalSearch />
+            <NotificationBell />
             <a 
               href="/" 
               target="_blank" 
