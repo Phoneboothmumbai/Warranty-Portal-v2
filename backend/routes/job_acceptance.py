@@ -674,10 +674,40 @@ async def engineer_accept(data: AcceptJobRequest, engineer: dict = Depends(get_c
         {"id": data.ticket_id},
         {"$set": update, "$push": {"timeline": timeline_entry}}
     )
-    await _db.ticket_schedules.update_many(
-        {"ticket_id": data.ticket_id, "engineer_id": eng["id"], "status": "scheduled"},
-        {"$set": {"status": "accepted"}}
+    # Update existing schedules or create one if none exist
+    existing_schedules = await _db.ticket_schedules.count_documents(
+        {"ticket_id": data.ticket_id, "engineer_id": eng["id"], "status": {"$ne": "cancelled"}}
     )
+    if existing_schedules > 0:
+        await _db.ticket_schedules.update_many(
+            {"ticket_id": data.ticket_id, "engineer_id": eng["id"], "status": "scheduled"},
+            {"$set": {"status": "accepted"}}
+        )
+    else:
+        # Create a schedule record so it shows in calendar
+        sched_time = data.proposed_time or ticket.get("scheduled_at") or now_ist()
+        sched_end = ticket.get("scheduled_end_at")
+        if not sched_end and sched_time:
+            try:
+                from datetime import datetime as dt_cls
+                st = dt_cls.fromisoformat(sched_time.replace("Z", "+00:00"))
+                sched_end = (st + timedelta(hours=1)).isoformat()
+            except Exception:
+                sched_end = None
+        await _db.ticket_schedules.insert_one({
+            "id": str(uuid.uuid4()),
+            "organization_id": eng["organization_id"],
+            "ticket_id": data.ticket_id,
+            "ticket_number": ticket.get("ticket_number"),
+            "engineer_id": eng["id"],
+            "engineer_name": eng["name"],
+            "company_name": ticket.get("company_name"),
+            "subject": ticket.get("subject"),
+            "scheduled_at": sched_time,
+            "scheduled_end_at": sched_end,
+            "status": "accepted",
+            "created_at": now_ist(),
+        })
     # SLA log
     if ticket.get("assigned_at"):
         await _db.assignment_sla_logs.insert_one({
