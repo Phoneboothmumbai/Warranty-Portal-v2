@@ -9137,6 +9137,10 @@ from routes.calendar import router as calendar_router, init_db as init_calendar_
 init_calendar_db(db)
 app.include_router(calendar_router, prefix="/api", tags=["Calendar"])
 
+from routes.job_acceptance import router as job_acceptance_router, init_db as init_job_acceptance_db
+init_job_acceptance_db(db)
+app.include_router(job_acceptance_router, prefix="/api", tags=["Job Acceptance"])
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
