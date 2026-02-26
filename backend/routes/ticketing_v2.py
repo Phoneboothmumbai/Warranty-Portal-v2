@@ -900,12 +900,17 @@ async def assign_ticket(ticket_id: str, data: dict = Body(...), admin: dict = De
     }
     
     if data.get("assigned_to_id"):
-        # Get user details
-        user = await _db.organization_members.find_one({"id": data["assigned_to_id"]}, {"_id": 0, "name": 1, "email": 1})
+        # Get user details - check engineers first, then org members
+        user = await _db.engineers.find_one({"id": data["assigned_to_id"]}, {"_id": 0, "name": 1, "email": 1})
+        if not user:
+            user = await _db.organization_members.find_one({"id": data["assigned_to_id"]}, {"_id": 0, "name": 1, "email": 1})
         if user:
             update_data["assigned_to_id"] = data["assigned_to_id"]
             update_data["assigned_to_name"] = user.get("name", user.get("email", ""))
-            timeline_entry["description"] = f"Assigned to {update_data['assigned_to_name']}"
+            update_data["assignment_status"] = "pending"
+            update_data["assigned_at"] = get_ist_isoformat()
+            update_data["assignment_responded_at"] = None
+            timeline_entry["description"] = f"Assigned to {update_data['assigned_to_name']} (pending acceptance)"
     
     if data.get("assigned_team_id"):
         team = await _db.ticket_teams.find_one({"id": data["assigned_team_id"]}, {"_id": 0, "name": 1})
