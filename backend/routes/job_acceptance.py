@@ -146,11 +146,40 @@ async def accept_assignment(data: AcceptJobRequest, admin: dict = Depends(get_cu
             {"$set": {"scheduled_at": data.proposed_time, "status": "accepted"}}
         )
     else:
-        # Just mark existing schedules as accepted
-        await _db.ticket_schedules.update_many(
-            {"ticket_id": data.ticket_id, "engineer_id": eng_id, "status": "scheduled"},
-            {"$set": {"status": "accepted"}}
+        # Update existing schedules or create one if none exist
+        existing_schedules = await _db.ticket_schedules.count_documents(
+            {"ticket_id": data.ticket_id, "engineer_id": eng_id, "status": {"$ne": "cancelled"}}
         )
+        if existing_schedules > 0:
+            await _db.ticket_schedules.update_many(
+                {"ticket_id": data.ticket_id, "engineer_id": eng_id, "status": "scheduled"},
+                {"$set": {"status": "accepted"}}
+            )
+        else:
+            # Create a schedule record so it appears on calendar
+            sched_time = ticket.get("scheduled_at") or now_ist()
+            sched_end = ticket.get("scheduled_end_at")
+            if not sched_end:
+                try:
+                    from datetime import datetime as dt_cls
+                    st = dt_cls.fromisoformat(sched_time.replace("Z", "+00:00"))
+                    sched_end = (st + timedelta(hours=1)).isoformat()
+                except Exception:
+                    sched_end = None
+            await _db.ticket_schedules.insert_one({
+                "id": str(uuid.uuid4()),
+                "organization_id": org_id,
+                "ticket_id": data.ticket_id,
+                "ticket_number": ticket.get("ticket_number"),
+                "engineer_id": eng_id,
+                "engineer_name": eng_name,
+                "company_name": ticket.get("company_name"),
+                "subject": ticket.get("subject"),
+                "scheduled_at": sched_time,
+                "scheduled_end_at": sched_end,
+                "status": "accepted",
+                "created_at": now_ist(),
+            })
 
     await _db.tickets_v2.update_one(
         {"id": data.ticket_id},
