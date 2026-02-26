@@ -872,6 +872,86 @@ async def engineer_dashboard(engineer: dict = Depends(get_current_engineer)):
     }
 
 
+
+@router.get("/engineer/ticket/{ticket_id}")
+async def engineer_ticket_detail(ticket_id: str, engineer: dict = Depends(get_current_engineer)):
+    """Get full ticket details for an engineer - includes customer, device, repair history."""
+    eng = await _resolve_engineer(engineer)
+    org_id = eng["organization_id"]
+    eng_id = eng["id"]
+
+    ticket = await _db.tickets_v2.find_one(
+        {"id": ticket_id, "assigned_to_id": eng_id, "organization_id": org_id, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    )
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found or not assigned to you")
+
+    # Fetch company details
+    company = None
+    if ticket.get("company_id"):
+        company = await _db.companies.find_one(
+            {"id": ticket["company_id"]}, {"_id": 0, "id": 1, "name": 1, "phone": 1, "email": 1, "address": 1, "city": 1, "state": 1}
+        )
+
+    # Fetch site details
+    site = None
+    if ticket.get("site_id"):
+        site = await _db.sites.find_one(
+            {"id": ticket["site_id"]}, {"_id": 0, "id": 1, "name": 1, "address": 1, "city": 1, "state": 1, "pincode": 1, "contact_name": 1, "contact_phone": 1}
+        )
+
+    # Fetch employee/contact details
+    employee = None
+    if ticket.get("employee_id"):
+        employee = await _db.employees.find_one(
+            {"id": ticket["employee_id"]}, {"_id": 0, "id": 1, "name": 1, "phone": 1, "email": 1, "designation": 1}
+        )
+
+    # Fetch device details
+    device = None
+    if ticket.get("device_id"):
+        device = await _db.devices.find_one(
+            {"id": ticket["device_id"]},
+            {"_id": 0, "id": 1, "name": 1, "model": 1, "serial_number": 1, "manufacturer": 1,
+             "device_type": 1, "warranty_end_date": 1, "warranty_status": 1, "purchase_date": 1,
+             "ip_address": 1, "mac_address": 1, "location": 1, "notes": 1}
+        )
+
+    # Fetch repair/service history for this device or company
+    repair_history = []
+    history_query = {"organization_id": org_id, "is_deleted": {"$ne": True}, "id": {"$ne": ticket_id}}
+    if ticket.get("device_id"):
+        history_query["device_id"] = ticket["device_id"]
+    elif ticket.get("company_id"):
+        history_query["company_id"] = ticket["company_id"]
+    
+    if "device_id" in history_query or "company_id" in history_query:
+        history_tickets = await _db.tickets_v2.find(
+            history_query,
+            {"_id": 0, "id": 1, "ticket_number": 1, "subject": 1, "current_stage_name": 1,
+             "priority_name": 1, "is_open": 1, "created_at": 1, "resolved_at": 1,
+             "assigned_to_name": 1, "description": 1}
+        ).sort("created_at", -1).to_list(20)
+        repair_history = history_tickets
+
+    # Fetch schedules for this ticket
+    schedules = await _db.ticket_schedules.find(
+        {"ticket_id": ticket_id, "organization_id": org_id, "status": {"$ne": "cancelled"}},
+        {"_id": 0}
+    ).sort("scheduled_at", -1).to_list(20)
+
+    return {
+        "ticket": ticket,
+        "company": company,
+        "site": site,
+        "employee": employee,
+        "device": device,
+        "repair_history": repair_history,
+        "schedules": schedules,
+    }
+
+
 # ── Admin Workforce Overview ──
 
 @router.get("/ticketing/workforce/overview")
