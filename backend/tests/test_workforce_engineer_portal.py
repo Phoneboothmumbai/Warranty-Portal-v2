@@ -15,18 +15,30 @@ import uuid
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
+def get_admin_token():
+    """Cached admin token to avoid rate limiting."""
+    if not hasattr(get_admin_token, '_token'):
+        for attempt in range(3):
+            res = requests.post(f"{BASE_URL}/api/auth/login", json={
+                "email": "ck@motta.in", 
+                "password": "Charu@123@"
+            })
+            if res.status_code == 200:
+                get_admin_token._token = res.json().get("access_token")
+                break
+            time.sleep(2)
+        else:
+            raise Exception("Failed to get admin token after 3 attempts")
+    return get_admin_token._token
+
+
 class TestWorkforceOverviewBackend:
     """Tests for admin workforce overview API."""
     
     @pytest.fixture(autouse=True)
     def setup(self):
         """Setup admin token for tests."""
-        res = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "ck@motta.in", 
-            "password": "Charu@123@"
-        })
-        assert res.status_code == 200, f"Admin login failed: {res.text}"
-        self.admin_token = res.json().get("access_token")
+        self.admin_token = get_admin_token()
         self.admin_headers = {"Authorization": f"Bearer {self.admin_token}", "Content-Type": "application/json"}
         yield
     
