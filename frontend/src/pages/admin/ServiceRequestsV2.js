@@ -401,8 +401,8 @@ const CreateTicketModal = ({ open, onClose, onCreated }) => {
             )}
           </div>
 
-          {/* Device / Asset */}
-          {selectedCompany && (
+          {/* Device / Asset - only for device-related topics */}
+          {selectedCompany && selectedTopicData?.require_device && (
             <div className="border rounded-lg p-4 space-y-3 bg-slate-50/50">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-1"><Monitor className="w-4 h-4" /> Device / Asset <span className="text-[10px] text-slate-400 font-normal">(optional)</span></h3>
