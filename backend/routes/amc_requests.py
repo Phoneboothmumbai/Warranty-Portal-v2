@@ -25,7 +25,10 @@ async def list_amc_packages(
     admin: dict = Depends(get_current_admin)
 ):
     """List all AMC packages"""
-    query = {"is_deleted": {"$ne": True}}
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    query = {"is_deleted": {"$ne": True}, "organization_id": org_id}
     if not include_inactive:
         query["is_active"] = True
     
@@ -39,8 +42,10 @@ async def create_amc_package(
     admin: dict = Depends(get_current_admin)
 ):
     """Create a new AMC package"""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
     package_data = package.model_dump()
-    # Set defaults for optional fields
     if package_data.get("coverage_includes") is None:
         package_data["coverage_includes"] = {}
     if package_data.get("exclusions") is None:
@@ -49,8 +54,11 @@ async def create_amc_package(
         package_data["entitlements"] = {}
     
     new_package = AMCPackage(**package_data)
-    await db.amc_packages.insert_one(new_package.model_dump())
-    return new_package.model_dump()
+    pkg_dict = new_package.model_dump()
+    pkg_dict["organization_id"] = org_id
+    await db.amc_packages.insert_one(pkg_dict)
+    del pkg_dict["_id"]
+    return pkg_dict
 
 
 @router.put("/admin/amc-packages/{package_id}")
@@ -60,20 +68,26 @@ async def update_amc_package(
     admin: dict = Depends(get_current_admin)
 ):
     """Update an AMC package"""
-    existing = await db.amc_packages.find_one({"id": package_id, "is_deleted": {"$ne": True}})
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    existing = await db.amc_packages.find_one({"id": package_id, "organization_id": org_id, "is_deleted": {"$ne": True}})
     if not existing:
         raise HTTPException(status_code=404, detail="Package not found")
     
     updates["updated_at"] = get_ist_isoformat()
-    await db.amc_packages.update_one({"id": package_id}, {"$set": updates})
-    return await db.amc_packages.find_one({"id": package_id}, {"_id": 0})
+    await db.amc_packages.update_one({"id": package_id, "organization_id": org_id}, {"$set": updates})
+    return await db.amc_packages.find_one({"id": package_id, "organization_id": org_id}, {"_id": 0})
 
 
 @router.delete("/admin/amc-packages/{package_id}")
 async def delete_amc_package(package_id: str, admin: dict = Depends(get_current_admin)):
     """Delete (soft) an AMC package"""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
     result = await db.amc_packages.update_one(
-        {"id": package_id},
+        {"id": package_id, "organization_id": org_id},
         {"$set": {"is_deleted": True, "is_active": False}}
     )
     if result.matched_count == 0:
@@ -89,7 +103,10 @@ async def list_company_pricing(
     admin: dict = Depends(get_current_admin)
 ):
     """List company-specific pricing"""
-    query = {"is_active": True}
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    query = {"is_active": True, "organization_id": org_id}
     if company_id:
         query["company_id"] = company_id
     
@@ -145,7 +162,10 @@ async def list_amc_requests(
     admin: dict = Depends(get_current_admin)
 ):
     """List all AMC requests with filters"""
-    query = {}
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    query = {"organization_id": org_id}
     if status:
         query["status"] = status
     if company_id:
@@ -171,7 +191,10 @@ async def get_amc_request_admin(
     admin: dict = Depends(get_current_admin)
 ):
     """Get AMC request details with full device info"""
-    amc_request = await db.amc_requests.find_one({"id": request_id}, {"_id": 0})
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    amc_request = await db.amc_requests.find_one({"id": request_id, "organization_id": org_id}, {"_id": 0})
     if not amc_request:
         raise HTTPException(status_code=404, detail="AMC Request not found")
     
@@ -202,7 +225,10 @@ async def update_amc_request_admin(
     admin: dict = Depends(get_current_admin)
 ):
     """Admin update AMC request (approve, reject, set pricing, etc.)"""
-    amc_request = await db.amc_requests.find_one({"id": request_id}, {"_id": 0})
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    amc_request = await db.amc_requests.find_one({"id": request_id, "organization_id": org_id}, {"_id": 0})
     if not amc_request:
         raise HTTPException(status_code=404, detail="AMC Request not found")
     
@@ -259,7 +285,10 @@ async def approve_amc_request(
     admin: dict = Depends(get_current_admin)
 ):
     """Approve AMC request and create AMC contract"""
-    amc_request = await db.amc_requests.find_one({"id": request_id}, {"_id": 0})
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    amc_request = await db.amc_requests.find_one({"id": request_id, "organization_id": org_id}, {"_id": 0})
     if not amc_request:
         raise HTTPException(status_code=404, detail="AMC Request not found")
     
