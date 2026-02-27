@@ -101,6 +101,7 @@ const CreateTicketModal = ({ open, onClose, onCreated }) => {
   // Core state
   const [helpTopics, setHelpTopics] = useState([]);
   const [selectedTopic, setSelectedTopic] = useState(null);
+  const selectedTopicData = helpTopics.find(t => t.id === selectedTopic);
   const [topicDetails, setTopicDetails] = useState(null);
   const [formValues, setFormValues] = useState({});
   const [subject, setSubject] = useState('');
