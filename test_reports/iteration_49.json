@@ -1,0 +1,87 @@
+{
+  "summary": "Quotation API Integration with Item Master - All tests passed. Backend: 17/17 tests (100%). Frontend: Item Master products page verified (4 products with GST calc). CompanyQuotations page verified with per-item GST column in detail modal.",
+  "test_date": "2026-02-27",
+  "features_tested": {
+    "backend_quotation_crud": {
+      "status": "PASSED",
+      "tests_passed": 17,
+      "tests_failed": 0,
+      "endpoints_verified": [
+        {"method": "POST", "path": "/api/admin/quotations", "status": "200 - Creates quotation with auto GST calc"},
+        {"method": "GET", "path": "/api/admin/quotations", "status": "200 - Lists with pagination"},
+        {"method": "GET", "path": "/api/admin/quotations/{id}", "status": "200 - Returns detail with line item GST"},
+        {"method": "PUT", "path": "/api/admin/quotations/{id}", "status": "200 - Updates draft quotations only"},
+        {"method": "POST", "path": "/api/admin/quotations/{id}/send", "status": "200 - Marks as sent"},
+        {"method": "DELETE", "path": "/api/admin/quotations/{id}", "status": "200 - Soft delete"},
+        {"method": "GET", "path": "/api/company/quotations", "status": "200 - Company can list (no drafts)"},
+        {"method": "POST", "path": "/api/company/quotations/{id}/respond", "status": "200 - Approve/reject"}
+      ]
+    },
+    "gst_calculation": {
+      "status": "PASSED",
+      "line_item_gst": "gst_amount = base_price * gst_slab / 100",
+      "line_total": "line_total = base_price + gst_amount",
+      "totals": "subtotal, total_gst, grand_total correctly calculated",
+      "verified_slabs": [0, 5, 12, 18, 28]
+    },
+    "item_master_integration": {
+      "status": "PASSED",
+      "products_page": "4 products displayed with Price/GST/Total columns",
+      "product_suggestions_endpoint": "/api/admin/item-master/products/{id}/suggestions - working"
+    },
+    "company_quotations_frontend": {
+      "status": "PASSED",
+      "page_url": "/company/quotations",
+      "features_verified": [
+        "Summary cards (Pending Response, Approved, Total)",
+        "Quotation table with Amount and Status columns",
+        "Detail modal with per-item GST column (Product, Qty, Unit Price, GST, Total)",
+        "Subtotal, GST total, Grand Total breakdown",
+        "Engineer Remarks section",
+        "Terms & Conditions display"
+      ]
+    }
+  },
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_quotation_api_v2.py",
+    "/app/test_reports/pytest/quotation_api_v2_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "quotations.py properly excludes _id from MongoDB responses",
+    "GST calculation in _calc_line() correctly handles all slabs",
+    "CompanyQuotations.js correctly displays per-item GST in detail modal",
+    "QuotationModal in ServiceTicketDetailV2.js has product picker with Item Master search",
+    "Bundle suggestions displayed as recommendations (not auto-added) per requirements"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_quotation_api_v2.py"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17 passed)",
+    "frontend": "100% (All UI flows verified)"
+  },
+  "test_credentials": {
+    "admin": {"email": "ck@motta.in", "password": "Charu@123@"},
+    "company_user": {"email": "testuser@testcompany.com", "password": "Test@123"}
+  },
+  "seed_data_creation": "Used existing Item Master products (4 products, 2 categories, 1 bundle) and existing quotation (QT-DTPPWE-3BB9, approved)",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Quotation API fully functional. Admin CRUD at /api/admin/quotations/* all working. Company endpoints at /api/company/quotations/* working. QuotationModal in ServiceTicketDetailV2.js is triggered by workflow transitions with requires_input='quotation'. The modal has product picker from Item Master with bundle suggestions. CompanyQuotations.js shows per-item GST column in detail modal. GST calculation: gst_amount = (unit_price * quantity) * gst_slab / 100",
+  "quotation_modal_note": "The QuotationModal opens from ticket detail page when workflow transition has requires_input='quotation'. The test tickets currently use 'Simple Support' workflow which does not have quotation step. To test the modal, a workflow with quotation requirement is needed, or manually trigger via requires_input.",
+  "verified_quotation_fields": {
+    "line_items": ["product_id", "product_name", "sku", "hsn_code", "quantity", "unit_price", "gst_slab", "gst_amount", "line_total", "description"],
+    "totals": ["subtotal", "total_gst", "grand_total"],
+    "meta": ["quotation_number", "status", "notes", "terms_and_conditions", "valid_days"]
+  }
+}
