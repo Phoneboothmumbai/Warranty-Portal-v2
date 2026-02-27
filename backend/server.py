@@ -4,7 +4,7 @@ Warranty & Asset Tracking Portal - Main Server
 This is a refactored version with modular architecture.
 Models, services, and utilities are now in separate modules.
 """
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Form, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Form, Query, Body
 from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
