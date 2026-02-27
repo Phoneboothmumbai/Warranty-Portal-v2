@@ -9131,6 +9131,10 @@ app.include_router(problem_master_router, tags=["Problem Master"])
 from routes.item_master import router as item_master_router
 app.include_router(item_master_router, tags=["Item Master"])
 
+# Quotations
+from routes.quotations import router as quotations_router
+app.include_router(quotations_router, tags=["Quotations"])
+
 # Inventory (Locations & Stock)
 from routes.inventory_new import router as inventory_router
 app.include_router(inventory_router, tags=["Inventory"])
