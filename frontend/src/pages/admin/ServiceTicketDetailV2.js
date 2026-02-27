@@ -295,14 +295,32 @@ const DiagnosisModal = ({ open, onClose, onConfirm }) => {
   );
 };
 
-// ========== PARTS LIST MODAL ==========
+// ========== PARTS LIST MODAL (Item Master Integration) ==========
 const PartsListModal = ({ open, onClose, onConfirm }) => {
   const [parts, setParts] = useState([{ name: '', quantity: 1, notes: '' }]);
   const [description, setDescription] = useState('');
+  const [products, setProducts] = useState([]);
+  const [partSearch, setPartSearch] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setParts([{ name: '', quantity: 1, notes: '' }]); setDescription(''); setPartSearch('');
+    fetch(`${API}/api/admin/item-master/products?limit=200`, { headers: authHeaders() })
+      .then(r => r.json()).then(d => setProducts(d.products || [])).catch(() => {});
+  }, [open]);
 
   const addPart = () => setParts(p => [...p, { name: '', quantity: 1, notes: '' }]);
   const updatePart = (i, field, val) => setParts(p => p.map((part, idx) => idx === i ? { ...part, [field]: val } : part));
   const removePart = (i) => setParts(p => p.filter((_, idx) => idx !== i));
+
+  const addFromCatalog = (prod) => {
+    setParts(prev => [...prev.filter(p => p.name.trim()), { name: prod.name, quantity: 1, notes: prod.sku ? `SKU: ${prod.sku}` : '' }]);
+    setPartSearch('');
+  };
+
+  const matchedProducts = partSearch.length >= 2 ? products.filter(p =>
+    p.name.toLowerCase().includes(partSearch.toLowerCase()) || (p.sku || '').toLowerCase().includes(partSearch.toLowerCase())
+  ).slice(0, 6) : [];
 
   if (!open) return null;
   return (
@@ -317,6 +335,22 @@ const PartsListModal = ({ open, onClose, onConfirm }) => {
             <label className="text-sm font-medium block mb-1">Description</label>
             <textarea className="w-full border rounded-lg px-3 py-2 text-sm" value={description} onChange={e => setDescription(e.target.value)} placeholder="Why are parts needed?" />
           </div>
+          {/* Quick add from catalog */}
+          <div>
+            <label className="text-xs font-medium text-slate-500 block mb-1">Quick add from Item Master</label>
+            <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Search product catalog..." value={partSearch} onChange={e => setPartSearch(e.target.value)} data-testid="parts-catalog-search" />
+            {matchedProducts.length > 0 && (
+              <div className="border rounded-lg mt-1 max-h-32 overflow-y-auto divide-y">
+                {matchedProducts.map(p => (
+                  <button key={p.id} className="w-full flex items-center justify-between px-3 py-1.5 text-sm hover:bg-slate-50 text-left" onClick={() => addFromCatalog(p)}>
+                    <span>{p.name}</span>
+                    {p.sku && <span className="text-xs text-slate-400 font-mono">{p.sku}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <hr className="border-slate-100" />
           {parts.map((part, i) => (
             <div key={i} className="flex gap-2 items-start">
               <Input className="flex-1" placeholder="Part name *" value={part.name} onChange={e => updatePart(i, 'name', e.target.value)} data-testid={`part-name-${i}`} />
