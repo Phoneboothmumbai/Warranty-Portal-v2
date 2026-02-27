@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Calendar, ChevronLeft, ChevronRight, Clock, MapPin,
-  AlertTriangle, User, Ticket
+  AlertTriangle, User, Ticket, Building2, Monitor, Wrench,
+  Phone, Mail, X, ExternalLink
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { useEngineerAuth } from '../../context/EngineerAuthContext';
