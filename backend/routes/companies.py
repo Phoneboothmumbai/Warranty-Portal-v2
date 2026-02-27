@@ -564,11 +564,14 @@ async def bulk_import_devices(data: dict, admin: dict = Depends(get_current_admi
 @router.post("/admin/bulk-import/supply-products")
 async def bulk_import_supply_products(data: dict, admin: dict = Depends(get_current_admin)):
     """Bulk import supply products from CSV data"""
+    organization_id = admin.get("organization_id")
+    if not organization_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
     records = data.get("records", [])
     if not records:
         raise HTTPException(status_code=400, detail="No records provided")
     
-    categories = await db.supply_categories.find({"is_deleted": {"$ne": True}}, {"_id": 0}).to_list(100)
+    categories = await db.supply_categories.find({"is_deleted": {"$ne": True}, "organization_id": organization_id}, {"_id": 0}).to_list(100)
     category_by_name = {c["name"].lower(): c["id"] for c in categories}
     
     success_count = 0
