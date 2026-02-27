@@ -362,6 +362,7 @@ const SidePanel = ({ selectedDate, events, activePanel, setActivePanel, holidays
 // ── MAIN CALENDAR COMPONENT ──
 
 export default function CentralCalendar() {
+  const navigate = useNavigate();
   const [view, setView] = useState('month');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
@@ -373,6 +374,9 @@ export default function CentralCalendar() {
   const [standardHours, setStandardHours] = useState({});
   const [activePanel, setActivePanel] = useState('events');
   const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [eventDetail, setEventDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
   const year = currentDate.getFullYear();
