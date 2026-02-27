@@ -10,6 +10,7 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - Central calendar (admin) and personal calendar (engineer)
 - Workforce management with working hours, holidays, salary
 - **Strict multi-tenant data isolation** - all data scoped by organization_id
+- Enhanced ticket creation: Company → Site → Employee → Device with inline "Add New"
 
 ## What's Been Implemented
 
@@ -26,20 +27,18 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - Engineer ticket detail page showing full customer, device, repair history
 - Admin reassignment UI for declined tickets
 
-### Security Hardening (Feb 26, 2026)
-- `scope_query()` now hard-fails when org_id is None
-- `masters.py` fully rewritten with org_id on all operations
-- `companies.py` changed from soft to hard org_id enforcement
-- `amc_requests.py` all admin endpoints scoped
-- `amc_onboarding.py` all admin endpoints scoped
-- `qr_service.py` bulk QR generation scoped
-- All bulk import endpoints scoped
+### Enhanced Ticket Creation (Feb 27, 2026)
+- Multi-step: Company → Site → Employee → Device cascading flow
+- "Add New Site" inline form saves to DB, syncs across portal
+- "Add New Employee" inline form saves to DB, syncs across portal
+- Employee auto-fills contact fields
+- Device universal search + manual entry toggle
+- Custom form fields load dynamically per help topic
 
-### Bug Fixes (Feb 26, 2026)
-- Fixed: Technician couldn't view job details
-- Fixed: Calendar not syncing after job acceptance
-- Fixed: Duplicate seed data on production
-- Fixed: No delete buttons on system items
+### Security Hardening (Feb 26, 2026)
+- scope_query() hard-fails when org_id is None
+- masters.py, companies.py, amc_requests.py, amc_onboarding.py, qr_service.py all scoped
+- All bulk import endpoints scoped by organization_id
 
 ## Architecture
 - Frontend: React + Tailwind + Shadcn/UI
@@ -51,7 +50,6 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 ## Prioritized Backlog
 
 ### P0 (Next)
-- Enhanced Ticket Creation Flow (Company -> Site -> Employee -> Device with "Add New")
 - Form Builder UI (drag-and-drop)
 - Workflow Designer UI (visual editor)
 - Email Inbox UI (IMAP/SMTP config)
