@@ -407,11 +407,14 @@ async def bulk_import_companies(data: dict, admin: dict = Depends(get_current_ad
 @router.post("/admin/bulk-import/sites")
 async def bulk_import_sites(data: dict, admin: dict = Depends(get_current_admin)):
     """Bulk import sites from CSV data"""
+    organization_id = admin.get("organization_id")
+    if not organization_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
     records = data.get("records", [])
     if not records:
         raise HTTPException(status_code=400, detail="No records provided")
     
-    companies = await db.companies.find({"is_deleted": {"$ne": True}}, {"_id": 0}).to_list(1000)
+    companies = await db.companies.find({"is_deleted": {"$ne": True}, "organization_id": organization_id}, {"_id": 0}).to_list(1000)
     company_by_code = {c.get("code", "").upper(): c["id"] for c in companies if c.get("code")}
     company_by_name = {c["name"].lower(): c["id"] for c in companies}
     
@@ -450,7 +453,9 @@ async def bulk_import_sites(data: dict, admin: dict = Depends(get_current_admin)
                 status="active"
             )
             
-            await db.sites.insert_one(site.model_dump())
+            site_dict = site.model_dump()
+            site_dict["organization_id"] = organization_id
+            await db.sites.insert_one(site_dict)
             success_count += 1
             
         except Exception as e:
@@ -462,15 +467,18 @@ async def bulk_import_sites(data: dict, admin: dict = Depends(get_current_admin)
 @router.post("/admin/bulk-import/devices")
 async def bulk_import_devices(data: dict, admin: dict = Depends(get_current_admin)):
     """Bulk import devices from CSV data"""
+    organization_id = admin.get("organization_id")
+    if not organization_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
     records = data.get("records", [])
     if not records:
         raise HTTPException(status_code=400, detail="No records provided")
     
-    companies = await db.companies.find({"is_deleted": {"$ne": True}}, {"_id": 0}).to_list(1000)
+    companies = await db.companies.find({"is_deleted": {"$ne": True}, "organization_id": organization_id}, {"_id": 0}).to_list(1000)
     company_by_code = {c.get("code", "").upper(): c["id"] for c in companies if c.get("code")}
     company_by_name = {c["name"].lower(): c["id"] for c in companies}
     
-    employees = await db.company_employees.find({"is_deleted": {"$ne": True}}, {"_id": 0}).to_list(10000)
+    employees = await db.company_employees.find({"is_deleted": {"$ne": True}, "organization_id": organization_id}, {"_id": 0}).to_list(10000)
     employee_by_code = {}
     employee_by_email = {}
     for emp in employees:
@@ -516,6 +524,7 @@ async def bulk_import_devices(data: dict, admin: dict = Depends(get_current_admi
             
             existing = await db.devices.find_one({
                 "serial_number": record["serial_number"],
+                "organization_id": organization_id,
                 "is_deleted": {"$ne": True}
             })
             if existing:
@@ -541,7 +550,9 @@ async def bulk_import_devices(data: dict, admin: dict = Depends(get_current_admi
                 notes=record.get("notes")
             )
             
-            await db.devices.insert_one(device.model_dump())
+            device_dict = device.model_dump()
+            device_dict["organization_id"] = organization_id
+            await db.devices.insert_one(device_dict)
             success_count += 1
             
         except Exception as e:
