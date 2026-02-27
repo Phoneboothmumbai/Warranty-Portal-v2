@@ -142,11 +142,15 @@ const EventDetailPanel = ({ event, detail, loading, onClose, onViewTicket }) => 
 
 export default function EngineerCalendar() {
   const { token } = useEngineerAuth();
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [events, setEvents] = useState([]);
   const [workingHours, setWorkingHours] = useState({});
   const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [eventDetail, setEventDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
   const year = currentDate.getFullYear();
