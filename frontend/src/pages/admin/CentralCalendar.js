@@ -554,9 +554,9 @@ export default function CentralCalendar() {
       {/* Toolbar */}
       <div className="flex items-center justify-between pb-3 shrink-0">
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => navigate(-1)} data-testid="nav-prev"><ChevronLeft className="w-4 h-4" /></Button>
+          <Button size="sm" variant="outline" onClick={() => navCalendar(-1)} data-testid="nav-prev"><ChevronLeft className="w-4 h-4" /></Button>
           <Button size="sm" variant="outline" onClick={goToday}>Today</Button>
-          <Button size="sm" variant="outline" onClick={() => navigate(1)} data-testid="nav-next"><ChevronRight className="w-4 h-4" /></Button>
+          <Button size="sm" variant="outline" onClick={() => navCalendar(1)} data-testid="nav-next"><ChevronRight className="w-4 h-4" /></Button>
           <h2 className="text-lg font-semibold text-slate-800 ml-2">{title}</h2>
         </div>
         <div className="flex bg-slate-100 rounded-lg p-0.5">
