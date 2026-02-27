@@ -113,14 +113,19 @@ const CreateTicketModal = ({ open, onClose, onCreated }) => {
   const [selectedCompany, setSelectedCompany] = useState('');
   const [sites, setSites] = useState([]);
   const [selectedSite, setSelectedSite] = useState('');
-  const [useCustomLocation, setUseCustomLocation] = useState(false);
-  const [customLocation, setCustomLocation] = useState('');
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState('');
-  const [useCustomEmployee, setUseCustomEmployee] = useState(false);
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [contactEmail, setContactEmail] = useState('');
+
+  // Add New forms
+  const [showAddSite, setShowAddSite] = useState(false);
+  const [newSite, setNewSite] = useState({ name: '', address: '', city: '', contact_number: '', primary_contact_name: '' });
+  const [savingSite, setSavingSite] = useState(false);
+  const [showAddEmployee, setShowAddEmployee] = useState(false);
+  const [newEmployee, setNewEmployee] = useState({ name: '', phone: '', email: '', department: '' });
+  const [savingEmployee, setSavingEmployee] = useState(false);
 
   // Device
   const [devices, setDevices] = useState([]);
@@ -154,10 +159,11 @@ const CreateTicketModal = ({ open, onClose, onCreated }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTopic]);
 
-  // Fetch sites when company changes
+  // Fetch sites & employees when company changes
   useEffect(() => {
     setSites([]); setSelectedSite(''); setEmployees([]); setSelectedEmployee('');
-    setDevices([]); setSelectedDevice(''); setUseCustomLocation(false); setUseCustomEmployee(false);
+    setDevices([]); setSelectedDevice(''); setShowAddSite(false); setShowAddEmployee(false);
+    setContactName(''); setContactPhone(''); setContactEmail('');
     if (!selectedCompany) return;
     fetch(`${API}/api/admin/sites?company_id=${selectedCompany}`, { headers: hdrs })
       .then(r => r.json()).then(d => setSites(Array.isArray(d) ? d : d.sites || []));
@@ -166,7 +172,7 @@ const CreateTicketModal = ({ open, onClose, onCreated }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCompany]);
 
-  // Fetch devices when site changes
+  // Fetch devices when site changes or search
   useEffect(() => {
     setDevices([]); setSelectedDevice(''); setUseCustomDevice(false);
     if (!selectedCompany) return;
@@ -184,9 +190,52 @@ const CreateTicketModal = ({ open, onClose, onCreated }) => {
     setSelectedEmployee(id);
     if (emp) {
       setContactName(emp.name || '');
-      setContactPhone(emp.phone || '');
+      setContactPhone(emp.phone || emp.contact_number || '');
       setContactEmail(emp.email || '');
     }
+  };
+
+  // Add New Site
+  const handleAddSite = async () => {
+    if (!newSite.name.trim()) { toast.error('Site name is required'); return; }
+    setSavingSite(true);
+    try {
+      const res = await fetch(`${API}/api/admin/sites/quick-create`, {
+        method: 'POST', headers: hdrs,
+        body: JSON.stringify({ company_id: selectedCompany, ...newSite }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
+      const site = await res.json();
+      setSites(prev => [...prev, site]);
+      setSelectedSite(site.id);
+      setShowAddSite(false);
+      setNewSite({ name: '', address: '', city: '', contact_number: '', primary_contact_name: '' });
+      toast.success(`Site "${site.name}" added`);
+    } catch (e) { toast.error(e.message); }
+    finally { setSavingSite(false); }
+  };
+
+  // Add New Employee
+  const handleAddEmployee = async () => {
+    if (!newEmployee.name.trim()) { toast.error('Employee name is required'); return; }
+    setSavingEmployee(true);
+    try {
+      const res = await fetch(`${API}/api/admin/company-employees/quick-create`, {
+        method: 'POST', headers: hdrs,
+        body: JSON.stringify({ company_id: selectedCompany, ...newEmployee }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
+      const emp = await res.json();
+      setEmployees(prev => [...prev, emp]);
+      setSelectedEmployee(emp.id);
+      setContactName(emp.name || '');
+      setContactPhone(newEmployee.phone || '');
+      setContactEmail(newEmployee.email || '');
+      setShowAddEmployee(false);
+      setNewEmployee({ name: '', phone: '', email: '', department: '' });
+      toast.success(`Employee "${emp.name}" added`);
+    } catch (e) { toast.error(e.message); }
+    finally { setSavingEmployee(false); }
   };
 
   const handleSubmit = async () => {
@@ -198,10 +247,9 @@ const CreateTicketModal = ({ open, onClose, onCreated }) => {
         subject, description,
         form_values: formValues,
         company_id: selectedCompany || undefined,
-        site_id: (!useCustomLocation && selectedSite) || undefined,
-        custom_location: useCustomLocation ? customLocation : undefined,
-        employee_id: (!useCustomEmployee && selectedEmployee) || undefined,
-        employee_name: useCustomEmployee ? contactName : undefined,
+        site_id: selectedSite || undefined,
+        employee_id: selectedEmployee || undefined,
+        employee_name: contactName || undefined,
         contact_name: contactName || undefined,
         contact_email: contactEmail || undefined,
         contact_phone: contactPhone || undefined,
@@ -273,12 +321,25 @@ const CreateTicketModal = ({ open, onClose, onCreated }) => {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-medium text-slate-600 flex items-center gap-1"><MapPin className="w-3 h-3" /> Site / Location</label>
-                  <button className="text-[10px] text-blue-600 hover:underline" onClick={() => { setUseCustomLocation(!useCustomLocation); setSelectedSite(''); }} data-testid="toggle-custom-location">
-                    {useCustomLocation ? 'Select from list' : '+ Another location'}
+                  <button className="text-[10px] text-blue-600 hover:underline font-medium" onClick={() => { setShowAddSite(!showAddSite); if (!showAddSite) setSelectedSite(''); }} data-testid="toggle-add-site">
+                    {showAddSite ? 'Select from list' : '+ Add New Site'}
                   </button>
                 </div>
-                {useCustomLocation ? (
-                  <Input placeholder="Type full address..." value={customLocation} onChange={e => setCustomLocation(e.target.value)} className="text-sm" data-testid="custom-location" />
+                {showAddSite ? (
+                  <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-3 space-y-2" data-testid="add-site-form">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input placeholder="Site name *" value={newSite.name} onChange={e => setNewSite(p => ({ ...p, name: e.target.value }))} className="text-sm" data-testid="new-site-name" />
+                      <Input placeholder="City" value={newSite.city} onChange={e => setNewSite(p => ({ ...p, city: e.target.value }))} className="text-sm" data-testid="new-site-city" />
+                    </div>
+                    <Input placeholder="Full address" value={newSite.address} onChange={e => setNewSite(p => ({ ...p, address: e.target.value }))} className="text-sm" data-testid="new-site-address" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input placeholder="Contact person" value={newSite.primary_contact_name} onChange={e => setNewSite(p => ({ ...p, primary_contact_name: e.target.value }))} className="text-sm" />
+                      <Input placeholder="Contact number" value={newSite.contact_number} onChange={e => setNewSite(p => ({ ...p, contact_number: e.target.value }))} className="text-sm" />
+                    </div>
+                    <Button size="sm" onClick={handleAddSite} disabled={savingSite} className="w-full" data-testid="save-new-site-btn">
+                      {savingSite ? 'Saving...' : 'Save & Select Site'}
+                    </Button>
+                  </div>
                 ) : (
                   <SearchSelect
                     options={sites}
@@ -301,15 +362,23 @@ const CreateTicketModal = ({ open, onClose, onCreated }) => {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-medium text-slate-600 flex items-center gap-1"><User className="w-3 h-3" /> Complainant / Employee</label>
-                  <button className="text-[10px] text-blue-600 hover:underline" onClick={() => { setUseCustomEmployee(!useCustomEmployee); setSelectedEmployee(''); }} data-testid="toggle-custom-employee">
-                    {useCustomEmployee ? 'Select from list' : '+ Another person'}
+                  <button className="text-[10px] text-blue-600 hover:underline font-medium" onClick={() => { setShowAddEmployee(!showAddEmployee); if (!showAddEmployee) setSelectedEmployee(''); }} data-testid="toggle-add-employee">
+                    {showAddEmployee ? 'Select from list' : '+ Add New Employee'}
                   </button>
                 </div>
-                {useCustomEmployee ? (
-                  <div className="grid grid-cols-3 gap-2">
-                    <Input placeholder="Name" value={contactName} onChange={e => setContactName(e.target.value)} className="text-sm" data-testid="custom-emp-name" />
-                    <Input placeholder="Phone" value={contactPhone} onChange={e => setContactPhone(e.target.value)} className="text-sm" data-testid="custom-emp-phone" />
-                    <Input placeholder="Email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} className="text-sm" data-testid="custom-emp-email" />
+                {showAddEmployee ? (
+                  <div className="bg-green-50/50 border border-green-100 rounded-lg p-3 space-y-2" data-testid="add-employee-form">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input placeholder="Full name *" value={newEmployee.name} onChange={e => setNewEmployee(p => ({ ...p, name: e.target.value }))} className="text-sm" data-testid="new-emp-name" />
+                      <Input placeholder="Phone number" value={newEmployee.phone} onChange={e => setNewEmployee(p => ({ ...p, phone: e.target.value }))} className="text-sm" data-testid="new-emp-phone" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input placeholder="Email" value={newEmployee.email} onChange={e => setNewEmployee(p => ({ ...p, email: e.target.value }))} className="text-sm" data-testid="new-emp-email" />
+                      <Input placeholder="Department" value={newEmployee.department} onChange={e => setNewEmployee(p => ({ ...p, department: e.target.value }))} className="text-sm" data-testid="new-emp-dept" />
+                    </div>
+                    <Button size="sm" onClick={handleAddEmployee} disabled={savingEmployee} className="w-full" data-testid="save-new-employee-btn">
+                      {savingEmployee ? 'Saving...' : 'Save & Select Employee'}
+                    </Button>
                   </div>
                 ) : (
                   <SearchSelect
@@ -337,7 +406,7 @@ const CreateTicketModal = ({ open, onClose, onCreated }) => {
             <div className="border rounded-lg p-4 space-y-3 bg-slate-50/50">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-1"><Monitor className="w-4 h-4" /> Device / Asset <span className="text-[10px] text-slate-400 font-normal">(optional)</span></h3>
-                <button className="text-[10px] text-blue-600 hover:underline" onClick={() => { setUseCustomDevice(!useCustomDevice); setSelectedDevice(''); }} data-testid="toggle-custom-device">
+                <button className="text-[10px] text-blue-600 hover:underline font-medium" onClick={() => { setUseCustomDevice(!useCustomDevice); setSelectedDevice(''); }} data-testid="toggle-custom-device">
                   {useCustomDevice ? 'Select from list' : '+ Type manually'}
                 </button>
               </div>
@@ -388,21 +457,12 @@ const CreateTicketModal = ({ open, onClose, onCreated }) => {
             <textarea data-testid="ticket-description" className="w-full border rounded-lg px-3 py-2 text-sm min-h-[80px]" value={description} onChange={e => setDescription(e.target.value)} placeholder="Detailed description..." />
           </div>
 
-          {/* Contact override (if employee was selected) */}
-          {selectedEmployee && !useCustomEmployee && (
+          {/* Contact info (auto-filled from employee or manual) */}
+          {(selectedEmployee || !selectedCompany) && (
             <div className="grid grid-cols-3 gap-3">
-              <div><label className="text-xs font-medium text-slate-600 block mb-1">Contact Name</label><Input className="text-sm" value={contactName} onChange={e => setContactName(e.target.value)} /></div>
-              <div><label className="text-xs font-medium text-slate-600 block mb-1">Phone</label><Input className="text-sm" value={contactPhone} onChange={e => setContactPhone(e.target.value)} /></div>
-              <div><label className="text-xs font-medium text-slate-600 block mb-1">Email</label><Input className="text-sm" value={contactEmail} onChange={e => setContactEmail(e.target.value)} /></div>
-            </div>
-          )}
-
-          {/* No company selected - manual contact */}
-          {!selectedCompany && (
-            <div className="grid grid-cols-3 gap-3">
-              <div><label className="text-sm font-medium text-slate-700 block mb-1.5">Contact Name</label><Input data-testid="contact-name" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Name" /></div>
-              <div><label className="text-sm font-medium text-slate-700 block mb-1.5">Contact Email</label><Input data-testid="contact-email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="Email" /></div>
-              <div><label className="text-sm font-medium text-slate-700 block mb-1.5">Contact Phone</label><Input data-testid="contact-phone" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="Phone" /></div>
+              <div><label className="text-xs font-medium text-slate-600 block mb-1">Contact Name</label><Input className="text-sm" value={contactName} onChange={e => setContactName(e.target.value)} data-testid="contact-name" /></div>
+              <div><label className="text-xs font-medium text-slate-600 block mb-1">Phone</label><Input className="text-sm" value={contactPhone} onChange={e => setContactPhone(e.target.value)} data-testid="contact-phone" /></div>
+              <div><label className="text-xs font-medium text-slate-600 block mb-1">Email</label><Input className="text-sm" value={contactEmail} onChange={e => setContactEmail(e.target.value)} data-testid="contact-email" /></div>
             </div>
           )}
 
