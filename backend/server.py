@@ -2722,26 +2722,33 @@ async def create_company_employee(employee: CompanyEmployeeCreate, admin: dict =
 
 @api_router.post("/admin/company-employees/quick-create")
 async def quick_create_company_employee(
-    company_id: str = Form(...),
-    name: str = Form(...),
-    email: Optional[str] = Form(None),
-    department: Optional[str] = Form(None),
+    data: dict = Body(...),
     admin: dict = Depends(get_current_admin)
 ):
-    """Quick create employee for inline forms"""
+    """Quick create employee for inline forms - accepts JSON"""
+    company_id = data.get("company_id")
+    name = data.get("name")
+    if not company_id or not name:
+        raise HTTPException(status_code=400, detail="company_id and name are required")
+    
     company = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
+    org_id = admin.get("organization_id")
     new_employee = CompanyEmployee(
         company_id=company_id,
         name=name,
-        email=email,
-        department=department
+        email=data.get("email"),
+        phone=data.get("phone"),
+        department=data.get("department")
     )
-    await db.company_employees.insert_one(new_employee.model_dump())
+    emp_dict = new_employee.model_dump()
+    if org_id:
+        emp_dict["organization_id"] = org_id
+    await db.company_employees.insert_one(emp_dict)
     
-    result = new_employee.model_dump()
+    result = {k: v for k, v in emp_dict.items() if k != "_id"}
     result["company_name"] = company.get("name")
     result["label"] = name
     return result
