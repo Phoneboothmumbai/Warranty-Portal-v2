@@ -337,8 +337,6 @@ export default function EngineerCalendar() {
             onClose={() => { setSelectedEvent(null); setEventDetail(null); }}
             onViewTicket={() => selectedEvent?.ticket_id && navigate(`/engineer/ticket/${selectedEvent.ticket_id}`)}
           />
-            )}
-          </div>
         </div>
       </div>
     </div>
