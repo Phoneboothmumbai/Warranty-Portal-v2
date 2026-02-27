@@ -332,19 +332,24 @@ const CompanyQuotations = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Description</TableHead>
+                      <TableHead>Product</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
                       <TableHead className="text-right">Unit Price</TableHead>
+                      <TableHead className="text-right">GST</TableHead>
                       <TableHead className="text-right">Total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {selectedQuotation.items?.map((item, idx) => (
                       <TableRow key={idx}>
-                        <TableCell>{item.description || item.item_name}</TableCell>
+                        <TableCell>
+                          <p className="font-medium">{item.product_name || item.description || item.item_name}</p>
+                          {item.sku && <p className="text-xs text-slate-400 font-mono">{item.sku}</p>}
+                        </TableCell>
                         <TableCell className="text-right">{item.quantity}</TableCell>
                         <TableCell className="text-right">{formatCurrency(item.unit_price)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(item.total_price)}</TableCell>
+                        <TableCell className="text-right text-xs text-slate-500">{item.gst_slab != null ? `${item.gst_slab}%` : `${selectedQuotation.tax_rate || 0}%`}</TableCell>
+                        <TableCell className="text-right font-medium">{formatCurrency(item.line_total || item.total_price)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -358,12 +363,12 @@ const CompanyQuotations = () => {
                   <span>{formatCurrency(selectedQuotation.subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Tax ({selectedQuotation.tax_rate}%)</span>
-                  <span>{formatCurrency(selectedQuotation.tax_amount)}</span>
+                  <span className="text-slate-500">GST</span>
+                  <span>{formatCurrency(selectedQuotation.total_gst || selectedQuotation.tax_amount)}</span>
                 </div>
                 <div className="flex justify-between font-bold text-xl border-t pt-2">
-                  <span>Total</span>
-                  <span className="text-emerald-600">{formatCurrency(selectedQuotation.total_amount)}</span>
+                  <span>Grand Total</span>
+                  <span className="text-emerald-600">{formatCurrency(selectedQuotation.grand_total || selectedQuotation.total_amount)}</span>
                 </div>
               </div>
 
