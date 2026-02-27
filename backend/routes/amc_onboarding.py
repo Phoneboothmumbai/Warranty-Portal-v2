@@ -121,7 +121,10 @@ async def list_onboardings(
     admin: dict = Depends(get_current_admin)
 ):
     """List all onboarding submissions"""
-    query = {}
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    query = {"organization_id": org_id}
     if status:
         query["status"] = status
     
@@ -140,7 +143,10 @@ async def list_onboardings(
 @router.get("/admin/onboardings/{onboarding_id}")
 async def get_onboarding_detail(onboarding_id: str, admin: dict = Depends(get_current_admin)):
     """Get detailed onboarding data"""
-    onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id}, {"_id": 0})
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id, "organization_id": org_id}, {"_id": 0})
     if not onboarding:
         raise HTTPException(status_code=404, detail="Onboarding not found")
     
