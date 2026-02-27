@@ -23,11 +23,11 @@ async def get_admin_org_id(admin_email: str) -> Optional[str]:
 def scope_query(query: Dict[str, Any], org_id: Optional[str]) -> Dict[str, Any]:
     """
     Add organization_id filter to a query.
-    Returns original query if org_id is None (backward compatibility).
+    HARD FAIL: Raises error if org_id is None to prevent cross-tenant data leaks.
     """
-    if org_id:
-        return {**query, "organization_id": org_id}
-    return query
+    if not org_id:
+        raise ValueError("Organization context required - data isolation breach prevented")
+    return {**query, "organization_id": org_id}
 
 
 async def get_scoped_query(query: Dict[str, Any], admin: dict) -> Dict[str, Any]:
