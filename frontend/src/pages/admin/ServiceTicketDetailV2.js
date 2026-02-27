@@ -1012,7 +1012,7 @@ export default function ServiceTicketDetailV2() {
       <DiagnosisModal open={activeModal === 'diagnosis'} onClose={() => { setActiveModal(null); setPendingTransitionId(null); }} onConfirm={handleDiagnosis} />
       <PartsListModal open={activeModal === 'parts_list'} onClose={() => { setActiveModal(null); setPendingTransitionId(null); }} onConfirm={handlePartsRequired} />
       <ResolutionModal open={activeModal === 'resolution'} onClose={() => { setActiveModal(null); setPendingTransitionId(null); }} onConfirm={handleResolution} />
-      <QuotationModal open={activeModal === 'quotation'} onClose={() => { setActiveModal(null); setPendingTransitionId(null); }} onConfirm={handleQuotation} />
+      <QuotationModal open={activeModal === 'quotation'} onClose={() => { setActiveModal(null); setPendingTransitionId(null); }} onConfirm={handleQuotation} ticket={ticket} />
     </div>
   );
 }
