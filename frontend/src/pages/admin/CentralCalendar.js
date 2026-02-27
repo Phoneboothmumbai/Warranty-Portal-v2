@@ -214,7 +214,7 @@ const DayView = ({ date, events, engineers }) => {
 
 // ── Sidebar Panel ──
 
-const SidePanel = ({ selectedDate, events, activePanel, setActivePanel, holidays, emergencyHours, standardHours, onAddHoliday, onDeleteHoliday, onAddEmergency, onDeleteEmergency, onUpdateStdHours }) => {
+const SidePanel = ({ selectedDate, events, activePanel, setActivePanel, holidays, emergencyHours, standardHours, onAddHoliday, onDeleteHoliday, onAddEmergency, onDeleteEmergency, onUpdateStdHours, onEventClick }) => {
   const [holidayForm, setHolidayForm] = useState({ name: '', date: selectedDate || '', type: 'public' });
   const [emergencyForm, setEmergencyForm] = useState({ date: selectedDate || '', reason: '', start: '09:00', end: '18:00' });
   const [stdHours, setStdHours] = useState(standardHours);
