@@ -450,7 +450,7 @@ export default function CentralCalendar() {
   useEffect(() => { fetchConfig(); }, [fetchConfig]);
 
   // Navigation
-  const navigate = (dir) => {
+  const navCalendar = (dir) => {
     const d = new Date(currentDate);
     if (view === 'month') d.setMonth(d.getMonth() + dir);
     else if (view === 'week') d.setDate(d.getDate() + 7 * dir);
@@ -462,6 +462,18 @@ export default function CentralCalendar() {
   };
   const goToday = () => { setCurrentDate(new Date()); setSelectedDate(new Date().toISOString().split('T')[0]); };
   const onDateClick = (date) => { setSelectedDate(date); setActivePanel('events'); if (view === 'day') { setCurrentDate(new Date(date + 'T00:00:00')); } };
+
+  const handleEventClick = async (event) => {
+    if (event.type === 'holiday' || !event.ticket_id) return;
+    setSelectedEvent(event);
+    setEventDetail(null);
+    setDetailLoading(true);
+    try {
+      const res = await fetch(`${API}/api/ticketing/tickets/${event.ticket_id}/full`, { headers: headers() });
+      if (res.ok) setEventDetail(await res.json());
+    } catch {}
+    finally { setDetailLoading(false); }
+  };
 
   // CRUD handlers
   const addHoliday = async (form) => {
