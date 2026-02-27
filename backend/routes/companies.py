@@ -349,6 +349,9 @@ async def reset_portal_user_password(
 @router.post("/admin/bulk-import/companies")
 async def bulk_import_companies(data: dict, admin: dict = Depends(get_current_admin)):
     """Bulk import companies from CSV data"""
+    organization_id = admin.get("organization_id")
+    if not organization_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
     records = data.get("records", [])
     if not records:
         raise HTTPException(status_code=400, detail="No records provided")
@@ -366,6 +369,7 @@ async def bulk_import_companies(data: dict, admin: dict = Depends(get_current_ad
             if company_code:
                 existing = await db.companies.find_one({
                     "code": company_code,
+                    "organization_id": organization_id,
                     "is_deleted": {"$ne": True}
                 })
                 if existing:
@@ -389,7 +393,9 @@ async def bulk_import_companies(data: dict, admin: dict = Depends(get_current_ad
                 status="active"
             )
             
-            await db.companies.insert_one(company.model_dump())
+            company_dict = company.model_dump()
+            company_dict["organization_id"] = organization_id
+            await db.companies.insert_one(company_dict)
             success_count += 1
             
         except Exception as e:
