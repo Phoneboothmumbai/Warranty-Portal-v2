@@ -56,11 +56,21 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - **Frontend**: 3-tab interface at `/admin/item-master` under Settings group
 - **Testing**: 25/25 backend tests passed, all frontend flows verified
 
+### Quotation System with Item Master Integration (Feb 27, 2026)
+- **Backend Quotation API**: Full CRUD at `/api/admin/quotations/*` — create, list, get, update, send, delete
+- **Per-line GST**: Each line item has its own GST slab (0/5/12/18/28%), with auto-calculated gst_amount and line_total
+- **Totals**: Auto-calculated subtotal, total_gst, grand_total on every quotation
+- **Company Endpoints**: `/api/company/quotations` (list), `/{id}/respond` (approve/reject)
+- **Enhanced QuotationModal** in ticket detail: Product picker from Item Master, bundle suggestions, real-time GST calc, Save Draft/Send
+- **Enhanced PartsListModal**: Quick add from Item Master catalog search
+- **CompanyQuotations.js**: Per-item GST column in detail modal, enhanced totals display
+- **Collection**: `quotations`
+- **Testing**: 17/17 backend tests passed, all frontend flows verified
+
 ## Prioritized Backlog
 
 ### P0 (Next)
-- Quotation creation flow integrated with Item Master (use products + GST + bundle suggestions)
-- Form Builder UI (drag-and-drop)
+- Form Builder UI (drag-and-drop custom ticket forms)
 - Workflow Designer UI (visual editor)
 - Email Inbox UI (IMAP/SMTP config)
 
