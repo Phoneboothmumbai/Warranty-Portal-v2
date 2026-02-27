@@ -253,10 +253,11 @@ const SidePanel = ({ selectedDate, events, activePanel, setActivePanel, holidays
             ) : (
               <div className="space-y-2">
                 {dayEvents.map(e => (
-                  <div key={e.id} className="p-2.5 rounded-lg border text-sm" style={{ borderLeftWidth: 3, borderLeftColor: e.color }}>
+                  <div key={e.id} className={`p-2.5 rounded-lg border text-sm ${e.ticket_id ? 'cursor-pointer hover:shadow-sm' : ''}`} style={{ borderLeftWidth: 3, borderLeftColor: e.color }} onClick={() => e.ticket_id && onEventClick?.(e)} data-testid={`sidebar-event-${e.id}`}>
                     <p className="font-medium text-slate-800 text-xs">{e.title}</p>
                     {e.start_time && <p className="text-[11px] text-slate-500">{e.start_time}{e.end_time ? ` - ${e.end_time}` : ''}</p>}
                     {e.engineer_name && <p className="text-[11px] text-slate-400 flex items-center gap-0.5"><User className="w-3 h-3" />{e.engineer_name}</p>}
+                    {e.ticket_id && <p className="text-[10px] text-blue-400 mt-0.5">Click for details</p>}
                   </div>
                 ))}
               </div>
