@@ -25,12 +25,10 @@ async def list_companies(
     admin: dict = Depends(get_current_admin)
 ):
     """List companies with optional search support - tenant scoped"""
-    # Tenant scoping - only show companies for this organization
     organization_id = admin.get("organization_id")
-    query = {"is_deleted": {"$ne": True}}
-    
-    if organization_id:
-        query["organization_id"] = organization_id
+    if not organization_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    query = {"is_deleted": {"$ne": True}, "organization_id": organization_id}
     
     if q and q.strip():
         search_regex = {"$regex": q.strip(), "$options": "i"}
@@ -54,10 +52,10 @@ async def list_companies(
 async def create_company(company_data: CompanyCreate, admin: dict = Depends(get_current_admin)):
     """Create a new company - tenant scoped"""
     company_dict = {k: v for k, v in company_data.model_dump().items() if v is not None}
-    # Add organization_id from admin context for tenant scoping
     organization_id = admin.get("organization_id")
-    if organization_id:
-        company_dict["organization_id"] = organization_id
+    if not organization_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    company_dict["organization_id"] = organization_id
     
     company = Company(**company_dict)
     await db.companies.insert_one(company.model_dump())
@@ -71,11 +69,10 @@ async def create_company(company_data: CompanyCreate, admin: dict = Depends(get_
 async def quick_create_company(company_data: CompanyCreate, admin: dict = Depends(get_current_admin)):
     """Quick create company (for inline creation from dropdowns) - tenant scoped"""
     organization_id = admin.get("organization_id")
+    if not organization_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
     
-    # Check for existing company within the same organization
-    existing_query = {"name": {"$regex": f"^{company_data.name}$", "$options": "i"}, "is_deleted": {"$ne": True}}
-    if organization_id:
-        existing_query["organization_id"] = organization_id
+    existing_query = {"name": {"$regex": f"^{company_data.name}$", "$options": "i"}, "is_deleted": {"$ne": True}, "organization_id": organization_id}
     
     existing = await db.companies.find_one(existing_query, {"_id": 0})
     if existing:
@@ -83,9 +80,7 @@ async def quick_create_company(company_data: CompanyCreate, admin: dict = Depend
         return existing
     
     company_dict = {k: v for k, v in company_data.model_dump().items() if v is not None}
-    # Add organization_id for tenant scoping
-    if organization_id:
-        company_dict["organization_id"] = organization_id
+    company_dict["organization_id"] = organization_id
     
     company = Company(**company_dict)
     await db.companies.insert_one(company.model_dump())
@@ -100,9 +95,9 @@ async def quick_create_company(company_data: CompanyCreate, admin: dict = Depend
 async def get_company(company_id: str, admin: dict = Depends(get_current_admin)):
     """Get a single company - tenant scoped"""
     organization_id = admin.get("organization_id")
-    query = {"id": company_id, "is_deleted": {"$ne": True}}
-    if organization_id:
-        query["organization_id"] = organization_id
+    if not organization_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    query = {"id": company_id, "is_deleted": {"$ne": True}, "organization_id": organization_id}
     
     company = await db.companies.find_one(query, {"_id": 0})
     if not company:
@@ -114,9 +109,9 @@ async def get_company(company_id: str, admin: dict = Depends(get_current_admin))
 async def update_company(company_id: str, updates: CompanyUpdate, admin: dict = Depends(get_current_admin)):
     """Update a company - tenant scoped"""
     organization_id = admin.get("organization_id")
-    query = {"id": company_id, "is_deleted": {"$ne": True}}
-    if organization_id:
-        query["organization_id"] = organization_id
+    if not organization_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    query = {"id": company_id, "is_deleted": {"$ne": True}, "organization_id": organization_id}
     
     existing = await db.companies.find_one(query, {"_id": 0})
     if not existing:
@@ -140,9 +135,9 @@ async def update_company(company_id: str, updates: CompanyUpdate, admin: dict = 
 async def delete_company(company_id: str, admin: dict = Depends(get_current_admin)):
     """Delete a company - tenant scoped"""
     organization_id = admin.get("organization_id")
-    query = {"id": company_id}
-    if organization_id:
-        query["organization_id"] = organization_id
+    if not organization_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    query = {"id": company_id, "organization_id": organization_id}
     
     result = await db.companies.update_one(query, {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
@@ -155,11 +150,11 @@ async def delete_company(company_id: str, admin: dict = Depends(get_current_admi
 
 @router.get("/admin/companies/{company_id}/overview")
 async def get_company_overview(company_id: str, admin: dict = Depends(get_current_admin)):
-    """Get comprehensive company 360° view with all related data - tenant scoped"""
+    """Get comprehensive company 360 view with all related data - tenant scoped"""
     organization_id = admin.get("organization_id")
-    query = {"id": company_id, "is_deleted": {"$ne": True}}
-    if organization_id:
-        query["organization_id"] = organization_id
+    if not organization_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    query = {"id": company_id, "is_deleted": {"$ne": True}, "organization_id": organization_id}
     
     company = await db.companies.find_one(query, {"_id": 0})
     if not company:
