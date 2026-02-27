@@ -28,6 +28,7 @@ import Parts from "./pages/admin/Parts";
 import AMCManagement from "./pages/admin/AMCManagement";
 import Settings from "./pages/admin/Settings";
 import MasterData from "./pages/admin/MasterData";
+import ItemMaster from "./pages/admin/ItemMaster";
 import ServiceHistory from "./pages/admin/ServiceHistory";
 import AMCContracts from "./pages/admin/AMCContracts";
 import Sites from "./pages/admin/Sites";
@@ -189,6 +190,7 @@ function App() {
                     <Route path="supply-products" element={<SupplyProducts />} />
                     <Route path="supply-orders" element={<SupplyOrders />} />
                     <Route path="master-data" element={<MasterData />} />
+                    <Route path="item-master" element={<ItemMaster />} />
                     <Route path="settings" element={<Settings />} />
                     <Route path="organization" element={<OrganizationSettings />} />
                     <Route path="static-pages" element={<StaticPages />} />
