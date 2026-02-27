@@ -47,9 +47,19 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - Auth: JWT-based, separate admin/engineer tokens
 - Multi-tenancy: organization_id on all collections, hard-fail scope enforcement
 
+### Item Master Module (Feb 27, 2026)
+- **Categories**: CRUD for product categories (e.g., Security, Networking)
+- **Products**: Full CRUD with SKU, part number, brand, manufacturer, pricing, GST slabs (0/5/12/18/28%), HSN code
+- **Product Bundles**: Link products as recommendations (e.g., CCTV Camera suggests NVR, HDD, POE Switch)
+- **Quotation Integration**: `/api/admin/item-master/products/{id}/suggestions` returns bundle recommendations
+- **Collections**: `item_categories`, `item_products`, `item_bundles`
+- **Frontend**: 3-tab interface at `/admin/item-master` under Settings group
+- **Testing**: 25/25 backend tests passed, all frontend flows verified
+
 ## Prioritized Backlog
 
 ### P0 (Next)
+- Quotation creation flow integrated with Item Master (use products + GST + bundle suggestions)
 - Form Builder UI (drag-and-drop)
 - Workflow Designer UI (visual editor)
 - Email Inbox UI (IMAP/SMTP config)
