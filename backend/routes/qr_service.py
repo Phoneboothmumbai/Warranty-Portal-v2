@@ -141,7 +141,10 @@ async def generate_bulk_qr_pdf(
     from reportlab.lib.utils import ImageReader
     from PIL import Image
     
-    query = {"is_deleted": {"$ne": True}}
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    query = {"is_deleted": {"$ne": True}, "organization_id": org_id}
     
     if request.device_ids and len(request.device_ids) > 0:
         query["id"] = {"$in": request.device_ids}
