@@ -232,9 +232,9 @@ export default function EngineerCalendar() {
         <div className="flex-1 bg-white border rounded-lg overflow-hidden">
           {/* Month nav */}
           <div className="flex items-center justify-between p-4 border-b">
-            <Button size="sm" variant="ghost" onClick={() => navigate(-1)}><ChevronLeft className="w-4 h-4" /></Button>
+            <Button size="sm" variant="ghost" onClick={() => navMonth(-1)}><ChevronLeft className="w-4 h-4" /></Button>
             <h2 className="text-lg font-semibold text-slate-800">{MONTHS[month]} {year}</h2>
-            <Button size="sm" variant="ghost" onClick={() => navigate(1)}><ChevronRight className="w-4 h-4" /></Button>
+            <Button size="sm" variant="ghost" onClick={() => navMonth(1)}><ChevronRight className="w-4 h-4" /></Button>
           </div>
 
           {/* Day headers */}
