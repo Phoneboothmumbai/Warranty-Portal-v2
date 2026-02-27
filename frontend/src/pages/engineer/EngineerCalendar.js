@@ -178,7 +178,22 @@ export default function EngineerCalendar() {
 
   useEffect(() => { fetchSchedule(); }, [fetchSchedule]);
 
-  const navigate = (dir) => {
+  const handleEventClick = async (event) => {
+    if (event.type === 'holiday' || event.type === 'personal_holiday') return;
+    setSelectedEvent(event);
+    setEventDetail(null);
+    if (!event.ticket_id) return;
+    setDetailLoading(true);
+    try {
+      const res = await fetch(`${API}/api/engineer/ticket/${event.ticket_id}`, {
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      if (res.ok) setEventDetail(await res.json());
+    } catch {}
+    finally { setDetailLoading(false); }
+  };
+
+  const navMonth = (dir) => {
     const d = new Date(currentDate);
     d.setMonth(d.getMonth() + dir);
     setCurrentDate(d);
