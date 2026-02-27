@@ -771,6 +771,51 @@ async def get_ticket(ticket_id: str, admin: dict = Depends(get_current_admin)):
     return ticket
 
 
+@router.get("/ticketing/tickets/{ticket_id}/full")
+async def get_ticket_full(ticket_id: str, admin: dict = Depends(get_current_admin)):
+    """Get ticket with company, site, employee, device, repair history for calendar/detail views"""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    
+    ticket = await _db.tickets_v2.find_one(
+        {"id": ticket_id, "organization_id": org_id, "is_deleted": {"$ne": True}}, {"_id": 0}
+    )
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    company = None
+    if ticket.get("company_id"):
+        company = await _db.companies.find_one({"id": ticket["company_id"]}, {"_id": 0, "id": 1, "name": 1, "phone": 1, "email": 1, "address": 1, "city": 1, "state": 1})
+
+    site = None
+    if ticket.get("site_id"):
+        site = await _db.sites.find_one({"id": ticket["site_id"]}, {"_id": 0, "id": 1, "name": 1, "address": 1, "city": 1, "state": 1, "pincode": 1, "contact_name": 1, "contact_phone": 1})
+
+    employee = None
+    if ticket.get("employee_id"):
+        employee = await _db.company_employees.find_one({"id": ticket["employee_id"]}, {"_id": 0, "id": 1, "name": 1, "phone": 1, "email": 1, "designation": 1, "department": 1})
+
+    device = None
+    if ticket.get("device_id"):
+        device = await _db.devices.find_one({"id": ticket["device_id"]}, {"_id": 0, "id": 1, "name": 1, "model": 1, "serial_number": 1, "manufacturer": 1, "device_type": 1, "warranty_end_date": 1, "warranty_status": 1, "purchase_date": 1, "ip_address": 1, "notes": 1})
+
+    repair_history = []
+    hq = {"organization_id": org_id, "is_deleted": {"$ne": True}, "id": {"$ne": ticket_id}}
+    if ticket.get("device_id"):
+        hq["device_id"] = ticket["device_id"]
+    elif ticket.get("company_id"):
+        hq["company_id"] = ticket["company_id"]
+    if "device_id" in hq or "company_id" in hq:
+        repair_history = await _db.tickets_v2.find(hq, {"_id": 0, "id": 1, "ticket_number": 1, "subject": 1, "current_stage_name": 1, "priority_name": 1, "is_open": 1, "created_at": 1, "resolved_at": 1, "assigned_to_name": 1}).sort("created_at", -1).to_list(20)
+
+    schedules = await _db.ticket_schedules.find({"ticket_id": ticket_id, "organization_id": org_id}, {"_id": 0}).sort("scheduled_at", -1).to_list(10)
+
+    return {"ticket": ticket, "company": company, "site": site, "employee": employee, "device": device, "repair_history": repair_history, "schedules": schedules}
+
+
+
+
 @router.post("/ticketing/tickets")
 async def create_ticket(data: TicketCreateV2, admin: dict = Depends(get_current_admin)):
     """Create a new ticket"""
