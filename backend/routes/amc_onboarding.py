@@ -164,7 +164,10 @@ async def update_onboarding_admin(
     admin: dict = Depends(get_current_admin)
 ):
     """Admin can edit any onboarding"""
-    onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id}, {"_id": 0})
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id, "organization_id": org_id}, {"_id": 0})
     if not onboarding:
         raise HTTPException(status_code=404, detail="Onboarding not found")
     
@@ -173,11 +176,11 @@ async def update_onboarding_admin(
         update_data[field] = value
     
     await _db.amc_onboardings.update_one(
-        {"id": onboarding_id},
+        {"id": onboarding_id, "organization_id": org_id},
         {"$set": update_data}
     )
     
-    return await _db.amc_onboardings.find_one({"id": onboarding_id}, {"_id": 0})
+    return await _db.amc_onboardings.find_one({"id": onboarding_id, "organization_id": org_id}, {"_id": 0})
 
 
 @router.post("/admin/onboardings/{onboarding_id}/request-changes")
@@ -187,11 +190,14 @@ async def request_onboarding_changes(
     admin: dict = Depends(get_current_admin)
 ):
     """Request changes from company"""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
     feedback = data.get("feedback", "")
     if not feedback:
         raise HTTPException(status_code=400, detail="Feedback is required")
     
-    onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id}, {"_id": 0})
+    onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id, "organization_id": org_id}, {"_id": 0})
     if not onboarding:
         raise HTTPException(status_code=404, detail="Onboarding not found")
     
@@ -215,7 +221,10 @@ async def approve_onboarding(
     admin: dict = Depends(get_current_admin)
 ):
     """Approve onboarding"""
-    onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id}, {"_id": 0})
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    onboarding = await _db.amc_onboardings.find_one({"id": onboarding_id, "organization_id": org_id}, {"_id": 0})
     if not onboarding:
         raise HTTPException(status_code=404, detail="Onboarding not found")
     
