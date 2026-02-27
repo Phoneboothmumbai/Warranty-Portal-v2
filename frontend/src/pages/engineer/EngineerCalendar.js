@@ -324,9 +324,19 @@ export default function EngineerCalendar() {
                   if (!a.all_day && b.all_day) return 1;
                   return (a.start_time || '').localeCompare(b.start_time || '');
                 }).map(event => (
-                  <EventCard key={event.id} event={event} />
+                  <EventCard key={event.id} event={event} onClick={handleEventClick} />
                 ))}
               </div>
+            )}
+          </div>
+          {/* Event Detail Panel */}
+          <EventDetailPanel
+            event={selectedEvent}
+            detail={eventDetail}
+            loading={detailLoading}
+            onClose={() => { setSelectedEvent(null); setEventDetail(null); }}
+            onViewTicket={() => selectedEvent?.ticket_id && navigate(`/engineer/ticket/${selectedEvent.ticket_id}`)}
+          />
             )}
           </div>
         </div>
