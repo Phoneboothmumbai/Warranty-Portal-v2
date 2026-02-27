@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Calendar, ChevronLeft, ChevronRight, Plus, X, Clock, AlertTriangle,
-  Zap, Filter, User, MapPin, Ticket, Trash2, Save
+  Zap, Filter, User, MapPin, Ticket, Trash2, Save,
+  Building2, Monitor, Wrench, Phone, Mail, ExternalLink, ChevronDown
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
