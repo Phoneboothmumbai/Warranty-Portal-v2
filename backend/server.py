@@ -4576,12 +4576,16 @@ async def quick_create_site(data: SiteCreate, admin: dict = Depends(get_current_
         return existing
     
     site = Site(**data.model_dump())
-    await db.sites.insert_one(site.model_dump())
+    site_dict = site.model_dump()
+    org_id = admin.get("organization_id")
+    if org_id:
+        site_dict["organization_id"] = org_id
+    await db.sites.insert_one(site_dict)
     await log_audit("site", site.id, "quick_create", {"data": data.model_dump()}, admin)
     
-    result = site.model_dump()
+    result = {k: v for k, v in site_dict.items() if k != "_id"}
     result["company_name"] = company.get("name")
-    result.get("label", result.get("name", "Unknown")) or result.get("name", "Unknown"); result["label"] = result.get("name", "Unknown")
+    result["label"] = result.get("name", "Unknown")
     return result
 
 @api_router.get("/admin/sites/{site_id}")
