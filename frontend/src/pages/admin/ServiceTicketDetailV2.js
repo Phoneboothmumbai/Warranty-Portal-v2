@@ -363,27 +363,210 @@ const ResolutionModal = ({ open, onClose, onConfirm }) => {
   );
 };
 
-// ========== QUOTATION MODAL ==========
-const QuotationModal = ({ open, onClose, onConfirm }) => {
+// ========== QUOTATION MODAL (Item Master Integration) ==========
+const QuotationModal = ({ open, onClose, onConfirm, ticket }) => {
   const [notes, setNotes] = useState('');
+  const [terms, setTerms] = useState('');
+  const [items, setItems] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [searchQ, setSearchQ] = useState('');
+  const [filterCat, setFilterCat] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [sugSource, setSugSource] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const GST_SLABS = [0, 5, 12, 18, 28];
+
+  useEffect(() => {
+    if (!open) return;
+    setItems([]); setNotes(''); setTerms(''); setSuggestions([]); setSugSource('');
+    // Load categories + products
+    const h = { Authorization: `Bearer ${getToken()}` };
+    fetch(`${API}/api/admin/item-master/categories`, { headers: h }).then(r => r.json()).then(d => setCategories(d.categories || [])).catch(() => {});
+    fetch(`${API}/api/admin/item-master/products?limit=200`, { headers: h }).then(r => r.json()).then(d => setProducts(d.products || [])).catch(() => {});
+  }, [open]);
+
+  const filteredProducts = products.filter(p => {
+    if (filterCat && p.category_id !== filterCat) return false;
+    if (searchQ && !p.name.toLowerCase().includes(searchQ.toLowerCase()) && !(p.sku || '').toLowerCase().includes(searchQ.toLowerCase())) return false;
+    return true;
+  });
+
+  const addProduct = (p) => {
+    if (items.find(i => i.product_id === p.id)) return;
+    setItems(prev => [...prev, {
+      product_id: p.id, product_name: p.name, sku: p.sku || '', hsn_code: p.hsn_code || '',
+      quantity: 1, unit_price: p.unit_price || 0, gst_slab: p.gst_slab ?? 18, description: '',
+    }]);
+    // Fetch bundle suggestions
+    fetch(`${API}/api/admin/item-master/products/${p.id}/suggestions`, { headers: { Authorization: `Bearer ${getToken()}` } })
+      .then(r => r.json()).then(d => {
+        if (d.suggestions?.length) {
+          setSuggestions(d.suggestions.filter(s => !items.find(i => i.product_id === s.id) && s.id !== p.id));
+          setSugSource(p.name);
+        }
+      }).catch(() => {});
+  };
+
+  const removeItem = (idx) => setItems(prev => prev.filter((_, i) => i !== idx));
+  const updateItem = (idx, field, val) => setItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: val } : item));
+
+  const calcLine = (item) => {
+    const base = (parseFloat(item.unit_price) || 0) * (parseInt(item.quantity) || 1);
+    const gst = base * (parseInt(item.gst_slab) || 0) / 100;
+    return { base, gst: Math.round(gst * 100) / 100, total: Math.round((base + gst) * 100) / 100 };
+  };
+
+  const subtotal = items.reduce((s, i) => s + (parseFloat(i.unit_price) || 0) * (parseInt(i.quantity) || 1), 0);
+  const totalGst = items.reduce((s, i) => s + calcLine(i).gst, 0);
+  const grandTotal = Math.round((subtotal + totalGst) * 100) / 100;
+
+  const handleSaveAndSend = async (sendNow) => {
+    if (items.length === 0) { return; }
+    setSaving(true);
+    try {
+      const payload = {
+        ticket_id: ticket?.id, ticket_number: ticket?.ticket_number,
+        company_id: ticket?.company_id, company_name: ticket?.company_name,
+        items: items.map(i => ({ ...i, quantity: parseInt(i.quantity) || 1, unit_price: parseFloat(i.unit_price) || 0, gst_slab: parseInt(i.gst_slab) || 18 })),
+        notes, terms_and_conditions: terms, valid_days: 30,
+      };
+      const res = await fetch(`${API}/api/admin/quotations`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Failed'); }
+      const created = await res.json();
+
+      if (sendNow) {
+        await fetch(`${API}/api/admin/quotations/${created.id}/send`, { method: 'POST', headers: authHeaders() });
+      }
+
+      onConfirm(notes || 'Quotation created');
+    } catch (e) {
+      alert(e.message);
+    } finally { setSaving(false); }
+  };
+
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" data-testid="quotation-modal">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
-        <div className="flex items-center justify-between p-5 border-b">
-          <h2 className="text-lg font-semibold flex items-center gap-2"><FileText className="w-5 h-5" /> Send Quotation</h2>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-5 border-b shrink-0">
+          <h2 className="text-lg font-semibold flex items-center gap-2"><FileText className="w-5 h-5" /> Create Quotation</h2>
           <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
         </div>
-        <div className="p-5 space-y-4">
+
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          {/* Product Picker */}
           <div>
-            <label className="text-sm font-medium block mb-1">Quotation Notes</label>
-            <textarea className="w-full border rounded-lg px-3 py-2 text-sm min-h-[80px]" value={notes} onChange={e => setNotes(e.target.value)}
-              placeholder="Additional notes for the quotation..." data-testid="quotation-notes" />
+            <label className="text-sm font-medium text-slate-700 block mb-2">Add Products from Item Master</label>
+            <div className="flex gap-2 mb-2">
+              <div className="relative flex-1">
+                <input className="w-full border rounded-lg px-3 py-2 text-sm pl-8" placeholder="Search products..." value={searchQ} onChange={e => setSearchQ(e.target.value)} data-testid="qt-product-search" />
+                <svg className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </div>
+              <select className="border rounded-lg px-3 py-2 text-sm" value={filterCat} onChange={e => setFilterCat(e.target.value)} data-testid="qt-category-filter">
+                <option value="">All Categories</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            {(searchQ || filterCat) && filteredProducts.length > 0 && (
+              <div className="border rounded-lg max-h-36 overflow-y-auto divide-y">
+                {filteredProducts.slice(0, 10).map(p => (
+                  <button key={p.id} className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-slate-50 transition-colors text-left" onClick={() => addProduct(p)} disabled={items.find(i => i.product_id === p.id)} data-testid={`qt-add-product-${p.id}`}>
+                    <div>
+                      <span className="font-medium text-slate-800">{p.name}</span>
+                      {p.sku && <span className="text-xs text-slate-400 ml-2 font-mono">{p.sku}</span>}
+                    </div>
+                    <span className="font-mono text-xs text-slate-500">₹{(p.unit_price || 0).toLocaleString('en-IN')}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Bundle Suggestions */}
+          {suggestions.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3" data-testid="bundle-suggestions">
+              <p className="text-xs font-medium text-amber-700 mb-2">Recommended with {sugSource}:</p>
+              <div className="flex flex-wrap gap-2">
+                {suggestions.map(s => (
+                  <button key={s.id} onClick={() => { addProduct(s); setSuggestions(prev => prev.filter(x => x.id !== s.id)); }}
+                    className="text-xs bg-white border border-amber-300 rounded-full px-3 py-1.5 hover:bg-amber-100 transition-colors flex items-center gap-1" data-testid={`qt-suggest-${s.id}`}>
+                    <span>+ {s.name}</span>
+                    <span className="text-amber-600 font-mono">₹{(s.unit_price || 0).toLocaleString('en-IN')}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Line Items Table */}
+          {items.length > 0 && (
+            <div>
+              <label className="text-sm font-medium text-slate-700 block mb-2">Line Items</label>
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-xs text-slate-500">
+                    <tr><th className="text-left px-3 py-2">Product</th><th className="text-right px-2 py-2 w-16">Qty</th><th className="text-right px-2 py-2 w-24">Price</th><th className="text-right px-2 py-2 w-20">GST</th><th className="text-right px-2 py-2 w-24">Total</th><th className="w-8"></th></tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {items.map((item, idx) => {
+                      const lc = calcLine(item);
+                      return (
+                        <tr key={idx} data-testid={`qt-line-${idx}`}>
+                          <td className="px-3 py-2">
+                            <p className="font-medium text-slate-800 text-xs">{item.product_name}</p>
+                            {item.sku && <p className="text-[10px] text-slate-400 font-mono">{item.sku}</p>}
+                          </td>
+                          <td className="px-2 py-2"><input type="number" min="1" className="w-14 border rounded px-2 py-1 text-sm text-right" value={item.quantity} onChange={e => updateItem(idx, 'quantity', e.target.value)} /></td>
+                          <td className="px-2 py-2"><input type="number" step="0.01" min="0" className="w-22 border rounded px-2 py-1 text-sm text-right font-mono" value={item.unit_price} onChange={e => updateItem(idx, 'unit_price', e.target.value)} /></td>
+                          <td className="px-2 py-2">
+                            <select className="border rounded px-1 py-1 text-xs" value={item.gst_slab} onChange={e => updateItem(idx, 'gst_slab', parseInt(e.target.value))}>
+                              {GST_SLABS.map(s => <option key={s} value={s}>{s}%</option>)}
+                            </select>
+                          </td>
+                          <td className="px-2 py-2 text-right font-mono text-xs font-semibold">₹{lc.total.toLocaleString('en-IN')}</td>
+                          <td className="px-1"><button onClick={() => removeItem(idx)} className="p-1 hover:bg-red-50 rounded"><X className="w-3.5 h-3.5 text-red-400" /></button></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Totals */}
+              <div className="mt-3 flex justify-end">
+                <div className="bg-slate-50 rounded-lg p-3 w-64 space-y-1.5 text-sm">
+                  <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span className="font-mono">₹{subtotal.toLocaleString('en-IN')}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">GST</span><span className="font-mono">₹{totalGst.toLocaleString('en-IN')}</span></div>
+                  <div className="flex justify-between font-bold border-t pt-1.5 text-base"><span>Grand Total</span><span className="font-mono text-[#0F62FE]">₹{grandTotal.toLocaleString('en-IN')}</span></div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Notes & Terms */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium block mb-1">Notes</label>
+              <textarea className="w-full border rounded-lg px-3 py-2 text-sm" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Additional notes..." rows={2} data-testid="quotation-notes" />
+            </div>
+            <div>
+              <label className="text-sm font-medium block mb-1">Terms & Conditions</label>
+              <textarea className="w-full border rounded-lg px-3 py-2 text-sm" value={terms} onChange={e => setTerms(e.target.value)} placeholder="Payment terms, validity..." rows={2} />
+            </div>
           </div>
         </div>
-        <div className="flex justify-end gap-3 p-5 border-t">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => onConfirm(notes)} data-testid="confirm-quotation-btn">Send Quotation</Button>
+
+        <div className="flex justify-between items-center p-5 border-t shrink-0 bg-slate-50 rounded-b-xl">
+          <span className="text-sm text-slate-500">{items.length} item{items.length !== 1 ? 's' : ''}</span>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button variant="outline" onClick={() => handleSaveAndSend(false)} disabled={items.length === 0 || saving} data-testid="save-draft-btn">Save Draft</Button>
+            <Button onClick={() => handleSaveAndSend(true)} disabled={items.length === 0 || saving} data-testid="confirm-quotation-btn" className="bg-[#0F62FE] hover:bg-[#0043CE] text-white">
+              {saving ? 'Sending...' : 'Save & Send'}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
