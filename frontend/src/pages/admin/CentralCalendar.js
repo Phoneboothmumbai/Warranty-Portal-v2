@@ -588,8 +588,93 @@ export default function CentralCalendar() {
           onAddEmergency={addEmergency}
           onDeleteEmergency={deleteEmergency}
           onUpdateStdHours={updateStdHours}
+          onEventClick={handleEventClick}
         />
       </div>
+
+      {/* Event Detail Modal */}
+      {selectedEvent && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => { setSelectedEvent(null); setEventDetail(null); }}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()} data-testid="event-detail-modal">
+            <div className="flex items-center justify-between p-4 border-b bg-slate-50">
+              <h3 className="text-sm font-semibold text-slate-700">Event Details</h3>
+              <button onClick={() => { setSelectedEvent(null); setEventDetail(null); }} className="p-1 hover:bg-slate-200 rounded"><X className="w-4 h-4" /></button>
+            </div>
+            {detailLoading ? (
+              <div className="p-8 text-center text-sm text-slate-400">Loading details...</div>
+            ) : !eventDetail ? (
+              <div className="p-4">
+                <p className="text-sm font-medium">{selectedEvent.title}</p>
+                {selectedEvent.start_time && <p className="text-xs text-slate-500 mt-1"><Clock className="w-3 h-3 inline mr-1" />{selectedEvent.start_time}{selectedEvent.end_time ? ` - ${selectedEvent.end_time}` : ''}</p>}
+                {selectedEvent.engineer_name && <p className="text-xs text-slate-400 mt-0.5"><User className="w-3 h-3 inline mr-1" />{selectedEvent.engineer_name}</p>}
+              </div>
+            ) : (
+              <div className="p-4 space-y-3 overflow-y-auto max-h-[65vh] text-xs">
+                {/* Ticket summary */}
+                <div>
+                  <p className="font-semibold text-blue-600 text-sm">#{eventDetail.ticket?.ticket_number} - {eventDetail.ticket?.subject}</p>
+                  {eventDetail.ticket?.description && <p className="text-slate-500 mt-1 whitespace-pre-wrap">{eventDetail.ticket.description}</p>}
+                  <div className="flex gap-2 mt-1.5 flex-wrap">
+                    {eventDetail.ticket?.priority_name && <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{eventDetail.ticket.priority_name}</span>}
+                    {eventDetail.ticket?.current_stage_name && <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">{eventDetail.ticket.current_stage_name}</span>}
+                    {eventDetail.ticket?.assigned_to_name && <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600"><User className="w-3 h-3 inline mr-0.5" />{eventDetail.ticket.assigned_to_name}</span>}
+                  </div>
+                </div>
+                {/* Company */}
+                {eventDetail.company && (
+                  <div className="p-2.5 rounded bg-slate-50 border">
+                    <p className="font-medium text-slate-700 flex items-center gap-1"><Building2 className="w-3 h-3" /> {eventDetail.company.name}</p>
+                    {eventDetail.company.phone && <p className="text-slate-400 mt-0.5"><Phone className="w-3 h-3 inline mr-1" />{eventDetail.company.phone}</p>}
+                    {eventDetail.company.address && <p className="text-slate-400"><MapPin className="w-3 h-3 inline mr-1" />{[eventDetail.company.address, eventDetail.company.city, eventDetail.company.state].filter(Boolean).join(', ')}</p>}
+                  </div>
+                )}
+                {/* Site */}
+                {eventDetail.site && (
+                  <div className="p-2.5 rounded bg-green-50 border border-green-100">
+                    <p className="font-medium text-green-700 flex items-center gap-1"><MapPin className="w-3 h-3" /> {eventDetail.site.name}</p>
+                    <p className="text-green-600">{[eventDetail.site.address, eventDetail.site.city, eventDetail.site.state].filter(Boolean).join(', ')}</p>
+                    {eventDetail.site.contact_phone && <p className="text-green-500"><Phone className="w-3 h-3 inline mr-1" />{eventDetail.site.contact_name} - {eventDetail.site.contact_phone}</p>}
+                  </div>
+                )}
+                {/* Contact */}
+                {eventDetail.employee && (
+                  <div className="p-2.5 rounded bg-teal-50 border border-teal-100">
+                    <p className="font-medium text-teal-700 flex items-center gap-1"><User className="w-3 h-3" /> {eventDetail.employee.name}</p>
+                    {eventDetail.employee.phone && <p className="text-teal-500"><Phone className="w-3 h-3 inline mr-1" />{eventDetail.employee.phone}</p>}
+                    {eventDetail.employee.email && <p className="text-teal-500"><Mail className="w-3 h-3 inline mr-1" />{eventDetail.employee.email}</p>}
+                  </div>
+                )}
+                {/* Device */}
+                {eventDetail.device && (
+                  <div className="p-2.5 rounded bg-purple-50 border border-purple-100">
+                    <p className="font-medium text-purple-700 flex items-center gap-1"><Monitor className="w-3 h-3" /> {eventDetail.device.name || eventDetail.device.model || 'Device'}</p>
+                    <p className="text-purple-500">{[eventDetail.device.manufacturer, eventDetail.device.model, eventDetail.device.serial_number && `S/N: ${eventDetail.device.serial_number}`].filter(Boolean).join(' | ')}</p>
+                    {eventDetail.device.warranty_status && <span className={`inline-block mt-0.5 px-1.5 py-0.5 rounded ${eventDetail.device.warranty_status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>Warranty: {eventDetail.device.warranty_status}</span>}
+                  </div>
+                )}
+                {/* Repair History */}
+                {eventDetail.repair_history?.length > 0 && (
+                  <div>
+                    <p className="font-medium text-slate-600 flex items-center gap-1 mb-1.5"><Wrench className="w-3 h-3" /> Past History ({eventDetail.repair_history.length})</p>
+                    {eventDetail.repair_history.slice(0, 5).map(h => (
+                      <div key={h.id} className="flex items-center gap-2 p-1.5 rounded border mb-1">
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${h.is_open ? 'bg-blue-500' : 'bg-green-500'}`} />
+                        <span className="font-mono text-[10px] shrink-0">#{h.ticket_number}</span>
+                        <span className="truncate flex-1">{h.subject}</span>
+                        <span className="text-slate-400 shrink-0">{h.created_at ? new Date(h.created_at).toLocaleDateString() : ''}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* View ticket button */}
+                <Button size="sm" variant="outline" className="w-full" onClick={() => { setSelectedEvent(null); setEventDetail(null); navigate(`/admin/service-requests/${eventDetail.ticket?.id}`); }} data-testid="view-full-ticket">
+                  <ExternalLink className="w-3 h-3 mr-1" /> Open Full Ticket
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
