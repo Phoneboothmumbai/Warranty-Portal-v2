@@ -275,8 +275,8 @@ async def update_amc_request_admin(
             )
             await db.notifications.insert_one(notification.model_dump())
     
-    await db.amc_requests.update_one({"id": request_id}, {"$set": update_data})
-    return await db.amc_requests.find_one({"id": request_id}, {"_id": 0})
+    await db.amc_requests.update_one({"id": request_id, "organization_id": org_id}, {"$set": update_data})
+    return await db.amc_requests.find_one({"id": request_id, "organization_id": org_id}, {"_id": 0})
 
 
 @router.post("/admin/amc-requests/{request_id}/approve")
