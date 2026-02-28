@@ -2072,6 +2072,7 @@ async def list_all_company_domains(admin: dict = Depends(get_current_admin)):
 @api_router.post("/admin/bulk-import/companies")
 async def bulk_import_companies(data: dict, admin: dict = Depends(get_current_admin)):
     """Bulk import companies from CSV data"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     records = data.get("records", [])
     if not records:
         raise HTTPException(status_code=400, detail="No records provided")
@@ -2339,8 +2340,9 @@ async def bulk_import_supply_products(data: dict, admin: dict = Depends(get_curr
 @api_router.get("/admin/companies/{company_id}/overview")
 async def get_company_overview(company_id: str, admin: dict = Depends(get_current_admin)):
     """Get comprehensive company 360° view with all related data"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Get company details
-    company = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    company = await db.companies.find_one(scope_query({"id": company_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
@@ -2443,7 +2445,8 @@ async def get_company_overview(company_id: str, admin: dict = Depends(get_curren
 @api_router.get("/admin/companies/{company_id}/portal-users")
 async def list_company_portal_users(company_id: str, admin: dict = Depends(get_current_admin)):
     """List all portal users for a company"""
-    company = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    company = await db.companies.find_one(scope_query({"id": company_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
@@ -3252,7 +3255,8 @@ async def get_device(device_id: str, admin: dict = Depends(get_current_admin)):
 
 @api_router.put("/admin/devices/{device_id}")
 async def update_device(device_id: str, updates: DeviceUpdate, admin: dict = Depends(get_current_admin)):
-    existing = await db.devices.find_one({"id": device_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    existing = await db.devices.find_one(scope_query({"id": device_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Device not found")
     
@@ -3672,7 +3676,8 @@ async def get_service(service_id: str, admin: dict = Depends(get_current_admin))
 
 @api_router.put("/admin/services/{service_id}")
 async def update_service(service_id: str, updates: ServiceHistoryUpdate, admin: dict = Depends(get_current_admin)):
-    existing = await db.service_history.find_one({"id": service_id}, {"_id": 0})
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    existing = await db.service_history.find_one(scope_query({"id": service_id}, org_id), {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Service record not found")
     
