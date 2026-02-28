@@ -2126,8 +2126,8 @@ async def bulk_import_companies(data: dict, admin: dict = Depends(get_current_ad
                 status="active"
             )
             
-            company_ins_dict["organization_id"] = org_id
             company_ins_dict = company.model_dump()
+            company_ins_dict["organization_id"] = org_id
             await db.companies.insert_one(company_ins_dict)
             success_count += 1
             
@@ -2185,8 +2185,8 @@ async def bulk_import_sites(data: dict, admin: dict = Depends(get_current_admin)
                 status="active"
             )
             
-            site_ins_dict["organization_id"] = org_id
             site_ins_dict = site.model_dump()
+            site_ins_dict["organization_id"] = org_id
             await db.sites.insert_one(site_ins_dict)
             success_count += 1
             
@@ -2284,8 +2284,8 @@ async def bulk_import_devices(data: dict, admin: dict = Depends(get_current_admi
                 notes=record.get("notes")
             )
             
-            device_ins_dict["organization_id"] = org_id
             device_ins_dict = device.model_dump()
+            device_ins_dict["organization_id"] = org_id
             await db.devices.insert_one(device_ins_dict)
             success_count += 1
             
@@ -2324,8 +2324,8 @@ async def bulk_import_supply_products(data: dict, admin: dict = Depends(get_curr
                 # Create category if it doesn't exist
                 if record.get("category"):
                     new_cat = SupplyCategory(name=record["category"])
-                    new_cat_ins_dict["organization_id"] = org_id
                     new_cat_ins_dict = new_cat.model_dump()
+                    new_cat_ins_dict["organization_id"] = org_id
                     await db.supply_categories.insert_one(new_cat_ins_dict)
                     category_id = new_cat.id
                     category_by_name[record["category"].lower()] = category_id
@@ -2351,8 +2351,8 @@ async def bulk_import_supply_products(data: dict, admin: dict = Depends(get_curr
                 internal_notes=record.get("internal_notes")
             )
             
-            product_ins_dict["organization_id"] = org_id
             product_ins_dict = product.model_dump()
+            product_ins_dict["organization_id"] = org_id
             await db.supply_products.insert_one(product_ins_dict)
             success_count += 1
             
@@ -2655,8 +2655,8 @@ async def quick_create_user(user_data: UserCreate, admin: dict = Depends(get_cur
         return existing
     
     user = User(**user_data.model_dump())
-    user_ins_dict["organization_id"] = org_id
     user_ins_dict = user.model_dump()
+    user_ins_dict["organization_id"] = org_id
     await db.users.insert_one(user_ins_dict)
     await log_audit("user", user.id, "quick_create", {"data": user_data.model_dump()}, admin)
     
@@ -3020,8 +3020,8 @@ async def bulk_import_company_employees(
             employee_data["name"] = name
             
             new_employee = CompanyEmployee(**employee_data)
-            new_employee_ins_dict["organization_id"] = org_id
             new_employee_ins_dict = new_employee.model_dump()
+            new_employee_ins_dict["organization_id"] = org_id
             await db.company_employees.insert_one(new_employee_ins_dict)
             results["created"] += 1
             
@@ -3219,8 +3219,8 @@ async def create_device(device_data: DeviceCreate, admin: dict = Depends(get_cur
             changed_by=admin.get("id"),
             changed_by_name=admin.get("name")
         )
-        assignment_ins_dict["organization_id"] = org_id
         assignment_ins_dict = assignment.model_dump()
+        assignment_ins_dict["organization_id"] = org_id
         await db.assignment_history.insert_one(assignment_ins_dict)
     
     await log_audit("device", device.id, "create", {"data": device_data.model_dump()}, admin)
@@ -3341,8 +3341,8 @@ async def update_device(device_id: str, updates: DeviceUpdate, admin: dict = Dep
             changed_by=admin.get("id"),
             changed_by_name=admin.get("name")
         )
-        assignment_ins_dict["organization_id"] = org_id
         assignment_ins_dict = assignment.model_dump()
+        assignment_ins_dict["organization_id"] = org_id
         await db.assignment_history.insert_one(assignment_ins_dict)
     
     changes = {k: {"old": existing.get(k), "new": v} for k, v in update_data.items() if existing.get(k) != v}
@@ -3713,8 +3713,8 @@ async def create_service(service_data: ServiceHistoryCreate, admin: dict = Depen
         created_by=admin.get("id"),
         created_by_name=admin.get("name")
     )
-    service_ins_dict["organization_id"] = org_id
     service_ins_dict = service.model_dump()
+    service_ins_dict["organization_id"] = org_id
     await db.service_history.insert_one(service_ins_dict)
     await log_audit("service", service.id, "create", {"data": service_data.model_dump()}, admin)
     return service.model_dump()
@@ -4176,8 +4176,8 @@ async def create_amc(amc_data: AMCCreate, admin: dict = Depends(get_current_admi
         raise HTTPException(status_code=400, detail="AMC already exists for this device")
     
     amc = AMC(**amc_data.model_dump())
-    amc_ins_dict["organization_id"] = org_id
     amc_ins_dict = amc.model_dump()
+    amc_ins_dict["organization_id"] = org_id
     await db.amc.insert_one(amc_ins_dict)
     await log_audit("amc", amc.id, "create", {"data": amc_data.model_dump()}, admin)
     return amc.model_dump()
@@ -4486,8 +4486,8 @@ async def record_amc_usage(
         notes=notes
     )
     
-    usage_ins_dict["organization_id"] = org_id
     usage_ins_dict = usage.model_dump()
+    usage_ins_dict["organization_id"] = org_id
     await db.amc_usage.insert_one(usage_ins_dict)
     return usage.model_dump()
 
@@ -4852,8 +4852,8 @@ async def create_deployment(data: DeploymentCreate, admin: dict = Depends(get_cu
         created_by_name=admin.get("name", "Admin")
     )
     
-    deployment_ins_dict["organization_id"] = org_id
     deployment_ins_dict = deployment.model_dump()
+    deployment_ins_dict["organization_id"] = org_id
     await db.deployments.insert_one(deployment_ins_dict)
     
     # Now create the device records for serialized items
@@ -5774,8 +5774,8 @@ async def assign_device_to_amc(
     assignment_data["created_by"] = admin["id"]
     
     assignment = AMCDeviceAssignment(**assignment_data)
-    assignment_ins_dict["organization_id"] = org_id
     assignment_ins_dict = assignment.model_dump()
+    assignment_ins_dict["organization_id"] = org_id
     await db.amc_device_assignments.insert_one(assignment_ins_dict)
     
     return assignment.model_dump()
@@ -5886,8 +5886,8 @@ async def confirm_bulk_amc_assignment(
         }
         
         assignment = AMCDeviceAssignment(**assignment_data)
-        assignment_ins_dict["organization_id"] = org_id
         assignment_ins_dict = assignment.model_dump()
+        assignment_ins_dict["organization_id"] = org_id
         await db.amc_device_assignments.insert_one(assignment_ins_dict)
         assigned.append(assignment.model_dump())
     
@@ -6371,8 +6371,8 @@ async def create_subscription(data: EmailSubscriptionCreate, admin: dict = Depen
         sub_data["total_price"] = sub_data["price_per_user"] * sub_data["num_users"] * multiplier
     
     subscription = EmailSubscription(**sub_data)
-    subscription_ins_dict["organization_id"] = org_id
     subscription_ins_dict = subscription.model_dump()
+    subscription_ins_dict["organization_id"] = org_id
     await db.email_subscriptions.insert_one(subscription_ins_dict)
     await log_audit("email_subscription", subscription.id, "create", sub_data, admin)
     
@@ -6512,8 +6512,8 @@ async def create_subscription_ticket_admin(
     }
     
     ticket = SubscriptionTicket(**ticket_data)
-    ticket_ins_dict["organization_id"] = org_id
     ticket_ins_dict = ticket.model_dump()
+    ticket_ins_dict["organization_id"] = org_id
     await db.subscription_tickets.insert_one(ticket_ins_dict)
     
     # Create osTicket
@@ -6621,8 +6621,8 @@ async def add_subscription_user_change(
         changed_by_name=admin.get("name", "Admin")
     )
     
-    change_ins_dict["organization_id"] = org_id
     change_ins_dict = change.model_dump()
+    change_ins_dict["organization_id"] = org_id
     await db.subscription_user_changes.insert_one(change_ins_dict)
     
     # Update subscription user count
@@ -6719,8 +6719,8 @@ async def create_asset_group(group_data: AssetGroupCreate, admin: dict = Depends
     """Create a new asset group"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     group = AssetGroup(**group_data.model_dump())
-    group_ins_dict["organization_id"] = org_id
     group_ins_dict = group.model_dump()
+    group_ins_dict["organization_id"] = org_id
     await db.asset_groups.insert_one(group_ins_dict)
     return group.model_dump()
 
@@ -6903,8 +6903,8 @@ async def transfer_asset(transfer_data: AssetTransferRequest, admin: dict = Depe
         transferred_by_name=admin.get("name", "Admin")
     )
     
-    transfer_ins_dict["organization_id"] = org_id
     transfer_ins_dict = transfer.model_dump()
+    transfer_ins_dict["organization_id"] = org_id
     await db.asset_transfers.insert_one(transfer_ins_dict)
     
     # Update the asset
@@ -7019,8 +7019,8 @@ async def create_accessory(acc_data: AccessoryCreate, admin: dict = Depends(get_
     """Create a new accessory"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     accessory = Accessory(**acc_data.model_dump())
-    accessory_ins_dict["organization_id"] = org_id
     accessory_ins_dict = accessory.model_dump()
+    accessory_ins_dict["organization_id"] = org_id
     await db.accessories.insert_one(accessory_ins_dict)
     return accessory.model_dump()
 
@@ -8595,8 +8595,8 @@ async def create_company_user(data: CompanyUserCreate, admin: dict = Depends(get
         created_by=admin.get("email")
     )
     
-    user_ins_dict["organization_id"] = org_id
     user_ins_dict = user.model_dump()
+    user_ins_dict["organization_id"] = org_id
     await db.company_users.insert_one(user_ins_dict)
     
     return {"message": "Company user created", "id": user.id}
@@ -8684,8 +8684,8 @@ async def create_internet_service(data: InternetServiceCreate, admin: dict = Dep
     """Create a new internet service record"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     service = InternetService(**data.model_dump())
-    service_ins_dict["organization_id"] = org_id
     service_ins_dict = service.model_dump()
+    service_ins_dict["organization_id"] = org_id
     await db.internet_services.insert_one(service_ins_dict)
     
     result = service.model_dump()
@@ -8847,8 +8847,8 @@ async def create_supply_category(data: SupplyCategoryCreate, admin: dict = Depen
     """Create a new supply category"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     category = SupplyCategory(**data.model_dump())
-    category_ins_dict["organization_id"] = org_id
     category_ins_dict = category.model_dump()
+    category_ins_dict["organization_id"] = org_id
     await db.supply_categories.insert_one(category_ins_dict)
     return category.model_dump()
 
@@ -8909,8 +8909,8 @@ async def create_supply_product(data: SupplyProductCreate, admin: dict = Depends
         raise HTTPException(status_code=400, detail="Category not found")
     
     product = SupplyProduct(**data.model_dump())
-    product_ins_dict["organization_id"] = org_id
     product_ins_dict = product.model_dump()
+    product_ins_dict["organization_id"] = org_id
     await db.supply_products.insert_one(product_ins_dict)
     
     result = product.model_dump()
