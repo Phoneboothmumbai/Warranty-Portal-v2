@@ -747,6 +747,7 @@ async def get_device_model(model_id: str, admin: dict = Depends(get_current_admi
 async def lookup_device_model(
     request: AILookupRequest,
     force_refresh: bool = Query(default=False),
+    org_id = await get_admin_org_id(admin.get("email", ""))
     admin: dict = Depends(get_current_admin)
 ):
     """
@@ -829,6 +830,7 @@ async def update_device_model(
 @api_router.delete("/device-models/{model_id}")
 async def delete_device_model(model_id: str, admin: dict = Depends(get_current_admin)):
     """Soft delete a device model"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.device_models.update_one(
         {"id": model_id},
         {"$set": {"is_deleted": True}}
@@ -841,6 +843,7 @@ async def delete_device_model(model_id: str, admin: dict = Depends(get_current_a
 @api_router.post("/device-models/{model_id}/verify")
 async def verify_device_model(model_id: str, admin: dict = Depends(get_current_admin)):
     """Mark a device model as admin-verified"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.device_models.update_one(
         {"id": model_id, "is_deleted": {"$ne": True}},
         {"$set": {"is_verified": True, "updated_at": get_ist_isoformat()}}
@@ -857,6 +860,7 @@ async def search_compatible_consumables(
     model: Optional[str] = None,
     consumable_type: Optional[str] = None,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """
     Search for compatible consumables based on device info.
@@ -1163,6 +1167,7 @@ class BulkQRRequest(BaseModel):
 async def generate_bulk_qr_pdf(
     request: BulkQRRequest,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """
     Generate a printable A4 PDF with multiple QR codes.
@@ -1612,6 +1617,7 @@ async def admin_login(request: Request, login: AdminLogin):
 @api_router.get("/auth/me")
 async def get_current_admin_info(request: Request, admin: dict = Depends(get_current_admin)):
     """Get current admin info with tenant context"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Get tenant from request state (set by middleware)
     request_tenant = getattr(request.state, "tenant", None)
     
@@ -1669,6 +1675,7 @@ async def get_current_admin_info(request: Request, admin: dict = Depends(get_cur
 @api_router.get("/admin/feature-flags")
 async def get_tenant_feature_flags(admin: dict = Depends(get_current_admin)):
     """Get feature flags for the current tenant organization"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     org_id = admin.get("organization_id")
     if not org_id:
         raise HTTPException(status_code=403, detail="Organization context required")
@@ -1807,6 +1814,7 @@ async def disable_master(master_id: str, admin: dict = Depends(get_current_admin
 @api_router.post("/admin/masters/seed")
 async def seed_masters(admin: dict = Depends(get_current_admin)):
     """Force re-seed default masters"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     await seed_default_masters()
     return {"message": "Default masters seeded"}
 
@@ -1978,6 +1986,7 @@ async def delete_company(company_id: str, admin: dict = Depends(get_current_admi
 @api_router.get("/admin/companies/{company_id}/domains")
 async def get_company_domains(company_id: str, admin: dict = Depends(get_current_admin)):
     """Get all email domains for a specific company"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     company = await db.companies.find_one(
         {"id": company_id, "is_deleted": {"$ne": True}},
         {"_id": 0, "email_domains": 1}
@@ -1992,6 +2001,7 @@ async def get_company_domains(company_id: str, admin: dict = Depends(get_current
 @api_router.post("/admin/companies/{company_id}/domains")
 async def add_company_domain(company_id: str, data: dict, admin: dict = Depends(get_current_admin)):
     """Add an email domain to a company for ticket routing"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     domain = data.get("domain", "").lower().strip()
     
     if not domain:
@@ -2036,6 +2046,7 @@ async def add_company_domain(company_id: str, data: dict, admin: dict = Depends(
 @api_router.delete("/admin/companies/{company_id}/domains/{domain}")
 async def remove_company_domain(company_id: str, domain: str, admin: dict = Depends(get_current_admin)):
     """Remove an email domain from a company"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     company = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -2126,6 +2137,7 @@ async def bulk_import_companies(data: dict, admin: dict = Depends(get_current_ad
 @api_router.post("/admin/bulk-import/sites")
 async def bulk_import_sites(data: dict, admin: dict = Depends(get_current_admin)):
     """Bulk import sites from CSV data"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     records = data.get("records", [])
     if not records:
         raise HTTPException(status_code=400, detail="No records provided")
@@ -2182,6 +2194,7 @@ async def bulk_import_sites(data: dict, admin: dict = Depends(get_current_admin)
 @api_router.post("/admin/bulk-import/devices")
 async def bulk_import_devices(data: dict, admin: dict = Depends(get_current_admin)):
     """Bulk import devices from CSV data"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     records = data.get("records", [])
     if not records:
         raise HTTPException(status_code=400, detail="No records provided")
@@ -2278,6 +2291,7 @@ async def bulk_import_devices(data: dict, admin: dict = Depends(get_current_admi
 @api_router.post("/admin/bulk-import/supply-products")
 async def bulk_import_supply_products(data: dict, admin: dict = Depends(get_current_admin)):
     """Bulk import supply products from CSV data"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     records = data.get("records", [])
     if not records:
         raise HTTPException(status_code=400, detail="No records provided")
@@ -2462,6 +2476,7 @@ async def create_company_portal_user(
     company_id: str,
     user_data: dict,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Create a new portal user for a company"""
     company = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
@@ -2506,6 +2521,7 @@ async def delete_company_portal_user(
     company_id: str,
     user_id: str,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Delete (soft) a portal user"""
     result = await db.company_users.update_one(
@@ -2524,6 +2540,7 @@ async def reset_portal_user_password(
     user_id: str,
     data: dict,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Reset a portal user's password with strong validation"""
     new_password = data.get("password")
@@ -2612,6 +2629,7 @@ async def create_user(user_data: UserCreate, admin: dict = Depends(get_current_a
 @api_router.post("/admin/users/quick-create")
 async def quick_create_user(user_data: UserCreate, admin: dict = Depends(get_current_admin)):
     """Quick create user (for inline creation from dropdowns)"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     company = await db.companies.find_one({"id": user_data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -2635,6 +2653,7 @@ async def quick_create_user(user_data: UserCreate, admin: dict = Depends(get_cur
 
 @api_router.get("/admin/users/{user_id}")
 async def get_user(user_id: str, admin: dict = Depends(get_current_admin)):
+    org_id = await get_admin_org_id(admin.get("email", ""))
     user = await db.users.find_one({"id": user_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -2642,6 +2661,7 @@ async def get_user(user_id: str, admin: dict = Depends(get_current_admin)):
 
 @api_router.put("/admin/users/{user_id}")
 async def update_user(user_id: str, updates: UserUpdate, admin: dict = Depends(get_current_admin)):
+    org_id = await get_admin_org_id(admin.get("email", ""))
     existing = await db.users.find_one({"id": user_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="User not found")
@@ -2658,6 +2678,7 @@ async def update_user(user_id: str, updates: UserUpdate, admin: dict = Depends(g
 
 @api_router.delete("/admin/users/{user_id}")
 async def delete_user(user_id: str, admin: dict = Depends(get_current_admin)):
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.users.update_one({"id": user_id}, {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
@@ -2741,6 +2762,7 @@ async def create_company_employee(employee: CompanyEmployeeCreate, admin: dict =
 @api_router.post("/admin/company-employees/quick-create")
 async def quick_create_company_employee(
     data: dict = Body(...),
+    org_id = await get_admin_org_id(admin.get("email", ""))
     admin: dict = Depends(get_current_admin)
 ):
     """Quick create employee for inline forms - accepts JSON"""
@@ -2871,6 +2893,7 @@ async def get_company_employee_full_profile(employee_id: str, admin: dict = Depe
 @api_router.put("/admin/company-employees/{employee_id}")
 async def update_company_employee(employee_id: str, data: CompanyEmployeeUpdate, admin: dict = Depends(get_current_admin)):
     """Update an employee"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=400, detail="No data to update")
@@ -2886,6 +2909,7 @@ async def update_company_employee(employee_id: str, data: CompanyEmployeeUpdate,
 @api_router.delete("/admin/company-employees/{employee_id}")
 async def delete_company_employee(employee_id: str, admin: dict = Depends(get_current_admin)):
     """Soft delete an employee"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.company_employees.update_one({"id": employee_id}, {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Employee not found")
@@ -2896,6 +2920,7 @@ async def delete_company_employee(employee_id: str, admin: dict = Depends(get_cu
 @api_router.post("/admin/company-employees/bulk-import")
 async def bulk_import_company_employees(
     file: UploadFile = File(...),
+    org_id = await get_admin_org_id(admin.get("email", ""))
     admin: dict = Depends(get_current_admin)
 ):
     """
@@ -2994,6 +3019,7 @@ async def bulk_import_company_employees(
 @api_router.get("/admin/company-employees/template/download")
 async def download_employee_template(admin: dict = Depends(get_current_admin)):
     """Download CSV template for bulk employee import"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     import csv
     import io
     
@@ -3186,6 +3212,7 @@ async def create_device(device_data: DeviceCreate, admin: dict = Depends(get_cur
 @api_router.get("/admin/devices/{device_id}")
 async def get_device(device_id: str, admin: dict = Depends(get_current_admin)):
     """Get device with full AMC contract details - P0 Fix"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     device = await db.devices.find_one({"id": device_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
@@ -3307,6 +3334,7 @@ async def update_device(device_id: str, updates: DeviceUpdate, admin: dict = Dep
 
 @api_router.delete("/admin/devices/{device_id}")
 async def delete_device(device_id: str, admin: dict = Depends(get_current_admin)):
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.devices.update_one({"id": device_id}, {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Device not found")
@@ -3319,12 +3347,14 @@ async def delete_device(device_id: str, admin: dict = Depends(get_current_admin)
 
 @api_router.get("/admin/devices/{device_id}/assignment-history")
 async def get_assignment_history(device_id: str, admin: dict = Depends(get_current_admin)):
+    org_id = await get_admin_org_id(admin.get("email", ""))
     history = await db.assignment_history.find({"device_id": device_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
     return history
 
 @api_router.get("/admin/devices/{device_id}/service-history")
 async def get_device_service_history(device_id: str, admin: dict = Depends(get_current_admin)):
     """Get comprehensive service history for a device (service records, tickets, AI chats)"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     device = await db.devices.find_one({"id": device_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
@@ -3396,6 +3426,7 @@ async def get_device_service_history(device_id: str, admin: dict = Depends(get_c
 @api_router.get("/admin/devices/{device_id}/timeline")
 async def get_device_timeline(device_id: str, admin: dict = Depends(get_current_admin)):
     """Get unified timeline for a device (assignments, services, parts, AMC)"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     device = await db.devices.find_one({"id": device_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
@@ -3669,6 +3700,7 @@ async def create_service(service_data: ServiceHistoryCreate, admin: dict = Depen
 
 @api_router.get("/admin/services/{service_id}")
 async def get_service(service_id: str, admin: dict = Depends(get_current_admin)):
+    org_id = await get_admin_org_id(admin.get("email", ""))
     service = await db.service_history.find_one({"id": service_id}, {"_id": 0})
     if not service:
         raise HTTPException(status_code=404, detail="Service record not found")
@@ -3750,6 +3782,7 @@ async def update_service_stage(
     stage_key: str, 
     stage_update: dict,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Update a specific stage in the service timeline"""
     service = await db.service_history.find_one({"id": service_id}, {"_id": 0})
@@ -3839,6 +3872,7 @@ async def add_custom_stage(
     service_id: str,
     stage_data: dict,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Add a custom stage to the service timeline"""
     service = await db.service_history.find_one({"id": service_id}, {"_id": 0})
@@ -3927,6 +3961,7 @@ async def add_custom_stage(
 async def upload_service_attachment(
     service_id: str, 
     file: UploadFile = File(...),
+    org_id = await get_admin_org_id(admin.get("email", ""))
     admin: dict = Depends(get_current_admin)
 ):
     """Upload attachment to service record"""
@@ -3976,6 +4011,7 @@ async def upload_service_attachment(
 
 @api_router.delete("/admin/services/{service_id}/attachments/{attachment_id}")
 async def delete_service_attachment(service_id: str, attachment_id: str, admin: dict = Depends(get_current_admin)):
+    org_id = await get_admin_org_id(admin.get("email", ""))
     service = await db.service_history.find_one({"id": service_id}, {"_id": 0})
     if not service:
         raise HTTPException(status_code=404, detail="Service record not found")
@@ -4133,6 +4169,7 @@ async def get_amc(amc_id: str, admin: dict = Depends(get_current_admin)):
 
 @api_router.put("/admin/amc/{amc_id}")
 async def update_amc(amc_id: str, updates: AMCUpdate, admin: dict = Depends(get_current_admin)):
+    org_id = await get_admin_org_id(admin.get("email", ""))
     existing = await db.amc.find_one({"id": amc_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="AMC not found")
@@ -4149,6 +4186,7 @@ async def update_amc(amc_id: str, updates: AMCUpdate, admin: dict = Depends(get_
 
 @api_router.delete("/admin/amc/{amc_id}")
 async def delete_amc(amc_id: str, admin: dict = Depends(get_current_admin)):
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.amc.update_one({"id": amc_id}, {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="AMC not found")
@@ -4313,6 +4351,7 @@ async def create_amc_contract(data: AMCContractCreate, admin: dict = Depends(get
 @api_router.get("/admin/amc-contracts/{contract_id}")
 async def get_amc_contract(contract_id: str, admin: dict = Depends(get_current_admin)):
     """Get single AMC contract with details"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     contract = await db.amc_contracts.find_one({"id": contract_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not contract:
         raise HTTPException(status_code=404, detail="AMC Contract not found")
@@ -4372,6 +4411,7 @@ async def get_amc_contract(contract_id: str, admin: dict = Depends(get_current_a
 @api_router.put("/admin/amc-contracts/{contract_id}")
 async def update_amc_contract(contract_id: str, updates: AMCContractUpdate, admin: dict = Depends(get_current_admin)):
     """Update AMC contract"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     existing = await db.amc_contracts.find_one({"id": contract_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="AMC Contract not found")
@@ -4394,6 +4434,7 @@ async def update_amc_contract(contract_id: str, updates: AMCContractUpdate, admi
 @api_router.delete("/admin/amc-contracts/{contract_id}")
 async def delete_amc_contract(contract_id: str, admin: dict = Depends(get_current_admin)):
     """Soft delete AMC contract"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.amc_contracts.update_one({"id": contract_id}, {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="AMC Contract not found")
@@ -4404,6 +4445,7 @@ async def delete_amc_contract(contract_id: str, admin: dict = Depends(get_curren
 async def record_amc_usage(
     contract_id: str,
     usage_type: str = Query(..., description="onsite_visit, remote_support, preventive_maintenance"),
+    org_id = await get_admin_org_id(admin.get("email", ""))
     service_id: Optional[str] = None,
     notes: Optional[str] = None,
     admin: dict = Depends(get_current_admin)
@@ -4427,6 +4469,7 @@ async def record_amc_usage(
 @api_router.get("/admin/amc-contracts/check-coverage/{device_id}")
 async def check_amc_coverage(device_id: str, admin: dict = Depends(get_current_admin)):
     """Check if a device is covered under any active AMC"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     device = await db.devices.find_one({"id": device_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
@@ -4478,6 +4521,7 @@ async def check_amc_coverage(device_id: str, admin: dict = Depends(get_current_a
 @api_router.get("/admin/companies-without-amc")
 async def get_companies_without_amc(admin: dict = Depends(get_current_admin)):
     """Get list of companies without any active AMC"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Get all companies
     companies = await db.companies.find({"is_deleted": {"$ne": True}}, {"_id": 0}).to_list(1000)
     
@@ -4583,6 +4627,7 @@ async def create_site(data: SiteCreate, admin: dict = Depends(get_current_admin)
 @api_router.post("/admin/sites/quick-create")
 async def quick_create_site(data: SiteCreate, admin: dict = Depends(get_current_admin)):
     """Quick create site (for inline creation from dropdowns)"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Validate company exists
     company = await db.companies.find_one({"id": data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not company:
@@ -4614,6 +4659,7 @@ async def quick_create_site(data: SiteCreate, admin: dict = Depends(get_current_
 @api_router.get("/admin/sites/{site_id}")
 async def get_site(site_id: str, admin: dict = Depends(get_current_admin)):
     """Get site with full details including deployments"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     site = await db.sites.find_one({"id": site_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
@@ -4663,6 +4709,7 @@ async def get_site(site_id: str, admin: dict = Depends(get_current_admin)):
 @api_router.put("/admin/sites/{site_id}")
 async def update_site(site_id: str, updates: SiteUpdate, admin: dict = Depends(get_current_admin)):
     """Update site"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     existing = await db.sites.find_one({"id": site_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Site not found")
@@ -4683,6 +4730,7 @@ async def update_site(site_id: str, updates: SiteUpdate, admin: dict = Depends(g
 @api_router.delete("/admin/sites/{site_id}")
 async def delete_site(site_id: str, admin: dict = Depends(get_current_admin)):
     """Soft delete site"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.sites.update_one({"id": site_id}, {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Site not found")
@@ -4724,6 +4772,7 @@ async def list_deployments(
 @api_router.post("/admin/deployments")
 async def create_deployment(data: DeploymentCreate, admin: dict = Depends(get_current_admin)):
     """Create new deployment with items"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Validate company and site
     company = await db.companies.find_one({"id": data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not company:
@@ -4817,6 +4866,7 @@ async def create_deployment(data: DeploymentCreate, admin: dict = Depends(get_cu
 @api_router.get("/admin/deployments/{deployment_id}")
 async def get_deployment(deployment_id: str, admin: dict = Depends(get_current_admin)):
     """Get deployment with full details"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     deployment = await db.deployments.find_one({"id": deployment_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not deployment:
         raise HTTPException(status_code=404, detail="Deployment not found")
@@ -4863,6 +4913,7 @@ async def get_deployment(deployment_id: str, admin: dict = Depends(get_current_a
 @api_router.put("/admin/deployments/{deployment_id}")
 async def update_deployment(deployment_id: str, updates: DeploymentUpdate, admin: dict = Depends(get_current_admin)):
     """Update deployment"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     existing = await db.deployments.find_one({"id": deployment_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Deployment not found")
@@ -4881,6 +4932,7 @@ async def update_deployment(deployment_id: str, updates: DeploymentUpdate, admin
 @api_router.delete("/admin/deployments/{deployment_id}")
 async def delete_deployment(deployment_id: str, admin: dict = Depends(get_current_admin)):
     """Soft delete deployment and linked devices"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.deployments.update_one({"id": deployment_id}, {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Deployment not found")
@@ -4897,6 +4949,7 @@ async def delete_deployment(deployment_id: str, admin: dict = Depends(get_curren
 @api_router.post("/admin/deployments/{deployment_id}/items")
 async def add_deployment_item(deployment_id: str, item_data: dict, admin: dict = Depends(get_current_admin)):
     """Add item to existing deployment"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     deployment = await db.deployments.find_one({"id": deployment_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not deployment:
         raise HTTPException(status_code=404, detail="Deployment not found")
@@ -4948,6 +5001,7 @@ async def update_deployment_item(
     item_index: int, 
     item_data: dict, 
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Update an item in a deployment and sync changes to devices"""
     deployment = await db.deployments.find_one({"id": deployment_id, "is_deleted": {"$ne": True}}, {"_id": 0})
@@ -5037,6 +5091,7 @@ async def update_deployment_item(
 @api_router.post("/admin/deployments/{deployment_id}/sync-devices")
 async def sync_deployment_devices(deployment_id: str, admin: dict = Depends(get_current_admin)):
     """Manually sync deployment items to devices collection"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     deployment = await db.deployments.find_one({"id": deployment_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not deployment:
         raise HTTPException(status_code=404, detail="Deployment not found")
@@ -5120,6 +5175,7 @@ async def sync_deployment_devices(deployment_id: str, admin: dict = Depends(get_
 @api_router.get("/search")
 async def universal_search(
     q: str = Query(..., min_length=1, description="Search query"),
+    org_id = await get_admin_org_id(admin.get("email", ""))
     limit: int = Query(5, ge=1, le=10, description="Results per category"),
     admin: dict = Depends(get_current_admin)
 ):
@@ -5361,6 +5417,7 @@ async def universal_search(
 
 @api_router.get("/admin/settings")
 async def get_settings(admin: dict = Depends(get_current_admin)):
+    org_id = await get_admin_org_id(admin.get("email", ""))
     settings = await db.settings.find_one({"id": "settings"}, {"_id": 0})
     if not settings:
         settings = Settings().model_dump()
@@ -5368,6 +5425,7 @@ async def get_settings(admin: dict = Depends(get_current_admin)):
 
 @api_router.put("/admin/settings")
 async def update_settings(updates: SettingsUpdate, admin: dict = Depends(get_current_admin)):
+    org_id = await get_admin_org_id(admin.get("email", ""))
     update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
     update_data["updated_at"] = get_ist_isoformat()
     
@@ -5381,6 +5439,7 @@ async def update_settings(updates: SettingsUpdate, admin: dict = Depends(get_cur
 
 @api_router.post("/admin/settings/logo")
 async def upload_logo(file: UploadFile = File(...), admin: dict = Depends(get_current_admin)):
+    org_id = await get_admin_org_id(admin.get("email", ""))
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
     
@@ -5506,6 +5565,7 @@ async def create_license(data: LicenseCreate, admin: dict = Depends(get_current_
 @api_router.get("/admin/licenses/{license_id}")
 async def get_license(license_id: str, admin: dict = Depends(get_current_admin)):
     """Get license details"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     lic = await db.licenses.find_one({"id": license_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not lic:
         raise HTTPException(status_code=404, detail="License not found")
@@ -5536,6 +5596,7 @@ async def get_license(license_id: str, admin: dict = Depends(get_current_admin))
 @api_router.put("/admin/licenses/{license_id}")
 async def update_license(license_id: str, updates: LicenseUpdate, admin: dict = Depends(get_current_admin)):
     """Update license"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     existing = await db.licenses.find_one({"id": license_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="License not found")
@@ -5561,6 +5622,7 @@ async def update_license(license_id: str, updates: LicenseUpdate, admin: dict = 
 @api_router.delete("/admin/licenses/{license_id}")
 async def delete_license(license_id: str, admin: dict = Depends(get_current_admin)):
     """Soft delete license"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.licenses.update_one({"id": license_id}, {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="License not found")
@@ -5571,6 +5633,7 @@ async def delete_license(license_id: str, admin: dict = Depends(get_current_admi
 @api_router.get("/admin/licenses/expiring/summary")
 async def get_expiring_licenses_summary(admin: dict = Depends(get_current_admin)):
     """Get summary of expiring licenses"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     licenses = await db.licenses.find({"is_deleted": {"$ne": True}}, {"_id": 0}).to_list(1000)
     
     today = get_ist_now().date()
@@ -5621,6 +5684,7 @@ async def get_expiring_licenses_summary(admin: dict = Depends(get_current_admin)
 @api_router.get("/admin/amc-contracts/{contract_id}/devices")
 async def get_amc_assigned_devices(contract_id: str, admin: dict = Depends(get_current_admin)):
     """Get all devices assigned to an AMC contract"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Verify contract exists
     contract = await db.amc_contracts.find_one({"id": contract_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not contract:
@@ -5653,6 +5717,7 @@ async def assign_device_to_amc(
     contract_id: str,
     data: AMCDeviceAssignmentCreate,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Assign a single device to an AMC contract"""
     # Verify contract exists
@@ -5687,6 +5752,7 @@ async def preview_bulk_amc_assignment(
     contract_id: str,
     data: AMCBulkAssignmentPreview,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Preview bulk device assignment to AMC - validates before actual assignment"""
     # Verify contract exists
@@ -5769,6 +5835,7 @@ async def confirm_bulk_amc_assignment(
     contract_id: str,
     data: AMCBulkAssignmentPreview,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Confirm and execute bulk device assignment to AMC"""
     # First run preview to get valid devices
@@ -5804,6 +5871,7 @@ async def unassign_device_from_amc(
     contract_id: str,
     device_id: str,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Remove device assignment from AMC contract"""
     result = await db.amc_device_assignments.delete_one({
@@ -6247,6 +6315,7 @@ async def list_subscriptions(
 @api_router.post("/admin/subscriptions")
 async def create_subscription(data: EmailSubscriptionCreate, admin: dict = Depends(get_current_admin)):
     """Create new email subscription"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Validate company
     company = await db.companies.find_one({"id": data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not company:
@@ -6278,6 +6347,7 @@ async def create_subscription(data: EmailSubscriptionCreate, admin: dict = Depen
 @api_router.get("/admin/subscriptions/{subscription_id}")
 async def get_subscription(subscription_id: str, admin: dict = Depends(get_current_admin)):
     """Get subscription details"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     sub = await db.email_subscriptions.find_one({"id": subscription_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not sub:
         raise HTTPException(status_code=404, detail="Subscription not found")
@@ -6302,6 +6372,7 @@ async def get_subscription(subscription_id: str, admin: dict = Depends(get_curre
 @api_router.put("/admin/subscriptions/{subscription_id}")
 async def update_subscription(subscription_id: str, data: EmailSubscriptionUpdate, admin: dict = Depends(get_current_admin)):
     """Update subscription"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=400, detail="No data to update")
@@ -6338,6 +6409,7 @@ async def update_subscription(subscription_id: str, data: EmailSubscriptionUpdat
 @api_router.delete("/admin/subscriptions/{subscription_id}")
 async def delete_subscription(subscription_id: str, admin: dict = Depends(get_current_admin)):
     """Soft delete subscription"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.email_subscriptions.update_one(
         {"id": subscription_id},
         {"$set": {"is_deleted": True, "updated_at": get_ist_isoformat()}}
@@ -6354,6 +6426,7 @@ async def get_subscription_tickets(
     subscription_id: str,
     status: Optional[str] = None,
     limit: int = Query(default=50, le=200),
+    org_id = await get_admin_org_id(admin.get("email", ""))
     admin: dict = Depends(get_current_admin)
 ):
     """Get tickets for a subscription"""
@@ -6369,6 +6442,7 @@ async def get_subscription_tickets(
 async def create_subscription_ticket_admin(
     subscription_id: str,
     subject: str = Form(...),
+    org_id = await get_admin_org_id(admin.get("email", ""))
     description: str = Form(...),
     issue_type: str = Form("other"),
     priority: str = Form("medium"),
@@ -6450,6 +6524,7 @@ from models.subscription import SubscriptionUserChange, SubscriptionUserChangeCr
 async def get_subscription_user_changes(
     subscription_id: str,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Get user change history for a subscription"""
     # Verify subscription exists
@@ -6473,6 +6548,7 @@ async def add_subscription_user_change(
     subscription_id: str,
     change_data: SubscriptionUserChangeCreate,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Add or remove users from a subscription"""
     # Get subscription
@@ -6523,6 +6599,7 @@ async def add_subscription_user_change(
 async def get_subscription_user_summary(
     subscription_id: str,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Get user summary with change history for a subscription"""
     # Get subscription
@@ -6599,6 +6676,7 @@ async def list_asset_groups(
 @api_router.post("/admin/asset-groups")
 async def create_asset_group(group_data: AssetGroupCreate, admin: dict = Depends(get_current_admin)):
     """Create a new asset group"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     group = AssetGroup(**group_data.model_dump())
     await db.asset_groups.insert_one(group.model_dump())
     return group.model_dump()
@@ -6607,6 +6685,7 @@ async def create_asset_group(group_data: AssetGroupCreate, admin: dict = Depends
 @api_router.get("/admin/asset-groups/{group_id}")
 async def get_asset_group(group_id: str, admin: dict = Depends(get_current_admin)):
     """Get asset group with all linked devices and accessories"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     group = await db.asset_groups.find_one({"id": group_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not group:
         raise HTTPException(status_code=404, detail="Asset group not found")
@@ -6640,6 +6719,7 @@ async def get_asset_group(group_id: str, admin: dict = Depends(get_current_admin
 @api_router.put("/admin/asset-groups/{group_id}")
 async def update_asset_group(group_id: str, update_data: AssetGroupUpdate, admin: dict = Depends(get_current_admin)):
     """Update an asset group"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     group = await db.asset_groups.find_one({"id": group_id, "is_deleted": {"$ne": True}})
     if not group:
         raise HTTPException(status_code=404, detail="Asset group not found")
@@ -6654,6 +6734,7 @@ async def update_asset_group(group_id: str, update_data: AssetGroupUpdate, admin
 @api_router.delete("/admin/asset-groups/{group_id}")
 async def delete_asset_group(group_id: str, admin: dict = Depends(get_current_admin)):
     """Delete an asset group (soft delete)"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.asset_groups.update_one(
         {"id": group_id},
         {"$set": {"is_deleted": True, "updated_at": get_ist_isoformat()}}
@@ -6666,6 +6747,7 @@ async def delete_asset_group(group_id: str, admin: dict = Depends(get_current_ad
 @api_router.post("/admin/asset-groups/{group_id}/add-devices")
 async def add_devices_to_group(group_id: str, device_ids: List[str], admin: dict = Depends(get_current_admin)):
     """Add devices to an asset group"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     group = await db.asset_groups.find_one({"id": group_id, "is_deleted": {"$ne": True}})
     if not group:
         raise HTTPException(status_code=404, detail="Asset group not found")
@@ -6683,6 +6765,7 @@ async def add_devices_to_group(group_id: str, device_ids: List[str], admin: dict
 @api_router.post("/admin/asset-groups/{group_id}/remove-devices")
 async def remove_devices_from_group(group_id: str, device_ids: List[str], admin: dict = Depends(get_current_admin)):
     """Remove devices from an asset group"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     group = await db.asset_groups.find_one({"id": group_id, "is_deleted": {"$ne": True}})
     if not group:
         raise HTTPException(status_code=404, detail="Asset group not found")
@@ -6728,6 +6811,8 @@ class AssetTransferRequest(BaseModel):
 @api_router.post("/admin/asset-transfers")
 async def transfer_asset(transfer_data: AssetTransferRequest, admin: dict = Depends(get_current_admin)):
     """Transfer an asset (device or accessory) to another employee"""
+    
+org_id = await get_admin_org_id(admin.get("email", ""))
     
     # Get current asset info
     if transfer_data.asset_type == "device":
@@ -6801,6 +6886,7 @@ async def list_asset_transfers(
     employee_id: str = None,
     limit: int = 100,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Get asset transfer history"""
     query = {}
@@ -6834,6 +6920,7 @@ async def list_asset_transfers(
 @api_router.get("/admin/assets/{asset_type}/{asset_id}/transfer-history")
 async def get_asset_transfer_history(asset_type: str, asset_id: str, admin: dict = Depends(get_current_admin)):
     """Get transfer history for a specific asset"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     transfers = await db.asset_transfers.find(
         {"asset_type": asset_type, "asset_id": asset_id},
         {"_id": 0}
@@ -6885,6 +6972,7 @@ async def list_accessories(
 @api_router.post("/admin/accessories")
 async def create_accessory(acc_data: AccessoryCreate, admin: dict = Depends(get_current_admin)):
     """Create a new accessory"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     accessory = Accessory(**acc_data.model_dump())
     await db.accessories.insert_one(accessory.model_dump())
     return accessory.model_dump()
@@ -6893,6 +6981,7 @@ async def create_accessory(acc_data: AccessoryCreate, admin: dict = Depends(get_
 @api_router.get("/admin/accessories/{accessory_id}")
 async def get_accessory(accessory_id: str, admin: dict = Depends(get_current_admin)):
     """Get accessory details"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     acc = await db.accessories.find_one({"id": accessory_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not acc:
         raise HTTPException(status_code=404, detail="Accessory not found")
@@ -6902,6 +6991,7 @@ async def get_accessory(accessory_id: str, admin: dict = Depends(get_current_adm
 @api_router.put("/admin/accessories/{accessory_id}")
 async def update_accessory(accessory_id: str, update_data: AccessoryUpdate, admin: dict = Depends(get_current_admin)):
     """Update an accessory"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     acc = await db.accessories.find_one({"id": accessory_id, "is_deleted": {"$ne": True}})
     if not acc:
         raise HTTPException(status_code=404, detail="Accessory not found")
@@ -6916,6 +7006,7 @@ async def update_accessory(accessory_id: str, update_data: AccessoryUpdate, admi
 @api_router.delete("/admin/accessories/{accessory_id}")
 async def delete_accessory(accessory_id: str, admin: dict = Depends(get_current_admin)):
     """Delete an accessory (soft delete)"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.accessories.update_one(
         {"id": accessory_id},
         {"$set": {"is_deleted": True, "updated_at": get_ist_isoformat()}}
@@ -6932,6 +7023,7 @@ async def get_renewal_alerts(
     days: int = 90,
     company_id: str = None,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Get all items expiring within specified days (warranties, AMC, licenses, subscriptions)"""
     from datetime import datetime, timedelta
@@ -8414,6 +8506,7 @@ async def list_company_sites(user: dict = Depends(get_current_company_user)):
 async def list_company_users(
     company_id: Optional[str] = None,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """List company portal users (admin only)"""
     query = {"is_deleted": {"$ne": True}}
@@ -8432,6 +8525,7 @@ async def list_company_users(
 @api_router.post("/admin/company-users")
 async def create_company_user(data: CompanyUserCreate, admin: dict = Depends(get_current_admin)):
     """Create company portal user (admin only)"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Check if company exists
     company = await db.companies.find_one({"id": data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not company:
@@ -8459,6 +8553,7 @@ async def create_company_user(data: CompanyUserCreate, admin: dict = Depends(get
 @api_router.put("/admin/company-users/{user_id}")
 async def update_company_user(user_id: str, updates: CompanyUserUpdate, admin: dict = Depends(get_current_admin)):
     """Update company portal user (admin only)"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
     
     if not update_data:
@@ -8473,6 +8568,7 @@ async def update_company_user(user_id: str, updates: CompanyUserUpdate, admin: d
 @api_router.post("/admin/company-users/{user_id}/reset-password")
 async def reset_company_user_password(user_id: str, new_password: str, admin: dict = Depends(get_current_admin)):
     """Reset company user password (admin only) with strong validation"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Validate password strength
     is_valid, error_msg = validate_password_strength(new_password)
     if not is_valid:
@@ -8491,6 +8587,7 @@ async def reset_company_user_password(user_id: str, new_password: str, admin: di
 @api_router.delete("/admin/company-users/{user_id}")
 async def delete_company_user(user_id: str, admin: dict = Depends(get_current_admin)):
     """Delete company portal user (admin only)"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.company_users.update_one({"id": user_id}, {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
@@ -8506,6 +8603,7 @@ async def list_internet_services(
     site_id: Optional[str] = None,
     status: Optional[str] = None,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """List all internet services/ISP connections"""
     query = {"is_deleted": {"$ne": True}}
@@ -8533,6 +8631,7 @@ async def list_internet_services(
 @api_router.post("/admin/internet-services")
 async def create_internet_service(data: InternetServiceCreate, admin: dict = Depends(get_current_admin)):
     """Create a new internet service record"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     service = InternetService(**data.model_dump())
     await db.internet_services.insert_one(service.model_dump())
     
@@ -8544,6 +8643,7 @@ async def create_internet_service(data: InternetServiceCreate, admin: dict = Dep
 @api_router.get("/admin/internet-services/{service_id}")
 async def get_internet_service(service_id: str, admin: dict = Depends(get_current_admin)):
     """Get internet service details"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     service = await db.internet_services.find_one({"id": service_id, "is_deleted": {"$ne": True}})
     if not service:
         raise HTTPException(status_code=404, detail="Internet service not found")
@@ -8561,6 +8661,7 @@ async def get_internet_service(service_id: str, admin: dict = Depends(get_curren
 @api_router.put("/admin/internet-services/{service_id}")
 async def update_internet_service(service_id: str, data: InternetServiceUpdate, admin: dict = Depends(get_current_admin)):
     """Update internet service"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=400, detail="No data to update")
@@ -8580,6 +8681,7 @@ async def update_internet_service(service_id: str, data: InternetServiceUpdate, 
 @api_router.delete("/admin/internet-services/{service_id}")
 async def delete_internet_service(service_id: str, admin: dict = Depends(get_current_admin)):
     """Delete internet service"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.internet_services.update_one(
         {"id": service_id},
         {"$set": {"is_deleted": True}}
@@ -8596,6 +8698,7 @@ async def list_all_credentials(
     company_id: Optional[str] = None,
     credential_type: Optional[str] = None,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """
     Get all credentials across devices and internet services.
@@ -8679,6 +8782,7 @@ async def list_all_credentials(
 @api_router.get("/admin/supply-categories")
 async def list_supply_categories(admin: dict = Depends(get_current_admin)):
     """List all supply categories"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     categories = await db.supply_categories.find(
         {"is_deleted": {"$ne": True}},
         {"_id": 0}
@@ -8688,6 +8792,7 @@ async def list_supply_categories(admin: dict = Depends(get_current_admin)):
 @api_router.post("/admin/supply-categories")
 async def create_supply_category(data: SupplyCategoryCreate, admin: dict = Depends(get_current_admin)):
     """Create a new supply category"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     category = SupplyCategory(**data.model_dump())
     await db.supply_categories.insert_one(category.model_dump())
     return category.model_dump()
@@ -8695,6 +8800,7 @@ async def create_supply_category(data: SupplyCategoryCreate, admin: dict = Depen
 @api_router.put("/admin/supply-categories/{category_id}")
 async def update_supply_category(category_id: str, data: SupplyCategoryUpdate, admin: dict = Depends(get_current_admin)):
     """Update a supply category"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=400, detail="No data to update")
@@ -8712,6 +8818,7 @@ async def update_supply_category(category_id: str, data: SupplyCategoryUpdate, a
 @api_router.delete("/admin/supply-categories/{category_id}")
 async def delete_supply_category(category_id: str, admin: dict = Depends(get_current_admin)):
     """Soft delete a supply category"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.supply_categories.update_one(
         {"id": category_id},
         {"$set": {"is_deleted": True}}
@@ -8723,6 +8830,7 @@ async def delete_supply_category(category_id: str, admin: dict = Depends(get_cur
 @api_router.get("/admin/supply-products")
 async def list_supply_products(category_id: Optional[str] = None, admin: dict = Depends(get_current_admin)):
     """List all supply products, optionally filtered by category"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     query = {"is_deleted": {"$ne": True}}
     if category_id:
         query["category_id"] = category_id
@@ -8739,6 +8847,7 @@ async def list_supply_products(category_id: Optional[str] = None, admin: dict = 
 @api_router.post("/admin/supply-products")
 async def create_supply_product(data: SupplyProductCreate, admin: dict = Depends(get_current_admin)):
     """Create a new supply product"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Verify category exists
     category = await db.supply_categories.find_one({"id": data.category_id, "is_deleted": {"$ne": True}})
     if not category:
@@ -8754,6 +8863,7 @@ async def create_supply_product(data: SupplyProductCreate, admin: dict = Depends
 @api_router.put("/admin/supply-products/{product_id}")
 async def update_supply_product(product_id: str, data: SupplyProductUpdate, admin: dict = Depends(get_current_admin)):
     """Update a supply product"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=400, detail="No data to update")
@@ -8779,6 +8889,7 @@ async def update_supply_product(product_id: str, data: SupplyProductUpdate, admi
 @api_router.delete("/admin/supply-products/{product_id}")
 async def delete_supply_product(product_id: str, admin: dict = Depends(get_current_admin)):
     """Soft delete a supply product"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.supply_products.update_one(
         {"id": product_id},
         {"$set": {"is_deleted": True}}
@@ -8790,6 +8901,7 @@ async def delete_supply_product(product_id: str, admin: dict = Depends(get_curre
 @api_router.post("/admin/supply-products/bulk-delete")
 async def bulk_delete_supply_products(data: dict, admin: dict = Depends(get_current_admin)):
     """Bulk soft delete supply products"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     product_ids = data.get("product_ids", [])
     if not product_ids:
         raise HTTPException(status_code=400, detail="No products selected")
@@ -8803,6 +8915,7 @@ async def bulk_delete_supply_products(data: dict, admin: dict = Depends(get_curr
 @api_router.post("/admin/supply-products/bulk-update")
 async def bulk_update_supply_products(data: dict, admin: dict = Depends(get_current_admin)):
     """Bulk update supply products (category, status, price)"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     product_ids = data.get("product_ids", [])
     updates = data.get("updates", {})
     
@@ -8829,6 +8942,7 @@ async def list_supply_orders(
     status: Optional[str] = None,
     company_id: Optional[str] = None,
     admin: dict = Depends(get_current_admin)
+    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """List all supply orders with optional filters"""
     query = {"is_deleted": {"$ne": True}}
@@ -8843,6 +8957,7 @@ async def list_supply_orders(
 @api_router.get("/admin/supply-orders/{order_id}")
 async def get_supply_order(order_id: str, admin: dict = Depends(get_current_admin)):
     """Get a specific supply order"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     order = await db.supply_orders.find_one({"id": order_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -8851,6 +8966,7 @@ async def get_supply_order(order_id: str, admin: dict = Depends(get_current_admi
 @api_router.put("/admin/supply-orders/{order_id}")
 async def update_supply_order(order_id: str, data: dict, admin: dict = Depends(get_current_admin)):
     """Update supply order status and admin notes"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     allowed_fields = ["status", "admin_notes"]
     update_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
     
