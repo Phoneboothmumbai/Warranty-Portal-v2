@@ -67,6 +67,18 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - **Collection**: `quotations`
 - **Testing**: 17/17 backend tests passed, all frontend flows verified
 
+### Complete Tenant Isolation Hardening (Feb 27, 2026)
+- **Scope**: Every single admin endpoint in server.py (115+ functions) now enforces `organization_id` via `scope_query()`
+- **Read isolation**: All find/find_one/count_documents queries wrapped with `scope_query(query, org_id)`  
+- **Write isolation**: All insert_one calls now stamp `organization_id = org_id` on new records
+- **Update/Delete isolation**: All update_one/update_many calls scoped by org_id
+- **Dashboard**: Stats and alerts now strictly tenant-scoped (was global before)
+- **Create Employee**: Now stamps org_id on new records + validates company within tenant
+- **Settings**: Admin settings now isolated per organization
+- **Supply Catalog (company portal)**: Scoped by org_id
+- **Data migration**: Backfilled `organization_id` on 191 existing records missing it
+- **Audit result**: 0 unscoped admin endpoints, 2 company endpoints (safe by design: AI summary + self-profile update)
+
 ## Prioritized Backlog
 
 ### P0 (Next)
