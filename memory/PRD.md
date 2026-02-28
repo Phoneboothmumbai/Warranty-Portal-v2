@@ -79,9 +79,21 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - **Data migration**: Backfilled `organization_id` on 191 existing records missing it
 - **Audit result**: 0 unscoped admin endpoints, 2 company endpoints (safe by design: AI summary + self-profile update)
 
+### Homepage Redesign (Feb 28, 2026)
+- **Complete redesign** of `LandingPage.js` — from generic centered layout to corporate, asymmetric, image-rich design
+- **Asymmetric hero**: Text left (60%) + dashboard visual with floating stat cards right (40%)
+- **Animated KPI stats bar**: 50,000+ Assets, 200+ MSPs, 99.9% Uptime, <2hr Response (with scroll-triggered counters)
+- **Bento grid features**: Mixed image cards (server room, engineer) + icon cards in varied sizes
+- **Full-width testimonial break**: Professional team photo with dark overlay + client quote
+- **Pricing**: Professional plan highlighted in dark navy with cyan badge
+- **Final CTA**: Split layout with workspace image
+- **Brand**: Updated default name to "aftersales.support" across PublicHeader + PublicFooter
+- **Testing**: 16/16 frontend tests passed, responsive design verified
+
 ## Prioritized Backlog
 
 ### P0 (Next)
+- Integrate Item Master into full Quotation/CRM flow
 - Form Builder UI (drag-and-drop custom ticket forms)
 - Workflow Designer UI (visual editor)
 - Email Inbox UI (IMAP/SMTP config)
