@@ -713,7 +713,8 @@ async def list_device_models(
     admin: dict = Depends(get_current_admin)
 ):
     """List device models from catalog"""
-    query = {"is_deleted": {"$ne": True}}
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    query = scope_query({"is_deleted": {"$ne": True}}, org_id)
     
     if device_type:
         query["device_type"] = device_type
@@ -734,8 +735,9 @@ async def list_device_models(
 @api_router.get("/device-models/{model_id}")
 async def get_device_model(model_id: str, admin: dict = Depends(get_current_admin)):
     """Get a specific device model by ID"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     model = await db.device_models.find_one(
-        {"id": model_id, "is_deleted": {"$ne": True}},
+        scope_query({"id": model_id, "is_deleted": {"$ne": True}}, org_id),
         {"_id": 0}
     )
     if not model:
@@ -771,13 +773,14 @@ async def create_device_model(
     admin: dict = Depends(get_current_admin)
 ):
     """Manually create a device model entry"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Check for existing
-    existing = await db.device_models.find_one({
+    existing = await db.device_models.find_one(scope_query({
         "brand": {"$regex": f"^{model_data.brand}$", "$options": "i"},
         "model": {"$regex": f"^{model_data.model}$", "$options": "i"},
         "device_type": model_data.device_type,
         "is_deleted": {"$ne": True}
-    })
+    }, org_id))
     
     if existing:
         raise HTTPException(
@@ -801,9 +804,11 @@ async def create_device_model(
     if model_data.specifications:
         device_model.specifications = model_data.specifications
     
-    await db.device_models.insert_one(device_model.model_dump())
+    dm_dict = device_model.model_dump()
+    dm_dict["organization_id"] = org_id
+    await db.device_models.insert_one(dm_dict)
     
-    return await db.device_models.find_one({"id": device_model.id}, {"_id": 0})
+    return await db.device_models.find_one(scope_query({"id": device_model.id}, org_id), {"_id": 0})
 
 
 @api_router.put("/device-models/{model_id}")
@@ -813,8 +818,9 @@ async def update_device_model(
     admin: dict = Depends(get_current_admin)
 ):
     """Update a device model"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     existing = await db.device_models.find_one(
-        {"id": model_id, "is_deleted": {"$ne": True}}
+        scope_query({"id": model_id, "is_deleted": {"$ne": True}}, org_id)
     )
     if not existing:
         raise HTTPException(status_code=404, detail="Device model not found")
@@ -822,9 +828,9 @@ async def update_device_model(
     update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
     if update_data:
         update_data["updated_at"] = get_ist_isoformat()
-        await db.device_models.update_one({"id": model_id}, {"$set": update_data})
+        await db.device_models.update_one(scope_query({"id": model_id}, org_id), {"$set": update_data})
     
-    return await db.device_models.find_one({"id": model_id}, {"_id": 0})
+    return await db.device_models.find_one(scope_query({"id": model_id}, org_id), {"_id": 0})
 
 
 @api_router.delete("/device-models/{model_id}")
@@ -832,7 +838,7 @@ async def delete_device_model(model_id: str, admin: dict = Depends(get_current_a
     """Soft delete a device model"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.device_models.update_one(
-        {"id": model_id},
+        scope_query({"id": model_id}, org_id),
         {"$set": {"is_deleted": True}}
     )
     if result.modified_count == 0:
@@ -845,7 +851,7 @@ async def verify_device_model(model_id: str, admin: dict = Depends(get_current_a
     """Mark a device model as admin-verified"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.device_models.update_one(
-        {"id": model_id, "is_deleted": {"$ne": True}},
+        scope_query({"id": model_id, "is_deleted": {"$ne": True}}, org_id),
         {"$set": {"is_verified": True, "updated_at": get_ist_isoformat()}}
     )
     if result.modified_count == 0:
@@ -869,7 +875,7 @@ async def search_compatible_consumables(
     if not brand and not model:
         raise HTTPException(status_code=400, detail="Brand or model is required")
     
-    query = {"is_deleted": {"$ne": True}}
+    query = scope_query({"is_deleted": {"$ne": True}}, org_id)
     if device_type:
         query["device_type"] = device_type
     if brand:
