@@ -747,7 +747,6 @@ async def get_device_model(model_id: str, admin: dict = Depends(get_current_admi
 async def lookup_device_model(
     request: AILookupRequest,
     force_refresh: bool = Query(default=False),
-    org_id = await get_admin_org_id(admin.get("email", ""))
     admin: dict = Depends(get_current_admin)
 ):
     """
@@ -755,6 +754,7 @@ async def lookup_device_model(
     Fetches specifications and compatible consumables for a device.
     Results are cached for future use.
     """
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await get_or_create_device_model(
         db=db,
         device_type=request.device_type,
@@ -860,12 +860,12 @@ async def search_compatible_consumables(
     model: Optional[str] = None,
     consumable_type: Optional[str] = None,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """
     Search for compatible consumables based on device info.
     Used when creating service records to show relevant parts.
     """
+    org_id = await get_admin_org_id(admin.get("email", ""))
     if not brand and not model:
         raise HTTPException(status_code=400, detail="Brand or model is required")
     
@@ -1167,13 +1167,13 @@ class BulkQRRequest(BaseModel):
 async def generate_bulk_qr_pdf(
     request: BulkQRRequest,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """
     Generate a printable A4 PDF with multiple QR codes.
     Each QR code is 1.5 inch x 1.5 inch with Serial Number and Asset Tag.
     A4 paper fits 4 columns x 5 rows = 20 QR codes per page.
     """
+    org_id = await get_admin_org_id(admin.get("email", ""))
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import inch
     from reportlab.pdfgen import canvas
@@ -2476,9 +2476,9 @@ async def create_company_portal_user(
     company_id: str,
     user_data: dict,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Create a new portal user for a company"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     company = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -2521,9 +2521,9 @@ async def delete_company_portal_user(
     company_id: str,
     user_id: str,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Delete (soft) a portal user"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.company_users.update_one(
         {"id": user_id, "company_id": company_id},
         {"$set": {"is_deleted": True, "deleted_at": get_ist_isoformat()}}
@@ -2540,9 +2540,9 @@ async def reset_portal_user_password(
     user_id: str,
     data: dict,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Reset a portal user's password with strong validation"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     new_password = data.get("password")
     if not new_password:
         raise HTTPException(status_code=400, detail="Password is required")
@@ -2762,10 +2762,10 @@ async def create_company_employee(employee: CompanyEmployeeCreate, admin: dict =
 @api_router.post("/admin/company-employees/quick-create")
 async def quick_create_company_employee(
     data: dict = Body(...),
-    org_id = await get_admin_org_id(admin.get("email", ""))
     admin: dict = Depends(get_current_admin)
 ):
     """Quick create employee for inline forms - accepts JSON"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     company_id = data.get("company_id")
     name = data.get("name")
     if not company_id or not name:
@@ -2920,7 +2920,6 @@ async def delete_company_employee(employee_id: str, admin: dict = Depends(get_cu
 @api_router.post("/admin/company-employees/bulk-import")
 async def bulk_import_company_employees(
     file: UploadFile = File(...),
-    org_id = await get_admin_org_id(admin.get("email", ""))
     admin: dict = Depends(get_current_admin)
 ):
     """
@@ -2928,6 +2927,7 @@ async def bulk_import_company_employees(
     Required columns: company_code OR company_name, name
     Optional columns: employee_id, email, phone, department, designation, location
     """
+    org_id = await get_admin_org_id(admin.get("email", ""))
     import pandas as pd
     
     # Read file
@@ -3782,9 +3782,9 @@ async def update_service_stage(
     stage_key: str, 
     stage_update: dict,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Update a specific stage in the service timeline"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     service = await db.service_history.find_one({"id": service_id}, {"_id": 0})
     if not service:
         raise HTTPException(status_code=404, detail="Service record not found")
@@ -3872,9 +3872,9 @@ async def add_custom_stage(
     service_id: str,
     stage_data: dict,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Add a custom stage to the service timeline"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     service = await db.service_history.find_one({"id": service_id}, {"_id": 0})
     if not service:
         raise HTTPException(status_code=404, detail="Service record not found")
@@ -3961,10 +3961,10 @@ async def add_custom_stage(
 async def upload_service_attachment(
     service_id: str, 
     file: UploadFile = File(...),
-    org_id = await get_admin_org_id(admin.get("email", ""))
     admin: dict = Depends(get_current_admin)
 ):
     """Upload attachment to service record"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     service = await db.service_history.find_one({"id": service_id}, {"_id": 0})
     if not service:
         raise HTTPException(status_code=404, detail="Service record not found")
@@ -4445,12 +4445,12 @@ async def delete_amc_contract(contract_id: str, admin: dict = Depends(get_curren
 async def record_amc_usage(
     contract_id: str,
     usage_type: str = Query(..., description="onsite_visit, remote_support, preventive_maintenance"),
-    org_id = await get_admin_org_id(admin.get("email", ""))
     service_id: Optional[str] = None,
     notes: Optional[str] = None,
     admin: dict = Depends(get_current_admin)
 ):
     """Record usage against AMC contract"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     contract = await db.amc_contracts.find_one({"id": contract_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not contract:
         raise HTTPException(status_code=404, detail="AMC Contract not found")
@@ -5001,9 +5001,9 @@ async def update_deployment_item(
     item_index: int, 
     item_data: dict, 
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Update an item in a deployment and sync changes to devices"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     deployment = await db.deployments.find_one({"id": deployment_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not deployment:
         raise HTTPException(status_code=404, detail="Deployment not found")
@@ -5175,7 +5175,6 @@ async def sync_deployment_devices(deployment_id: str, admin: dict = Depends(get_
 @api_router.get("/search")
 async def universal_search(
     q: str = Query(..., min_length=1, description="Search query"),
-    org_id = await get_admin_org_id(admin.get("email", ""))
     limit: int = Query(5, ge=1, le=10, description="Results per category"),
     admin: dict = Depends(get_current_admin)
 ):
@@ -5183,6 +5182,7 @@ async def universal_search(
     Universal search across all entities with smart synonym support.
     Returns grouped results from companies, sites, users, assets, deployments, AMCs, and services.
     """
+    org_id = await get_admin_org_id(admin.get("email", ""))
     from utils.synonyms import expand_search_query, get_brand_variants
     
     if not q or len(q.strip()) < 1:
@@ -5717,9 +5717,9 @@ async def assign_device_to_amc(
     contract_id: str,
     data: AMCDeviceAssignmentCreate,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Assign a single device to an AMC contract"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Verify contract exists
     contract = await db.amc_contracts.find_one({"id": contract_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not contract:
@@ -5752,9 +5752,9 @@ async def preview_bulk_amc_assignment(
     contract_id: str,
     data: AMCBulkAssignmentPreview,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Preview bulk device assignment to AMC - validates before actual assignment"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Verify contract exists
     contract = await db.amc_contracts.find_one({"id": contract_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not contract:
@@ -5835,9 +5835,9 @@ async def confirm_bulk_amc_assignment(
     contract_id: str,
     data: AMCBulkAssignmentPreview,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Confirm and execute bulk device assignment to AMC"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # First run preview to get valid devices
     preview = await preview_bulk_amc_assignment(contract_id, data, admin)
     
@@ -5871,9 +5871,9 @@ async def unassign_device_from_amc(
     contract_id: str,
     device_id: str,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Remove device assignment from AMC contract"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     result = await db.amc_device_assignments.delete_one({
         "amc_contract_id": contract_id,
         "device_id": device_id
@@ -6426,10 +6426,10 @@ async def get_subscription_tickets(
     subscription_id: str,
     status: Optional[str] = None,
     limit: int = Query(default=50, le=200),
-    org_id = await get_admin_org_id(admin.get("email", ""))
     admin: dict = Depends(get_current_admin)
 ):
     """Get tickets for a subscription"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     query = {"subscription_id": subscription_id, "is_deleted": {"$ne": True}}
     if status:
         query["status"] = status
@@ -6442,13 +6442,13 @@ async def get_subscription_tickets(
 async def create_subscription_ticket_admin(
     subscription_id: str,
     subject: str = Form(...),
-    org_id = await get_admin_org_id(admin.get("email", ""))
     description: str = Form(...),
     issue_type: str = Form("other"),
     priority: str = Form("medium"),
     admin: dict = Depends(get_current_admin)
 ):
     """Create ticket for subscription issue (admin)"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Get subscription
     sub = await db.email_subscriptions.find_one({"id": subscription_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not sub:
@@ -6524,9 +6524,9 @@ from models.subscription import SubscriptionUserChange, SubscriptionUserChangeCr
 async def get_subscription_user_changes(
     subscription_id: str,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Get user change history for a subscription"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Verify subscription exists
     sub = await db.email_subscriptions.find_one({"id": subscription_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not sub:
@@ -6548,9 +6548,9 @@ async def add_subscription_user_change(
     subscription_id: str,
     change_data: SubscriptionUserChangeCreate,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Add or remove users from a subscription"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Get subscription
     sub = await db.email_subscriptions.find_one({"id": subscription_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not sub:
@@ -6599,9 +6599,9 @@ async def add_subscription_user_change(
 async def get_subscription_user_summary(
     subscription_id: str,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Get user summary with change history for a subscription"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Get subscription
     sub = await db.email_subscriptions.find_one({"id": subscription_id, "is_deleted": {"$ne": True}}, {"_id": 0})
     if not sub:
@@ -6886,9 +6886,9 @@ async def list_asset_transfers(
     employee_id: str = None,
     limit: int = 100,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Get asset transfer history"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     query = {}
     if asset_type:
         query["asset_type"] = asset_type
@@ -7023,9 +7023,9 @@ async def get_renewal_alerts(
     days: int = 90,
     company_id: str = None,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """Get all items expiring within specified days (warranties, AMC, licenses, subscriptions)"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     from datetime import datetime, timedelta
     
     today = datetime.now().date()
@@ -8506,9 +8506,9 @@ async def list_company_sites(user: dict = Depends(get_current_company_user)):
 async def list_company_users(
     company_id: Optional[str] = None,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """List company portal users (admin only)"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     query = {"is_deleted": {"$ne": True}}
     if company_id:
         query["company_id"] = company_id
@@ -8603,9 +8603,9 @@ async def list_internet_services(
     site_id: Optional[str] = None,
     status: Optional[str] = None,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """List all internet services/ISP connections"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     query = {"is_deleted": {"$ne": True}}
     if company_id:
         query["company_id"] = company_id
@@ -8698,13 +8698,13 @@ async def list_all_credentials(
     company_id: Optional[str] = None,
     credential_type: Optional[str] = None,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """
     Get all credentials across devices and internet services.
     Returns a consolidated view for the credentials dashboard.
     credential_type: device, internet, all
     """
+    org_id = await get_admin_org_id(admin.get("email", ""))
     credentials = []
     
     # Device credentials
@@ -8942,9 +8942,9 @@ async def list_supply_orders(
     status: Optional[str] = None,
     company_id: Optional[str] = None,
     admin: dict = Depends(get_current_admin)
-    org_id = await get_admin_org_id(admin.get("email", ""))
 ):
     """List all supply orders with optional filters"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     query = {"is_deleted": {"$ne": True}}
     if status:
         query["status"] = status
