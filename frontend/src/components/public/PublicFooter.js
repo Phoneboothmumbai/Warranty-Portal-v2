@@ -4,7 +4,7 @@ import { useSettings } from '../../context/SettingsContext';
 
 const PublicFooter = ({ variant = 'full' }) => {
   const { settings } = useSettings();
-  const companyName = settings?.company_name || 'AssetVault';
+  const companyName = settings?.company_name || 'aftersales.support';
 
   // Simple footer for signup/login pages
   if (variant === 'simple') {
