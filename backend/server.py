@@ -1732,7 +1732,8 @@ async def setup_first_admin(request: Request, admin_data: AdminCreate):
 @api_router.get("/admin/staff")
 async def list_admin_staff(admin: dict = Depends(get_current_admin)):
     """List all admin panel users/staff for assignment"""
-    staff = await db.admins.find({"is_deleted": {"$ne": True}}, {"_id": 0, "password": 0}).to_list(100)
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    staff = await db.admins.find(scope_query({"is_deleted": {"$ne": True}}, org_id), {"_id": 0, "password": 0}).to_list(100)
     # Add label for SmartSelect compatibility
     for s in staff:
         s["label"] = s.get("name", s.get("email", "Unknown"))
@@ -1743,30 +1744,35 @@ async def list_admin_staff(admin: dict = Depends(get_current_admin)):
 
 @api_router.get("/admin/masters")
 async def list_masters(master_type: Optional[str] = None, include_inactive: bool = False, admin: dict = Depends(get_current_admin)):
+    org_id = await get_admin_org_id(admin.get("email", ""))
     query = {}
     if master_type:
         query["type"] = master_type
     if not include_inactive:
         query["is_active"] = True
-    
+    query = scope_query(query, org_id)
     masters = await db.masters.find(query, {"_id": 0}).sort([("type", 1), ("sort_order", 1)]).to_list(1000)
     return masters
 
 @api_router.post("/admin/masters")
 async def create_master(item: MasterItemCreate, admin: dict = Depends(get_current_admin)):
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Check for duplicate
-    existing = await db.masters.find_one({"type": item.type, "name": item.name}, {"_id": 0})
+    existing = await db.masters.find_one(scope_query({"type": item.type, "name": item.name}, org_id), {"_id": 0})
     if existing:
         raise HTTPException(status_code=400, detail=f"Master item '{item.name}' already exists for type '{item.type}'")
     
     master = MasterItem(**item.model_dump())
-    await db.masters.insert_one(master.model_dump())
+    master_dict = master.model_dump()
+    master_dict["organization_id"] = org_id
+    await db.masters.insert_one(master_dict)
     await log_audit("master", master.id, "create", {"data": item.model_dump()}, admin)
     return master.model_dump()
 
 @api_router.put("/admin/masters/{master_id}")
 async def update_master(master_id: str, updates: MasterItemUpdate, admin: dict = Depends(get_current_admin)):
-    existing = await db.masters.find_one({"id": master_id}, {"_id": 0})
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    existing = await db.masters.find_one(scope_query({"id": master_id}, org_id), {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Master item not found")
     
@@ -1780,7 +1786,7 @@ async def update_master(master_id: str, updates: MasterItemUpdate, admin: dict =
         if existing.get(k) != v:
             changes[k] = {"old": existing.get(k), "new": v}
     
-    result = await db.masters.update_one({"id": master_id}, {"$set": update_data})
+    result = await db.masters.update_one(scope_query({"id": master_id}, org_id), {"$set": update_data})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Master item not found")
     
@@ -1790,7 +1796,8 @@ async def update_master(master_id: str, updates: MasterItemUpdate, admin: dict =
 @api_router.delete("/admin/masters/{master_id}")
 async def disable_master(master_id: str, admin: dict = Depends(get_current_admin)):
     """Disable master (soft delete - preserve history)"""
-    result = await db.masters.update_one({"id": master_id}, {"$set": {"is_active": False}})
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    result = await db.masters.update_one(scope_query({"id": master_id}, org_id), {"$set": {"is_active": False}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Master item not found")
     
@@ -1806,23 +1813,26 @@ async def seed_masters(admin: dict = Depends(get_current_admin)):
 @api_router.post("/admin/masters/quick-create")
 async def quick_create_master(item: MasterItemCreate, admin: dict = Depends(get_current_admin)):
     """Quick create master item (for inline creation from dropdowns)"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Check for duplicate
-    existing = await db.masters.find_one({"type": item.type, "name": item.name}, {"_id": 0})
+    existing = await db.masters.find_one(scope_query({"type": item.type, "name": item.name}, org_id), {"_id": 0})
     if existing:
         # Return existing item instead of error (idempotent)
         return existing
     
     # Get next sort order
-    last = await db.masters.find_one({"type": item.type}, {"_id": 0}, sort=[("sort_order", -1)])
+    last = await db.masters.find_one(scope_query({"type": item.type}, org_id), {"_id": 0}, sort=[("sort_order", -1)])
     next_order = (last.get("sort_order", 0) + 1) if last else 1
     
     master_data = item.model_dump()
     master_data["sort_order"] = next_order
     master = MasterItem(**master_data)
-    await db.masters.insert_one(master.model_dump())
+    m_dict = master.model_dump()
+    m_dict["organization_id"] = org_id
+    await db.masters.insert_one(m_dict)
     await log_audit("master", master.id, "quick_create", {"data": item.model_dump()}, admin)
     
-    result = master.model_dump()
+    result = {k: v for k, v in m_dict.items() if k != "_id"}
     # Add label for SmartSelect compatibility
     result.get("label", result.get("name", "Unknown")) or result.get("name", "Unknown"); result["label"] = result.get("name", "Unknown")
     return result
@@ -2044,8 +2054,9 @@ async def remove_company_domain(company_id: str, domain: str, admin: dict = Depe
 @api_router.get("/admin/company-domains")
 async def list_all_company_domains(admin: dict = Depends(get_current_admin)):
     """List all companies with their email domains"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     companies = await db.companies.find(
-        {"is_deleted": {"$ne": True}},
+        scope_query({"is_deleted": {"$ne": True}}, org_id),
         {"_id": 0, "id": 1, "name": 1, "email_domains": 1, "contact_email": 1}
     ).to_list(500)
     
@@ -2761,7 +2772,8 @@ async def quick_create_company_employee(
 @api_router.get("/admin/company-employees/{employee_id}")
 async def get_company_employee(employee_id: str, admin: dict = Depends(get_current_admin)):
     """Get a specific employee"""
-    employee = await db.company_employees.find_one({"id": employee_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    employee = await db.company_employees.find_one(scope_query({"id": employee_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     return employee
@@ -2770,8 +2782,9 @@ async def get_company_employee(employee_id: str, admin: dict = Depends(get_curre
 @api_router.get("/admin/company-employees/{employee_id}/full-profile")
 async def get_company_employee_full_profile(employee_id: str, admin: dict = Depends(get_current_admin)):
     """Get employee with all related data: devices, licenses, subscriptions, service history"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     # Get employee
-    employee = await db.company_employees.find_one({"id": employee_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    employee = await db.company_employees.find_one(scope_query({"id": employee_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
@@ -4107,7 +4120,8 @@ async def create_amc(amc_data: AMCCreate, admin: dict = Depends(get_current_admi
 
 @api_router.get("/admin/amc/{amc_id}")
 async def get_amc(amc_id: str, admin: dict = Depends(get_current_admin)):
-    amc = await db.amc.find_one({"id": amc_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    amc = await db.amc.find_one(scope_query({"id": amc_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not amc:
         raise HTTPException(status_code=404, detail="AMC not found")
     return amc
