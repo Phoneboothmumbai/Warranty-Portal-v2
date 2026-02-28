@@ -1311,11 +1311,11 @@ async def generate_bulk_qr_pdf(
     # Generate filename
     filename_parts = ["QR_Codes"]
     if request.company_id:
-        company = await db.companies.find_one({"id": request.company_id}, {"_id": 0, "name": 1})
+        company = await db.companies.find_one(scope_query({"id": request.company_id}, org_id), {"_id": 0, "name": 1})
         if company:
             filename_parts.append(company["name"].replace(" ", "_")[:20])
     if request.site_id:
-        site = await db.sites.find_one({"id": request.site_id}, {"_id": 0, "name": 1})
+        site = await db.sites.find_one(scope_query({"id": request.site_id}, org_id), {"_id": 0, "name": 1})
         if site:
             filename_parts.append(site["name"].replace(" ", "_")[:20])
     
@@ -2013,7 +2013,7 @@ async def add_company_domain(company_id: str, data: dict, admin: dict = Depends(
         raise HTTPException(status_code=400, detail="Invalid domain format")
     
     # Check if company exists
-    company = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}})
+    company = await db.companies.find_one(scope_query({"id": company_id, "is_deleted": {"$ne": True}}, org_id))
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
@@ -2047,7 +2047,7 @@ async def add_company_domain(company_id: str, data: dict, admin: dict = Depends(
 async def remove_company_domain(company_id: str, domain: str, admin: dict = Depends(get_current_admin)):
     """Remove an email domain from a company"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    company = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}})
+    company = await db.companies.find_one(scope_query({"id": company_id, "is_deleted": {"$ne": True}}, org_id))
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
@@ -2479,12 +2479,12 @@ async def create_company_portal_user(
 ):
     """Create a new portal user for a company"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    company = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    company = await db.companies.find_one(scope_query({"id": company_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
     # Check if email already exists
-    existing = await db.company_users.find_one({"email": user_data.get("email"), "is_deleted": {"$ne": True}})
+    existing = await db.company_users.find_one(scope_query({"email": user_data.get("email"), "is_deleted": {"$ne": True}}, org_id))
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
@@ -2630,7 +2630,7 @@ async def create_user(user_data: UserCreate, admin: dict = Depends(get_current_a
 async def quick_create_user(user_data: UserCreate, admin: dict = Depends(get_current_admin)):
     """Quick create user (for inline creation from dropdowns)"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    company = await db.companies.find_one({"id": user_data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    company = await db.companies.find_one(scope_query({"id": user_data.company_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
@@ -2654,7 +2654,7 @@ async def quick_create_user(user_data: UserCreate, admin: dict = Depends(get_cur
 @api_router.get("/admin/users/{user_id}")
 async def get_user(user_id: str, admin: dict = Depends(get_current_admin)):
     org_id = await get_admin_org_id(admin.get("email", ""))
-    user = await db.users.find_one({"id": user_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    user = await db.users.find_one(scope_query({"id": user_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
@@ -2662,7 +2662,7 @@ async def get_user(user_id: str, admin: dict = Depends(get_current_admin)):
 @api_router.put("/admin/users/{user_id}")
 async def update_user(user_id: str, updates: UserUpdate, admin: dict = Depends(get_current_admin)):
     org_id = await get_admin_org_id(admin.get("email", ""))
-    existing = await db.users.find_one({"id": user_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    existing = await db.users.find_one(scope_query({"id": user_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -2672,14 +2672,14 @@ async def update_user(user_id: str, updates: UserUpdate, admin: dict = Depends(g
     
     changes = {k: {"old": existing.get(k), "new": v} for k, v in update_data.items() if existing.get(k) != v}
     
-    result = await db.users.update_one({"id": user_id}, {"$set": update_data})
+    result = await db.users.update_one(scope_query({"id": user_id}, org_id), {"$set": update_data})
     await log_audit("user", user_id, "update", changes, admin)
-    return await db.users.find_one({"id": user_id}, {"_id": 0})
+    return await db.users.find_one(scope_query({"id": user_id}, org_id), {"_id": 0})
 
 @api_router.delete("/admin/users/{user_id}")
 async def delete_user(user_id: str, admin: dict = Depends(get_current_admin)):
     org_id = await get_admin_org_id(admin.get("email", ""))
-    result = await db.users.update_one({"id": user_id}, {"$set": {"is_deleted": True}})
+    result = await db.users.update_one(scope_query({"id": user_id}, org_id), {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
     await log_audit("user", user_id, "delete", {"is_deleted": True}, admin)
@@ -2771,7 +2771,7 @@ async def quick_create_company_employee(
     if not company_id or not name:
         raise HTTPException(status_code=400, detail="company_id and name are required")
     
-    company = await db.companies.find_one({"id": company_id, "is_deleted": {"$ne": True}})
+    company = await db.companies.find_one(scope_query({"id": company_id, "is_deleted": {"$ne": True}}, org_id))
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
@@ -2898,7 +2898,7 @@ async def update_company_employee(employee_id: str, data: CompanyEmployeeUpdate,
     if not update_data:
         raise HTTPException(status_code=400, detail="No data to update")
     
-    result = await db.company_employees.update_one({"id": employee_id, "is_deleted": {"$ne": True}}, {"$set": update_data})
+    result = await db.company_employees.update_one(scope_query({"id": employee_id, "is_deleted": {"$ne": True}}, org_id), {"$set": update_data})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Employee not found")
     
@@ -2910,7 +2910,7 @@ async def update_company_employee(employee_id: str, data: CompanyEmployeeUpdate,
 async def delete_company_employee(employee_id: str, admin: dict = Depends(get_current_admin)):
     """Soft delete an employee"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    result = await db.company_employees.update_one({"id": employee_id}, {"$set": {"is_deleted": True}})
+    result = await db.company_employees.update_one(scope_query({"id": employee_id}, org_id), {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Employee not found")
     await log_audit("company_employee", employee_id, "delete", {"is_deleted": True}, admin)
@@ -3213,17 +3213,17 @@ async def create_device(device_data: DeviceCreate, admin: dict = Depends(get_cur
 async def get_device(device_id: str, admin: dict = Depends(get_current_admin)):
     """Get device with full AMC contract details - P0 Fix"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    device = await db.devices.find_one({"id": device_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    device = await db.devices.find_one(scope_query({"id": device_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     
     # Get company details
-    company = await db.companies.find_one({"id": device.get("company_id")}, {"_id": 0, "name": 1})
+    company = await db.companies.find_one(scope_query({"id": device.get("company_id")}, org_id), {"_id": 0, "name": 1})
     device["company_name"] = company.get("name") if company else "Unknown"
     
     # Get assigned user details
     if device.get("assigned_user_id"):
-        user = await db.users.find_one({"id": device["assigned_user_id"]}, {"_id": 0, "name": 1, "email": 1})
+        user = await db.users.find_one(scope_query({"id": device["assigned_user_id"]}, org_id), {"_id": 0, "name": 1, "email": 1})
         device["assigned_user_name"] = user.get("name") if user else None
         device["assigned_user_email"] = user.get("email") if user else None
     
@@ -3275,7 +3275,7 @@ async def get_device(device_id: str, admin: dict = Depends(get_current_admin)):
     device["parts"] = parts
     
     # Get service history count
-    service_count = await db.service_history.count_documents({"device_id": device_id})
+    service_count = await db.service_history.count_documents(scope_query({"device_id": device_id}, org_id))
     device["service_count"] = service_count
     
     return device
@@ -3335,13 +3335,13 @@ async def update_device(device_id: str, updates: DeviceUpdate, admin: dict = Dep
 @api_router.delete("/admin/devices/{device_id}")
 async def delete_device(device_id: str, admin: dict = Depends(get_current_admin)):
     org_id = await get_admin_org_id(admin.get("email", ""))
-    result = await db.devices.update_one({"id": device_id}, {"$set": {"is_deleted": True}})
+    result = await db.devices.update_one(scope_query({"id": device_id}, org_id), {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Device not found")
     
     # Soft delete related data
-    await db.parts.update_many({"device_id": device_id}, {"$set": {"is_deleted": True}})
-    await db.amc.update_many({"device_id": device_id}, {"$set": {"is_deleted": True}})
+    await db.parts.update_many(scope_query({"device_id": device_id}, org_id), {"$set": {"is_deleted": True}})
+    await db.amc.update_many(scope_query({"device_id": device_id}, org_id), {"$set": {"is_deleted": True}})
     await log_audit("device", device_id, "delete", {"is_deleted": True}, admin)
     return {"message": "Device archived"}
 
@@ -3355,7 +3355,7 @@ async def get_assignment_history(device_id: str, admin: dict = Depends(get_curre
 async def get_device_service_history(device_id: str, admin: dict = Depends(get_current_admin)):
     """Get comprehensive service history for a device (service records, tickets, AI chats)"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    device = await db.devices.find_one({"id": device_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    device = await db.devices.find_one(scope_query({"id": device_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     
@@ -3427,7 +3427,7 @@ async def get_device_service_history(device_id: str, admin: dict = Depends(get_c
 async def get_device_timeline(device_id: str, admin: dict = Depends(get_current_admin)):
     """Get unified timeline for a device (assignments, services, parts, AMC)"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    device = await db.devices.find_one({"id": device_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    device = await db.devices.find_one(scope_query({"id": device_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     
@@ -3701,7 +3701,7 @@ async def create_service(service_data: ServiceHistoryCreate, admin: dict = Depen
 @api_router.get("/admin/services/{service_id}")
 async def get_service(service_id: str, admin: dict = Depends(get_current_admin)):
     org_id = await get_admin_org_id(admin.get("email", ""))
-    service = await db.service_history.find_one({"id": service_id}, {"_id": 0})
+    service = await db.service_history.find_one(scope_query({"id": service_id}, org_id), {"_id": 0})
     if not service:
         raise HTTPException(status_code=404, detail="Service record not found")
     return service
@@ -3785,7 +3785,7 @@ async def update_service_stage(
 ):
     """Update a specific stage in the service timeline"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    service = await db.service_history.find_one({"id": service_id}, {"_id": 0})
+    service = await db.service_history.find_one(scope_query({"id": service_id}, org_id), {"_id": 0})
     if not service:
         raise HTTPException(status_code=404, detail="Service record not found")
     
@@ -3864,7 +3864,7 @@ async def update_service_stage(
         "new_status": stage_update.get("status")
     }, admin)
     
-    return await db.service_history.find_one({"id": service_id}, {"_id": 0})
+    return await db.service_history.find_one(scope_query({"id": service_id}, org_id), {"_id": 0})
 
 
 @api_router.post("/admin/services/{service_id}/stages")
@@ -3875,7 +3875,7 @@ async def add_custom_stage(
 ):
     """Add a custom stage to the service timeline"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    service = await db.service_history.find_one({"id": service_id}, {"_id": 0})
+    service = await db.service_history.find_one(scope_query({"id": service_id}, org_id), {"_id": 0})
     if not service:
         raise HTTPException(status_code=404, detail="Service record not found")
     
@@ -3954,7 +3954,7 @@ async def add_custom_stage(
     
     await log_audit("service", service_id, "stage_add", {"stage_key": stage_key}, admin)
     
-    return await db.service_history.find_one({"id": service_id}, {"_id": 0})
+    return await db.service_history.find_one(scope_query({"id": service_id}, org_id), {"_id": 0})
 
 
 @api_router.post("/admin/services/{service_id}/attachments")
@@ -3965,7 +3965,7 @@ async def upload_service_attachment(
 ):
     """Upload attachment to service record"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    service = await db.service_history.find_one({"id": service_id}, {"_id": 0})
+    service = await db.service_history.find_one(scope_query({"id": service_id}, org_id), {"_id": 0})
     if not service:
         raise HTTPException(status_code=404, detail="Service record not found")
     
@@ -4012,7 +4012,7 @@ async def upload_service_attachment(
 @api_router.delete("/admin/services/{service_id}/attachments/{attachment_id}")
 async def delete_service_attachment(service_id: str, attachment_id: str, admin: dict = Depends(get_current_admin)):
     org_id = await get_admin_org_id(admin.get("email", ""))
-    service = await db.service_history.find_one({"id": service_id}, {"_id": 0})
+    service = await db.service_history.find_one(scope_query({"id": service_id}, org_id), {"_id": 0})
     if not service:
         raise HTTPException(status_code=404, detail="Service record not found")
     
@@ -4170,7 +4170,7 @@ async def get_amc(amc_id: str, admin: dict = Depends(get_current_admin)):
 @api_router.put("/admin/amc/{amc_id}")
 async def update_amc(amc_id: str, updates: AMCUpdate, admin: dict = Depends(get_current_admin)):
     org_id = await get_admin_org_id(admin.get("email", ""))
-    existing = await db.amc.find_one({"id": amc_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    existing = await db.amc.find_one(scope_query({"id": amc_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="AMC not found")
     
@@ -4180,14 +4180,14 @@ async def update_amc(amc_id: str, updates: AMCUpdate, admin: dict = Depends(get_
     
     changes = {k: {"old": existing.get(k), "new": v} for k, v in update_data.items() if existing.get(k) != v}
     
-    result = await db.amc.update_one({"id": amc_id}, {"$set": update_data})
+    result = await db.amc.update_one(scope_query({"id": amc_id}, org_id), {"$set": update_data})
     await log_audit("amc", amc_id, "update", changes, admin)
-    return await db.amc.find_one({"id": amc_id}, {"_id": 0})
+    return await db.amc.find_one(scope_query({"id": amc_id}, org_id), {"_id": 0})
 
 @api_router.delete("/admin/amc/{amc_id}")
 async def delete_amc(amc_id: str, admin: dict = Depends(get_current_admin)):
     org_id = await get_admin_org_id(admin.get("email", ""))
-    result = await db.amc.update_one({"id": amc_id}, {"$set": {"is_deleted": True}})
+    result = await db.amc.update_one(scope_query({"id": amc_id}, org_id), {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="AMC not found")
     await log_audit("amc", amc_id, "delete", {"is_deleted": True}, admin)
@@ -4352,7 +4352,7 @@ async def create_amc_contract(data: AMCContractCreate, admin: dict = Depends(get
 async def get_amc_contract(contract_id: str, admin: dict = Depends(get_current_admin)):
     """Get single AMC contract with details"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    contract = await db.amc_contracts.find_one({"id": contract_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    contract = await db.amc_contracts.find_one(scope_query({"id": contract_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not contract:
         raise HTTPException(status_code=404, detail="AMC Contract not found")
     
@@ -4361,7 +4361,7 @@ async def get_amc_contract(contract_id: str, admin: dict = Depends(get_current_a
     contract["days_until_expiry"] = get_days_until_expiry(contract.get("end_date", ""))
     
     # Get company details
-    company = await db.companies.find_one({"id": contract.get("company_id")}, {"_id": 0})
+    company = await db.companies.find_one(scope_query({"id": contract.get("company_id")}, org_id), {"_id": 0})
     contract["company_name"] = company.get("name") if company else "Unknown"
     
     # Get covered assets based on mapping type
@@ -4412,7 +4412,7 @@ async def get_amc_contract(contract_id: str, admin: dict = Depends(get_current_a
 async def update_amc_contract(contract_id: str, updates: AMCContractUpdate, admin: dict = Depends(get_current_admin)):
     """Update AMC contract"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    existing = await db.amc_contracts.find_one({"id": contract_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    existing = await db.amc_contracts.find_one(scope_query({"id": contract_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="AMC Contract not found")
     
@@ -4424,10 +4424,10 @@ async def update_amc_contract(contract_id: str, updates: AMCContractUpdate, admi
     
     changes = {k: {"old": existing.get(k), "new": v} for k, v in update_data.items() if existing.get(k) != v}
     
-    await db.amc_contracts.update_one({"id": contract_id}, {"$set": update_data})
+    await db.amc_contracts.update_one(scope_query({"id": contract_id}, org_id), {"$set": update_data})
     await log_audit("amc_contract", contract_id, "update", changes, admin)
     
-    result = await db.amc_contracts.find_one({"id": contract_id}, {"_id": 0})
+    result = await db.amc_contracts.find_one(scope_query({"id": contract_id}, org_id), {"_id": 0})
     result["status"] = get_amc_status(result.get("start_date", ""), result.get("end_date", ""))
     return result
 
@@ -4435,7 +4435,7 @@ async def update_amc_contract(contract_id: str, updates: AMCContractUpdate, admi
 async def delete_amc_contract(contract_id: str, admin: dict = Depends(get_current_admin)):
     """Soft delete AMC contract"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    result = await db.amc_contracts.update_one({"id": contract_id}, {"$set": {"is_deleted": True}})
+    result = await db.amc_contracts.update_one(scope_query({"id": contract_id}, org_id), {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="AMC Contract not found")
     await log_audit("amc_contract", contract_id, "delete", {"is_deleted": True}, admin)
@@ -4451,7 +4451,7 @@ async def record_amc_usage(
 ):
     """Record usage against AMC contract"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    contract = await db.amc_contracts.find_one({"id": contract_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    contract = await db.amc_contracts.find_one(scope_query({"id": contract_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not contract:
         raise HTTPException(status_code=404, detail="AMC Contract not found")
     
@@ -4470,7 +4470,7 @@ async def record_amc_usage(
 async def check_amc_coverage(device_id: str, admin: dict = Depends(get_current_admin)):
     """Check if a device is covered under any active AMC"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    device = await db.devices.find_one({"id": device_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    device = await db.devices.find_one(scope_query({"id": device_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     
@@ -4629,7 +4629,7 @@ async def quick_create_site(data: SiteCreate, admin: dict = Depends(get_current_
     """Quick create site (for inline creation from dropdowns)"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     # Validate company exists
-    company = await db.companies.find_one({"id": data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    company = await db.companies.find_one(scope_query({"id": data.company_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
@@ -4660,12 +4660,12 @@ async def quick_create_site(data: SiteCreate, admin: dict = Depends(get_current_
 async def get_site(site_id: str, admin: dict = Depends(get_current_admin)):
     """Get site with full details including deployments"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    site = await db.sites.find_one({"id": site_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    site = await db.sites.find_one(scope_query({"id": site_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
     
     # Get company
-    company = await db.companies.find_one({"id": site.get("company_id")}, {"_id": 0})
+    company = await db.companies.find_one(scope_query({"id": site.get("company_id")}, org_id), {"_id": 0})
     site["company_name"] = company.get("name") if company else "Unknown"
     
     # Get deployments
@@ -4710,7 +4710,7 @@ async def get_site(site_id: str, admin: dict = Depends(get_current_admin)):
 async def update_site(site_id: str, updates: SiteUpdate, admin: dict = Depends(get_current_admin)):
     """Update site"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    existing = await db.sites.find_one({"id": site_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    existing = await db.sites.find_one(scope_query({"id": site_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Site not found")
     
@@ -4722,16 +4722,16 @@ async def update_site(site_id: str, updates: SiteUpdate, admin: dict = Depends(g
     
     changes = {k: {"old": existing.get(k), "new": v} for k, v in update_data.items() if existing.get(k) != v}
     
-    await db.sites.update_one({"id": site_id}, {"$set": update_data})
+    await db.sites.update_one(scope_query({"id": site_id}, org_id), {"$set": update_data})
     await log_audit("site", site_id, "update", changes, admin)
     
-    return await db.sites.find_one({"id": site_id}, {"_id": 0})
+    return await db.sites.find_one(scope_query({"id": site_id}, org_id), {"_id": 0})
 
 @api_router.delete("/admin/sites/{site_id}")
 async def delete_site(site_id: str, admin: dict = Depends(get_current_admin)):
     """Soft delete site"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    result = await db.sites.update_one({"id": site_id}, {"$set": {"is_deleted": True}})
+    result = await db.sites.update_one(scope_query({"id": site_id}, org_id), {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Site not found")
     await log_audit("site", site_id, "delete", {"is_deleted": True}, admin)
@@ -4774,11 +4774,11 @@ async def create_deployment(data: DeploymentCreate, admin: dict = Depends(get_cu
     """Create new deployment with items"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     # Validate company and site
-    company = await db.companies.find_one({"id": data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    company = await db.companies.find_one(scope_query({"id": data.company_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
-    site = await db.sites.find_one({"id": data.site_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    site = await db.sites.find_one(scope_query({"id": data.site_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
     
@@ -4867,20 +4867,20 @@ async def create_deployment(data: DeploymentCreate, admin: dict = Depends(get_cu
 async def get_deployment(deployment_id: str, admin: dict = Depends(get_current_admin)):
     """Get deployment with full details"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    deployment = await db.deployments.find_one({"id": deployment_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    deployment = await db.deployments.find_one(scope_query({"id": deployment_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not deployment:
         raise HTTPException(status_code=404, detail="Deployment not found")
     
     # Get company and site
-    company = await db.companies.find_one({"id": deployment.get("company_id")}, {"_id": 0})
-    site = await db.sites.find_one({"id": deployment.get("site_id")}, {"_id": 0})
+    company = await db.companies.find_one(scope_query({"id": deployment.get("company_id")}, org_id), {"_id": 0})
+    site = await db.sites.find_one(scope_query({"id": deployment.get("site_id")}, org_id), {"_id": 0})
     deployment["company_name"] = company.get("name") if company else "Unknown"
     deployment["site_name"] = site.get("name") if site else "Unknown"
     
     # Enrich items with AMC coverage info
     for item in deployment.get("items", []):
         if item.get("amc_contract_id"):
-            amc = await db.amc_contracts.find_one({"id": item["amc_contract_id"]}, {"_id": 0, "name": 1})
+            amc = await db.amc_contracts.find_one(scope_query({"id": item["amc_contract_id"]}, org_id), {"_id": 0, "name": 1})
             item["amc_name"] = amc.get("name") if amc else None
         
         # Check if covered by any active AMC
@@ -4914,7 +4914,7 @@ async def get_deployment(deployment_id: str, admin: dict = Depends(get_current_a
 async def update_deployment(deployment_id: str, updates: DeploymentUpdate, admin: dict = Depends(get_current_admin)):
     """Update deployment"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    existing = await db.deployments.find_one({"id": deployment_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    existing = await db.deployments.find_one(scope_query({"id": deployment_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Deployment not found")
     
@@ -4924,16 +4924,16 @@ async def update_deployment(deployment_id: str, updates: DeploymentUpdate, admin
     
     update_data["updated_at"] = get_ist_isoformat()
     
-    await db.deployments.update_one({"id": deployment_id}, {"$set": update_data})
+    await db.deployments.update_one(scope_query({"id": deployment_id}, org_id), {"$set": update_data})
     await log_audit("deployment", deployment_id, "update", update_data, admin)
     
-    return await db.deployments.find_one({"id": deployment_id}, {"_id": 0})
+    return await db.deployments.find_one(scope_query({"id": deployment_id}, org_id), {"_id": 0})
 
 @api_router.delete("/admin/deployments/{deployment_id}")
 async def delete_deployment(deployment_id: str, admin: dict = Depends(get_current_admin)):
     """Soft delete deployment and linked devices"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    result = await db.deployments.update_one({"id": deployment_id}, {"$set": {"is_deleted": True}})
+    result = await db.deployments.update_one(scope_query({"id": deployment_id}, org_id), {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Deployment not found")
     
@@ -4950,7 +4950,7 @@ async def delete_deployment(deployment_id: str, admin: dict = Depends(get_curren
 async def add_deployment_item(deployment_id: str, item_data: dict, admin: dict = Depends(get_current_admin)):
     """Add item to existing deployment"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    deployment = await db.deployments.find_one({"id": deployment_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    deployment = await db.deployments.find_one(scope_query({"id": deployment_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not deployment:
         raise HTTPException(status_code=404, detail="Deployment not found")
     
@@ -5004,7 +5004,7 @@ async def update_deployment_item(
 ):
     """Update an item in a deployment and sync changes to devices"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    deployment = await db.deployments.find_one({"id": deployment_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    deployment = await db.deployments.find_one(scope_query({"id": deployment_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not deployment:
         raise HTTPException(status_code=404, detail="Deployment not found")
     
@@ -5092,7 +5092,7 @@ async def update_deployment_item(
 async def sync_deployment_devices(deployment_id: str, admin: dict = Depends(get_current_admin)):
     """Manually sync deployment items to devices collection"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    deployment = await db.deployments.find_one({"id": deployment_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    deployment = await db.deployments.find_one(scope_query({"id": deployment_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not deployment:
         raise HTTPException(status_code=404, detail="Deployment not found")
     
@@ -5253,7 +5253,7 @@ async def universal_search(
     }, {"_id": 0}).limit(limit).to_list(limit)
     
     for s in sites:
-        company = await db.companies.find_one({"id": s.get("company_id")}, {"_id": 0, "name": 1})
+        company = await db.companies.find_one(scope_query({"id": s.get("company_id")}, org_id), {"_id": 0, "name": 1})
         results["sites"].append({
             "id": s["id"],
             "type": "site",
@@ -5299,7 +5299,7 @@ async def universal_search(
     }, {"_id": 0}).limit(limit).to_list(limit)
     
     for d in devices:
-        company = await db.companies.find_one({"id": d.get("company_id")}, {"_id": 0, "name": 1})
+        company = await db.companies.find_one(scope_query({"id": d.get("company_id")}, org_id), {"_id": 0, "name": 1})
         results["assets"].append({
             "id": d["id"],
             "type": "asset",
@@ -5343,7 +5343,7 @@ async def universal_search(
             all_deployments[d["id"]] = d
     
     for d in list(all_deployments.values())[:limit]:
-        site = await db.sites.find_one({"id": d.get("site_id")}, {"_id": 0, "name": 1})
+        site = await db.sites.find_one(scope_query({"id": d.get("site_id")}, org_id), {"_id": 0, "name": 1})
         results["deployments"].append({
             "id": d["id"],
             "type": "deployment",
@@ -5364,7 +5364,7 @@ async def universal_search(
     }, {"_id": 0}).limit(limit).to_list(limit)
     
     for a in amcs:
-        company = await db.companies.find_one({"id": a.get("company_id")}, {"_id": 0, "name": 1})
+        company = await db.companies.find_one(scope_query({"id": a.get("company_id")}, org_id), {"_id": 0, "name": 1})
         status = get_amc_status(a.get("start_date", ""), a.get("end_date", ""))
         results["amcs"].append({
             "id": a["id"],
@@ -5389,7 +5389,7 @@ async def universal_search(
     }, {"_id": 0}).limit(limit).to_list(limit)
     
     for s in services:
-        device = await db.devices.find_one({"id": s.get("device_id")}, {"_id": 0, "brand": 1, "model": 1, "serial_number": 1})
+        device = await db.devices.find_one(scope_query({"id": s.get("device_id")}, org_id), {"_id": 0, "brand": 1, "model": 1, "serial_number": 1})
         results["services"].append({
             "id": s["id"],
             "type": "service",
@@ -5418,7 +5418,7 @@ async def universal_search(
 @api_router.get("/admin/settings")
 async def get_settings(admin: dict = Depends(get_current_admin)):
     org_id = await get_admin_org_id(admin.get("email", ""))
-    settings = await db.settings.find_one({"id": "settings"}, {"_id": 0})
+    settings = await db.settings.find_one(scope_query({"id": "settings"}, org_id), {"_id": 0})
     if not settings:
         settings = Settings().model_dump()
     return settings
@@ -5435,7 +5435,7 @@ async def update_settings(updates: SettingsUpdate, admin: dict = Depends(get_cur
         upsert=True
     )
     
-    return await db.settings.find_one({"id": "settings"}, {"_id": 0})
+    return await db.settings.find_one(scope_query({"id": "settings"}, org_id), {"_id": 0})
 
 @api_router.post("/admin/settings/logo")
 async def upload_logo(file: UploadFile = File(...), admin: dict = Depends(get_current_admin)):
@@ -5566,12 +5566,12 @@ async def create_license(data: LicenseCreate, admin: dict = Depends(get_current_
 async def get_license(license_id: str, admin: dict = Depends(get_current_admin)):
     """Get license details"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    lic = await db.licenses.find_one({"id": license_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    lic = await db.licenses.find_one(scope_query({"id": license_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not lic:
         raise HTTPException(status_code=404, detail="License not found")
     
     # Get company
-    company = await db.companies.find_one({"id": lic.get("company_id")}, {"_id": 0})
+    company = await db.companies.find_one(scope_query({"id": lic.get("company_id")}, org_id), {"_id": 0})
     lic["company_name"] = company.get("name") if company else "Unknown"
     
     # Get assigned devices/users details
@@ -5597,7 +5597,7 @@ async def get_license(license_id: str, admin: dict = Depends(get_current_admin))
 async def update_license(license_id: str, updates: LicenseUpdate, admin: dict = Depends(get_current_admin)):
     """Update license"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    existing = await db.licenses.find_one({"id": license_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    existing = await db.licenses.find_one(scope_query({"id": license_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="License not found")
     
@@ -5614,16 +5614,16 @@ async def update_license(license_id: str, updates: LicenseUpdate, admin: dict = 
     
     changes = {k: {"old": existing.get(k), "new": v} for k, v in update_data.items() if existing.get(k) != v}
     
-    await db.licenses.update_one({"id": license_id}, {"$set": update_data})
+    await db.licenses.update_one(scope_query({"id": license_id}, org_id), {"$set": update_data})
     await log_audit("license", license_id, "update", changes, admin)
     
-    return await db.licenses.find_one({"id": license_id}, {"_id": 0})
+    return await db.licenses.find_one(scope_query({"id": license_id}, org_id), {"_id": 0})
 
 @api_router.delete("/admin/licenses/{license_id}")
 async def delete_license(license_id: str, admin: dict = Depends(get_current_admin)):
     """Soft delete license"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    result = await db.licenses.update_one({"id": license_id}, {"$set": {"is_deleted": True}})
+    result = await db.licenses.update_one(scope_query({"id": license_id}, org_id), {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="License not found")
     
@@ -5655,7 +5655,7 @@ async def get_expiring_licenses_summary(admin: dict = Depends(get_current_admin)
             end = datetime.strptime(lic["end_date"], "%Y-%m-%d").date()
             days = (end - today).days
             
-            company = await db.companies.find_one({"id": lic.get("company_id")}, {"_id": 0, "name": 1})
+            company = await db.companies.find_one(scope_query({"id": lic.get("company_id")}, org_id), {"_id": 0, "name": 1})
             
             item = {
                 "id": lic["id"],
@@ -5686,7 +5686,7 @@ async def get_amc_assigned_devices(contract_id: str, admin: dict = Depends(get_c
     """Get all devices assigned to an AMC contract"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     # Verify contract exists
-    contract = await db.amc_contracts.find_one({"id": contract_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    contract = await db.amc_contracts.find_one(scope_query({"id": contract_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not contract:
         raise HTTPException(status_code=404, detail="AMC Contract not found")
     
@@ -5697,7 +5697,7 @@ async def get_amc_assigned_devices(contract_id: str, admin: dict = Depends(get_c
     
     # Enrich with device details
     for assignment in assignments:
-        device = await db.devices.find_one({"id": assignment["device_id"]}, {"_id": 0})
+        device = await db.devices.find_one(scope_query({"id": assignment["device_id"]}, org_id), {"_id": 0})
         if device:
             assignment["device_brand"] = device.get("brand")
             assignment["device_model"] = device.get("model")
@@ -5721,12 +5721,12 @@ async def assign_device_to_amc(
     """Assign a single device to an AMC contract"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     # Verify contract exists
-    contract = await db.amc_contracts.find_one({"id": contract_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    contract = await db.amc_contracts.find_one(scope_query({"id": contract_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not contract:
         raise HTTPException(status_code=404, detail="AMC Contract not found")
     
     # Verify device exists
-    device = await db.devices.find_one({"id": data.device_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    device = await db.devices.find_one(scope_query({"id": data.device_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     
@@ -5756,7 +5756,7 @@ async def preview_bulk_amc_assignment(
     """Preview bulk device assignment to AMC - validates before actual assignment"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     # Verify contract exists
-    contract = await db.amc_contracts.find_one({"id": contract_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    contract = await db.amc_contracts.find_one(scope_query({"id": contract_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not contract:
         raise HTTPException(status_code=404, detail="AMC Contract not found")
     
@@ -6317,7 +6317,7 @@ async def create_subscription(data: EmailSubscriptionCreate, admin: dict = Depen
     """Create new email subscription"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     # Validate company
-    company = await db.companies.find_one({"id": data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    company = await db.companies.find_one(scope_query({"id": data.company_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
@@ -6348,12 +6348,12 @@ async def create_subscription(data: EmailSubscriptionCreate, admin: dict = Depen
 async def get_subscription(subscription_id: str, admin: dict = Depends(get_current_admin)):
     """Get subscription details"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    sub = await db.email_subscriptions.find_one({"id": subscription_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    sub = await db.email_subscriptions.find_one(scope_query({"id": subscription_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not sub:
         raise HTTPException(status_code=404, detail="Subscription not found")
     
     # Get company
-    company = await db.companies.find_one({"id": sub.get("company_id")}, {"_id": 0})
+    company = await db.companies.find_one(scope_query({"id": sub.get("company_id")}, org_id), {"_id": 0})
     sub["company_name"] = company.get("name") if company else "Unknown"
     
     # Update status
@@ -6383,7 +6383,7 @@ async def update_subscription(subscription_id: str, data: EmailSubscriptionUpdat
     
     # Recalculate total price
     if "price_per_user" in update_data or "num_users" in update_data:
-        sub = await db.email_subscriptions.find_one({"id": subscription_id}, {"_id": 0})
+        sub = await db.email_subscriptions.find_one(scope_query({"id": subscription_id}, org_id), {"_id": 0})
         if sub:
             price = update_data.get("price_per_user", sub.get("price_per_user", 0))
             users = update_data.get("num_users", sub.get("num_users", 1))
@@ -6450,12 +6450,12 @@ async def create_subscription_ticket_admin(
     """Create ticket for subscription issue (admin)"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     # Get subscription
-    sub = await db.email_subscriptions.find_one({"id": subscription_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    sub = await db.email_subscriptions.find_one(scope_query({"id": subscription_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not sub:
         raise HTTPException(status_code=404, detail="Subscription not found")
     
     # Get company
-    company = await db.companies.find_one({"id": sub.get("company_id")}, {"_id": 0})
+    company = await db.companies.find_one(scope_query({"id": sub.get("company_id")}, org_id), {"_id": 0})
     
     # Generate ticket number
     ticket_number = f"SUB-{get_ist_now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}"
@@ -6528,7 +6528,7 @@ async def get_subscription_user_changes(
     """Get user change history for a subscription"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     # Verify subscription exists
-    sub = await db.email_subscriptions.find_one({"id": subscription_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    sub = await db.email_subscriptions.find_one(scope_query({"id": subscription_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not sub:
         raise HTTPException(status_code=404, detail="Subscription not found")
     
@@ -6552,7 +6552,7 @@ async def add_subscription_user_change(
     """Add or remove users from a subscription"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     # Get subscription
-    sub = await db.email_subscriptions.find_one({"id": subscription_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    sub = await db.email_subscriptions.find_one(scope_query({"id": subscription_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not sub:
         raise HTTPException(status_code=404, detail="Subscription not found")
     
@@ -6603,7 +6603,7 @@ async def get_subscription_user_summary(
     """Get user summary with change history for a subscription"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     # Get subscription
-    sub = await db.email_subscriptions.find_one({"id": subscription_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    sub = await db.email_subscriptions.find_one(scope_query({"id": subscription_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not sub:
         raise HTTPException(status_code=404, detail="Subscription not found")
     
@@ -6686,12 +6686,12 @@ async def create_asset_group(group_data: AssetGroupCreate, admin: dict = Depends
 async def get_asset_group(group_id: str, admin: dict = Depends(get_current_admin)):
     """Get asset group with all linked devices and accessories"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    group = await db.asset_groups.find_one({"id": group_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    group = await db.asset_groups.find_one(scope_query({"id": group_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not group:
         raise HTTPException(status_code=404, detail="Asset group not found")
     
     # Get company
-    company = await db.companies.find_one({"id": group.get("company_id")}, {"_id": 0, "name": 1})
+    company = await db.companies.find_one(scope_query({"id": group.get("company_id")}, org_id), {"_id": 0, "name": 1})
     group["company_name"] = company.get("name") if company else "Unknown"
     
     # Get linked devices
@@ -6710,7 +6710,7 @@ async def get_asset_group(group_id: str, admin: dict = Depends(get_current_admin
     
     # Get primary device
     if group.get("primary_device_id"):
-        primary = await db.devices.find_one({"id": group["primary_device_id"]}, {"_id": 0})
+        primary = await db.devices.find_one(scope_query({"id": group["primary_device_id"]}, org_id), {"_id": 0})
         group["primary_device"] = primary
     
     return group
@@ -6720,14 +6720,14 @@ async def get_asset_group(group_id: str, admin: dict = Depends(get_current_admin
 async def update_asset_group(group_id: str, update_data: AssetGroupUpdate, admin: dict = Depends(get_current_admin)):
     """Update an asset group"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    group = await db.asset_groups.find_one({"id": group_id, "is_deleted": {"$ne": True}})
+    group = await db.asset_groups.find_one(scope_query({"id": group_id, "is_deleted": {"$ne": True}}, org_id))
     if not group:
         raise HTTPException(status_code=404, detail="Asset group not found")
     
     update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
     update_dict["updated_at"] = get_ist_isoformat()
     
-    await db.asset_groups.update_one({"id": group_id}, {"$set": update_dict})
+    await db.asset_groups.update_one(scope_query({"id": group_id}, org_id), {"$set": update_dict})
     return {"message": "Asset group updated", "id": group_id}
 
 
@@ -6748,7 +6748,7 @@ async def delete_asset_group(group_id: str, admin: dict = Depends(get_current_ad
 async def add_devices_to_group(group_id: str, device_ids: List[str], admin: dict = Depends(get_current_admin)):
     """Add devices to an asset group"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    group = await db.asset_groups.find_one({"id": group_id, "is_deleted": {"$ne": True}})
+    group = await db.asset_groups.find_one(scope_query({"id": group_id, "is_deleted": {"$ne": True}}, org_id))
     if not group:
         raise HTTPException(status_code=404, detail="Asset group not found")
     
@@ -6766,7 +6766,7 @@ async def add_devices_to_group(group_id: str, device_ids: List[str], admin: dict
 async def remove_devices_from_group(group_id: str, device_ids: List[str], admin: dict = Depends(get_current_admin)):
     """Remove devices from an asset group"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    group = await db.asset_groups.find_one({"id": group_id, "is_deleted": {"$ne": True}})
+    group = await db.asset_groups.find_one(scope_query({"id": group_id, "is_deleted": {"$ne": True}}, org_id))
     if not group:
         raise HTTPException(status_code=404, detail="Asset group not found")
     
@@ -6816,14 +6816,14 @@ async def transfer_asset(transfer_data: AssetTransferRequest, admin: dict = Depe
     
     # Get current asset info
     if transfer_data.asset_type == "device":
-        asset = await db.devices.find_one({"id": transfer_data.asset_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+        asset = await db.devices.find_one(scope_query({"id": transfer_data.asset_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
         if not asset:
             raise HTTPException(status_code=404, detail="Device not found")
         from_employee_id = asset.get("assigned_employee_id")
         collection = db.devices
         update_field = "assigned_employee_id"
     elif transfer_data.asset_type == "accessory":
-        asset = await db.accessories.find_one({"id": transfer_data.asset_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+        asset = await db.accessories.find_one(scope_query({"id": transfer_data.asset_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
         if not asset:
             raise HTTPException(status_code=404, detail="Accessory not found")
         from_employee_id = asset.get("assigned_employee_id")
@@ -6835,12 +6835,12 @@ async def transfer_asset(transfer_data: AssetTransferRequest, admin: dict = Depe
     # Get employee names
     from_employee_name = None
     if from_employee_id:
-        from_emp = await db.company_employees.find_one({"id": from_employee_id}, {"_id": 0, "name": 1})
+        from_emp = await db.company_employees.find_one(scope_query({"id": from_employee_id}, org_id), {"_id": 0, "name": 1})
         from_employee_name = from_emp.get("name") if from_emp else None
     
     to_employee_name = None
     if transfer_data.to_employee_id:
-        to_emp = await db.company_employees.find_one({"id": transfer_data.to_employee_id}, {"_id": 0, "name": 1})
+        to_emp = await db.company_employees.find_one(scope_query({"id": transfer_data.to_employee_id}, org_id), {"_id": 0, "name": 1})
         if not to_emp:
             raise HTTPException(status_code=404, detail="Target employee not found")
         to_employee_name = to_emp.get("name")
@@ -6905,12 +6905,12 @@ async def list_asset_transfers(
     # Enrich with asset details
     for t in transfers:
         if t["asset_type"] == "device":
-            device = await db.devices.find_one({"id": t["asset_id"]}, {"_id": 0, "brand": 1, "model": 1, "serial_number": 1, "device_type": 1})
+            device = await db.devices.find_one(scope_query({"id": t["asset_id"]}, org_id), {"_id": 0, "brand": 1, "model": 1, "serial_number": 1, "device_type": 1})
             if device:
                 t["asset_name"] = f"{device.get('brand', '')} {device.get('model', device.get('device_type', ''))}"
                 t["asset_serial"] = device.get("serial_number")
         elif t["asset_type"] == "accessory":
-            acc = await db.accessories.find_one({"id": t["asset_id"]}, {"_id": 0, "name": 1, "brand": 1})
+            acc = await db.accessories.find_one(scope_query({"id": t["asset_id"]}, org_id), {"_id": 0, "name": 1, "brand": 1})
             if acc:
                 t["asset_name"] = acc.get("name")
     
@@ -6982,7 +6982,7 @@ async def create_accessory(acc_data: AccessoryCreate, admin: dict = Depends(get_
 async def get_accessory(accessory_id: str, admin: dict = Depends(get_current_admin)):
     """Get accessory details"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    acc = await db.accessories.find_one({"id": accessory_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    acc = await db.accessories.find_one(scope_query({"id": accessory_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not acc:
         raise HTTPException(status_code=404, detail="Accessory not found")
     return acc
@@ -6992,14 +6992,14 @@ async def get_accessory(accessory_id: str, admin: dict = Depends(get_current_adm
 async def update_accessory(accessory_id: str, update_data: AccessoryUpdate, admin: dict = Depends(get_current_admin)):
     """Update an accessory"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    acc = await db.accessories.find_one({"id": accessory_id, "is_deleted": {"$ne": True}})
+    acc = await db.accessories.find_one(scope_query({"id": accessory_id, "is_deleted": {"$ne": True}}, org_id))
     if not acc:
         raise HTTPException(status_code=404, detail="Accessory not found")
     
     update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
     update_dict["updated_at"] = get_ist_isoformat()
     
-    await db.accessories.update_one({"id": accessory_id}, {"$set": update_dict})
+    await db.accessories.update_one(scope_query({"id": accessory_id}, org_id), {"$set": update_dict})
     return {"message": "Accessory updated", "id": accessory_id}
 
 
@@ -8517,7 +8517,7 @@ async def list_company_users(
     
     # Add company names
     for u in users:
-        company = await db.companies.find_one({"id": u["company_id"]}, {"_id": 0, "name": 1})
+        company = await db.companies.find_one(scope_query({"id": u["company_id"]}, org_id), {"_id": 0, "name": 1})
         u["company_name"] = company.get("name") if company else None
     
     return users
@@ -8527,12 +8527,12 @@ async def create_company_user(data: CompanyUserCreate, admin: dict = Depends(get
     """Create company portal user (admin only)"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     # Check if company exists
-    company = await db.companies.find_one({"id": data.company_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    company = await db.companies.find_one(scope_query({"id": data.company_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
     # Check if email already exists
-    existing = await db.company_users.find_one({"email": data.email.lower()}, {"_id": 0})
+    existing = await db.company_users.find_one(scope_query({"email": data.email.lower()}, org_id), {"_id": 0})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
@@ -8559,7 +8559,7 @@ async def update_company_user(user_id: str, updates: CompanyUserUpdate, admin: d
     if not update_data:
         raise HTTPException(status_code=400, detail="No updates provided")
     
-    result = await db.company_users.update_one({"id": user_id}, {"$set": update_data})
+    result = await db.company_users.update_one(scope_query({"id": user_id}, org_id), {"$set": update_data})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -8588,7 +8588,7 @@ async def reset_company_user_password(user_id: str, new_password: str, admin: di
 async def delete_company_user(user_id: str, admin: dict = Depends(get_current_admin)):
     """Delete company portal user (admin only)"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    result = await db.company_users.update_one({"id": user_id}, {"$set": {"is_deleted": True}})
+    result = await db.company_users.update_one(scope_query({"id": user_id}, org_id), {"$set": {"is_deleted": True}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -8618,10 +8618,10 @@ async def list_internet_services(
     
     # Enrich with company and site names
     for service in services:
-        company = await db.companies.find_one({"id": service.get("company_id")})
+        company = await db.companies.find_one(scope_query({"id": service.get("company_id")}, org_id))
         service["company_name"] = company.get("name") if company else "Unknown"
         if service.get("site_id"):
-            site = await db.sites.find_one({"id": service["site_id"]})
+            site = await db.sites.find_one(scope_query({"id": service["site_id"]}, org_id))
             service["site_name"] = site.get("name") if site else None
         service.pop("_id", None)
     
@@ -8644,14 +8644,14 @@ async def create_internet_service(data: InternetServiceCreate, admin: dict = Dep
 async def get_internet_service(service_id: str, admin: dict = Depends(get_current_admin)):
     """Get internet service details"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    service = await db.internet_services.find_one({"id": service_id, "is_deleted": {"$ne": True}})
+    service = await db.internet_services.find_one(scope_query({"id": service_id, "is_deleted": {"$ne": True}}, org_id))
     if not service:
         raise HTTPException(status_code=404, detail="Internet service not found")
     
-    company = await db.companies.find_one({"id": service.get("company_id")})
+    company = await db.companies.find_one(scope_query({"id": service.get("company_id")}, org_id))
     service["company_name"] = company.get("name") if company else "Unknown"
     if service.get("site_id"):
-        site = await db.sites.find_one({"id": service["site_id"]})
+        site = await db.sites.find_one(scope_query({"id": service["site_id"]}, org_id))
         service["site_name"] = site.get("name") if site else None
     
     service.pop("_id", None)
@@ -8673,7 +8673,7 @@ async def update_internet_service(service_id: str, data: InternetServiceUpdate, 
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Internet service not found")
     
-    updated = await db.internet_services.find_one({"id": service_id})
+    updated = await db.internet_services.find_one(scope_query({"id": service_id}, org_id))
     updated.pop("_id", None)
     return updated
 
@@ -8716,7 +8716,7 @@ async def list_all_credentials(
         devices = await db.devices.find(device_query).to_list(1000)
         for device in devices:
             if device.get("credentials"):
-                company = await db.companies.find_one({"id": device.get("company_id")})
+                company = await db.companies.find_one(scope_query({"id": device.get("company_id")}, org_id))
                 credentials.append({
                     "id": device["id"],
                     "source_type": "device",
@@ -8738,10 +8738,10 @@ async def list_all_credentials(
         
         services = await db.internet_services.find(isp_query).to_list(1000)
         for service in services:
-            company = await db.companies.find_one({"id": service.get("company_id")})
+            company = await db.companies.find_one(scope_query({"id": service.get("company_id")}, org_id))
             site_name = None
             if service.get("site_id"):
-                site = await db.sites.find_one({"id": service["site_id"]})
+                site = await db.sites.find_one(scope_query({"id": service["site_id"]}, org_id))
                 site_name = site.get("name") if site else None
             
             # Extract credential-related fields
@@ -8812,7 +8812,7 @@ async def update_supply_category(category_id: str, data: SupplyCategoryUpdate, a
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Category not found")
     
-    updated = await db.supply_categories.find_one({"id": category_id}, {"_id": 0})
+    updated = await db.supply_categories.find_one(scope_query({"id": category_id}, org_id), {"_id": 0})
     return updated
 
 @api_router.delete("/admin/supply-categories/{category_id}")
@@ -8849,7 +8849,7 @@ async def create_supply_product(data: SupplyProductCreate, admin: dict = Depends
     """Create a new supply product"""
     org_id = await get_admin_org_id(admin.get("email", ""))
     # Verify category exists
-    category = await db.supply_categories.find_one({"id": data.category_id, "is_deleted": {"$ne": True}})
+    category = await db.supply_categories.find_one(scope_query({"id": data.category_id, "is_deleted": {"$ne": True}}, org_id))
     if not category:
         raise HTTPException(status_code=400, detail="Category not found")
     
@@ -8870,7 +8870,7 @@ async def update_supply_product(product_id: str, data: SupplyProductUpdate, admi
     
     # If category is being changed, verify it exists
     if "category_id" in update_data:
-        category = await db.supply_categories.find_one({"id": update_data["category_id"], "is_deleted": {"$ne": True}})
+        category = await db.supply_categories.find_one(scope_query({"id": update_data["category_id"], "is_deleted": {"$ne": True}}, org_id))
         if not category:
             raise HTTPException(status_code=400, detail="Category not found")
     
@@ -8881,8 +8881,8 @@ async def update_supply_product(product_id: str, data: SupplyProductUpdate, admi
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Product not found")
     
-    updated = await db.supply_products.find_one({"id": product_id}, {"_id": 0})
-    category = await db.supply_categories.find_one({"id": updated["category_id"]}, {"_id": 0})
+    updated = await db.supply_products.find_one(scope_query({"id": product_id}, org_id), {"_id": 0})
+    category = await db.supply_categories.find_one(scope_query({"id": updated["category_id"]}, org_id), {"_id": 0})
     updated["category_name"] = category["name"] if category else "Unknown"
     return updated
 
@@ -8958,7 +8958,7 @@ async def list_supply_orders(
 async def get_supply_order(order_id: str, admin: dict = Depends(get_current_admin)):
     """Get a specific supply order"""
     org_id = await get_admin_org_id(admin.get("email", ""))
-    order = await db.supply_orders.find_one({"id": order_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    order = await db.supply_orders.find_one(scope_query({"id": order_id, "is_deleted": {"$ne": True}}, org_id), {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     return order
@@ -8984,7 +8984,7 @@ async def update_supply_order(order_id: str, data: dict, admin: dict = Depends(g
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    updated = await db.supply_orders.find_one({"id": order_id}, {"_id": 0})
+    updated = await db.supply_orders.find_one(scope_query({"id": order_id}, org_id), {"_id": 0})
     return updated
 
 # ==================== OFFICE SUPPLIES COMPANY ENDPOINTS ====================
