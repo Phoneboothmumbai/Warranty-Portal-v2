@@ -8239,6 +8239,7 @@ async def ai_support_chat(data: AISupportMessage, user: dict = Depends(get_curre
 async def generate_ai_summary(data: AISupportSummaryRequest, user: dict = Depends(get_current_company_user)):
     """
     Generate ticket subject and description from AI chat history using AI summarization.
+    Uses company user context for isolation.
     """
     from services.ai_support import generate_ticket_summary_ai
     
@@ -8420,7 +8421,8 @@ async def update_company_profile(
     updates: dict,
     user: dict = Depends(get_current_company_user)
 ):
-    """Update user profile"""
+    """Update user profile - scoped to user's own record"""
+    user_id = user.get("id")
     # Allow updating user's own profile fields
     user_fields = ["name", "phone"]
     password_fields = ["current_password", "new_password"]
@@ -8992,15 +8994,22 @@ async def update_supply_order(order_id: str, data: dict, admin: dict = Depends(g
 @api_router.get("/company/supply-catalog")
 async def get_supply_catalog(user: dict = Depends(get_current_company_user)):
     """Get supply catalog (categories with their products) for ordering"""
-    # Get active categories
+    org_id = user.get("organization_id")
+    # Get active categories - scoped by org
+    cat_query = {"is_deleted": {"$ne": True}, "is_active": True}
+    if org_id:
+        cat_query["organization_id"] = org_id
     categories = await db.supply_categories.find(
-        {"is_deleted": {"$ne": True}, "is_active": True},
+        cat_query,
         {"_id": 0}
     ).sort("sort_order", 1).to_list(100)
     
-    # Get active products
+    # Get active products - scoped by org
+    prod_query = {"is_deleted": {"$ne": True}, "is_active": True}
+    if org_id:
+        prod_query["organization_id"] = org_id
     products = await db.supply_products.find(
-        {"is_deleted": {"$ne": True}, "is_active": True},
+        prod_query,
         {"_id": 0, "internal_notes": 0}  # Exclude internal notes from company view
     ).to_list(500)
     
