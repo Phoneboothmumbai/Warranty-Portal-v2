@@ -2706,16 +2706,20 @@ async def list_company_employees(
 @api_router.post("/admin/company-employees")
 async def create_company_employee(employee: CompanyEmployeeCreate, admin: dict = Depends(get_current_admin)):
     """Create a new company employee"""
-    # Verify company exists
-    company = await db.companies.find_one({"id": employee.company_id, "is_deleted": {"$ne": True}})
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    # Verify company exists within tenant
+    company = await db.companies.find_one(scope_query({"id": employee.company_id, "is_deleted": {"$ne": True}}, org_id))
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
     new_employee = CompanyEmployee(**employee.model_dump())
-    await db.company_employees.insert_one(new_employee.model_dump())
-    await log_audit("company_employee", new_employee.id, "create", new_employee.model_dump(), admin)
+    emp_dict = new_employee.model_dump()
+    if org_id:
+        emp_dict["organization_id"] = org_id
+    await db.company_employees.insert_one(emp_dict)
+    await log_audit("company_employee", new_employee.id, "create", {k: v for k, v in emp_dict.items() if k != "_id"}, admin)
     
-    result = new_employee.model_dump()
+    result = {k: v for k, v in emp_dict.items() if k != "_id"}
     result["company_name"] = company.get("name")
     return result
 
@@ -5797,25 +5801,29 @@ async def unassign_device_from_amc(
 
 @api_router.get("/admin/dashboard")
 async def get_dashboard_stats(admin: dict = Depends(get_current_admin)):
-    companies_count = await db.companies.count_documents({"is_deleted": {"$ne": True}})
-    users_count = await db.users.count_documents({"is_deleted": {"$ne": True}})
-    devices_count = await db.devices.count_documents({"is_deleted": {"$ne": True}})
-    parts_count = await db.parts.count_documents({"is_deleted": {"$ne": True}})
-    services_count = await db.service_history.count_documents({})
+    org_id = await get_admin_org_id(admin.get("email", ""))
+    base = {"is_deleted": {"$ne": True}}
+    scoped = scope_query(base.copy(), org_id)
+    
+    companies_count = await db.companies.count_documents(scoped)
+    users_count = await db.users.count_documents(scope_query({"is_deleted": {"$ne": True}}, org_id))
+    devices_count = await db.devices.count_documents(scope_query({"is_deleted": {"$ne": True}}, org_id))
+    parts_count = await db.parts.count_documents(scope_query({"is_deleted": {"$ne": True}}, org_id))
+    services_count = await db.service_history.count_documents(scope_query({}, org_id))
     
     today = get_ist_now().strftime('%Y-%m-%d')
-    active_warranties = await db.devices.count_documents({
+    active_warranties = await db.devices.count_documents(scope_query({
         "is_deleted": {"$ne": True},
         "warranty_end_date": {"$gte": today}
-    })
+    }, org_id))
     
-    active_amc = await db.amc.count_documents({
+    active_amc = await db.amc.count_documents(scope_query({
         "is_deleted": {"$ne": True},
         "end_date": {"$gte": today}
-    })
+    }, org_id))
     
-    recent_devices = await db.devices.find({"is_deleted": {"$ne": True}}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
-    recent_services = await db.service_history.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
+    recent_devices = await db.devices.find(scope_query({"is_deleted": {"$ne": True}}, org_id), {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
+    recent_services = await db.service_history.find(scope_query({}, org_id), {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
     
     return {
         "companies_count": companies_count,
@@ -5833,6 +5841,7 @@ async def get_dashboard_stats(admin: dict = Depends(get_current_admin)):
 @api_router.get("/admin/dashboard/alerts")
 async def get_dashboard_alerts(admin: dict = Depends(get_current_admin)):
     """Get warranty and AMC expiry alerts"""
+    org_id = await get_admin_org_id(admin.get("email", ""))
     today = get_ist_now()
     
     alerts = {
@@ -5846,9 +5855,9 @@ async def get_dashboard_alerts(admin: dict = Depends(get_current_admin)):
         "devices_lost": []
     }
     
-    # Get all devices with warranty
+    # Get all devices with warranty - SCOPED
     devices = await db.devices.find(
-        {"is_deleted": {"$ne": True}, "warranty_end_date": {"$ne": None}},
+        scope_query({"is_deleted": {"$ne": True}, "warranty_end_date": {"$ne": None}}, org_id),
         {"_id": 0}
     ).to_list(1000)
     
@@ -5898,8 +5907,8 @@ async def get_dashboard_alerts(admin: dict = Depends(get_current_admin)):
                 "serial_number": device.get("serial_number")
             })
     
-    # AMC alerts
-    amc_list = await db.amc.find({"is_deleted": {"$ne": True}}, {"_id": 0}).to_list(1000)
+    # AMC alerts - SCOPED
+    amc_list = await db.amc.find(scope_query({"is_deleted": {"$ne": True}}, org_id), {"_id": 0}).to_list(1000)
     for amc in amc_list:
         days = days_until_expiry(amc.get("end_date", ""))
         device = await db.devices.find_one({"id": amc.get("device_id")}, {"_id": 0, "brand": 1, "model": 1, "serial_number": 1})
@@ -5929,7 +5938,7 @@ async def get_dashboard_alerts(admin: dict = Depends(get_current_admin)):
     alerts["amc_contracts_expiring_30_days"] = []
     alerts["companies_without_amc"] = []
     
-    contracts = await db.amc_contracts.find({"is_deleted": {"$ne": True}}, {"_id": 0}).to_list(1000)
+    contracts = await db.amc_contracts.find(scope_query({"is_deleted": {"$ne": True}}, org_id), {"_id": 0}).to_list(1000)
     for contract in contracts:
         days = days_until_expiry(contract.get("end_date", ""))
         company = await db.companies.find_one({"id": contract.get("company_id")}, {"_id": 0, "name": 1})
@@ -5951,8 +5960,8 @@ async def get_dashboard_alerts(admin: dict = Depends(get_current_admin)):
         elif 15 < days <= 30:
             alerts["amc_contracts_expiring_30_days"].append(alert_item)
     
-    # Companies without any active AMC contract
-    companies = await db.companies.find({"is_deleted": {"$ne": True}}, {"_id": 0}).to_list(1000)
+    # Companies without any active AMC contract - SCOPED
+    companies = await db.companies.find(scope_query({"is_deleted": {"$ne": True}}, org_id), {"_id": 0}).to_list(1000)
     for company in companies:
         has_active_contract = False
         for contract in contracts:
