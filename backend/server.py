@@ -6812,7 +6812,7 @@ class AssetTransferRequest(BaseModel):
 async def transfer_asset(transfer_data: AssetTransferRequest, admin: dict = Depends(get_current_admin)):
     """Transfer an asset (device or accessory) to another employee"""
     
-org_id = await get_admin_org_id(admin.get("email", ""))
+    org_id = await get_admin_org_id(admin.get("email", ""))
     
     # Get current asset info
     if transfer_data.asset_type == "device":
