@@ -3347,9 +3347,9 @@ async def update_device(device_id: str, updates: DeviceUpdate, admin: dict = Dep
     
     changes = {k: {"old": existing.get(k), "new": v} for k, v in update_data.items() if existing.get(k) != v}
     
-    result = await db.devices.update_one({"id": device_id}, {"$set": update_data})
+    result = await db.devices.update_one(scope_query({"id": device_id}, org_id), {"$set": update_data})
     await log_audit("device", device_id, "update", changes, admin)
-    return await db.devices.find_one({"id": device_id}, {"_id": 0})
+    return await db.devices.find_one(scope_query({"id": device_id}, org_id), {"_id": 0})
 
 @api_router.delete("/admin/devices/{device_id}")
 async def delete_device(device_id: str, admin: dict = Depends(get_current_admin)):
@@ -3791,9 +3791,9 @@ async def update_service(service_id: str, updates: ServiceHistoryUpdate, admin: 
     
     changes = {k: {"old": existing.get(k), "new": v} for k, v in update_data.items() if existing.get(k) != v}
     
-    result = await db.service_history.update_one({"id": service_id}, {"$set": update_data})
+    result = await db.service_history.update_one(scope_query({"id": service_id}, org_id), {"$set": update_data})
     await log_audit("service", service_id, "update", changes, admin)
-    return await db.service_history.find_one({"id": service_id}, {"_id": 0})
+    return await db.service_history.find_one(scope_query({"id": service_id}, org_id), {"_id": 0})
 
 
 # ==================== STAGE MANAGEMENT ENDPOINTS ====================
