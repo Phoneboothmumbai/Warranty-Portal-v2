@@ -87,8 +87,8 @@ const IMAGES = {
 const LandingPage = () => {
   const { settings } = useSettings();
 
-  const stat1 = useCountUp(50000, 2200);
-  const stat2 = useCountUp(200, 1800);
+  const stat1 = useCountUp(5000, 2200);
+  const stat2 = useCountUp(30, 1800);
 
   const features = [
     {
@@ -190,7 +190,7 @@ const LandingPage = () => {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0F62FE] opacity-75" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-[#0F62FE]" />
                   </span>
-                  <span className="text-sm font-medium text-[#0F62FE] font-mono tracking-wide">Trusted by 200+ IT Teams</span>
+                  <span className="text-sm font-medium text-[#0F62FE] font-mono tracking-wide">Trusted by 30+ IT Teams</span>
                 </div>
               </FadeIn>
 
