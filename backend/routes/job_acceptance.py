@@ -656,6 +656,13 @@ async def _resolve_engineer(user: dict):
         {"_id": 0, "id": 1, "name": 1, "organization_id": 1}
     )
     if not engineer:
+        # Also check staff_users (staff can log into engineer portal)
+        staff = await _db.staff_users.find_one(
+            {"$or": [{"id": eng_id}, {"email": email}], "state": "active", "is_deleted": {"$ne": True}},
+            {"_id": 0, "id": 1, "name": 1, "organization_id": 1}
+        )
+        if staff:
+            return staff
         raise HTTPException(status_code=404, detail="Engineer profile not found")
     return engineer
 
