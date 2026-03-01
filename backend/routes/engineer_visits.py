@@ -395,7 +395,7 @@ async def checkout_visit(visit_id: str, data: CheckoutRequest, engineer: dict = 
 
     # Auto-deduct inventory for parts used during this visit
     parts_used = visit.get("parts_requested", [])
-    if parts_used and resolution == "fixed":
+    if parts_used:
         org_id = eng["organization_id"]
         for part in parts_used:
             pid = part.get("product_id")
@@ -427,6 +427,10 @@ async def checkout_visit(visit_id: str, data: CheckoutRequest, engineer: dict = 
                 "performed_by_id": eng["id"],
                 "created_at": checkout_time,
             })
+
+        # Auto-create/update pending bill for this ticket
+        from routes.inventory import upsert_pending_bill
+        await upsert_pending_bill(org_id, visit.get("ticket_id"), parts_used, visit_id, eng["name"])
 
     # Update ticket stage
     timeline_entry = {
