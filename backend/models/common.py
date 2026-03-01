@@ -66,3 +66,4 @@ class SettingsUpdate(BaseModel):
     logo_base64: Optional[str] = None
     accent_color: Optional[str] = None
     company_name: Optional[str] = None
+    billing_emails: Optional[list] = None
