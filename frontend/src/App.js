@@ -29,6 +29,7 @@ import AMCManagement from "./pages/admin/AMCManagement";
 import Settings from "./pages/admin/Settings";
 import MasterData from "./pages/admin/MasterData";
 import ItemMaster from "./pages/admin/ItemMaster";
+import PartsRequests from "./pages/admin/PartsRequests";
 import ServiceHistory from "./pages/admin/ServiceHistory";
 import AMCContracts from "./pages/admin/AMCContracts";
 import Sites from "./pages/admin/Sites";
