@@ -81,6 +81,7 @@ const navGroups = [
       { path: '/admin/master-data', label: 'Master Data', icon: Database },
       { path: '/admin/item-master', label: 'Item Master', icon: Package },
       { path: '/admin/parts-requests', label: 'Parts Requests', icon: Wrench },
+      { path: '/admin/pending-bills', label: 'Pending Bills', icon: IndianRupee },
       { path: '/admin/integrations/watchtower', label: 'WatchTower', icon: Monitor },
       { path: '/admin/integrations/moltbot', label: 'MoltBot (Chat)', icon: MessageSquare },
       { path: '/admin/integrations/tgms', label: 'Remote Management', icon: Laptop },
