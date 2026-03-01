@@ -955,6 +955,7 @@ export default function ItemMaster() {
       {activeTab === 'categories' && <CategoriesTab token={token} />}
       {activeTab === 'products' && <ProductsTab token={token} />}
       {activeTab === 'bundles' && <BundlesTab token={token} />}
+      {activeTab === 'inventory' && <InventoryTab token={token} />}
     </div>
   );
 }
