@@ -194,6 +194,7 @@ function App() {
                     <Route path="master-data" element={<MasterData />} />
                     <Route path="item-master" element={<ItemMaster />} />
                     <Route path="parts-requests" element={<PartsRequests />} />
+                    <Route path="pending-bills" element={<PendingBills />} />
                     <Route path="settings" element={<Settings />} />
                     <Route path="organization" element={<OrganizationSettings />} />
                     <Route path="static-pages" element={<StaticPages />} />
