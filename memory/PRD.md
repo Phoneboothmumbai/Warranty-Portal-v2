@@ -10,7 +10,7 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - Central calendar (admin) and personal calendar (engineer)
 - Workforce management with working hours, holidays, salary
 - **Strict multi-tenant data isolation** - all data scoped by organization_id
-- Enhanced ticket creation: Company → Site → Employee → Device with inline "Add New"
+- Enhanced ticket creation: Company > Site > Employee > Device with inline "Add New"
 
 ## What's Been Implemented
 
@@ -28,7 +28,7 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - Admin reassignment UI for declined tickets
 
 ### Enhanced Ticket Creation (Feb 27, 2026)
-- Multi-step: Company → Site → Employee → Device cascading flow
+- Multi-step: Company > Site > Employee > Device cascading flow
 - "Add New Site" inline form saves to DB, syncs across portal
 - "Add New Employee" inline form saves to DB, syncs across portal
 - Employee auto-fills contact fields
@@ -40,70 +40,48 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - masters.py, companies.py, amc_requests.py, amc_onboarding.py, qr_service.py all scoped
 - All bulk import endpoints scoped by organization_id
 
+### Item Master Module (Feb 27, 2026)
+- Categories, Products, Product Bundles CRUD
+- Quotation Integration with bundle recommendations
+- Frontend: 3-tab interface at /admin/item-master
+- Testing: 25/25 backend tests passed
+
+### Quotation System (Feb 27, 2026)
+- Full CRUD at /api/admin/quotations/*
+- Per-line GST, auto-calculated totals
+- Company endpoints for list/approve/reject
+- Testing: 17/17 backend tests passed
+
+### Complete Tenant Isolation (Feb 27, 2026)
+- Every admin endpoint scoped by organization_id
+- Dashboard stats strictly tenant-scoped
+- Data migration backfilled 191 records
+
+### Composite Email Uniqueness (Mar 1, 2026)
+- UNIQUE(organization_id, email) across companies, users, engineers, staff_users
+- DB-level composite unique indexes
+
+### Homepage Redesign (Feb 28, 2026)
+- Corporate hero, animated KPIs, bento grid features, testimonial section
+- Updated branding to "aftersales.support"
+
+### Engineer Reschedule Fix - Slot-Based Scheduling (Mar 1, 2026)
+- **Completely rebuilt** the reschedule UI in PendingCard component
+- Replaced broken datetime-local input with date picker + slot grid
+- New backend endpoint: `GET /api/engineer/available-slots?date=YYYY-MM-DD`
+- Shows 30-minute time slots within engineer's working hours
+- Blocks past times, holidays, non-working days
+- Blocks already-booked slots with 1-hour buffer (greyed out + line-through)
+- Available slots clickable with blue highlight on selection
+- Backend validation: past date, 30-min intervals, working hours, slot availability
+- **Testing: 95% backend (18/19), 100% frontend - ALL PASS**
+
 ## Architecture
 - Frontend: React + Tailwind + Shadcn/UI
 - Backend: FastAPI + Motor (MongoDB async)
 - Database: MongoDB
 - Auth: JWT-based, separate admin/engineer tokens
-- Multi-tenancy: organization_id on all collections, hard-fail scope enforcement
-
-### Item Master Module (Feb 27, 2026)
-- **Categories**: CRUD for product categories (e.g., Security, Networking)
-- **Products**: Full CRUD with SKU, part number, brand, manufacturer, pricing, GST slabs (0/5/12/18/28%), HSN code
-- **Product Bundles**: Link products as recommendations (e.g., CCTV Camera suggests NVR, HDD, POE Switch)
-- **Quotation Integration**: `/api/admin/item-master/products/{id}/suggestions` returns bundle recommendations
-- **Collections**: `item_categories`, `item_products`, `item_bundles`
-- **Frontend**: 3-tab interface at `/admin/item-master` under Settings group
-- **Testing**: 25/25 backend tests passed, all frontend flows verified
-
-### Quotation System with Item Master Integration (Feb 27, 2026)
-- **Backend Quotation API**: Full CRUD at `/api/admin/quotations/*` — create, list, get, update, send, delete
-- **Per-line GST**: Each line item has its own GST slab (0/5/12/18/28%), with auto-calculated gst_amount and line_total
-- **Totals**: Auto-calculated subtotal, total_gst, grand_total on every quotation
-- **Company Endpoints**: `/api/company/quotations` (list), `/{id}/respond` (approve/reject)
-- **Enhanced QuotationModal** in ticket detail: Product picker from Item Master, bundle suggestions, real-time GST calc, Save Draft/Send
-- **Enhanced PartsListModal**: Quick add from Item Master catalog search
-- **CompanyQuotations.js**: Per-item GST column in detail modal, enhanced totals display
-- **Collection**: `quotations`
-- **Testing**: 17/17 backend tests passed, all frontend flows verified
-
-### Complete Tenant Isolation Hardening (Feb 27, 2026)
-- **Scope**: Every single admin endpoint in server.py (115+ functions) now enforces `organization_id` via `scope_query()`
-- **Read isolation**: All find/find_one/count_documents queries wrapped with `scope_query(query, org_id)`  
-- **Write isolation**: All insert_one calls now stamp `organization_id = org_id` on new records
-- **Update/Delete isolation**: All update_one/update_many calls scoped by org_id
-- **Dashboard**: Stats and alerts now strictly tenant-scoped (was global before)
-- **Create Employee**: Now stamps org_id on new records + validates company within tenant
-- **Settings**: Admin settings now isolated per organization
-- **Supply Catalog (company portal)**: Scoped by org_id
-- **Data migration**: Backfilled `organization_id` on 191 existing records missing it
-- **Audit result**: 0 unscoped admin endpoints, 2 company endpoints (safe by design: AI summary + self-profile update)
-
-### Composite Email Uniqueness (Mar 1, 2026)
-- Enforced `UNIQUE(organization_id, email)` across: companies, users, company_users, engineers, staff_users
-- Backend validation on 5 creation endpoints + bulk import
-- DB-level composite unique indexes
-- Rule: Email unique per tenant, allowed across tenants
-
-### Engineer Reschedule Fix (Mar 1, 2026)
-- Fixed `_resolve_engineer()` to check both `engineers` and `staff_users` collections
-- Staff users logging into engineer portal can now reschedule jobs
-
-### Contact Details & Pricing Fix (Mar 1, 2026)
-- Updated contact page: support@aftersales.support, +91 97694 44455, Mumbai address
-- Fixed Enterprise pricing showing "Free" → now shows "Custom"
-- Updated all hardcoded "Warranty Portal" → "aftersales.support"
-
-### Homepage Redesign (Feb 28, 2026)
-- **Complete redesign** of `LandingPage.js` — from generic centered layout to corporate, asymmetric, image-rich design
-- **Asymmetric hero**: Text left (60%) + dashboard visual with floating stat cards right (40%)
-- **Animated KPI stats bar**: 50,000+ Assets, 200+ MSPs, 99.9% Uptime, <2hr Response (with scroll-triggered counters)
-- **Bento grid features**: Mixed image cards (server room, engineer) + icon cards in varied sizes
-- **Full-width testimonial break**: Professional team photo with dark overlay + client quote
-- **Pricing**: Professional plan highlighted in dark navy with cyan badge
-- **Final CTA**: Split layout with workspace image
-- **Brand**: Updated default name to "aftersales.support" across PublicHeader + PublicFooter
-- **Testing**: 16/16 frontend tests passed, responsive design verified
+- Multi-tenancy: organization_id on all collections
 
 ## Prioritized Backlog
 
@@ -127,4 +105,5 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 
 ## Credentials
 - Admin: ck@motta.in / Charu@123@
+- Test Engineer: testeng@test.com / Test@123
 - Production domain: aftersales.support
