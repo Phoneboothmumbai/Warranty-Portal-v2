@@ -165,9 +165,7 @@ export function TenantProvider({ children }) {
       }
       
       // Set page title
-      if (company_name) {
-        document.title = company_name;
-      }
+      document.title = 'aftersales.support';
       
       // Set favicon
       if (favicon_url) {
