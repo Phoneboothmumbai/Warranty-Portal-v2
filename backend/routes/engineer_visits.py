@@ -481,7 +481,7 @@ async def update_parts_request_status(
         timeline_entry = {
             "id": str(uuid.uuid4()),
             "type": "parts_approved",
-            "description": f"Parts request approved. Procurement in progress.",
+            "description": "Parts request approved. Procurement in progress.",
             "user_name": admin.get("name", "Admin"),
             "created_at": now_ist(),
         }
@@ -494,7 +494,7 @@ async def update_parts_request_status(
         timeline_entry = {
             "id": str(uuid.uuid4()),
             "type": "parts_delivered",
-            "description": f"Parts delivered. Ready for engineer revisit.",
+            "description": "Parts delivered. Ready for engineer revisit.",
             "user_name": admin.get("name", "Admin"),
             "created_at": now_ist(),
         }
