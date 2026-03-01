@@ -2650,6 +2650,13 @@ async def create_user(user_data: UserCreate, admin: dict = Depends(get_current_a
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
+    # Enforce UNIQUE(organization_id, email) within tenant
+    existing_user = await db.users.find_one(scope_query({
+        "email": user_data.email, "is_deleted": {"$ne": True}
+    }, org_id))
+    if existing_user:
+        raise HTTPException(status_code=400, detail=f"A user with email '{user_data.email}' already exists in your tenant")
+    
     user_dict = user_data.model_dump()
     if org_id:
         user_dict["organization_id"] = org_id
