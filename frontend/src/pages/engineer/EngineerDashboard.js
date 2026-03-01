@@ -90,20 +90,33 @@ const PendingCard = ({ ticket, declineReasons, onAccept, onDecline, onReschedule
         <div className="mt-3 bg-white rounded-lg border p-3 space-y-2" data-testid={`reschedule-form-${ticket.ticket_number}`}>
           <p className="text-xs font-medium text-blue-700">Propose a new time:</p>
           <div className="flex gap-2">
-            <Input type="date" className="text-sm" value={proposedDate} onChange={e => setProposedDate(e.target.value)} min={new Date().toISOString().split('T')[0]} data-testid="reschedule-date" />
-            <Input type="time" className="text-sm" value={proposedTime} onChange={e => setProposedTime(e.target.value)} data-testid="reschedule-time" />
+            <input type="datetime-local" className="flex-1 border rounded-md px-3 py-2 text-sm bg-white" 
+              id={`reschedule-dt-${ticket.id}`}
+              min={new Date().toISOString().slice(0,16)} 
+              data-testid="reschedule-datetime" />
           </div>
-          <Input placeholder="Notes (optional)" value={notes} onChange={e => setNotes(e.target.value)} className="text-sm" />
+          <input type="text" placeholder="Notes (optional)" className="w-full border rounded-md px-3 py-2 text-sm"
+            id={`reschedule-notes-${ticket.id}`}
+            data-testid="reschedule-notes" />
           <div className="flex gap-2">
-            <Button size="sm" disabled={!proposedDate || !proposedTime} onClick={() => {
-              const dt = `${proposedDate}T${proposedTime}:00`;
-              const [h, m] = proposedTime.split(':').map(Number);
-              const endMins = h * 60 + m + 60;
-              const endDt = `${proposedDate}T${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}:00`;
-              onReschedule(ticket.id, dt, endDt, notes);
-            }} data-testid={`confirm-reschedule-${ticket.ticket_number}`}>
+            <button 
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 h-9 px-4 transition-colors"
+              data-testid={`confirm-reschedule-${ticket.ticket_number}`}
+              onClick={() => {
+                const dtInput = document.getElementById(`reschedule-dt-${ticket.id}`);
+                const notesInput = document.getElementById(`reschedule-notes-${ticket.id}`);
+                const dtVal = dtInput ? dtInput.value : '';
+                const notesVal = notesInput ? notesInput.value : '';
+                if (!dtVal) { toast.error('Please select a date and time'); return; }
+                const dt = dtVal.includes('T') ? dtVal + ':00' : dtVal + 'T00:00:00';
+                const endDate = new Date(dtVal);
+                endDate.setHours(endDate.getHours() + 1);
+                const endDt = endDate.toISOString().slice(0,19);
+                onReschedule(ticket.id, dt, endDt, notesVal);
+              }}
+            >
               Accept & Reschedule
-            </Button>
+            </button>
             <Button size="sm" variant="ghost" onClick={() => setAction(null)}>Cancel</Button>
           </div>
         </div>
