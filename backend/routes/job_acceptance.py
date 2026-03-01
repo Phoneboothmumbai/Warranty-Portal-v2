@@ -711,7 +711,7 @@ async def engineer_accept(data: AcceptJobRequest, engineer: dict = Depends(get_c
     """Engineer accepts job."""
     eng = await _resolve_engineer(engineer)
     ticket = await _db.tickets_v2.find_one({
-        "id": data.ticket_id, "assigned_to_id": eng["id"],
+        "id": data.ticket_id, "assigned_to_id": {"$in": eng["all_ids"]},
         "assignment_status": "pending", "is_deleted": {"$ne": True}
     })
     if not ticket:
@@ -786,7 +786,7 @@ async def engineer_decline(data: DeclineJobRequest, engineer: dict = Depends(get
     """Engineer declines job."""
     eng = await _resolve_engineer(engineer)
     ticket = await _db.tickets_v2.find_one({
-        "id": data.ticket_id, "assigned_to_id": eng["id"],
+        "id": data.ticket_id, "assigned_to_id": {"$in": eng["all_ids"]},
         "assignment_status": "pending", "is_deleted": {"$ne": True}
     })
     if not ticket:
@@ -840,7 +840,7 @@ async def engineer_reschedule(data: RescheduleJobRequest, engineer: dict = Depen
     """Engineer accepts but proposes different time."""
     eng = await _resolve_engineer(engineer)
     ticket = await _db.tickets_v2.find_one({
-        "id": data.ticket_id, "assigned_to_id": eng["id"],
+        "id": data.ticket_id, "assigned_to_id": {"$in": eng["all_ids"]},
         "assignment_status": "pending", "is_deleted": {"$ne": True}
     })
     if not ticket:
