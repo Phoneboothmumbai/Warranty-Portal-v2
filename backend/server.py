@@ -2125,12 +2125,23 @@ async def bulk_import_companies(data: dict, admin: dict = Depends(get_current_ad
             # Check for duplicate company code (field is 'code' in Company model)
             company_code = record.get("company_code") or record.get("code")
             if company_code:
-                existing = await db.companies.find_one({
+                existing = await db.companies.find_one(scope_query({
                     "code": company_code,
                     "is_deleted": {"$ne": True}
-                })
+                }, org_id))
                 if existing:
                     errors.append({"row": idx + 2, "message": f"Company code {company_code} already exists"})
+                    continue
+            
+            # Enforce UNIQUE(organization_id, contact_email) within tenant
+            contact_email = record.get("contact_email")
+            if contact_email:
+                email_dup = await db.companies.find_one(scope_query({
+                    "contact_email": contact_email,
+                    "is_deleted": {"$ne": True}
+                }, org_id))
+                if email_dup:
+                    errors.append({"row": idx + 2, "message": f"Email {contact_email} already exists in your tenant"})
                     continue
             
             company = Company(
