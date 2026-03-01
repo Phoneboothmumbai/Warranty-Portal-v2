@@ -242,7 +242,7 @@ export default function SignupPage() {
       const options = {
         key: response.data.razorpay_key,
         subscription_id: response.data.subscription_id,
-        name: 'Warranty Portal',
+        name: 'aftersales.support',
         description: `${getSelectedPlanData()?.name || 'Selected'} Plan`,
         handler: async (razorpayResponse) => {
           await axios.post(`${API}/api/billing/verify-payment`, {
@@ -404,7 +404,7 @@ export default function SignupPage() {
           <div className="max-w-xl mx-auto" data-testid="account-form">
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-slate-900 mb-2">Create Your Account</h1>
-              <p className="text-slate-600">Set up your organization on Warranty Portal</p>
+              <p className="text-slate-600">Set up your organization on aftersales.support</p>
             </div>
 
             <form onSubmit={handleSignup} className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">

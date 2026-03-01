@@ -177,7 +177,7 @@ const AdminSetup = () => {
             href="/" 
             className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
           >
-            ← Back to Warranty Portal
+            ← Back to aftersales.support
           </a>
         </div>
       </div>
