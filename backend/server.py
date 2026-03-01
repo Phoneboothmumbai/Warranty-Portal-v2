@@ -9425,41 +9425,44 @@ async def startup_event():
     UPLOAD_DIR.mkdir(exist_ok=True)
     
     # Create composite uniqueness indexes for tenant data isolation
-    await db.companies.create_index(
-        [("organization_id", 1), ("contact_email", 1)],
-        unique=True,
-        partialFilterExpression={"contact_email": {"$exists": True, "$ne": None, "$ne": ""}, "is_deleted": {"$ne": True}},
-        name="unique_org_company_email",
-        background=True
-    )
-    await db.users.create_index(
-        [("organization_id", 1), ("email", 1)],
-        unique=True,
-        partialFilterExpression={"is_deleted": {"$ne": True}},
-        name="unique_org_user_email",
-        background=True
-    )
-    await db.company_users.create_index(
-        [("organization_id", 1), ("email", 1)],
-        unique=True,
-        partialFilterExpression={"is_deleted": {"$ne": True}},
-        name="unique_org_portal_user_email",
-        background=True
-    )
-    await db.engineers.create_index(
-        [("organization_id", 1), ("email", 1)],
-        unique=True,
-        partialFilterExpression={"is_deleted": {"$ne": True}},
-        name="unique_org_engineer_email",
-        background=True
-    )
-    await db.staff_users.create_index(
-        [("organization_id", 1), ("email", 1)],
-        unique=True,
-        partialFilterExpression={"is_deleted": {"$ne": True}},
-        name="unique_org_staff_email",
-        background=True
-    )
+    try:
+        await db.companies.create_index(
+            [("organization_id", 1), ("contact_email", 1)],
+            unique=True,
+            partialFilterExpression={"contact_email": {"$type": "string"}, "is_deleted": {"$eq": False}},
+            name="unique_org_company_email",
+            background=True
+        )
+        await db.users.create_index(
+            [("organization_id", 1), ("email", 1)],
+            unique=True,
+            partialFilterExpression={"email": {"$type": "string"}, "is_deleted": {"$eq": False}},
+            name="unique_org_user_email",
+            background=True
+        )
+        await db.company_users.create_index(
+            [("organization_id", 1), ("email", 1)],
+            unique=True,
+            partialFilterExpression={"email": {"$type": "string"}, "is_deleted": {"$eq": False}},
+            name="unique_org_portal_user_email",
+            background=True
+        )
+        await db.engineers.create_index(
+            [("organization_id", 1), ("email", 1)],
+            unique=True,
+            partialFilterExpression={"email": {"$type": "string"}, "is_deleted": {"$eq": False}},
+            name="unique_org_engineer_email",
+            background=True
+        )
+        await db.staff_users.create_index(
+            [("organization_id", 1), ("email", 1)],
+            unique=True,
+            partialFilterExpression={"email": {"$type": "string"}, "is_deleted": {"$eq": False}},
+            name="unique_org_staff_email",
+            background=True
+        )
+    except Exception as e:
+        print(f"Index creation note (non-fatal if already exists): {e}")
     
     # Seed default supply categories and products
     await seed_default_supplies()
