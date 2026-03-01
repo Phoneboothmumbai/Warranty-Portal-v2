@@ -80,6 +80,7 @@ const navGroups = [
       { path: '/admin/knowledge-base', label: 'Knowledge Base', icon: BookOpen },
       { path: '/admin/master-data', label: 'Master Data', icon: Database },
       { path: '/admin/item-master', label: 'Item Master', icon: Package },
+      { path: '/admin/parts-requests', label: 'Parts Requests', icon: Wrench },
       { path: '/admin/integrations/watchtower', label: 'WatchTower', icon: Monitor },
       { path: '/admin/integrations/moltbot', label: 'MoltBot (Chat)', icon: MessageSquare },
       { path: '/admin/integrations/tgms', label: 'Remote Management', icon: Laptop },
