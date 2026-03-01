@@ -168,8 +168,8 @@ function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Contact</h4>
             <ul className="space-y-2 text-sm">
-              <li>support@yourcompany.com</li>
-              <li>+91 98765 43210</li>
+              <li>support@aftersales.support</li>
+              <li>+91 97694 44455</li>
             </ul>
           </div>
         </div>

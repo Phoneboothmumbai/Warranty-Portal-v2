@@ -81,6 +81,7 @@ const PricingPage = () => {
   const getPrice = (plan) => {
     if (plan.is_trial) return 'Free';
     const price = billingPeriod === 'yearly' ? plan.price_yearly : plan.price_monthly;
+    if ((!price || price === 0) && !plan.is_trial) return 'Custom';
     return formatPrice(price, plan.currency);
   };
 
