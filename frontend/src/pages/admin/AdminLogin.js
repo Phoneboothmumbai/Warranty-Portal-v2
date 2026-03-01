@@ -96,7 +96,7 @@ const AdminLogin = () => {
   // Get branding - prefer tenant branding, fallback to global settings
   const branding = tenant?.branding || settings;
   const accentColor = branding?.accent_color || '#0F62FE';
-  const companyName = branding?.company_name || tenant?.name || 'Warranty Portal';
+  const companyName = 'aftersales.support';
   const logo = branding?.logo_base64 || branding?.logo_url || settings.logo_base64 || settings.logo_url;
 
   return (

@@ -41,7 +41,7 @@ const Settings = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSettings({
-        company_name: response.data.company_name || 'Warranty Portal',
+        company_name: response.data.company_name || 'aftersales.support',
         accent_color: response.data.accent_color || '#0F62FE',
         logo_url: response.data.logo_url || '',
         logo_base64: response.data.logo_base64 || ''
