@@ -919,6 +919,7 @@ const TABS = [
   { key: 'categories', label: 'Categories', icon: Layers },
   { key: 'products', label: 'Products', icon: Package },
   { key: 'bundles', label: 'Bundles', icon: Link2 },
+  { key: 'inventory', label: 'Inventory', icon: Warehouse },
 ];
 
 export default function ItemMaster() {
