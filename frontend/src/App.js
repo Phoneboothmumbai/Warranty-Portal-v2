@@ -192,6 +192,7 @@ function App() {
                     <Route path="supply-orders" element={<SupplyOrders />} />
                     <Route path="master-data" element={<MasterData />} />
                     <Route path="item-master" element={<ItemMaster />} />
+                    <Route path="parts-requests" element={<PartsRequests />} />
                     <Route path="settings" element={<Settings />} />
                     <Route path="organization" element={<OrganizationSettings />} />
                     <Route path="static-pages" element={<StaticPages />} />
