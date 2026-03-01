@@ -1093,6 +1093,12 @@ async def transition_ticket(ticket_id: str, data: StageTransitionRequest, admin:
             {"_id": 0, "name": 1, "email": 1, "phone": 1}
         )
         if not engineer:
+            # Try staff_users
+            engineer = await _db.staff_users.find_one(
+                {"id": data.assigned_to_id},
+                {"_id": 0, "name": 1, "email": 1, "phone": 1}
+            )
+        if not engineer:
             # Try organization members
             engineer = await _db.organization_members.find_one(
                 {"id": data.assigned_to_id},
