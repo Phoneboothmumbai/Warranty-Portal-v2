@@ -292,6 +292,63 @@ const Settings = () => {
         </div>
       </div>
 
+      {/* Billing Email Section */}
+      <div className="card-elevated space-y-6">
+        <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+          <Mail className="h-5 w-5 text-slate-400" />
+          Billing Team Emails
+        </h2>
+        <p className="text-sm text-slate-500 -mt-4">These email addresses receive notifications when parts are consumed during field visits</p>
+
+        <div className="flex gap-2">
+          <input
+            type="email"
+            value={newBillingEmail}
+            onChange={(e) => setNewBillingEmail(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && newBillingEmail.trim()) {
+                e.preventDefault();
+                if (!settings.billing_emails.includes(newBillingEmail.trim())) {
+                  setSettings({ ...settings, billing_emails: [...settings.billing_emails, newBillingEmail.trim()] });
+                }
+                setNewBillingEmail('');
+              }
+            }}
+            className="form-input flex-1 max-w-sm"
+            placeholder="billing@company.com"
+            data-testid="billing-email-input"
+          />
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (newBillingEmail.trim() && !settings.billing_emails.includes(newBillingEmail.trim())) {
+                setSettings({ ...settings, billing_emails: [...settings.billing_emails, newBillingEmail.trim()] });
+                setNewBillingEmail('');
+              }
+            }}
+            data-testid="add-billing-email-btn"
+          >
+            Add
+          </Button>
+        </div>
+
+        {settings.billing_emails.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {settings.billing_emails.map((email, i) => (
+              <span key={i} className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-sm px-3 py-1.5 rounded-full">
+                {email}
+                <button
+                  onClick={() => setSettings({ ...settings, billing_emails: settings.billing_emails.filter((_, j) => j !== i) })}
+                  className="w-4 h-4 rounded-full bg-blue-200 hover:bg-blue-300 flex items-center justify-center"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Save Button */}
       <div className="flex justify-end">
         <Button 
