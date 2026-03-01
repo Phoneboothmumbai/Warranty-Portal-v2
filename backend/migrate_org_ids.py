@@ -33,6 +33,7 @@ COLLECTIONS_WITH_ORG = [
     "credentials", "subscriptions", "accessories", "asset_groups",
     "internet_services", "licenses", "deployments", "knowledge_articles",
     "static_pages", "custom_domains", "email_whitelabel",
+    "engineers", "staff_users", "ticket_schedules",
 ]
 
 ORPHAN_QUERY = {"$or": [
