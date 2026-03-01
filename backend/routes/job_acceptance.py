@@ -930,7 +930,7 @@ async def engineer_dashboard(engineer: dict = Depends(get_current_engineer)):
     })
 
     return {
-        "engineer": {"id": eng_id, "name": eng["name"]},
+        "engineer": {"id": eng["id"], "name": eng["name"]},
         "pending_tickets": pending,
         "active_tickets": active,
         "upcoming_schedules": schedules,
