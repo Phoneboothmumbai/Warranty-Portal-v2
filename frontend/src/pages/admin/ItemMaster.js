@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Plus, Search, Edit2, Trash2, MoreVertical, Package, Tag,
-  Layers, Link2, IndianRupee, ChevronRight, X, ArrowLeft, Filter
+  Layers, Link2, IndianRupee, ChevronRight, X, ArrowLeft, Filter,
+  Upload, Download, Warehouse, History, Loader2, ArrowUpDown
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
@@ -11,6 +12,7 @@ import { Badge } from '../../components/ui/badge';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api/admin/item-master`;
+const INV_API = `${process.env.REACT_APP_BACKEND_URL}/api/admin/inventory`;
 const GST_SLABS = [0, 5, 12, 18, 28];
 
 const headers = (token) => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' });
