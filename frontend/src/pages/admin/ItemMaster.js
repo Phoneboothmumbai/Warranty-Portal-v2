@@ -230,9 +230,12 @@ function ProductsTab({ token }) {
             </select>
           </div>
         </div>
-        <Button onClick={openCreate} className="bg-[#0F62FE] hover:bg-[#0043CE] text-white" data-testid="add-product-btn">
-          <Plus className="h-4 w-4 mr-2" />Add Product
-        </Button>
+        <div className="flex gap-2">
+          <BulkUploadButton token={token} onComplete={fetchProducts} />
+          <Button onClick={openCreate} className="bg-[#0F62FE] hover:bg-[#0043CE] text-white" data-testid="add-product-btn">
+            <Plus className="h-4 w-4 mr-2" />Add Product
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
