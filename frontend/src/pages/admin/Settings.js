@@ -27,9 +27,11 @@ const Settings = () => {
     company_name: '',
     accent_color: '#0F62FE',
     logo_url: '',
-    logo_base64: ''
+    logo_base64: '',
+    billing_emails: [],
   });
   const [logoPreview, setLogoPreview] = useState(null);
+  const [newBillingEmail, setNewBillingEmail] = useState('');
 
   useEffect(() => {
     fetchSettings();
