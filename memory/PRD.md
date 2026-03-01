@@ -14,22 +14,6 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 
 ## What's Been Implemented
 
-### Completed (Feb 2026)
-- Full admin portal with dashboard, company/site/device management
-- Full engineer portal with dashboard, calendar, ticket detail view
-- Ticketing V2 system with seed data auto-provisioning + auto-deduplication
-- Job acceptance/decline/reschedule workflow (both admin and engineer auth)
-- Central calendar for admins, personal calendar for engineers
-- Workforce overview for admins
-- Notification system for declined jobs
-- Smart scheduling with 30-min slots and 1-hour buffer
-- Enhanced ticket creation (multi-step: Company > Site > Employee > Device)
-- Item Master module (Categories, Products, Bundles)
-- Quotation system (CRUD, GST calc, company approve/reject)
-- Security hardening (scope_query, bulk imports, composite indexes)
-- Homepage redesign with corporate aesthetic
-- Production data isolation fix with migration script
-
 ### Engineer Reschedule Fix (Mar 1, 2026)
 - Slot-based scheduling with 30-min intervals within working hours
 - Backend validation: past date, blocked slots, working hours
@@ -41,32 +25,38 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - Calendar floating popup with full ticket/company/device/history details
 
 ### Admin Parts Requests Management (Mar 1, 2026)
-- Full management page at `/admin/parts-requests`
-- Status filter pills: All/Pending/Quoted/Approved/Procured/Delivered
-- Expandable rows with items table, pricing, engineer info, quotation link
-- Status advancement buttons (Mark as Approved/Procured/Delivered)
-- **Testing: 100% backend (16/16), 100% frontend**
+- Full management page at /admin/parts-requests
+- Status filter pills, expandable rows with items/pricing, status advancement
 
 ### Item Master Bulk Upload (Mar 1, 2026)
-- Sample CSV download with all fields (name, SKU, category, part_number, brand, manufacturer, description, unit_price, gst_slab, hsn_code, unit_of_measure, initial_stock, reorder_level)
-- CSV upload with duplicate detection (by SKU or product name within tenant)
-- Auto-creates categories if not existing
-- Creates initial inventory records + transactions if initial_stock specified
-- Error report for rejected rows
+- Sample CSV download with all 13 fields
+- CSV upload with duplicate detection (by SKU or product name)
+- Auto-creates categories, error report for rejected rows
 
 ### Inventory Management (Mar 1, 2026)
-- New "Inventory" tab in Item Master alongside Categories/Products/Bundles
-- Table: Product, Category, SKU, In Stock (green/red), Purchased, Used, Price, Adjust
-- Low Stock indicator for items at/below reorder level
-- Search functionality
-- Stock adjustment modal (Purchase/Return/Manual Adjustment/Initial Stock)
-- Click any item → history panel showing:
-  - Summary: In Stock, Purchased, Used counts
-  - Transaction log with type badges and +/- quantities
-  - Job details (ticket number, company name) for 'used' transactions
-- Auto-deduct inventory when engineer checks out with resolution "fixed"
-- Engineer inventory view endpoint
-- **Testing: 100% backend (16/16), 100% frontend**
+- Inventory tab in Item Master with stock levels (In Stock/Purchased/Used)
+- Low Stock alerts, search, stock adjustment modal
+- Click item → history panel with transaction log + job details
+- Auto-deduct inventory when engineer uses parts during checkout
+
+### Pending Bills System (Mar 1, 2026)
+- Auto-created when engineer uses parts during visit checkout
+- Bills aggregated per ticket (multiple visits → same bill)
+- Available at both /admin/pending-bills AND Item Master "Pending Bills" tab
+- Stats dashboard: Pending count, Billed count, Pending Amount
+- Filter pills: All/Pending/Billed
+- Expandable rows with items table (Part, Added By, Qty, Price, GST, Total)
+- "Mark as Done" requires Bill/Invoice Number → status changes to "billed"
+- Timeline entry added to ticket when bill is completed
+- Billing Team Email config in Settings (multiple emails)
+- Email notification sent to billing team when parts are consumed (uses SMTP)
+- **Testing: 100% backend, 100% frontend**
+
+### Previous Work (Feb 2026)
+- Full admin/engineer portals, ticketing V2, workforce, calendars
+- Item Master (Categories/Products/Bundles), Quotation system
+- Security hardening, data isolation, composite indexes
+- Enhanced ticket creation, homepage redesign
 
 ## Architecture
 - Frontend: React + Tailwind + Shadcn/UI
@@ -76,15 +66,11 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - Multi-tenancy: organization_id on all collections
 
 ## Key Collections
-- `tickets_v2` - Main ticket data
-- `visits` - Engineer field visit records
-- `parts_requests` - Parts requested by engineers
-- `quotations` - Auto-created from parts requests
-- `inventory` - Stock levels per product
-- `inventory_transactions` - Transaction log (purchase/use/return/adjustment)
-- `item_products` - Product catalog
-- `item_categories` - Product categories
-- `item_bundles` - Product bundles
+- `tickets_v2`, `visits`, `parts_requests`, `quotations`
+- `inventory`, `inventory_transactions`
+- `pending_bills` - Per-ticket billing records
+- `item_products`, `item_categories`, `item_bundles`
+- `settings` - includes billing_emails array
 
 ## Prioritized Backlog
 
@@ -104,7 +90,6 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - CompanySwitcher for platform admins
 - Refactor server.py / unify User/Staff models
 - Fix ESLint warnings and --legacy-peer-deps
-- Backend unit tests with pytest
 
 ## Credentials
 - Admin: ck@motta.in / Charu@123@
