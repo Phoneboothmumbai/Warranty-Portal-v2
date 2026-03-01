@@ -846,10 +846,192 @@ async def engineer_decline(data: DeclineJobRequest, engineer: dict = Depends(get
     return {"status": "declined", "ticket_id": data.ticket_id}
 
 
+async def _get_engineer_available_slots(eng_id: str, org_id: str, date: str):
+    """Shared logic to compute available 30-min slots for an engineer on a given date."""
+    engineer = await _db.engineers.find_one(
+        {"id": eng_id, "organization_id": org_id, "is_deleted": {"$ne": True}},
+        {"_id": 0, "id": 1, "name": 1, "working_hours": 1, "holidays": 1}
+    )
+    if not engineer:
+        # Try without org_id filter (for cross-collection resolution)
+        engineer = await _db.engineers.find_one(
+            {"id": eng_id, "is_deleted": {"$ne": True}},
+            {"_id": 0, "id": 1, "name": 1, "working_hours": 1, "holidays": 1}
+        )
+    holidays = (engineer or {}).get("holidays", [])
+    if date in holidays:
+        return {"date": date, "is_holiday": True, "is_working_day": False, "slots": [], "message": "This is a holiday for you"}
+
+    from datetime import datetime as dt_cls
+    date_obj = dt_cls.strptime(date, "%Y-%m-%d")
+    day_name = date_obj.strftime("%A").lower()
+
+    working_hours = (engineer or {}).get("working_hours", {})
+    if not working_hours:
+        working_hours = {
+            "monday": {"is_working": True, "start": "09:00", "end": "18:00"},
+            "tuesday": {"is_working": True, "start": "09:00", "end": "18:00"},
+            "wednesday": {"is_working": True, "start": "09:00", "end": "18:00"},
+            "thursday": {"is_working": True, "start": "09:00", "end": "18:00"},
+            "friday": {"is_working": True, "start": "09:00", "end": "18:00"},
+            "saturday": {"is_working": True, "start": "09:00", "end": "14:00"},
+            "sunday": {"is_working": False, "start": "09:00", "end": "18:00"},
+        }
+    day_schedule = working_hours.get(day_name, {"is_working": True, "start": "09:00", "end": "18:00"})
+
+    if not day_schedule.get("is_working", False):
+        return {"date": date, "is_holiday": False, "is_working_day": False, "slots": [], "message": f"Not a working day ({day_name.title()})"}
+
+    work_start = day_schedule.get("start", "09:00")
+    work_end = day_schedule.get("end", "18:00")
+    ws_h, ws_m = map(int, work_start.split(":"))
+    we_h, we_m = map(int, work_end.split(":"))
+    work_start_mins = ws_h * 60 + ws_m
+    work_end_mins = we_h * 60 + we_m
+
+    all_slots = []
+    t = work_start_mins
+    while t < work_end_mins:
+        h, m = divmod(t, 60)
+        all_slots.append(f"{h:02d}:{m:02d}")
+        t += 30
+
+    date_start = f"{date}T00:00:00"
+    date_end = f"{date}T23:59:59"
+
+    schedules = await _db.ticket_schedules.find({
+        "engineer_id": eng_id, "organization_id": org_id,
+        "scheduled_at": {"$gte": date_start, "$lte": date_end},
+        "status": {"$ne": "cancelled"}
+    }, {"_id": 0, "scheduled_at": 1, "scheduled_end_at": 1, "ticket_number": 1, "company_name": 1}).to_list(100)
+
+    scheduled_tickets = await _db.tickets_v2.find({
+        "assigned_to_id": eng_id, "organization_id": org_id,
+        "scheduled_at": {"$gte": date_start, "$lte": date_end},
+        "is_deleted": {"$ne": True}
+    }, {"_id": 0, "scheduled_at": 1, "scheduled_end_at": 1, "ticket_number": 1, "company_name": 1}).to_list(100)
+
+    blocked_ranges = []
+    bookings_info = []
+    for booking in schedules + scheduled_tickets:
+        sched_at = booking.get("scheduled_at", "")
+        if not sched_at or not sched_at.startswith(date):
+            continue
+        try:
+            time_part = sched_at[11:16]
+            bh, bm = map(int, time_part.split(":"))
+            booking_start = bh * 60 + bm
+        except (ValueError, IndexError):
+            continue
+        sched_end = booking.get("scheduled_end_at", "")
+        if sched_end and sched_end.startswith(date):
+            try:
+                eh, em = map(int, sched_end[11:16].split(":"))
+                booking_end = eh * 60 + em
+            except (ValueError, IndexError):
+                booking_end = booking_start + 60
+        else:
+            booking_end = booking_start + 60
+        blocked_end = booking_end + 60
+        blocked_ranges.append((booking_start, blocked_end))
+        bookings_info.append({
+            "time": time_part,
+            "ticket_number": booking.get("ticket_number", ""),
+            "company_name": booking.get("company_name", ""),
+        })
+
+    # Filter out past slots if date is today
+    now_dt = datetime.now(IST)
+    today_str = now_dt.strftime("%Y-%m-%d")
+    now_mins = now_dt.hour * 60 + now_dt.minute if date == today_str else -1
+
+    slots = []
+    for slot_time in all_slots:
+        sh, sm = map(int, slot_time.split(":"))
+        slot_mins = sh * 60 + sm
+
+        if date == today_str and slot_mins <= now_mins:
+            slots.append({"time": slot_time, "available": False, "blocked_by": "Past time"})
+            continue
+
+        available = True
+        blocked_by = None
+        for bstart, bend in blocked_ranges:
+            if bstart <= slot_mins < bend:
+                available = False
+                for bi in bookings_info:
+                    bih, bim = map(int, bi["time"].split(":"))
+                    if bih * 60 + bim <= slot_mins:
+                        blocked_by = f"#{bi['ticket_number']} - {bi['company_name']}"
+                        break
+                break
+        slots.append({"time": slot_time, "available": available, "blocked_by": blocked_by})
+
+    return {
+        "date": date, "is_holiday": False, "is_working_day": True,
+        "work_start": work_start, "work_end": work_end,
+        "slots": slots, "bookings": bookings_info
+    }
+
+
+@router.get("/engineer/available-slots")
+async def engineer_get_available_slots(
+    date: str = Query(..., description="Date in YYYY-MM-DD format"),
+    engineer: dict = Depends(get_current_engineer)
+):
+    """Get available 30-min time slots for the logged-in engineer on a given date."""
+    eng = await _resolve_engineer(engineer)
+    org_id = eng["organization_id"]
+
+    # Validate date is not in the past
+    from datetime import datetime as dt_cls
+    try:
+        date_obj = dt_cls.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+    today = datetime.now(IST).date()
+    if date_obj.date() < today:
+        raise HTTPException(status_code=400, detail="Cannot schedule in the past")
+
+    return await _get_engineer_available_slots(eng["id"], org_id, date)
+
+
 @router.post("/engineer/assignment/reschedule")
 async def engineer_reschedule(data: RescheduleJobRequest, engineer: dict = Depends(get_current_engineer)):
     """Engineer accepts but proposes different time."""
     eng = await _resolve_engineer(engineer)
+    org_id = eng["organization_id"]
+
+    # Validate proposed_time
+    try:
+        proposed_dt = datetime.fromisoformat(data.proposed_time.replace("Z", "+00:00"))
+        if proposed_dt.tzinfo is None:
+            proposed_dt = proposed_dt.replace(tzinfo=IST)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid proposed_time format")
+
+    now_dt = datetime.now(IST)
+    if proposed_dt < now_dt:
+        raise HTTPException(status_code=400, detail="Cannot schedule in the past")
+
+    # Validate 30-minute intervals
+    if proposed_dt.minute not in (0, 30):
+        raise HTTPException(status_code=400, detail="Scheduling is only allowed at 30-minute intervals (e.g., 09:00, 09:30)")
+
+    # Validate slot availability
+    date_str = data.proposed_time[:10]
+    slot_data = await _get_engineer_available_slots(eng["id"], org_id, date_str)
+    if not slot_data.get("is_working_day"):
+        raise HTTPException(status_code=400, detail=slot_data.get("message", "Not a working day"))
+
+    proposed_time_str = data.proposed_time[11:16]
+    slot_match = next((s for s in slot_data.get("slots", []) if s["time"] == proposed_time_str), None)
+    if not slot_match:
+        raise HTTPException(status_code=400, detail="Selected time is outside working hours")
+    if not slot_match["available"]:
+        raise HTTPException(status_code=400, detail=f"Slot {proposed_time_str} is not available: {slot_match.get('blocked_by', 'already booked')}")
+
     ticket = await _db.tickets_v2.find_one({
         "id": data.ticket_id, "assigned_to_id": {"$in": eng["all_ids"]},
         "assignment_status": "pending", "is_deleted": {"$ne": True}
@@ -879,7 +1061,7 @@ async def engineer_reschedule(data: RescheduleJobRequest, engineer: dict = Depen
         {"$set": {"status": "cancelled"}}
     )
     await _db.ticket_schedules.insert_one({
-        "id": str(uuid.uuid4()), "organization_id": eng["organization_id"],
+        "id": str(uuid.uuid4()), "organization_id": org_id,
         "ticket_id": data.ticket_id, "ticket_number": ticket.get("ticket_number"),
         "engineer_id": eng["id"], "engineer_name": eng["name"],
         "company_name": ticket.get("company_name"), "subject": ticket.get("subject"),
