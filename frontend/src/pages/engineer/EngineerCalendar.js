@@ -52,90 +52,92 @@ const EventDetailPanel = ({ event, detail, loading, onClose, onViewTicket }) => 
   const { ticket, company, site, employee, device, repair_history } = detail || {};
 
   return (
-    <div className="border-t bg-white" data-testid="event-detail-panel">
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b">
-        <h3 className="text-xs font-semibold text-slate-700">Event Details</h3>
-        <button onClick={onClose} className="p-0.5 hover:bg-slate-200 rounded"><X className="w-3.5 h-3.5" /></button>
-      </div>
-      {loading ? (
-        <div className="p-4 text-center text-xs text-slate-400">Loading...</div>
-      ) : !detail ? (
-        <div className="p-4">
-          <p className="text-sm font-medium text-slate-800">{event.title}</p>
-          {event.start_time && <p className="text-xs text-slate-500 mt-1"><Clock className="w-3 h-3 inline mr-1" />{event.start_time}{event.end_time ? ` - ${event.end_time}` : ''}</p>}
-          {event.company_name && <p className="text-xs text-slate-400 mt-0.5">{event.company_name}</p>}
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose} data-testid="event-detail-modal">
+      <div className="bg-white rounded-xl w-full max-w-md max-h-[85vh] overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderTopWidth: 4, borderTopColor: event.color }}>
+          <h3 className="text-sm font-semibold text-slate-800">Event Details</h3>
+          <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded"><X className="w-4 h-4" /></button>
         </div>
-      ) : (
-        <div className="p-3 space-y-3 max-h-[340px] overflow-y-auto text-xs">
-          {/* Ticket summary */}
-          <div>
-            <p className="font-semibold text-blue-600 text-sm">#{ticket?.ticket_number} - {ticket?.subject}</p>
-            {ticket?.description && <p className="text-slate-500 mt-1 whitespace-pre-wrap line-clamp-3">{ticket.description}</p>}
-            <div className="flex gap-2 mt-1.5">
-              {ticket?.priority_name && <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{ticket.priority_name}</span>}
-              {ticket?.current_stage_name && <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">{ticket.current_stage_name}</span>}
-            </div>
+        {loading ? (
+          <div className="p-8 text-center text-sm text-slate-400">Loading...</div>
+        ) : !detail ? (
+          <div className="p-4">
+            <p className="text-sm font-medium text-slate-800">{event.title}</p>
+            {event.start_time && <p className="text-xs text-slate-500 mt-1"><Clock className="w-3 h-3 inline mr-1" />{event.start_time}{event.end_time ? ` - ${event.end_time}` : ''}</p>}
+            {event.company_name && <p className="text-xs text-slate-400 mt-0.5">{event.company_name}</p>}
           </div>
-
-          {/* Company */}
-          {company && (
-            <div className="p-2 rounded bg-slate-50">
-              <p className="font-medium text-slate-700 flex items-center gap-1"><Building2 className="w-3 h-3" /> {company.name}</p>
-              {company.phone && <p className="text-slate-400 mt-0.5"><Phone className="w-3 h-3 inline mr-1" />{company.phone}</p>}
-              {company.address && <p className="text-slate-400"><MapPin className="w-3 h-3 inline mr-1" />{[company.address, company.city, company.state].filter(Boolean).join(', ')}</p>}
-            </div>
-          )}
-
-          {/* Site */}
-          {site && (
-            <div className="p-2 rounded bg-green-50">
-              <p className="font-medium text-green-700 flex items-center gap-1"><MapPin className="w-3 h-3" /> {site.name}</p>
-              <p className="text-green-600">{[site.address, site.city, site.state, site.pincode].filter(Boolean).join(', ')}</p>
-              {site.contact_phone && <p className="text-green-500"><Phone className="w-3 h-3 inline mr-1" />{site.contact_name} - {site.contact_phone}</p>}
-            </div>
-          )}
-
-          {/* Contact */}
-          {employee && (
-            <div className="p-2 rounded bg-teal-50">
-              <p className="font-medium text-teal-700 flex items-center gap-1"><User className="w-3 h-3" /> {employee.name} {employee.designation && `(${employee.designation})`}</p>
-              {employee.phone && <p className="text-teal-500"><Phone className="w-3 h-3 inline mr-1" />{employee.phone}</p>}
-              {employee.email && <p className="text-teal-500"><Mail className="w-3 h-3 inline mr-1" />{employee.email}</p>}
-            </div>
-          )}
-
-          {/* Device */}
-          {device && (
-            <div className="p-2 rounded bg-purple-50">
-              <p className="font-medium text-purple-700 flex items-center gap-1"><Monitor className="w-3 h-3" /> {device.name || device.model || 'Device'}</p>
-              <p className="text-purple-500">{[device.manufacturer, device.model, device.serial_number && `S/N: ${device.serial_number}`].filter(Boolean).join(' | ')}</p>
-              {device.warranty_status && <span className={`inline-block mt-0.5 px-1.5 py-0.5 rounded ${device.warranty_status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>Warranty: {device.warranty_status}</span>}
-            </div>
-          )}
-
-          {/* Repair History */}
-          {repair_history?.length > 0 && (
+        ) : (
+          <div className="p-4 space-y-3 max-h-[70vh] overflow-y-auto text-xs">
+            {/* Ticket summary */}
             <div>
-              <p className="font-medium text-slate-600 flex items-center gap-1 mb-1"><Wrench className="w-3 h-3" /> Past History ({repair_history.length})</p>
-              {repair_history.slice(0, 5).map(h => (
-                <div key={h.id} className="flex items-center gap-2 p-1.5 rounded border mb-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${h.is_open ? 'bg-blue-500' : 'bg-green-500'}`} />
-                  <span className="font-mono text-[10px]">#{h.ticket_number}</span>
-                  <span className="truncate flex-1">{h.subject}</span>
-                  <span className="text-slate-400 shrink-0">{h.created_at ? new Date(h.created_at).toLocaleDateString() : ''}</span>
-                </div>
-              ))}
+              <p className="font-semibold text-blue-600 text-sm">#{ticket?.ticket_number} - {ticket?.subject}</p>
+              {ticket?.description && <p className="text-slate-500 mt-1 whitespace-pre-wrap line-clamp-3">{ticket.description}</p>}
+              <div className="flex gap-2 mt-1.5">
+                {ticket?.priority_name && <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{ticket.priority_name}</span>}
+                {ticket?.current_stage_name && <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">{ticket.current_stage_name}</span>}
+              </div>
             </div>
-          )}
 
-          {/* View full details button */}
-          {ticket?.id && (
-            <Button size="sm" variant="outline" className="w-full" onClick={onViewTicket} data-testid="view-full-ticket">
-              <ExternalLink className="w-3 h-3 mr-1" /> View Full Ticket Details
-            </Button>
-          )}
-        </div>
-      )}
+            {/* Company */}
+            {company && (
+              <div className="p-2.5 rounded-lg bg-slate-50">
+                <p className="font-medium text-slate-700 flex items-center gap-1"><Building2 className="w-3 h-3" /> {company.name}</p>
+                {company.phone && <p className="text-slate-400 mt-0.5"><Phone className="w-3 h-3 inline mr-1" />{company.phone}</p>}
+                {company.address && <p className="text-slate-400"><MapPin className="w-3 h-3 inline mr-1" />{[company.address, company.city, company.state].filter(Boolean).join(', ')}</p>}
+              </div>
+            )}
+
+            {/* Site */}
+            {site && (
+              <div className="p-2.5 rounded-lg bg-green-50">
+                <p className="font-medium text-green-700 flex items-center gap-1"><MapPin className="w-3 h-3" /> {site.name}</p>
+                <p className="text-green-600">{[site.address, site.city, site.state, site.pincode].filter(Boolean).join(', ')}</p>
+                {site.contact_phone && <p className="text-green-500"><Phone className="w-3 h-3 inline mr-1" />{site.contact_name} - {site.contact_phone}</p>}
+              </div>
+            )}
+
+            {/* Contact */}
+            {employee && (
+              <div className="p-2.5 rounded-lg bg-teal-50">
+                <p className="font-medium text-teal-700 flex items-center gap-1"><User className="w-3 h-3" /> {employee.name} {employee.designation && `(${employee.designation})`}</p>
+                {employee.phone && <p className="text-teal-500"><Phone className="w-3 h-3 inline mr-1" />{employee.phone}</p>}
+                {employee.email && <p className="text-teal-500"><Mail className="w-3 h-3 inline mr-1" />{employee.email}</p>}
+              </div>
+            )}
+
+            {/* Device */}
+            {device && (
+              <div className="p-2.5 rounded-lg bg-purple-50">
+                <p className="font-medium text-purple-700 flex items-center gap-1"><Monitor className="w-3 h-3" /> {device.name || device.model || 'Device'}</p>
+                <p className="text-purple-500">{[device.manufacturer, device.model, device.serial_number && `S/N: ${device.serial_number}`].filter(Boolean).join(' | ')}</p>
+                {device.warranty_status && <span className={`inline-block mt-0.5 px-1.5 py-0.5 rounded ${device.warranty_status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>Warranty: {device.warranty_status}</span>}
+              </div>
+            )}
+
+            {/* Repair History */}
+            {repair_history?.length > 0 && (
+              <div>
+                <p className="font-medium text-slate-600 flex items-center gap-1 mb-1"><Wrench className="w-3 h-3" /> Past History ({repair_history.length})</p>
+                {repair_history.slice(0, 5).map(h => (
+                  <div key={h.id} className="flex items-center gap-2 p-1.5 rounded border mb-1">
+                    <span className={`w-1.5 h-1.5 rounded-full ${h.is_open ? 'bg-blue-500' : 'bg-green-500'}`} />
+                    <span className="font-mono text-[10px]">#{h.ticket_number}</span>
+                    <span className="truncate flex-1">{h.subject}</span>
+                    <span className="text-slate-400 shrink-0">{h.created_at ? new Date(h.created_at).toLocaleDateString() : ''}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* View full details button */}
+            {ticket?.id && (
+              <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={onViewTicket} data-testid="view-full-ticket">
+                <ExternalLink className="w-3 h-3 mr-1" /> Open Full Ticket
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
