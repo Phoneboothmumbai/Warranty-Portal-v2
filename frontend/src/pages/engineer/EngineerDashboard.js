@@ -158,14 +158,19 @@ export default function EngineerDashboard() {
 
   const handleReschedule = async (ticketId, proposedTime, endTime, notes) => {
     try {
+      console.log('Reschedule request:', { ticketId, proposedTime, endTime, notes });
       const res = await fetch(`${API}/api/engineer/assignment/reschedule`, {
         method: 'POST', headers: hdrs(),
         body: JSON.stringify({ ticket_id: ticketId, proposed_time: proposedTime, proposed_end_time: endTime, notes: notes || '' }),
       });
       const body = await res.json();
+      console.log('Reschedule response:', res.status, body);
       if (res.ok) { toast.success('Accepted & rescheduled!'); fetchDash(); }
-      else { toast.error(body.detail || 'Reschedule failed'); }
-    } catch (err) { toast.error('Network error: ' + err.message); }
+      else { toast.error(`Error ${res.status}: ${body.detail || JSON.stringify(body)}`); }
+    } catch (err) { 
+      console.error('Reschedule error:', err);
+      toast.error('Network error: ' + err.message); 
+    }
   };
 
   if (loading) return <div className="flex items-center justify-center h-64 text-slate-400">Loading...</div>;
