@@ -467,3 +467,229 @@ async def engineer_list_inventory(
         })
 
     return {"items": items}
+
+
+# ── Pending Bills ─────────────────────────────────────────
+
+async def upsert_pending_bill(org_id: str, ticket_id: str, parts: list, visit_id: str, engineer_name: str):
+    """Create or update a pending bill for a ticket. Aggregates parts across visits."""
+    ticket = await db.tickets_v2.find_one(
+        {"id": ticket_id, "organization_id": org_id},
+        {"_id": 0, "ticket_number": 1, "company_name": 1, "company_id": 1, "subject": 1,
+         "contact_name": 1, "contact_email": 1, "contact_phone": 1}
+    )
+    if not ticket:
+        return None
+
+    existing = await db.pending_bills.find_one(
+        {"organization_id": org_id, "ticket_id": ticket_id, "status": "pending"}
+    )
+
+    new_items = []
+    for p in parts:
+        qty = p.get("quantity", 1)
+        price = p.get("unit_price", 0)
+        slab = p.get("gst_slab", 18)
+        base = price * qty
+        gst = round(base * slab / 100, 2)
+        new_items.append({
+            "product_id": p.get("product_id"),
+            "product_name": p.get("product_name", ""),
+            "sku": p.get("sku"),
+            "quantity": qty,
+            "unit_price": price,
+            "gst_slab": slab,
+            "gst_amount": gst,
+            "line_total": round(base + gst, 2),
+            "visit_id": visit_id,
+            "added_by": engineer_name,
+            "added_at": get_ist_isoformat(),
+        })
+
+    now = get_ist_isoformat()
+
+    if existing:
+        all_items = existing.get("items", []) + new_items
+        subtotal = sum(i.get("unit_price", 0) * i.get("quantity", 1) for i in all_items)
+        total_gst = sum(i.get("gst_amount", 0) for i in all_items)
+        await db.pending_bills.update_one(
+            {"id": existing["id"]},
+            {"$set": {
+                "items": all_items,
+                "subtotal": round(subtotal, 2),
+                "total_gst": round(total_gst, 2),
+                "grand_total": round(subtotal + total_gst, 2),
+                "visit_count": existing.get("visit_count", 1) + 1,
+                "updated_at": now,
+            }}
+        )
+        bill_id = existing["id"]
+    else:
+        bill_id = str(uuid.uuid4())
+        subtotal = sum(i.get("unit_price", 0) * i.get("quantity", 1) for i in new_items)
+        total_gst = sum(i.get("gst_amount", 0) for i in new_items)
+        await db.pending_bills.insert_one({
+            "id": bill_id,
+            "organization_id": org_id,
+            "ticket_id": ticket_id,
+            "ticket_number": ticket.get("ticket_number"),
+            "company_id": ticket.get("company_id"),
+            "company_name": ticket.get("company_name"),
+            "subject": ticket.get("subject"),
+            "contact_name": ticket.get("contact_name"),
+            "contact_email": ticket.get("contact_email"),
+            "items": new_items,
+            "subtotal": round(subtotal, 2),
+            "total_gst": round(total_gst, 2),
+            "grand_total": round(subtotal + total_gst, 2),
+            "visit_count": 1,
+            "status": "pending",  # pending → billed
+            "bill_number": None,
+            "billed_at": None,
+            "billed_by": None,
+            "created_at": now,
+            "updated_at": now,
+        })
+
+    # Send email notification to billing team
+    try:
+        settings = await db.settings.find_one({"organization_id": org_id}, {"_id": 0, "billing_emails": 1})
+        billing_emails = (settings or {}).get("billing_emails", [])
+        if billing_emails:
+            await _send_billing_email(billing_emails, ticket, new_items, org_id)
+    except Exception as e:
+        logger.warning(f"Failed to send billing email: {e}")
+
+    return bill_id
+
+
+async def _send_billing_email(emails: list, ticket: dict, items: list, org_id: str):
+    """Send email notification to billing team about pending bill."""
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+
+    # Get SMTP settings
+    smtp_settings = await db.settings.find_one(
+        {"organization_id": org_id}, {"_id": 0, "smtp_host": 1, "smtp_port": 1, "smtp_user": 1, "smtp_pass": 1, "smtp_from": 1}
+    )
+    if not smtp_settings or not smtp_settings.get("smtp_host"):
+        logger.info("SMTP not configured, skipping billing email")
+        return
+
+    items_html = "".join(
+        f"<tr><td style='padding:6px;border:1px solid #e2e8f0'>{i['product_name']}</td>"
+        f"<td style='padding:6px;border:1px solid #e2e8f0;text-align:center'>{i['quantity']}</td>"
+        f"<td style='padding:6px;border:1px solid #e2e8f0;text-align:right'>{i['unit_price']:.2f}</td>"
+        f"<td style='padding:6px;border:1px solid #e2e8f0;text-align:right'>{i['line_total']:.2f}</td></tr>"
+        for i in items
+    )
+    total = sum(i.get("line_total", 0) for i in items)
+
+    html = f"""
+    <div style="font-family:sans-serif;max-width:600px">
+        <h2 style="color:#0F62FE">Pending Bill Notification</h2>
+        <p>Parts have been consumed for the following job:</p>
+        <table style="width:100%;margin:16px 0">
+            <tr><td><strong>Job #</strong></td><td>{ticket.get('ticket_number','')}</td></tr>
+            <tr><td><strong>Company</strong></td><td>{ticket.get('company_name','')}</td></tr>
+            <tr><td><strong>Subject</strong></td><td>{ticket.get('subject','')}</td></tr>
+        </table>
+        <h3>Parts Consumed:</h3>
+        <table style="width:100%;border-collapse:collapse">
+            <tr style="background:#f1f5f9">
+                <th style="padding:6px;border:1px solid #e2e8f0;text-align:left">Part</th>
+                <th style="padding:6px;border:1px solid #e2e8f0;text-align:center">Qty</th>
+                <th style="padding:6px;border:1px solid #e2e8f0;text-align:right">Price</th>
+                <th style="padding:6px;border:1px solid #e2e8f0;text-align:right">Total</th>
+            </tr>
+            {items_html}
+            <tr style="background:#f1f5f9;font-weight:bold">
+                <td colspan="3" style="padding:6px;border:1px solid #e2e8f0;text-align:right">Grand Total</td>
+                <td style="padding:6px;border:1px solid #e2e8f0;text-align:right">{total:.2f}</td>
+            </tr>
+        </table>
+        <p style="margin-top:16px;color:#64748b">Please generate an invoice and update the bill status in the portal.</p>
+    </div>
+    """
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"Pending Bill: Job #{ticket.get('ticket_number','')} - {ticket.get('company_name','')}"
+    msg["From"] = smtp_settings.get("smtp_from", smtp_settings.get("smtp_user", ""))
+    msg["To"] = ", ".join(emails)
+    msg.attach(MIMEText(html, "html"))
+
+    try:
+        with smtplib.SMTP(smtp_settings["smtp_host"], int(smtp_settings.get("smtp_port", 587)), timeout=10) as server:
+            server.starttls()
+            server.login(smtp_settings["smtp_user"], smtp_settings["smtp_pass"])
+            server.send_message(msg)
+        logger.info(f"Billing email sent to {emails}")
+    except Exception as e:
+        logger.warning(f"SMTP send failed: {e}")
+
+
+@router.get("/api/admin/pending-bills")
+async def list_pending_bills(
+    admin: dict = Depends(get_current_admin),
+    status: Optional[str] = None,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=50, le=200),
+):
+    """List all pending bills."""
+    org_id = _org(admin)
+    query = {"organization_id": org_id}
+    if status:
+        query["status"] = status
+
+    total = await db.pending_bills.count_documents(query)
+    skip = (page - 1) * limit
+    docs = await db.pending_bills.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    return {"bills": docs, "total": total, "page": page}
+
+
+class CompleteBillRequest(BaseModel):
+    bill_number: str
+
+
+@router.put("/api/admin/pending-bills/{bill_id}/complete")
+async def complete_bill(bill_id: str, data: CompleteBillRequest, admin: dict = Depends(get_current_admin)):
+    """Mark a pending bill as billed. Requires bill/invoice number."""
+    org_id = _org(admin)
+
+    bill = await db.pending_bills.find_one({"id": bill_id, "organization_id": org_id})
+    if not bill:
+        raise HTTPException(status_code=404, detail="Bill not found")
+
+    if bill.get("status") == "billed":
+        raise HTTPException(status_code=400, detail="Bill already marked as done")
+
+    if not data.bill_number.strip():
+        raise HTTPException(status_code=400, detail="Bill number is required")
+
+    await db.pending_bills.update_one(
+        {"id": bill_id},
+        {"$set": {
+            "status": "billed",
+            "bill_number": data.bill_number.strip(),
+            "billed_at": get_ist_isoformat(),
+            "billed_by": admin.get("name", "Admin"),
+            "billed_by_id": admin.get("id"),
+            "updated_at": get_ist_isoformat(),
+        }}
+    )
+
+    # Add timeline to ticket
+    if bill.get("ticket_id"):
+        await db.tickets_v2.update_one(
+            {"id": bill["ticket_id"]},
+            {"$push": {"timeline": {
+                "id": str(uuid.uuid4()),
+                "type": "bill_generated",
+                "description": f"Invoice {data.bill_number} generated for parts consumed",
+                "user_name": admin.get("name", "Admin"),
+                "created_at": get_ist_isoformat(),
+            }}}
+        )
+
+    return {"status": "billed", "bill_number": data.bill_number, "message": f"Bill marked as done. Invoice: {data.bill_number}"}
