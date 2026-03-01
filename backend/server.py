@@ -9416,6 +9416,10 @@ init_visits_db(db)
 app.include_router(engineer_visits_router, tags=["Engineer Visits"])
 
 
+from routes.inventory import router as inventory_router
+app.include_router(inventory_router, tags=["Inventory"])
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
