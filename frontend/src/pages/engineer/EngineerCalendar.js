@@ -332,15 +332,16 @@ export default function EngineerCalendar() {
             )}
           </div>
           {/* Event Detail Panel */}
-          <EventDetailPanel
-            event={selectedEvent}
-            detail={eventDetail}
-            loading={detailLoading}
-            onClose={() => { setSelectedEvent(null); setEventDetail(null); }}
-            onViewTicket={() => selectedEvent?.ticket_id && navigate(`/engineer/ticket/${selectedEvent.ticket_id}`)}
-          />
         </div>
       </div>
+      {/* Floating Event Detail Modal */}
+      <EventDetailPanel
+        event={selectedEvent}
+        detail={eventDetail}
+        loading={detailLoading}
+        onClose={() => { setSelectedEvent(null); setEventDetail(null); }}
+        onViewTicket={() => selectedEvent?.ticket_id && navigate(`/engineer/ticket/${selectedEvent.ticket_id}`)}
+      />
     </div>
   );
 }
