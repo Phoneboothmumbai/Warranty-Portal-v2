@@ -2676,9 +2676,9 @@ async def quick_create_user(user_data: UserCreate, admin: dict = Depends(get_cur
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
-    # Check if user with same email exists in same company
+    # Enforce UNIQUE(organization_id, email) within tenant
     existing = await db.users.find_one(
-        {"email": user_data.email, "company_id": user_data.company_id, "is_deleted": {"$ne": True}},
+        scope_query({"email": user_data.email, "is_deleted": {"$ne": True}}, org_id),
         {"_id": 0}
     )
     if existing:
