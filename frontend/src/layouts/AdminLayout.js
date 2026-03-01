@@ -279,7 +279,7 @@ const AdminLayout = () => {
               )}
               <div>
                 <span className="font-semibold text-slate-900 text-sm">
-                  {branding.company_name || settings.company_name || 'Warranty Portal'}
+                  aftersales.support
                 </span>
                 <p className="text-xs text-slate-500">
                   {organization?.subscription?.plan ? (

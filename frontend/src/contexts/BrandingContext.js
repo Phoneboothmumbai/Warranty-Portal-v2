@@ -38,7 +38,7 @@ export function BrandingProvider({ children }) {
         setBranding(prev => ({
           ...prev,
           ...org.branding,
-          company_name: org.branding.company_name || org.name || prev.company_name
+          company_name: 'aftersales.support'
         }));
       }
       
