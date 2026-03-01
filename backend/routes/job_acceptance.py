@@ -697,7 +697,7 @@ async def engineer_get_pending(engineer: dict = Depends(get_current_engineer)):
     """Get pending assignments for logged-in engineer."""
     eng = await _resolve_engineer(engineer)
     tickets = await _db.tickets_v2.find({
-        "assigned_to_id": eng["id"],
+        "assigned_to_id": {"$in": eng["all_ids"]},
         "organization_id": eng["organization_id"],
         "assignment_status": "pending",
         "is_open": True,
