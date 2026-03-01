@@ -393,6 +393,41 @@ async def checkout_visit(visit_id: str, data: CheckoutRequest, engineer: dict = 
 
     await _db.visits.update_one({"id": visit_id}, {"$set": visit_updates})
 
+    # Auto-deduct inventory for parts used during this visit
+    parts_used = visit.get("parts_requested", [])
+    if parts_used and resolution == "fixed":
+        org_id = eng["organization_id"]
+        for part in parts_used:
+            pid = part.get("product_id")
+            if not pid:
+                continue
+            qty = part.get("quantity", 1)
+            # Deduct from inventory
+            await _db.inventory.update_one(
+                {"organization_id": org_id, "product_id": pid},
+                {"$inc": {"quantity_in_stock": -qty, "total_used": qty},
+                 "$set": {"updated_at": checkout_time}}
+            )
+            # Log transaction
+            await _db.inventory_transactions.insert_one({
+                "id": str(uuid.uuid4()),
+                "organization_id": org_id,
+                "product_id": pid,
+                "product_name": part.get("product_name", ""),
+                "type": "used",
+                "quantity": qty,
+                "ticket_id": visit.get("ticket_id"),
+                "ticket_number": visit.get("ticket_number"),
+                "company_name": visit.get("company_name"),
+                "visit_id": visit_id,
+                "engineer_name": eng["name"],
+                "reference": f"Job #{visit.get('ticket_number')}",
+                "notes": f"Used during visit by {eng['name']}",
+                "performed_by": eng["name"],
+                "performed_by_id": eng["id"],
+                "created_at": checkout_time,
+            })
+
     # Update ticket stage
     timeline_entry = {
         "id": str(uuid.uuid4()),
