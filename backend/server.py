@@ -9411,6 +9411,11 @@ from routes.job_acceptance import router as job_acceptance_router, init_db as in
 init_job_acceptance_db(db)
 app.include_router(job_acceptance_router, prefix="/api", tags=["Job Acceptance"])
 
+from routes.engineer_visits import router as engineer_visits_router, init_db as init_visits_db
+init_visits_db(db)
+app.include_router(engineer_visits_router, tags=["Engineer Visits"])
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
