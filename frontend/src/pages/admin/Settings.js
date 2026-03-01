@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Upload, Save, Palette, Building2, ImageIcon, X } from 'lucide-react';
+import { Upload, Save, Palette, Building2, ImageIcon, X, Mail } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
 import { Button } from '../../components/ui/button';
