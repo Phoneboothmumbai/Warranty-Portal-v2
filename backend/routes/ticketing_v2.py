@@ -1454,6 +1454,18 @@ async def list_engineers(admin: dict = Depends(get_current_admin)):
         {"_id": 0, "password_hash": 0}
     ).to_list(100)
     
+    # Also include staff_users who can be assigned (technicians/field engineers)
+    existing_emails = {e.get("email") for e in engineers}
+    staff_engineers = await _db.staff_users.find(
+        {"organization_id": org_id, "state": "active", "is_deleted": {"$ne": True}},
+        {"_id": 0, "password_hash": 0}
+    ).to_list(100)
+    for s in staff_engineers:
+        if s.get("email") not in existing_emails:
+            s["is_active"] = True
+            s["source"] = "staff_user"
+            engineers.append(s)
+    
     # For each engineer, get their current workload and last visit info
     for eng in engineers:
         # Count open assigned tickets
