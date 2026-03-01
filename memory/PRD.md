@@ -27,54 +27,34 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - Engineer ticket detail page showing full customer, device, repair history
 - Admin reassignment UI for declined tickets
 
-### Enhanced Ticket Creation (Feb 27, 2026)
-- Multi-step: Company > Site > Employee > Device cascading flow
-- "Add New Site" inline form saves to DB, syncs across portal
-- "Add New Employee" inline form saves to DB, syncs across portal
-- Employee auto-fills contact fields
-- Device universal search + manual entry toggle
-- Custom form fields load dynamically per help topic
-
-### Security Hardening (Feb 26, 2026)
-- scope_query() hard-fails when org_id is None
-- masters.py, companies.py, amc_requests.py, amc_onboarding.py, qr_service.py all scoped
-- All bulk import endpoints scoped by organization_id
-
-### Item Master Module (Feb 27, 2026)
-- Categories, Products, Product Bundles CRUD
-- Quotation Integration with bundle recommendations
-- Frontend: 3-tab interface at /admin/item-master
-- Testing: 25/25 backend tests passed
-
-### Quotation System (Feb 27, 2026)
-- Full CRUD at /api/admin/quotations/*
-- Per-line GST, auto-calculated totals
-- Company endpoints for list/approve/reject
-- Testing: 17/17 backend tests passed
-
-### Complete Tenant Isolation (Feb 27, 2026)
-- Every admin endpoint scoped by organization_id
-- Dashboard stats strictly tenant-scoped
-- Data migration backfilled 191 records
-
-### Composite Email Uniqueness (Mar 1, 2026)
-- UNIQUE(organization_id, email) across companies, users, engineers, staff_users
-- DB-level composite unique indexes
-
-### Homepage Redesign (Feb 28, 2026)
-- Corporate hero, animated KPIs, bento grid features, testimonial section
-- Updated branding to "aftersales.support"
-
 ### Engineer Reschedule Fix - Slot-Based Scheduling (Mar 1, 2026)
-- **Completely rebuilt** the reschedule UI in PendingCard component
 - Replaced broken datetime-local input with date picker + slot grid
 - New backend endpoint: `GET /api/engineer/available-slots?date=YYYY-MM-DD`
-- Shows 30-minute time slots within engineer's working hours
-- Blocks past times, holidays, non-working days
-- Blocks already-booked slots with 1-hour buffer (greyed out + line-through)
-- Available slots clickable with blue highlight on selection
+- 30-minute time slots within working hours, blocks past times/booked slots
 - Backend validation: past date, 30-min intervals, working hours, slot availability
-- **Testing: 95% backend (18/19), 100% frontend - ALL PASS**
+- Testing: 95% backend (18/19), 100% frontend
+
+### Tenant Name Hardcoding (Mar 1, 2026)
+- Hardcoded "aftersales.support" brand name across all portals
+- Fixed cross-tenant name leak in BrandingContext.js
+
+### Engineer Visit Workflow - Full Lifecycle (Mar 1, 2026)
+- **Phase 1: Calendar Floating Popup** - Event click opens centered modal with full ticket/company/device/history details
+- **Phase 2: Visit Workflow** - Start Visit (check-in timer), Service Report (Problem/Diagnosis/Solution/Resolution Type), Check Out
+- **Phase 3: Parts Request Flow** - Engineer requests parts → auto-creates quotation draft → admin reviews/sends → customer approves
+- New backend file: `/app/backend/routes/engineer_visits.py`
+- Endpoints: `POST /api/engineer/visit/start`, `PUT /api/engineer/visit/{id}/update`, `POST /api/engineer/visit/{id}/request-parts`, `POST /api/engineer/visit/{id}/checkout`, `GET /api/engineer/visit/history/{ticket_id}`, `GET /api/admin/parts-requests`, `PUT /api/admin/parts-requests/{id}/status`
+- Resolution types: Fixed → "Work Done", Parts Needed → "Awaiting Parts", Escalation → "Escalated"
+- **Testing: 100% backend (15/15), 100% frontend - ALL PASS**
+
+### Previous Work
+- Homepage redesign with corporate aesthetic
+- Production data isolation fix with migration script
+- Email uniqueness constraints (composite indexes)
+- Item Master module (Categories, Products, Bundles)
+- Quotation system (CRUD, GST calc, company approve/reject)
+- Security hardening (scope_query, bulk imports)
+- Enhanced ticket creation (multi-step cascading flow)
 
 ## Architecture
 - Frontend: React + Tailwind + Shadcn/UI
@@ -83,10 +63,18 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - Auth: JWT-based, separate admin/engineer tokens
 - Multi-tenancy: organization_id on all collections
 
+## Key Collections
+- `tickets_v2` - Main ticket data
+- `visits` - Engineer field visit records (NEW)
+- `parts_requests` - Parts requested by engineers (NEW)
+- `quotations` - Auto-created from parts requests
+- `ticket_schedules` - Scheduling data
+- `engineers` - Engineer profiles with working hours
+
 ## Prioritized Backlog
 
 ### P0 (Next)
-- Integrate Item Master into full Quotation/CRM flow
+- Admin UI for Parts Requests management (view, update status, link to quotation)
 - Form Builder UI (drag-and-drop custom ticket forms)
 - Workflow Designer UI (visual editor)
 - Email Inbox UI (IMAP/SMTP config)
@@ -96,6 +84,7 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - Notification Engine (Email/In-app)
 - Quotation PDF Generation
 - Razorpay Integration
+- Customer quotation approval portal
 
 ### P2
 - CompanySwitcher for platform admins
