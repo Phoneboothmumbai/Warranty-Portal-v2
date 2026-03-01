@@ -338,7 +338,7 @@ export default function EngineerDashboard() {
           <div className="space-y-3">
             {pending_tickets.map(t => (
               <PendingCard key={t.id} ticket={t} declineReasons={decline_reasons}
-                onAccept={handleAccept} onDecline={handleDecline} onReschedule={handleReschedule} />
+                onAccept={handleAccept} onDecline={handleDecline} onReschedule={handleReschedule} token={token} />
             ))}
           </div>
         </div>
