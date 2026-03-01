@@ -1896,6 +1896,15 @@ async def create_company(company_data: CompanyCreate, admin: dict = Depends(get_
     if org_id:
         company_dict["organization_id"] = org_id
     
+    # Enforce UNIQUE(organization_id, contact_email) within tenant
+    if company_dict.get("contact_email"):
+        dup = await db.companies.find_one(scope_query({
+            "contact_email": company_dict["contact_email"],
+            "is_deleted": {"$ne": True}
+        }, org_id))
+        if dup:
+            raise HTTPException(status_code=400, detail=f"A company with email '{company_dict['contact_email']}' already exists in your tenant")
+    
     company = Company(**company_dict)
     await db.companies.insert_one(company.model_dump())
     await log_audit("company", company.id, "create", {"data": company_data.model_dump()}, admin)
