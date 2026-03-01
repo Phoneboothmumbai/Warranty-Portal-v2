@@ -958,6 +958,7 @@ export default function ItemMaster() {
       {activeTab === 'products' && <ProductsTab token={token} />}
       {activeTab === 'bundles' && <BundlesTab token={token} />}
       {activeTab === 'inventory' && <InventoryTab token={token} />}
+      {activeTab === 'pending-bills' && <PendingBillsComponent />}
     </div>
   );
 }
