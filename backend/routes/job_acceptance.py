@@ -883,17 +883,17 @@ async def engineer_dashboard(engineer: dict = Depends(get_current_engineer)):
     """Engineer's own dashboard data."""
     eng = await _resolve_engineer(engineer)
     org_id = eng["organization_id"]
-    eng_id = eng["id"]
+    eng_ids = eng["all_ids"]
 
     # Pending acceptance
     pending = await _db.tickets_v2.find({
-        "assigned_to_id": eng_id, "organization_id": org_id,
+        "assigned_to_id": {"$in": eng_ids}, "organization_id": org_id,
         "assignment_status": "pending", "is_open": True, "is_deleted": {"$ne": True}
     }, {"_id": 0, "timeline": 0}).sort("assigned_at", -1).to_list(20)
 
     # Accepted / active tickets
     active = await _db.tickets_v2.find({
-        "assigned_to_id": eng_id, "organization_id": org_id,
+        "assigned_to_id": {"$in": eng_ids}, "organization_id": org_id,
         "is_open": True, "is_deleted": {"$ne": True},
         "assignment_status": {"$ne": "pending"}
     }, {"_id": 0, "timeline": 0}).sort("updated_at", -1).to_list(30)
@@ -902,18 +902,18 @@ async def engineer_dashboard(engineer: dict = Depends(get_current_engineer)):
     from datetime import datetime as dt_cls
     now = dt_cls.now(IST).isoformat()
     schedules = await _db.ticket_schedules.find({
-        "engineer_id": eng_id, "organization_id": org_id,
+        "engineer_id": {"$in": eng_ids}, "organization_id": org_id,
         "scheduled_at": {"$gte": now}, "status": {"$nin": ["cancelled"]}
     }, {"_id": 0}).sort("scheduled_at", 1).to_list(10)
 
     # Stats
     total_assigned = await _db.tickets_v2.count_documents({
-        "assigned_to_id": eng_id, "organization_id": org_id,
+        "assigned_to_id": {"$in": eng_ids}, "organization_id": org_id,
         "is_open": True, "is_deleted": {"$ne": True}
     })
     today_str = dt_cls.now(IST).strftime("%Y-%m-%d")
     visits_today = await _db.ticket_schedules.count_documents({
-        "engineer_id": eng_id, "organization_id": org_id,
+        "engineer_id": {"$in": eng_ids}, "organization_id": org_id,
         "scheduled_at": {"$gte": f"{today_str}T00:00:00", "$lte": f"{today_str}T23:59:59"},
         "status": {"$nin": ["cancelled"]}
     })
