@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Badge } from '../../components/ui/badge';
 import { toast } from 'sonner';
+import PendingBillsComponent from './PendingBills';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api/admin/item-master`;
 const INV_API = `${process.env.REACT_APP_BACKEND_URL}/api/admin/inventory`;
