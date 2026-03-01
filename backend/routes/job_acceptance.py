@@ -688,6 +688,17 @@ async def _resolve_engineer(user: dict):
     if not profile:
         raise HTTPException(status_code=404, detail="Engineer profile not found")
     
+    # If profile is missing organization_id, resolve it from organization_members
+    if not profile.get("organization_id"):
+        email = profile.get("email", "")
+        if email:
+            member = await _db.organization_members.find_one(
+                {"email": email, "is_deleted": {"$ne": True}},
+                {"_id": 0, "organization_id": 1}
+            )
+            if member and member.get("organization_id"):
+                profile["organization_id"] = member["organization_id"]
+    
     profile["all_ids"] = list(all_ids)
     return profile
 
