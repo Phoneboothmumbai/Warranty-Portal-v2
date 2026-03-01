@@ -9,7 +9,7 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - Job acceptance/decline/reschedule workflow for technicians
 - Central calendar (admin) and personal calendar (engineer)
 - Workforce management with working hours, holidays, salary
-- **Strict multi-tenant data isolation** - all data scoped by organization_id
+- Strict multi-tenant data isolation - all data scoped by organization_id
 - Enhanced ticket creation: Company > Site > Employee > Device with inline "Add New"
 
 ## What's Been Implemented
@@ -23,38 +23,50 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - Workforce overview for admins
 - Notification system for declined jobs
 - Smart scheduling with 30-min slots and 1-hour buffer
-- Delete functionality for all master data items
-- Engineer ticket detail page showing full customer, device, repair history
-- Admin reassignment UI for declined tickets
-
-### Engineer Reschedule Fix - Slot-Based Scheduling (Mar 1, 2026)
-- Replaced broken datetime-local input with date picker + slot grid
-- New backend endpoint: `GET /api/engineer/available-slots?date=YYYY-MM-DD`
-- 30-minute time slots within working hours, blocks past times/booked slots
-- Backend validation: past date, 30-min intervals, working hours, slot availability
-- Testing: 95% backend (18/19), 100% frontend
-
-### Tenant Name Hardcoding (Mar 1, 2026)
-- Hardcoded "aftersales.support" brand name across all portals
-- Fixed cross-tenant name leak in BrandingContext.js
-
-### Engineer Visit Workflow - Full Lifecycle (Mar 1, 2026)
-- **Phase 1: Calendar Floating Popup** - Event click opens centered modal with full ticket/company/device/history details
-- **Phase 2: Visit Workflow** - Start Visit (check-in timer), Service Report (Problem/Diagnosis/Solution/Resolution Type), Check Out
-- **Phase 3: Parts Request Flow** - Engineer requests parts → auto-creates quotation draft → admin reviews/sends → customer approves
-- New backend file: `/app/backend/routes/engineer_visits.py`
-- Endpoints: `POST /api/engineer/visit/start`, `PUT /api/engineer/visit/{id}/update`, `POST /api/engineer/visit/{id}/request-parts`, `POST /api/engineer/visit/{id}/checkout`, `GET /api/engineer/visit/history/{ticket_id}`, `GET /api/admin/parts-requests`, `PUT /api/admin/parts-requests/{id}/status`
-- Resolution types: Fixed → "Work Done", Parts Needed → "Awaiting Parts", Escalation → "Escalated"
-- **Testing: 100% backend (15/15), 100% frontend - ALL PASS**
-
-### Previous Work
-- Homepage redesign with corporate aesthetic
-- Production data isolation fix with migration script
-- Email uniqueness constraints (composite indexes)
+- Enhanced ticket creation (multi-step: Company > Site > Employee > Device)
 - Item Master module (Categories, Products, Bundles)
 - Quotation system (CRUD, GST calc, company approve/reject)
-- Security hardening (scope_query, bulk imports)
-- Enhanced ticket creation (multi-step cascading flow)
+- Security hardening (scope_query, bulk imports, composite indexes)
+- Homepage redesign with corporate aesthetic
+- Production data isolation fix with migration script
+
+### Engineer Reschedule Fix (Mar 1, 2026)
+- Slot-based scheduling with 30-min intervals within working hours
+- Backend validation: past date, blocked slots, working hours
+
+### Engineer Visit Workflow (Mar 1, 2026)
+- Start Visit (check-in timer), Service Report, Check Out
+- Parts Request flow: auto-creates quotation draft for back office
+- Resolution types: Fixed/Parts Needed/Escalation with auto stage transition
+- Calendar floating popup with full ticket/company/device/history details
+
+### Admin Parts Requests Management (Mar 1, 2026)
+- Full management page at `/admin/parts-requests`
+- Status filter pills: All/Pending/Quoted/Approved/Procured/Delivered
+- Expandable rows with items table, pricing, engineer info, quotation link
+- Status advancement buttons (Mark as Approved/Procured/Delivered)
+- **Testing: 100% backend (16/16), 100% frontend**
+
+### Item Master Bulk Upload (Mar 1, 2026)
+- Sample CSV download with all fields (name, SKU, category, part_number, brand, manufacturer, description, unit_price, gst_slab, hsn_code, unit_of_measure, initial_stock, reorder_level)
+- CSV upload with duplicate detection (by SKU or product name within tenant)
+- Auto-creates categories if not existing
+- Creates initial inventory records + transactions if initial_stock specified
+- Error report for rejected rows
+
+### Inventory Management (Mar 1, 2026)
+- New "Inventory" tab in Item Master alongside Categories/Products/Bundles
+- Table: Product, Category, SKU, In Stock (green/red), Purchased, Used, Price, Adjust
+- Low Stock indicator for items at/below reorder level
+- Search functionality
+- Stock adjustment modal (Purchase/Return/Manual Adjustment/Initial Stock)
+- Click any item → history panel showing:
+  - Summary: In Stock, Purchased, Used counts
+  - Transaction log with type badges and +/- quantities
+  - Job details (ticket number, company name) for 'used' transactions
+- Auto-deduct inventory when engineer checks out with resolution "fixed"
+- Engineer inventory view endpoint
+- **Testing: 100% backend (16/16), 100% frontend**
 
 ## Architecture
 - Frontend: React + Tailwind + Shadcn/UI
@@ -65,16 +77,18 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 
 ## Key Collections
 - `tickets_v2` - Main ticket data
-- `visits` - Engineer field visit records (NEW)
-- `parts_requests` - Parts requested by engineers (NEW)
+- `visits` - Engineer field visit records
+- `parts_requests` - Parts requested by engineers
 - `quotations` - Auto-created from parts requests
-- `ticket_schedules` - Scheduling data
-- `engineers` - Engineer profiles with working hours
+- `inventory` - Stock levels per product
+- `inventory_transactions` - Transaction log (purchase/use/return/adjustment)
+- `item_products` - Product catalog
+- `item_categories` - Product categories
+- `item_bundles` - Product bundles
 
 ## Prioritized Backlog
 
 ### P0 (Next)
-- Admin UI for Parts Requests management (view, update status, link to quotation)
 - Form Builder UI (drag-and-drop custom ticket forms)
 - Workflow Designer UI (visual editor)
 - Email Inbox UI (IMAP/SMTP config)
