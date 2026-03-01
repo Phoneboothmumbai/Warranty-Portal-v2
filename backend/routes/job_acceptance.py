@@ -648,23 +648,48 @@ async def check_escalations(admin: dict = Depends(get_current_admin)):
 # ═══════════════════════════════════════════════════════════════
 
 async def _resolve_engineer(user: dict):
-    """Resolve engineer record from auth token data."""
+    """Resolve engineer record from auth token data.
+    Returns profile with all_ids list for cross-collection ID matching."""
     eng_id = user.get("id")
     email = user.get("email", user.get("sub", ""))
+    
+    all_ids = set()
+    profile = None
+    
+    # Check engineers collection
     engineer = await _db.engineers.find_one(
         {"$or": [{"id": eng_id}, {"email": email}], "is_deleted": {"$ne": True}},
-        {"_id": 0, "id": 1, "name": 1, "organization_id": 1}
+        {"_id": 0, "id": 1, "name": 1, "email": 1, "organization_id": 1}
     )
-    if not engineer:
-        # Also check staff_users (staff can log into engineer portal)
-        staff = await _db.staff_users.find_one(
-            {"$or": [{"id": eng_id}, {"email": email}], "state": "active", "is_deleted": {"$ne": True}},
-            {"_id": 0, "id": 1, "name": 1, "organization_id": 1}
-        )
-        if staff:
-            return staff
+    if engineer:
+        all_ids.add(engineer["id"])
+        profile = engineer
+    
+    # Check staff_users collection
+    staff = await _db.staff_users.find_one(
+        {"$or": [{"id": eng_id}, {"email": email}], "state": "active", "is_deleted": {"$ne": True}},
+        {"_id": 0, "id": 1, "name": 1, "email": 1, "organization_id": 1}
+    )
+    if staff:
+        all_ids.add(staff["id"])
+        if not profile:
+            profile = staff
+    
+    # Check organization_members too (tickets can be assigned to org members)
+    org_member = await _db.organization_members.find_one(
+        {"$or": [{"id": eng_id}, {"email": email}], "is_deleted": {"$ne": True}},
+        {"_id": 0, "id": 1, "name": 1, "email": 1, "organization_id": 1}
+    )
+    if org_member:
+        all_ids.add(org_member["id"])
+        if not profile:
+            profile = org_member
+    
+    if not profile:
         raise HTTPException(status_code=404, detail="Engineer profile not found")
-    return engineer
+    
+    profile["all_ids"] = list(all_ids)
+    return profile
 
 
 @router.get("/engineer/assignment/pending")
