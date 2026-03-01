@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Ticket, Clock, Calendar, CheckCircle, MapPin, AlertTriangle,
-  ChevronRight, Check, X, RefreshCw, Zap
+  ChevronRight, Check, X, RefreshCw, Zap, Loader2
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -28,13 +28,62 @@ const StatsCard = ({ label, value, icon: Icon, color }) => (
 );
 
 // ── Pending Assignment Card ──
-const PendingCard = ({ ticket, declineReasons, onAccept, onDecline, onReschedule }) => {
+const PendingCard = ({ ticket, declineReasons, onAccept, onDecline, onReschedule, token }) => {
   const [action, setAction] = useState(null);
   const [reasonId, setReasonId] = useState('');
   const [reasonDetail, setReasonDetail] = useState('');
-  const [proposedDate, setProposedDate] = useState('');
-  const [proposedTime, setProposedTime] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedSlot, setSelectedSlot] = useState('');
   const [notes, setNotes] = useState('');
+  const [slotData, setSlotData] = useState(null);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  const fetchSlots = async (date) => {
+    if (!date) return;
+    setLoadingSlots(true);
+    setSlotData(null);
+    setSelectedSlot('');
+    try {
+      const res = await fetch(`${API}/api/engineer/available-slots?date=${date}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setSlotData(await res.json());
+      } else {
+        const err = await res.json();
+        toast.error(err.detail || 'Failed to load slots');
+        setSlotData({ slots: [], message: err.detail });
+      }
+    } catch {
+      toast.error('Failed to load available slots');
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  const handleDateChange = (e) => {
+    const date = e.target.value;
+    setSelectedDate(date);
+    if (date) fetchSlots(date);
+  };
+
+  const handleSubmitReschedule = async () => {
+    if (!selectedDate) { toast.error('Please select a date'); return; }
+    if (!selectedSlot) { toast.error('Please select a time slot'); return; }
+    setSubmitting(true);
+    const proposedTime = `${selectedDate}T${selectedSlot}:00`;
+    const [sh, sm] = selectedSlot.split(':').map(Number);
+    const endH = sh + 1;
+    const endTime = `${selectedDate}T${String(endH).padStart(2, '0')}:${String(sm).padStart(2, '0')}:00`;
+    await onReschedule(ticket.id, proposedTime, endTime, notes);
+    setSubmitting(false);
+  };
+
+  const availableSlots = slotData?.slots?.filter(s => s.available) || [];
+  const blockedSlots = slotData?.slots?.filter(s => !s.available) || [];
 
   return (
     <div className="border-2 border-amber-300 bg-amber-50/50 rounded-xl p-4" data-testid={`pending-${ticket.ticket_number}`}>
@@ -87,37 +136,110 @@ const PendingCard = ({ ticket, declineReasons, onAccept, onDecline, onReschedule
       )}
 
       {action === 'reschedule' && (
-        <div className="mt-3 bg-white rounded-lg border p-3 space-y-2" data-testid={`reschedule-form-${ticket.ticket_number}`}>
-          <p className="text-xs font-medium text-blue-700">Propose a new time:</p>
-          <div className="flex gap-2">
-            <input type="datetime-local" className="flex-1 border rounded-md px-3 py-2 text-sm bg-white" 
-              id={`reschedule-dt-${ticket.id}`}
-              min={new Date().toISOString().slice(0,16)} 
-              data-testid="reschedule-datetime" />
+        <div className="mt-3 bg-white rounded-lg border p-3 space-y-3" data-testid={`reschedule-form-${ticket.ticket_number}`}>
+          <p className="text-xs font-medium text-blue-700">Select a date and available time slot:</p>
+
+          {/* Date Picker */}
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Date</label>
+            <input
+              type="date"
+              className="w-full border rounded-md px-3 py-2 text-sm bg-white"
+              min={todayStr}
+              value={selectedDate}
+              onChange={handleDateChange}
+              data-testid="reschedule-date"
+            />
           </div>
-          <input type="text" placeholder="Notes (optional)" className="w-full border rounded-md px-3 py-2 text-sm"
-            id={`reschedule-notes-${ticket.id}`}
-            data-testid="reschedule-notes" />
+
+          {/* Slot Loading */}
+          {loadingSlots && (
+            <div className="flex items-center justify-center py-4 text-slate-400" data-testid="slots-loading">
+              <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading available slots...
+            </div>
+          )}
+
+          {/* Non-working day / Holiday message */}
+          {slotData && !slotData.is_working_day && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-xs text-orange-700" data-testid="non-working-msg">
+              {slotData.message || 'This is not a working day. Please select another date.'}
+            </div>
+          )}
+
+          {/* Available Slots Grid */}
+          {slotData && slotData.is_working_day && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs text-slate-500">
+                  Available Slots ({slotData.work_start} - {slotData.work_end})
+                </label>
+                <span className="text-[10px] text-slate-400">
+                  {availableSlots.length} available / {slotData.slots?.length || 0} total
+                </span>
+              </div>
+              {availableSlots.length === 0 ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-600" data-testid="no-slots-msg">
+                  No available slots on this date. Please try another day.
+                </div>
+              ) : (
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5" data-testid="slot-grid">
+                  {slotData.slots.map(slot => (
+                    <button
+                      key={slot.time}
+                      type="button"
+                      disabled={!slot.available}
+                      onClick={() => setSelectedSlot(slot.time)}
+                      className={`px-2 py-1.5 text-xs rounded-md border transition-all font-medium
+                        ${!slot.available
+                          ? 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed line-through'
+                          : selectedSlot === slot.time
+                            ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-300'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:bg-blue-50 cursor-pointer'
+                        }`}
+                      title={slot.blocked_by ? `Blocked: ${slot.blocked_by}` : `Select ${slot.time}`}
+                      data-testid={`slot-${slot.time.replace(':', '')}`}
+                    >
+                      {slot.time}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedSlot && (
+                <p className="text-xs text-blue-600 mt-1.5 font-medium" data-testid="selected-slot-label">
+                  Selected: {selectedDate} at {selectedSlot}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Notes */}
+          {selectedSlot && (
+            <div>
+              <label className="text-xs text-slate-500 block mb-1">Notes (optional)</label>
+              <input
+                type="text"
+                placeholder="Add any notes..."
+                className="w-full border rounded-md px-3 py-2 text-sm"
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                data-testid="reschedule-notes"
+              />
+            </div>
+          )}
+
+          {/* Actions */}
           <div className="flex gap-2">
-            <button 
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 h-9 px-4 transition-colors"
+            <Button
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={!selectedSlot || submitting}
+              onClick={handleSubmitReschedule}
               data-testid={`confirm-reschedule-${ticket.ticket_number}`}
-              onClick={() => {
-                const dtInput = document.getElementById(`reschedule-dt-${ticket.id}`);
-                const notesInput = document.getElementById(`reschedule-notes-${ticket.id}`);
-                const dtVal = dtInput ? dtInput.value : '';
-                const notesVal = notesInput ? notesInput.value : '';
-                if (!dtVal) { toast.error('Please select a date and time'); return; }
-                const dt = dtVal.includes('T') ? dtVal + ':00' : dtVal + 'T00:00:00';
-                const endDate = new Date(dtVal);
-                endDate.setHours(endDate.getHours() + 1);
-                const endDt = endDate.toISOString().slice(0,19);
-                onReschedule(ticket.id, dt, endDt, notesVal);
-              }}
             >
+              {submitting ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Check className="w-3.5 h-3.5 mr-1" />}
               Accept & Reschedule
-            </button>
-            <Button size="sm" variant="ghost" onClick={() => setAction(null)}>Cancel</Button>
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { setAction(null); setSelectedDate(''); setSelectedSlot(''); setSlotData(null); }}>Cancel</Button>
           </div>
         </div>
       )}
