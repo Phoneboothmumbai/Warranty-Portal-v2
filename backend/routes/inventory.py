@@ -262,7 +262,7 @@ async def download_sample_csv(admin: dict = Depends(get_current_admin)):
     ])
     writer.writerow([
         f"# Available categories: {', '.join(cat_names) if cat_names else 'Create categories first'}",
-        "", "", "", "", "", f"# GST slabs: 0, 5, 12, 18, 28", "", "", "", "", "", ""
+        "", "", "", "", "", "# GST slabs: 0, 5, 12, 18, 28", "", "", "", "", "", ""
     ])
 
     output.seek(0)
@@ -410,7 +410,7 @@ async def bulk_upload_products(
                 "quantity": initial_stock,
                 "unit_cost": unit_price,
                 "reference": "Bulk Upload",
-                "notes": f"Initial stock from CSV upload",
+                "notes": "Initial stock from CSV upload",
                 "performed_by": admin.get("name", "Admin"),
                 "performed_by_id": admin.get("id"),
                 "created_at": now,
