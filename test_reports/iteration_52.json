@@ -1,0 +1,123 @@
+{
+  "summary": "Comprehensive testing of Engineer Visit Workflow (Phases 1-3). All backend API tests passed (15/15). Frontend UI tests successful for all visit workflow components - Start Visit, Add Report dialog, Request Parts dialog, Checkout dialog, and Calendar floating popup.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "Phase 1: Calendar floating popup opens when clicking calendar events (not inline panel)",
+    "Phase 2a: Ticket detail page shows 'Start Visit' button for accepted tickets",
+    "Phase 2b: Clicking Start Visit creates visit record, shows timer with action buttons (Add Report, Request Parts, Check Out)",
+    "Phase 2c: Add Report dialog opens with fields: Problem Found*, Diagnosis, Solution Applied, Resolution Type (Fixed/Parts Needed/Escalate), Notes",
+    "Phase 2c: Resolution type buttons are clickable and highlight when selected",
+    "Phase 2c: Save Report button submits and updates visit record",
+    "Phase 2d: Checkout dialog shows duration timer, visit summary, resolution type selection, customer name field",
+    "Phase 2d: Checkout moves ticket to appropriate stage (Fixed→Work Done, Parts Needed→Awaiting Parts, Escalation→Escalated)",
+    "Phase 3a: Request Parts dialog allows adding multiple part items (name, qty, price)",
+    "Phase 3a: Parts table shows calculated GST and totals",
+    "Phase 3b: Parts request auto-creates quotation draft (verified via toast notification showing quotation number)",
+    "Phase 3c: Backend validation - Start visit returns 404 for invalid ticket",
+    "Phase 3c: Backend validation - Update returns 404 for invalid/completed visit",
+    "Phase 3c: Backend validation - Checkout returns 404 for invalid visit",
+    "Phase 3c: Backend validation - Empty parts list rejected (400)",
+    "Phase 3d: Admin can list parts requests via GET /api/admin/parts-requests",
+    "Phase 3d: Admin can filter parts requests by status"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_engineer_visit_workflow.py",
+    "/app/test_reports/pytest/engineer_visit_workflow_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_engineer_visit_workflow.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 passed)",
+    "frontend": "100%"
+  },
+  "test_credentials": {
+    "engineer_email": "testeng@test.com",
+    "engineer_password": "Test@123",
+    "admin_email": "ck@motta.in",
+    "admin_password": "Charu@123@",
+    "test_ticket_id": "c028d748-3bac-4b7e-a6b1-32310d8ec7f8",
+    "test_ticket_number": "TEST-9999"
+  },
+  "features_verified": {
+    "calendar_floating_popup": {
+      "phase": "Phase 1",
+      "status": "PASS",
+      "details": "EventDetailPanel renders as floating modal centered on screen with dark overlay"
+    },
+    "start_visit": {
+      "phase": "Phase 2a",
+      "status": "PASS",
+      "api": "POST /api/engineer/visit/start",
+      "ui_element": "[data-testid='start-visit-btn']"
+    },
+    "visit_in_progress": {
+      "phase": "Phase 2b",
+      "status": "PASS",
+      "features": ["Live timer", "Add Report button", "Request Parts button", "Check Out button"]
+    },
+    "add_report_dialog": {
+      "phase": "Phase 2c",
+      "status": "PASS",
+      "api": "PUT /api/engineer/visit/{visit_id}/update",
+      "fields": ["Problem Found*", "Diagnosis", "Solution Applied", "Resolution Type", "Notes"],
+      "ui_element": "[data-testid='service-report-dialog']"
+    },
+    "checkout_dialog": {
+      "phase": "Phase 2d",
+      "status": "PASS",
+      "api": "POST /api/engineer/visit/{visit_id}/checkout",
+      "stage_mapping": {
+        "fixed": "Work Done",
+        "parts_needed": "Awaiting Parts",
+        "escalation": "Escalated"
+      },
+      "ui_element": "[data-testid='checkout-dialog']"
+    },
+    "request_parts": {
+      "phase": "Phase 3a",
+      "status": "PASS",
+      "api": "POST /api/engineer/visit/{visit_id}/request-parts",
+      "ui_element": "[data-testid='parts-request-dialog']",
+      "features": ["Part name input", "Qty/Price fields", "Parts table with GST calc", "Submit button"]
+    },
+    "auto_create_quotation": {
+      "phase": "Phase 3b",
+      "status": "PASS",
+      "details": "Parts request creates draft quotation automatically with auto-generated number (e.g., QT-572711)"
+    },
+    "admin_parts_requests": {
+      "phase": "Phase 3d",
+      "status": "PASS",
+      "endpoints": [
+        "GET /api/admin/parts-requests",
+        "GET /api/admin/parts-requests?status=quoted",
+        "PUT /api/admin/parts-requests/{id}/status"
+      ]
+    }
+  },
+  "visit_workflow_ui_elements": {
+    "start_visit_btn": "[data-testid='start-visit-btn']",
+    "update_report_btn": "[data-testid='update-report-btn']",
+    "request_parts_btn": "[data-testid='request-parts-btn']",
+    "checkout_btn": "[data-testid='checkout-btn']",
+    "service_report_dialog": "[data-testid='service-report-dialog']",
+    "parts_request_dialog": "[data-testid='parts-request-dialog']",
+    "checkout_dialog": "[data-testid='checkout-dialog']",
+    "visit_control": "[data-testid='visit-control']",
+    "visit_completed": "[data-testid='visit-completed']"
+  },
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Engineer visit workflow fully tested. Test data: testeng@test.com engineer with TEST-9999 ticket. Multiple visits completed during testing. Parts requests created with auto-quotations (QT-572711 etc). All endpoints are real - no mocked APIs. Calendar floating popup works for events with linked tickets."
+}
