@@ -18,7 +18,7 @@ export const SettingsProvider = ({ children }) => {
     logo_url: null,
     logo_base64: null,
     accent_color: '#0F62FE',
-    company_name: 'Warranty Portal'
+    company_name: 'aftersales.support'
   });
   const [loading, setLoading] = useState(true);
 
