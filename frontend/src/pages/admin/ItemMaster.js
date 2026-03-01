@@ -600,6 +600,319 @@ function BundlesTab({ token }) {
   );
 }
 
+// ── Bulk Upload Button ──────────────────────────────────
+
+function BulkUploadButton({ token, onComplete }) {
+  const fileRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const downloadSample = async () => {
+    try {
+      const res = await fetch(`${API}/bulk-upload/sample`, { headers: { Authorization: `Bearer ${token}` } });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'item_master_bulk_upload_sample.csv'; a.click();
+      URL.revokeObjectURL(url);
+    } catch { toast.error('Failed to download sample'); }
+  };
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true); setResult(null);
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch(`${API}/bulk-upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setResult(data);
+        toast.success(data.message);
+        onComplete();
+      } else { toast.error(data.detail || 'Upload failed'); }
+    } catch { toast.error('Upload failed'); }
+    finally { setUploading(false); if (fileRef.current) fileRef.current.value = ''; }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="sm" onClick={downloadSample} data-testid="download-sample-btn">
+        <Download className="h-3.5 w-3.5 mr-1" /> Sample CSV
+      </Button>
+      <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={uploading} data-testid="bulk-upload-btn">
+        {uploading ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1" />}
+        Bulk Upload
+      </Button>
+      <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleUpload} />
+      {result && result.errors?.length > 0 && (
+        <Dialog open={true} onOpenChange={() => setResult(null)}>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Upload Results</DialogTitle></DialogHeader>
+            <div className="space-y-2 text-sm">
+              <p className="text-green-600">{result.created} created</p>
+              <p className="text-amber-600">{result.skipped} skipped</p>
+              {result.errors.map((err, i) => (
+                <div key={i} className="text-xs bg-red-50 p-2 rounded border border-red-100">
+                  <span className="font-medium">Row {err.row}:</span> {err.name} — {err.reason}
+                </div>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}
+
+// ── Inventory Tab ────────────────────────────────────────
+
+function InventoryTab({ token }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [history, setHistory] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [adjustModal, setAdjustModal] = useState(null);
+  const [adjustForm, setAdjustForm] = useState({ quantity: 0, type: 'purchase', unit_cost: 0, notes: '' });
+  const [adjusting, setAdjusting] = useState(false);
+
+  const hdrs = useCallback(() => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }), [token]);
+
+  const fetchInventory = useCallback(async () => {
+    try {
+      const params = search ? `?search=${encodeURIComponent(search)}` : '';
+      const res = await fetch(`${INV_API}${params}`, { headers: hdrs() });
+      if (res.ok) { const d = await res.json(); setItems(d.items || []); }
+    } catch { toast.error('Failed to load inventory'); }
+    finally { setLoading(false); }
+  }, [token, search, hdrs]);
+
+  useEffect(() => { setLoading(true); fetchInventory(); }, [fetchInventory]);
+
+  const fetchHistory = async (productId) => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch(`${INV_API}/${productId}/history`, { headers: hdrs() });
+      if (res.ok) { setHistory(await res.json()); }
+    } catch { toast.error('Failed to load history'); }
+    finally { setHistoryLoading(false); }
+  };
+
+  const handleAdjust = async () => {
+    if (!adjustModal || adjustForm.quantity <= 0) { toast.error('Enter a valid quantity'); return; }
+    setAdjusting(true);
+    try {
+      const res = await fetch(`${INV_API}/adjust`, {
+        method: 'POST', headers: hdrs(),
+        body: JSON.stringify({ product_id: adjustModal.id, ...adjustForm, quantity: parseInt(adjustForm.quantity), unit_cost: parseFloat(adjustForm.unit_cost) || 0 }),
+      });
+      if (res.ok) {
+        toast.success('Stock adjusted');
+        setAdjustModal(null); fetchInventory();
+        if (selectedItem?.id === adjustModal.id) fetchHistory(adjustModal.id);
+      } else { const d = await res.json(); toast.error(d.detail || 'Failed'); }
+    } catch { toast.error('Failed'); }
+    finally { setAdjusting(false); }
+  };
+
+  const openItemHistory = (item) => {
+    setSelectedItem(item);
+    fetchHistory(item.id);
+  };
+
+  if (loading) return <div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-[#0F62FE] border-t-transparent rounded-full animate-spin" /></div>;
+
+  return (
+    <>
+      {/* Toolbar */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <input className="form-input pl-9 w-full" placeholder="Search inventory..." value={search} onChange={e => setSearch(e.target.value)} data-testid="inventory-search" />
+        </div>
+        <Badge variant="secondary">{items.length} items</Badge>
+      </div>
+
+      <div className="grid grid-cols-3 gap-6">
+        {/* Inventory List */}
+        <div className={`${selectedItem ? 'col-span-2' : 'col-span-3'}`}>
+          <div className="bg-white rounded-xl border overflow-hidden">
+            {items.length === 0 ? (
+              <div className="text-center py-20">
+                <Warehouse className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+                <p className="text-slate-500">No inventory items. Add products first.</p>
+              </div>
+            ) : (
+              <table className="w-full table-modern text-sm">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Category</th>
+                    <th>SKU</th>
+                    <th className="text-center">In Stock</th>
+                    <th className="text-center">Purchased</th>
+                    <th className="text-center">Used</th>
+                    <th className="text-right">Price</th>
+                    <th className="w-24"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map(item => {
+                    const isLow = item.quantity_in_stock <= item.reorder_level;
+                    return (
+                      <tr key={item.id} className={`cursor-pointer hover:bg-slate-50 ${selectedItem?.id === item.id ? 'bg-blue-50' : ''}`}
+                        onClick={() => openItemHistory(item)} data-testid={`inv-row-${item.id}`}>
+                        <td>
+                          <p className="font-medium text-slate-900">{item.name}</p>
+                          {item.brand && <p className="text-[10px] text-slate-400">{item.brand}</p>}
+                        </td>
+                        <td><Badge variant="outline" className="text-[10px]">{item.category_name || '-'}</Badge></td>
+                        <td><code className="text-[10px] bg-slate-100 px-1 py-0.5 rounded">{item.sku || '-'}</code></td>
+                        <td className="text-center">
+                          <span className={`font-mono font-bold text-sm ${isLow ? 'text-red-600' : 'text-green-600'}`}>
+                            {item.quantity_in_stock}
+                          </span>
+                          {isLow && <p className="text-[9px] text-red-400">Low Stock</p>}
+                        </td>
+                        <td className="text-center font-mono text-xs text-slate-500">{item.total_purchased}</td>
+                        <td className="text-center font-mono text-xs text-slate-500">{item.total_used}</td>
+                        <td className="text-right font-mono text-xs">{item.unit_price?.toFixed(2)}</td>
+                        <td>
+                          <Button variant="outline" size="sm" className="text-xs" onClick={(e) => { e.stopPropagation(); setAdjustModal(item); setAdjustForm({ quantity: 0, type: 'purchase', unit_cost: item.unit_price || 0, notes: '' }); }} data-testid={`adjust-${item.id}`}>
+                            <ArrowUpDown className="w-3 h-3 mr-1" /> Adjust
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        {/* Item History Panel */}
+        {selectedItem && (
+          <div className="col-span-1">
+            <div className="bg-white rounded-xl border sticky top-4">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h3 className="font-semibold text-sm text-slate-800 truncate">{selectedItem.name}</h3>
+                <button onClick={() => { setSelectedItem(null); setHistory(null); }} className="p-1 hover:bg-slate-100 rounded"><X className="w-4 h-4" /></button>
+              </div>
+
+              {historyLoading ? (
+                <div className="p-8 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-slate-400" /></div>
+              ) : history ? (
+                <div className="p-4 space-y-3 max-h-[60vh] overflow-y-auto">
+                  {/* Summary */}
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="bg-green-50 rounded-lg p-2">
+                      <p className="text-xs text-green-600">In Stock</p>
+                      <p className="font-bold text-green-700">{history.inventory?.quantity_in_stock ?? 0}</p>
+                    </div>
+                    <div className="bg-blue-50 rounded-lg p-2">
+                      <p className="text-xs text-blue-600">Purchased</p>
+                      <p className="font-bold text-blue-700">{history.inventory?.total_purchased ?? 0}</p>
+                    </div>
+                    <div className="bg-orange-50 rounded-lg p-2">
+                      <p className="text-xs text-orange-600">Used</p>
+                      <p className="font-bold text-orange-700">{history.inventory?.total_used ?? 0}</p>
+                    </div>
+                  </div>
+
+                  {/* Transaction Log */}
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 mb-2 flex items-center gap-1"><History className="w-3 h-3" /> Transaction History</p>
+                    {(history.transactions || []).length === 0 ? (
+                      <p className="text-xs text-slate-400 text-center py-4">No transactions yet</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {history.transactions.map(txn => (
+                          <div key={txn.id} className="text-xs border rounded-lg p-2.5" data-testid={`txn-${txn.id}`}>
+                            <div className="flex items-center justify-between">
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                txn.type === 'purchase' ? 'bg-green-100 text-green-700' :
+                                txn.type === 'used' ? 'bg-orange-100 text-orange-700' :
+                                txn.type === 'return' ? 'bg-blue-100 text-blue-700' :
+                                txn.type === 'initial' ? 'bg-purple-100 text-purple-700' :
+                                'bg-slate-100 text-slate-600'
+                              }`}>{txn.type}</span>
+                              <span className={`font-mono font-bold ${
+                                ['purchase', 'return', 'initial', 'adjustment'].includes(txn.type) ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {['purchase', 'return', 'initial', 'adjustment'].includes(txn.type) ? '+' : '-'}{txn.quantity}
+                              </span>
+                            </div>
+                            {txn.ticket_details && (
+                              <div className="mt-1.5 bg-slate-50 rounded p-1.5">
+                                <p className="font-medium text-blue-600">Job #{txn.ticket_details.ticket_number}</p>
+                                <p className="text-slate-500 truncate">{txn.ticket_details.subject}</p>
+                                <p className="text-slate-400">{txn.ticket_details.company_name}</p>
+                              </div>
+                            )}
+                            {txn.reference && !txn.ticket_details && (
+                              <p className="text-slate-400 mt-1">{txn.reference}</p>
+                            )}
+                            <p className="text-slate-300 mt-1">{txn.performed_by} &middot; {txn.created_at ? new Date(txn.created_at).toLocaleString() : ''}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Stock Adjustment Modal */}
+      <Dialog open={!!adjustModal} onOpenChange={() => setAdjustModal(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Adjust Stock — {adjustModal?.name}</DialogTitle></DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <label className="form-label">Type</label>
+              <select className="form-input" value={adjustForm.type} onChange={e => setAdjustForm({...adjustForm, type: e.target.value})} data-testid="adjust-type">
+                <option value="purchase">Purchase (add stock)</option>
+                <option value="return">Return (add stock)</option>
+                <option value="adjustment">Manual Adjustment</option>
+                <option value="initial">Initial Stock</option>
+              </select>
+            </div>
+            <div>
+              <label className="form-label">Quantity</label>
+              <input type="number" min="1" className="form-input font-mono" value={adjustForm.quantity} onChange={e => setAdjustForm({...adjustForm, quantity: e.target.value})} data-testid="adjust-qty" />
+            </div>
+            <div>
+              <label className="form-label">Unit Cost</label>
+              <input type="number" step="0.01" className="form-input font-mono" value={adjustForm.unit_cost} onChange={e => setAdjustForm({...adjustForm, unit_cost: e.target.value})} />
+            </div>
+            <div>
+              <label className="form-label">Notes</label>
+              <input className="form-input" value={adjustForm.notes} onChange={e => setAdjustForm({...adjustForm, notes: e.target.value})} placeholder="e.g., PO #12345" />
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => setAdjustModal(null)}>Cancel</Button>
+              <Button onClick={handleAdjust} disabled={adjusting} className="bg-[#0F62FE] hover:bg-[#0043CE] text-white" data-testid="confirm-adjust">
+                {adjusting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                Confirm
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 // ── Main Page ────────────────────────────────────────────
 
 const TABS = [
