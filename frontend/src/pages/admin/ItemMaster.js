@@ -920,6 +920,7 @@ const TABS = [
   { key: 'products', label: 'Products', icon: Package },
   { key: 'bundles', label: 'Bundles', icon: Link2 },
   { key: 'inventory', label: 'Inventory', icon: Warehouse },
+  { key: 'pending-bills', label: 'Pending Bills', icon: IndianRupee },
 ];
 
 export default function ItemMaster() {
