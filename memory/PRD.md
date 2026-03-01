@@ -79,6 +79,21 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - **Data migration**: Backfilled `organization_id` on 191 existing records missing it
 - **Audit result**: 0 unscoped admin endpoints, 2 company endpoints (safe by design: AI summary + self-profile update)
 
+### Composite Email Uniqueness (Mar 1, 2026)
+- Enforced `UNIQUE(organization_id, email)` across: companies, users, company_users, engineers, staff_users
+- Backend validation on 5 creation endpoints + bulk import
+- DB-level composite unique indexes
+- Rule: Email unique per tenant, allowed across tenants
+
+### Engineer Reschedule Fix (Mar 1, 2026)
+- Fixed `_resolve_engineer()` to check both `engineers` and `staff_users` collections
+- Staff users logging into engineer portal can now reschedule jobs
+
+### Contact Details & Pricing Fix (Mar 1, 2026)
+- Updated contact page: support@aftersales.support, +91 97694 44455, Mumbai address
+- Fixed Enterprise pricing showing "Free" → now shows "Custom"
+- Updated all hardcoded "Warranty Portal" → "aftersales.support"
+
 ### Homepage Redesign (Feb 28, 2026)
 - **Complete redesign** of `LandingPage.js` — from generic centered layout to corporate, asymmetric, image-rich design
 - **Asymmetric hero**: Text left (60%) + dashboard visual with floating stat cards right (40%)
