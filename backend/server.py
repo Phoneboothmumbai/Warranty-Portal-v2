@@ -1926,6 +1926,15 @@ async def quick_create_company(company_data: CompanyCreate, admin: dict = Depend
         existing.get("label", existing.get("name", "Unknown")) or existing.get("name", "Unknown"); existing["label"] = existing.get("name", "Unknown")
         return existing
     
+    # Enforce UNIQUE(organization_id, contact_email) within tenant
+    if company_data.contact_email:
+        dup = await db.companies.find_one(scope_query({
+            "contact_email": company_data.contact_email,
+            "is_deleted": {"$ne": True}
+        }, org_id))
+        if dup:
+            raise HTTPException(status_code=400, detail=f"A company with email '{company_data.contact_email}' already exists in your tenant")
+    
     # Filter out None values to allow Company model defaults to work
     company_dict = {k: v for k, v in company_data.model_dump().items() if v is not None}
     
