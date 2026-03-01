@@ -8,7 +8,7 @@ const BrandingContext = createContext(null);
 export function BrandingProvider({ children }) {
   const [branding, setBranding] = useState({
     accent_color: '#0F62FE',
-    company_name: 'Warranty Portal',
+    company_name: 'aftersales.support',
     logo_url: null,
     logo_base64: null
   });
@@ -102,7 +102,7 @@ export function useBranding() {
     return {
       branding: {
         accent_color: '#0F62FE',
-        company_name: 'Warranty Portal',
+        company_name: 'aftersales.support',
         logo_url: null
       },
       organization: null,

@@ -98,7 +98,7 @@ function Header() {
           <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
             <Shield className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold text-slate-900">Warranty Portal</span>
+          <span className="text-xl font-bold text-slate-900">aftersales.support</span>
         </Link>
       </div>
     </header>
@@ -131,7 +131,7 @@ function Footer() {
               <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                 <Shield className="w-4 h-4 text-white" />
               </div>
-              <span className="text-lg font-bold text-white">Warranty Portal</span>
+              <span className="text-lg font-bold text-white">aftersales.support</span>
             </div>
             <p className="text-sm">
               Enterprise warranty and asset tracking solution for modern businesses.
@@ -175,7 +175,7 @@ function Footer() {
         </div>
 
         <div className="border-t border-slate-800 mt-8 pt-8 text-sm text-center">
-          <p>© {new Date().getFullYear()} Warranty Portal. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} aftersales.support. All rights reserved.</p>
         </div>
       </div>
     </footer>
