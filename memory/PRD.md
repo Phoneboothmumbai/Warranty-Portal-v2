@@ -14,6 +14,14 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 
 ## What's Been Implemented
 
+### Admin Ticket Dashboard Redesign (Mar 2, 2026)
+- Split ticket list into "To Be Assigned" (unassigned) and "Assigned Tickets" sections
+- Status filter pills (New, Assigned, In Progress, Awaiting Parts, Diagnosed, Fixed On-Site, etc.)
+- Stats cards: Unassigned, Open, Closed, Total
+- Backend: `assigned` boolean filter + `status` stage filter on /api/ticketing/tickets
+- Backend: `by_stage` and `unassigned` count in /api/ticketing/stats
+- **Testing: 100% backend (13/13), 100% frontend**
+
 ### Engineer Reschedule Fix (Mar 1, 2026)
 - Slot-based scheduling with 30-min intervals within working hours
 - Backend validation: past date, blocked slots, working hours
@@ -36,21 +44,16 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 ### Inventory Management (Mar 1, 2026)
 - Inventory tab in Item Master with stock levels (In Stock/Purchased/Used)
 - Low Stock alerts, search, stock adjustment modal
-- Click item → history panel with transaction log + job details
+- Click item -> history panel with transaction log + job details
 - Auto-deduct inventory when engineer uses parts during checkout
 
 ### Pending Bills System (Mar 1, 2026)
 - Auto-created when engineer uses parts during visit checkout
-- Bills aggregated per ticket (multiple visits → same bill)
+- Bills aggregated per ticket (multiple visits -> same bill)
 - Available at both /admin/pending-bills AND Item Master "Pending Bills" tab
-- Stats dashboard: Pending count, Billed count, Pending Amount
-- Filter pills: All/Pending/Billed
-- Expandable rows with items table (Part, Added By, Qty, Price, GST, Total)
-- "Mark as Done" requires Bill/Invoice Number → status changes to "billed"
-- Timeline entry added to ticket when bill is completed
-- Billing Team Email config in Settings (multiple emails)
-- Email notification sent to billing team when parts are consumed (uses SMTP)
-- **Testing: 100% backend, 100% frontend**
+- Stats dashboard, filter pills, expandable rows
+- "Mark as Done" requires Bill/Invoice Number
+- Billing Team Email config in Settings with SMTP notifications
 
 ### Previous Work (Feb 2026)
 - Full admin/engineer portals, ticketing V2, workforce, calendars
