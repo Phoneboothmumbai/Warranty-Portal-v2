@@ -47,7 +47,7 @@ const AboutPage = () => {
                 <Shield className="h-5 w-5 text-white" />
               </div>
               <span className="text-lg font-semibold text-slate-900 font-display">
-                {settings.company_name || 'AssetVault'}
+                aftersales.support
               </span>
             </Link>
 
@@ -192,7 +192,7 @@ const AboutPage = () => {
               <div className="w-8 h-8 rounded-lg bg-[#0F62FE] flex items-center justify-center">
                 <Shield className="h-4 w-4 text-white" />
               </div>
-              <span className="font-semibold font-display">{settings.company_name || 'AssetVault'}</span>
+              <span className="font-semibold font-display">aftersales.support</span>
             </div>
             <div className="flex gap-8 text-sm text-slate-400">
               <Link to="/" className="hover:text-white transition-colors">Home</Link>

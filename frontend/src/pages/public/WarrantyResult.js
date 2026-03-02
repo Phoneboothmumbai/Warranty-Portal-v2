@@ -104,7 +104,7 @@ const WarrantyResult = () => {
             ) : (
               <Shield className="h-7 w-7 text-[#0F62FE]" />
             )}
-            <span className="text-lg font-semibold text-slate-900">{settings.company_name}</span>
+            <span className="text-lg font-semibold text-slate-900">aftersales.support</span>
           </Link>
           <Button 
             variant="ghost" 

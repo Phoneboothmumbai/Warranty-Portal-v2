@@ -58,21 +58,14 @@ const Settings = () => {
   };
 
   const handleSave = async () => {
-    if (!settings.company_name.trim()) {
-      toast.error('Company name is required');
-      return;
-    }
-
     setSaving(true);
     try {
       await axios.put(`${API}/admin/settings`, {
-        company_name: settings.company_name,
-        accent_color: settings.accent_color
+        billing_emails: settings.billing_emails,
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Settings saved');
-      refreshSettings();
     } catch (error) {
       toast.error('Failed to save settings');
     } finally {
@@ -143,153 +136,7 @@ const Settings = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Settings</h1>
-        <p className="text-slate-500 mt-1">Configure your portal branding</p>
-      </div>
-
-      {/* Branding Section */}
-      <div className="card-elevated space-y-6">
-        <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-          <Building2 className="h-5 w-5 text-slate-400" />
-          Portal Branding
-        </h2>
-
-        {/* Company Name */}
-        <div>
-          <label className="form-label">Portal Name</label>
-          <input
-            type="text"
-            value={settings.company_name}
-            onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
-            className="form-input max-w-md"
-            placeholder="e.g., NeoStore Warranty Portal"
-            data-testid="settings-company-name-input"
-          />
-          <p className="text-xs text-slate-500 mt-1">This name appears in the header and PDF reports</p>
-        </div>
-
-        {/* Logo Upload */}
-        <div>
-          <label className="form-label flex items-center gap-2">
-            <ImageIcon className="h-4 w-4" />
-            Logo
-          </label>
-          <div className="flex items-start gap-6">
-            {/* Logo Preview */}
-            <div className="w-32 h-32 bg-slate-100 rounded-xl flex items-center justify-center border-2 border-dashed border-slate-200 relative overflow-hidden">
-              {logoPreview ? (
-                <>
-                  <img 
-                    src={logoPreview} 
-                    alt="Logo preview" 
-                    className="max-w-full max-h-full object-contain p-2"
-                  />
-                  <button
-                    onClick={removeLogo}
-                    className="absolute top-1 right-1 w-6 h-6 bg-white rounded-full shadow flex items-center justify-center hover:bg-red-50"
-                    data-testid="remove-logo-btn"
-                  >
-                    <X className="h-3 w-3 text-red-500" />
-                  </button>
-                </>
-              ) : (
-                <ImageIcon className="h-8 w-8 text-slate-300" />
-              )}
-            </div>
-
-            {/* Upload Button */}
-            <div>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleLogoUpload}
-                accept="image/*"
-                className="hidden"
-              />
-              <Button 
-                variant="outline" 
-                onClick={() => fileInputRef.current?.click()}
-                data-testid="upload-logo-btn"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Logo
-              </Button>
-              <p className="text-xs text-slate-500 mt-2">
-                Recommended: Square image, PNG or SVG<br />
-                Max size: 2MB
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Accent Color Section */}
-      <div className="card-elevated space-y-6">
-        <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-          <Palette className="h-5 w-5 text-slate-400" />
-          Accent Color
-        </h2>
-
-        <div>
-          <label className="form-label">Primary Color</label>
-          <div className="flex flex-wrap gap-3 mb-4">
-            {predefinedColors.map((color) => (
-              <button
-                key={color.value}
-                onClick={() => setSettings({ ...settings, accent_color: color.value })}
-                className={`w-10 h-10 rounded-lg border-2 transition-all ${
-                  settings.accent_color === color.value 
-                    ? 'border-slate-900 scale-110' 
-                    : 'border-transparent hover:scale-105'
-                }`}
-                style={{ backgroundColor: color.value }}
-                title={color.name}
-                data-testid={`color-${color.name.toLowerCase().replace(' ', '-')}`}
-              />
-            ))}
-          </div>
-          
-          {/* Custom Color */}
-          <div className="flex items-center gap-3">
-            <div 
-              className="w-10 h-10 rounded-lg border border-slate-200"
-              style={{ backgroundColor: settings.accent_color }}
-            />
-            <input
-              type="text"
-              value={settings.accent_color}
-              onChange={(e) => setSettings({ ...settings, accent_color: e.target.value })}
-              className="form-input w-32 font-mono text-sm"
-              placeholder="#0F62FE"
-              data-testid="custom-color-input"
-            />
-            <span className="text-sm text-slate-500">Custom hex color</span>
-          </div>
-        </div>
-
-        {/* Preview */}
-        <div className="p-4 bg-slate-50 rounded-xl">
-          <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">Preview</p>
-          <div className="flex items-center gap-4">
-            <Button 
-              className="text-white"
-              style={{ backgroundColor: settings.accent_color }}
-            >
-              Primary Button
-            </Button>
-            <span 
-              className="px-3 py-1 rounded-full text-sm font-medium"
-              style={{ 
-                backgroundColor: `${settings.accent_color}15`,
-                color: settings.accent_color
-              }}
-            >
-              Badge
-            </span>
-            <span style={{ color: settings.accent_color }} className="text-sm font-medium">
-              Link Text
-            </span>
-          </div>
-        </div>
+        <p className="text-slate-500 mt-1">Configure your portal settings</p>
       </div>
 
       {/* Billing Email Section */}

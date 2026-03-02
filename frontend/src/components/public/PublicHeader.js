@@ -32,7 +32,7 @@ const PublicHeader = () => {
               )}
             </div>
             <span className="text-lg font-semibold text-slate-900 font-display">
-              {settings?.company_name || 'aftersales.support'}
+              aftersales.support
             </span>
           </Link>
 

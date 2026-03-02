@@ -144,7 +144,7 @@ const PublicDevicePage = () => {
             ) : (
               <Shield className="h-7 w-7 text-[#0F62FE]" />
             )}
-            <span className="text-lg font-semibold text-slate-900">{settings.company_name}</span>
+            <span className="text-lg font-semibold text-slate-900">aftersales.support</span>
           </Link>
           <div className="flex items-center gap-2">
             <QrCode className="h-4 w-4 text-slate-400" />
@@ -537,7 +537,7 @@ const PublicDevicePage = () => {
 
               {/* Footer Note */}
               <p className="text-center text-sm text-slate-400 pt-4">
-                Scanned via QR Code • {settings.company_name}
+                Scanned via QR Code • aftersales.support
               </p>
             </div>
           ) : null}
