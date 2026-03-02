@@ -691,6 +691,7 @@ async def list_tickets(
     assigned_to_id: Optional[str] = None,
     assigned_team_id: Optional[str] = None,
     is_open: Optional[bool] = None,
+    assigned: Optional[bool] = None,
     search: Optional[str] = None,
     page: int = 1,
     limit: int = 20,
@@ -713,11 +714,28 @@ async def list_tickets(
         query["assigned_team_id"] = assigned_team_id
     if is_open is not None:
         query["is_open"] = is_open
+    if status:
+        query["current_stage_name"] = status
+    if assigned is not None:
+        if assigned:
+            query["assigned_to_id"] = {"$ne": None}
+            query["assigned_to_name"] = {"$ne": None}
+        else:
+            query["$or"] = [
+                {"assigned_to_id": None},
+                {"assigned_to_id": {"$exists": False}},
+                {"assigned_to_name": None},
+                {"assigned_to_name": {"$exists": False}}
+            ]
     if search:
-        query["$or"] = [
+        search_conditions = [
             {"ticket_number": {"$regex": search, "$options": "i"}},
             {"subject": {"$regex": search, "$options": "i"}}
         ]
+        if "$or" in query:
+            query["$and"] = [{"$or": query.pop("$or")}, {"$or": search_conditions}]
+        else:
+            query["$or"] = search_conditions
     
     skip = (page - 1) * limit
     
@@ -1402,24 +1420,44 @@ async def get_ticketing_stats(admin: dict = Depends(get_current_admin)):
     if not org_id:
         raise HTTPException(status_code=403, detail="Organization context required")
     
+    base_q = {"organization_id": org_id, "is_deleted": {"$ne": True}}
+    
     # Total tickets
-    total = await _db.tickets_v2.count_documents({"organization_id": org_id, "is_deleted": {"$ne": True}})
-    open_count = await _db.tickets_v2.count_documents({"organization_id": org_id, "is_open": True, "is_deleted": {"$ne": True}})
-    closed_count = await _db.tickets_v2.count_documents({"organization_id": org_id, "is_open": False, "is_deleted": {"$ne": True}})
+    total = await _db.tickets_v2.count_documents(base_q)
+    open_count = await _db.tickets_v2.count_documents({**base_q, "is_open": True})
+    closed_count = await _db.tickets_v2.count_documents({**base_q, "is_open": False})
+    
+    # Unassigned count
+    unassigned_count = await _db.tickets_v2.count_documents({
+        **base_q,
+        "$or": [
+            {"assigned_to_id": None},
+            {"assigned_to_id": {"$exists": False}},
+            {"assigned_to_name": None},
+            {"assigned_to_name": {"$exists": False}}
+        ]
+    })
     
     # By priority
     priority_pipeline = [
-        {"$match": {"organization_id": org_id, "is_open": True, "is_deleted": {"$ne": True}}},
+        {"$match": {**base_q, "is_open": True}},
         {"$group": {"_id": "$priority_name", "count": {"$sum": 1}}}
     ]
     by_priority = {doc["_id"]: doc["count"] async for doc in _db.tickets_v2.aggregate(priority_pipeline)}
     
     # By help topic
     topic_pipeline = [
-        {"$match": {"organization_id": org_id, "is_open": True, "is_deleted": {"$ne": True}}},
+        {"$match": {**base_q, "is_open": True}},
         {"$group": {"_id": "$help_topic_name", "count": {"$sum": 1}}}
     ]
     by_topic = {doc["_id"]: doc["count"] async for doc in _db.tickets_v2.aggregate(topic_pipeline)}
+    
+    # By stage (for filter pills)
+    stage_pipeline = [
+        {"$match": {**base_q, "is_deleted": {"$ne": True}}},
+        {"$group": {"_id": "$current_stage_name", "count": {"$sum": 1}}}
+    ]
+    by_stage = {doc["_id"]: doc["count"] async for doc in _db.tickets_v2.aggregate(stage_pipeline)}
     
     # Pending tasks
     pending_tasks = await _db.ticket_tasks.count_documents({
@@ -1431,8 +1469,10 @@ async def get_ticketing_stats(admin: dict = Depends(get_current_admin)):
         "total": total,
         "open": open_count,
         "closed": closed_count,
+        "unassigned": unassigned_count,
         "by_priority": by_priority,
         "by_topic": by_topic,
+        "by_stage": by_stage,
         "pending_tasks": pending_tasks
     }
 

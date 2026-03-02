@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, Ticket, Clock, AlertTriangle, CheckCircle, ChevronDown, X, RefreshCw, MapPin, User, Monitor, Building2 } from 'lucide-react';
+import { Plus, Search, Ticket, Clock, AlertTriangle, CheckCircle, X, RefreshCw, MapPin, User, Monitor, Building2, ChevronDown } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { toast } from 'sonner';
@@ -502,58 +502,157 @@ const CreateTicketModal = ({ open, onClose, onCreated }) => {
   );
 };
 
+// ── Reusable Ticket Table ──
+const TicketTable = ({ tickets, loading, emptyText, navigate, testId }) => (
+  <div className="bg-white border border-slate-200 rounded-lg overflow-hidden" data-testid={testId}>
+    <table className="w-full">
+      <thead className="bg-slate-50 border-b">
+        <tr>
+          <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Ticket</th>
+          <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Subject</th>
+          <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Help Topic</th>
+          <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Stage</th>
+          <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Priority</th>
+          <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Assigned</th>
+          <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        {loading ? (
+          <tr><td colSpan={7} className="text-center py-10 text-slate-400">Loading...</td></tr>
+        ) : tickets.length === 0 ? (
+          <tr><td colSpan={7} className="text-center py-10 text-slate-400">{emptyText}</td></tr>
+        ) : tickets.map(t => (
+          <tr
+            key={t.id}
+            className="border-b hover:bg-slate-50 cursor-pointer transition-colors"
+            onClick={() => navigate(`/admin/service-requests/${t.id}`)}
+            data-testid={`ticket-row-${t.ticket_number}`}
+          >
+            <td className="px-4 py-3">
+              <span className="font-mono text-sm font-semibold text-blue-600">#{t.ticket_number}</span>
+            </td>
+            <td className="px-4 py-3">
+              <p className="text-sm font-medium text-slate-900 truncate max-w-[250px]">{t.subject}</p>
+              {t.company_name && <p className="text-xs text-slate-400">{t.company_name}</p>}
+            </td>
+            <td className="px-4 py-3">
+              <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{t.help_topic_name}</span>
+            </td>
+            <td className="px-4 py-3">
+              <span className={`text-xs px-2 py-0.5 rounded-full ${stageColors[t.current_stage_name] || 'bg-slate-100 text-slate-600'}`}>
+                {t.current_stage_name || 'New'}
+              </span>
+            </td>
+            <td className="px-4 py-3">
+              <span className={`text-xs px-2 py-0.5 rounded-full ${priorityColors[t.priority_name] || priorityColors.medium}`}>
+                {t.priority_name || 'medium'}
+              </span>
+            </td>
+            <td className="px-4 py-3">
+              <span className="text-xs text-slate-500">{t.assigned_to_name || t.assigned_team_name || '-'}</span>
+            </td>
+            <td className="px-4 py-3">
+              <span className="text-xs text-slate-400">{t.created_at ? new Date(t.created_at).toLocaleDateString() : '-'}</span>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
+const stageColors = {
+  'New': 'bg-blue-50 text-blue-700',
+  'Open': 'bg-sky-50 text-sky-700',
+  'Assigned': 'bg-indigo-50 text-indigo-700',
+  'In Progress': 'bg-amber-50 text-amber-700',
+  'Awaiting Parts': 'bg-orange-50 text-orange-700',
+  'Diagnosed': 'bg-purple-50 text-purple-700',
+  'Fixed On-Site': 'bg-emerald-50 text-emerald-700',
+  'Closed': 'bg-green-50 text-green-700',
+  'Resolved': 'bg-green-50 text-green-700',
+};
+
 export default function ServiceRequestsV2() {
   const navigate = useNavigate();
-  const [tickets, setTickets] = useState([]);
   const [stats, setStats] = useState({});
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState({ is_open: null, help_topic_id: null, priority: null });
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [helpTopics, setHelpTopics] = useState([]);
+  const [stageFilter, setStageFilter] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
 
-  const fetchTickets = useCallback(async () => {
-    setLoading(true);
-    const token = localStorage.getItem('admin_token');
-    const params = new URLSearchParams({ page, limit: 20 });
-    if (search) params.set('search', search);
-    if (filter.is_open !== null) params.set('is_open', filter.is_open);
-    if (filter.help_topic_id) params.set('help_topic_id', filter.help_topic_id);
-    if (filter.priority) params.set('priority', filter.priority);
+  // Unassigned tickets (To Be Assigned)
+  const [unassigned, setUnassigned] = useState([]);
+  const [unassignedLoading, setUnassignedLoading] = useState(true);
 
+  // Assigned tickets
+  const [assigned, setAssigned] = useState([]);
+  const [assignedLoading, setAssignedLoading] = useState(true);
+  const [assignedPage, setAssignedPage] = useState(1);
+  const [assignedTotalPages, setAssignedTotalPages] = useState(1);
+  const [assignedTotal, setAssignedTotal] = useState(0);
+
+  const token = localStorage.getItem('admin_token');
+  const hdrs = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+
+  // Fetch stats
+  const fetchStats = useCallback(async () => {
     try {
-      const [ticketsRes, statsRes] = await Promise.all([
-        fetch(`${API}/api/ticketing/tickets?${params}`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API}/api/ticketing/stats`, { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
-      const ticketsData = await ticketsRes.json();
-      setTickets(ticketsData.tickets || []);
-      setTotalPages(ticketsData.pages || 1);
-      setStats(await statsRes.json());
-    } catch { toast.error('Failed to load tickets'); }
-    finally { setLoading(false); }
-  }, [page, search, filter]);
+      const res = await fetch(`${API}/api/ticketing/stats`, { headers: hdrs });
+      setStats(await res.json());
+    } catch { /* silent */ }
+  }, [hdrs]);
 
-  useEffect(() => { fetchTickets(); }, [fetchTickets]);
+  // Fetch unassigned tickets
+  const fetchUnassigned = useCallback(async () => {
+    setUnassignedLoading(true);
+    const params = new URLSearchParams({ assigned: 'false', limit: '50' });
+    if (search) params.set('search', search);
+    try {
+      const res = await fetch(`${API}/api/ticketing/tickets?${params}`, { headers: hdrs });
+      const data = await res.json();
+      setUnassigned(data.tickets || []);
+    } catch { toast.error('Failed to load unassigned tickets'); }
+    finally { setUnassignedLoading(false); }
+  }, [search, hdrs]);
 
-  useEffect(() => {
-    const token = localStorage.getItem('admin_token');
-    fetch(`${API}/api/ticketing/help-topics`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json()).then(data => setHelpTopics(Array.isArray(data) ? data : []));
-  }, []);
+  // Fetch assigned tickets (with pagination + stage filter)
+  const fetchAssigned = useCallback(async () => {
+    setAssignedLoading(true);
+    const params = new URLSearchParams({ assigned: 'true', page: assignedPage, limit: '20' });
+    if (search) params.set('search', search);
+    if (stageFilter) params.set('status', stageFilter);
+    try {
+      const res = await fetch(`${API}/api/ticketing/tickets?${params}`, { headers: hdrs });
+      const data = await res.json();
+      setAssigned(data.tickets || []);
+      setAssignedTotalPages(data.pages || 1);
+      setAssignedTotal(data.total || 0);
+    } catch { toast.error('Failed to load assigned tickets'); }
+    finally { setAssignedLoading(false); }
+  }, [assignedPage, search, stageFilter, hdrs]);
+
+  useEffect(() => { fetchStats(); }, [fetchStats]);
+  useEffect(() => { fetchUnassigned(); }, [fetchUnassigned]);
+  useEffect(() => { fetchAssigned(); }, [fetchAssigned]);
+
+  const refreshAll = () => { fetchStats(); fetchUnassigned(); fetchAssigned(); };
+
+  const stages = useMemo(() => {
+    const s = stats.by_stage || {};
+    return Object.entries(s).filter(([k]) => k).sort((a, b) => b[1] - a[1]);
+  }, [stats]);
 
   return (
     <div className="space-y-6" data-testid="tickets-page">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Tickets</h1>
           <p className="text-sm text-slate-500 mt-1">Manage service requests and support tickets</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={fetchTickets} data-testid="refresh-btn">
+          <Button variant="outline" size="sm" onClick={refreshAll} data-testid="refresh-btn">
             <RefreshCw className="w-4 h-4 mr-1" /> Refresh
           </Button>
           <Button size="sm" onClick={() => setShowCreate(true)} data-testid="create-ticket-btn">
@@ -562,117 +661,101 @@ export default function ServiceRequestsV2() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatsCard label="Unassigned" value={stats.unassigned || 0} icon={AlertTriangle} color="bg-red-50 text-red-600" />
         <StatsCard label="Open" value={stats.open || 0} icon={Ticket} color="bg-blue-50 text-blue-600" />
         <StatsCard label="Closed" value={stats.closed || 0} icon={CheckCircle} color="bg-green-50 text-green-600" />
         <StatsCard label="Total" value={stats.total || 0} icon={Clock} color="bg-slate-50 text-slate-600" />
-        <StatsCard label="Pending Tasks" value={stats.pending_tasks || 0} icon={AlertTriangle} color="bg-orange-50 text-orange-600" />
       </div>
 
-      <div className="flex gap-3 items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            data-testid="search-tickets"
-            className="pl-9"
-            placeholder="Search by ticket number or subject..."
-            value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1); }}
-          />
-        </div>
-        <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} data-testid="filter-btn">
-          <Filter className="w-4 h-4 mr-1" /> Filters {showFilters && <ChevronDown className="w-3 h-3 ml-1" />}
-        </Button>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <Input
+          data-testid="search-tickets"
+          className="pl-9"
+          placeholder="Search by ticket number or subject..."
+          value={search}
+          onChange={e => { setSearch(e.target.value); setAssignedPage(1); }}
+        />
       </div>
 
-      {showFilters && (
-        <div className="flex gap-3 items-center bg-slate-50 p-3 rounded-lg" data-testid="filter-bar">
-          <select className="border rounded-lg px-3 py-1.5 text-sm" value={filter.is_open ?? ''} onChange={e => { setFilter(f => ({ ...f, is_open: e.target.value === '' ? null : e.target.value === 'true' })); setPage(1); }}>
-            <option value="">All Status</option>
-            <option value="true">Open</option>
-            <option value="false">Closed</option>
-          </select>
-          <select className="border rounded-lg px-3 py-1.5 text-sm" value={filter.help_topic_id || ''} onChange={e => { setFilter(f => ({ ...f, help_topic_id: e.target.value || null })); setPage(1); }}>
-            <option value="">All Topics</option>
-            {helpTopics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-          <select className="border rounded-lg px-3 py-1.5 text-sm" value={filter.priority || ''} onChange={e => { setFilter(f => ({ ...f, priority: e.target.value || null })); setPage(1); }}>
-            <option value="">All Priorities</option>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="critical">Critical</option>
-          </select>
-          <Button variant="ghost" size="sm" onClick={() => { setFilter({ is_open: null, help_topic_id: null, priority: null }); setPage(1); }}>Clear</Button>
-        </div>
-      )}
-
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden" data-testid="tickets-table">
-        <table className="w-full">
-          <thead className="bg-slate-50 border-b">
-            <tr>
-              <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Ticket</th>
-              <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Subject</th>
-              <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Help Topic</th>
-              <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Stage</th>
-              <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Priority</th>
-              <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Assigned</th>
-              <th className="text-left text-xs font-medium text-slate-500 uppercase px-4 py-3">Created</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={7} className="text-center py-12 text-slate-400">Loading...</td></tr>
-            ) : tickets.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-12 text-slate-400">No tickets found</td></tr>
-            ) : tickets.map(t => (
-              <tr
-                key={t.id}
-                className="border-b hover:bg-slate-50 cursor-pointer transition-colors"
-                onClick={() => navigate(`/admin/service-requests/${t.id}`)}
-                data-testid={`ticket-row-${t.ticket_number}`}
-              >
-                <td className="px-4 py-3">
-                  <span className="font-mono text-sm font-semibold text-blue-600">#{t.ticket_number}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <p className="text-sm font-medium text-slate-900 truncate max-w-[250px]">{t.subject}</p>
-                  {t.company_name && <p className="text-xs text-slate-400">{t.company_name}</p>}
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{t.help_topic_name}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${t.is_open ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'}`}>
-                    {t.current_stage_name || 'New'}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${priorityColors[t.priority_name] || priorityColors.medium}`}>
-                    {t.priority_name || 'medium'}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-xs text-slate-500">{t.assigned_to_name || t.assigned_team_name || '-'}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-xs text-slate-400">{t.created_at ? new Date(t.created_at).toLocaleDateString() : '-'}</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Status Filter Pills */}
+      <div className="flex flex-wrap gap-2" data-testid="stage-filters">
+        <button
+          className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+            !stageFilter ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+          }`}
+          onClick={() => { setStageFilter(null); setAssignedPage(1); }}
+          data-testid="stage-filter-all"
+        >
+          All Stages
+        </button>
+        {stages.map(([stage, count]) => (
+          <button
+            key={stage}
+            className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+              stageFilter === stage ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+            }`}
+            onClick={() => { setStageFilter(stageFilter === stage ? null : stage); setAssignedPage(1); }}
+            data-testid={`stage-filter-${stage.toLowerCase().replace(/\s/g, '-')}`}
+          >
+            {stage} <span className="ml-1 opacity-70">({count})</span>
+          </button>
+        ))}
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2" data-testid="pagination">
-          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
-          <span className="text-sm text-slate-500 self-center">Page {page} of {totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+      {/* Section 1: To Be Assigned */}
+      <div data-testid="unassigned-section">
+        <div className="flex items-center gap-3 mb-3">
+          <h2 className="text-base font-semibold text-slate-800">To Be Assigned</h2>
+          <span className="text-xs font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded-full" data-testid="unassigned-count">
+            {unassigned.length}
+          </span>
         </div>
-      )}
+        <TicketTable
+          tickets={unassigned}
+          loading={unassignedLoading}
+          emptyText="All tickets are assigned"
+          navigate={navigate}
+          testId="unassigned-table"
+        />
+      </div>
 
-      <CreateTicketModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={fetchTickets} />
+      {/* Section 2: Assigned Tickets */}
+      <div data-testid="assigned-section">
+        <div className="flex items-center gap-3 mb-3">
+          <h2 className="text-base font-semibold text-slate-800">Assigned Tickets</h2>
+          <span className="text-xs font-medium bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full" data-testid="assigned-count">
+            {assignedTotal}
+          </span>
+          {stageFilter && (
+            <span className="text-xs text-slate-500 flex items-center gap-1">
+              Filtered: <span className="font-medium">{stageFilter}</span>
+              <button onClick={() => setStageFilter(null)} className="hover:text-red-500" data-testid="clear-stage-filter">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+        </div>
+        <TicketTable
+          tickets={assigned}
+          loading={assignedLoading}
+          emptyText={stageFilter ? `No assigned tickets with stage "${stageFilter}"` : "No assigned tickets"}
+          navigate={navigate}
+          testId="assigned-table"
+        />
+        {assignedTotalPages > 1 && (
+          <div className="flex justify-center gap-2 mt-4" data-testid="assigned-pagination">
+            <Button variant="outline" size="sm" disabled={assignedPage <= 1} onClick={() => setAssignedPage(p => p - 1)}>Previous</Button>
+            <span className="text-sm text-slate-500 self-center">Page {assignedPage} of {assignedTotalPages}</span>
+            <Button variant="outline" size="sm" disabled={assignedPage >= assignedTotalPages} onClick={() => setAssignedPage(p => p + 1)}>Next</Button>
+          </div>
+        )}
+      </div>
+
+      <CreateTicketModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={refreshAll} />
     </div>
   );
 }
