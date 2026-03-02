@@ -1,56 +1,102 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Upload, Save, Palette, Building2, ImageIcon, X, Mail } from 'lucide-react';
+import { Save, Mail, Phone, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-const predefinedColors = [
-  { name: 'Trust Blue', value: '#0F62FE' },
-  { name: 'Emerald', value: '#059669' },
-  { name: 'Slate', value: '#475569' },
-  { name: 'Indigo', value: '#4F46E5' },
-  { name: 'Amber', value: '#D97706' },
-  { name: 'Rose', value: '#E11D48' },
-];
+const PhoneField = ({ label, description, value, onChange, testId }) => (
+  <div>
+    <label className="text-sm font-medium text-slate-700 block mb-1">{label}</label>
+    {description && <p className="text-xs text-slate-400 mb-2">{description}</p>}
+    <Input
+      type="tel"
+      value={value || ''}
+      onChange={e => onChange(e.target.value)}
+      placeholder="e.g. 919876543210 (with country code)"
+      className="max-w-sm"
+      data-testid={testId}
+    />
+  </div>
+);
+
+const EmailListField = ({ label, description, emails, onAdd, onRemove, testIdPrefix }) => {
+  const [val, setVal] = useState('');
+  const add = () => {
+    if (val.trim() && !emails.includes(val.trim())) {
+      onAdd(val.trim());
+      setVal('');
+    }
+  };
+  return (
+    <div>
+      <label className="text-sm font-medium text-slate-700 block mb-1">{label}</label>
+      {description && <p className="text-xs text-slate-400 mb-2">{description}</p>}
+      <div className="flex gap-2 mb-2">
+        <input
+          type="email"
+          value={val}
+          onChange={e => setVal(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
+          className="form-input flex-1 max-w-sm"
+          placeholder="email@company.com"
+          data-testid={`${testIdPrefix}-input`}
+        />
+        <Button variant="outline" onClick={add} data-testid={`${testIdPrefix}-add-btn`}>Add</Button>
+      </div>
+      {emails.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {emails.map((email, i) => (
+            <span key={i} className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-sm px-3 py-1.5 rounded-full">
+              {email}
+              <button onClick={() => onRemove(i)} className="w-4 h-4 rounded-full bg-blue-200 hover:bg-blue-300 flex items-center justify-center">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Settings = () => {
   const { token } = useAuth();
   const { refreshSettings } = useSettings();
-  const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
-    company_name: '',
-    accent_color: '#0F62FE',
-    logo_url: '',
-    logo_base64: '',
     billing_emails: [],
+    billing_team_phone: '',
+    parts_order_phone: '',
+    parts_order_emails: [],
+    quote_team_phone: '',
+    quote_team_emails: [],
+    backend_team_phone: '',
   });
-  const [logoPreview, setLogoPreview] = useState(null);
-  const [newBillingEmail, setNewBillingEmail] = useState('');
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
+  useEffect(() => { fetchSettings(); }, []);
 
   const fetchSettings = async () => {
     try {
       const response = await axios.get(`${API}/admin/settings`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      const d = response.data;
       setSettings({
-        company_name: response.data.company_name || 'aftersales.support',
-        accent_color: response.data.accent_color || '#0F62FE',
-        logo_url: response.data.logo_url || '',
-        logo_base64: response.data.logo_base64 || '',
-        billing_emails: response.data.billing_emails || [],
+        billing_emails: d.billing_emails || [],
+        billing_team_phone: d.billing_team_phone || '',
+        parts_order_phone: d.parts_order_phone || '',
+        parts_order_emails: d.parts_order_emails || [],
+        quote_team_phone: d.quote_team_phone || '',
+        quote_team_emails: d.quote_team_emails || [],
+        backend_team_phone: d.backend_team_phone || '',
       });
-      setLogoPreview(response.data.logo_base64 || response.data.logo_url || null);
-    } catch (error) {
+    } catch {
       toast.error('Failed to fetch settings');
     } finally {
       setLoading(false);
@@ -60,68 +106,21 @@ const Settings = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await axios.put(`${API}/admin/settings`, {
-        billing_emails: settings.billing_emails,
-      }, {
+      await axios.put(`${API}/admin/settings`, settings, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Settings saved');
-    } catch (error) {
+      refreshSettings();
+    } catch {
       toast.error('Failed to save settings');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleLogoUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Image size should be less than 2MB');
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const response = await axios.post(`${API}/admin/settings/logo`, formData, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      setLogoPreview(response.data.logo_base64);
-      setSettings({ ...settings, logo_base64: response.data.logo_base64 });
-      toast.success('Logo uploaded');
-      refreshSettings();
-    } catch (error) {
-      toast.error('Failed to upload logo');
-    }
-  };
-
-  const removeLogo = async () => {
-    try {
-      await axios.put(`${API}/admin/settings`, {
-        logo_base64: null,
-        logo_url: null
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setLogoPreview(null);
-      setSettings({ ...settings, logo_base64: '', logo_url: '' });
-      toast.success('Logo removed');
-      refreshSettings();
-    } catch (error) {
-      toast.error('Failed to remove logo');
-    }
-  };
+  const updateField = (field, value) => setSettings(s => ({ ...s, [field]: value }));
+  const addToList = (field, val) => setSettings(s => ({ ...s, [field]: [...(s[field] || []), val] }));
+  const removeFromList = (field, idx) => setSettings(s => ({ ...s, [field]: s[field].filter((_, i) => i !== idx) }));
 
   if (loading) {
     return (
@@ -133,72 +132,98 @@ const Settings = () => {
 
   return (
     <div className="space-y-8 max-w-3xl" data-testid="settings-page">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Settings</h1>
-        <p className="text-slate-500 mt-1">Configure your portal settings</p>
+        <p className="text-slate-500 mt-1">Configure notification recipients for WhatsApp and Email</p>
       </div>
 
-      {/* Billing Email Section */}
-      <div className="card-elevated space-y-6">
-        <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-          <Mail className="h-5 w-5 text-slate-400" />
-          Billing Team Emails
+      {/* Billing Team */}
+      <div className="bg-white border rounded-lg p-6 space-y-5">
+        <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+          <Mail className="h-4 w-4 text-slate-400" />
+          Billing Team
         </h2>
-        <p className="text-sm text-slate-500 -mt-4">These email addresses receive notifications when parts are consumed during field visits</p>
+        <PhoneField
+          label="Billing Team WhatsApp Number"
+          description="WhatsApp number for billing notifications (include country code, e.g. 919876543210)"
+          value={settings.billing_team_phone}
+          onChange={v => updateField('billing_team_phone', v)}
+          testId="billing-team-phone"
+        />
+        <EmailListField
+          label="Billing Team Emails"
+          description="Email addresses that receive billing notifications"
+          emails={settings.billing_emails}
+          onAdd={v => addToList('billing_emails', v)}
+          onRemove={i => removeFromList('billing_emails', i)}
+          testIdPrefix="billing-email"
+        />
+      </div>
 
-        <div className="flex gap-2">
-          <input
-            type="email"
-            value={newBillingEmail}
-            onChange={(e) => setNewBillingEmail(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && newBillingEmail.trim()) {
-                e.preventDefault();
-                if (!settings.billing_emails.includes(newBillingEmail.trim())) {
-                  setSettings({ ...settings, billing_emails: [...settings.billing_emails, newBillingEmail.trim()] });
-                }
-                setNewBillingEmail('');
-              }
-            }}
-            className="form-input flex-1 max-w-sm"
-            placeholder="billing@company.com"
-            data-testid="billing-email-input"
-          />
-          <Button
-            variant="outline"
-            onClick={() => {
-              if (newBillingEmail.trim() && !settings.billing_emails.includes(newBillingEmail.trim())) {
-                setSettings({ ...settings, billing_emails: [...settings.billing_emails, newBillingEmail.trim()] });
-                setNewBillingEmail('');
-              }
-            }}
-            data-testid="add-billing-email-btn"
-          >
-            Add
-          </Button>
-        </div>
+      {/* Parts Order Team */}
+      <div className="bg-white border rounded-lg p-6 space-y-5">
+        <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+          <Phone className="h-4 w-4 text-slate-400" />
+          Parts Order Team
+        </h2>
+        <PhoneField
+          label="Parts Order WhatsApp Number"
+          description="WhatsApp number for parts order notifications"
+          value={settings.parts_order_phone}
+          onChange={v => updateField('parts_order_phone', v)}
+          testId="parts-order-phone"
+        />
+        <EmailListField
+          label="Parts Order Team Emails"
+          description="Email addresses for parts order notifications"
+          emails={settings.parts_order_emails}
+          onAdd={v => addToList('parts_order_emails', v)}
+          onRemove={i => removeFromList('parts_order_emails', i)}
+          testIdPrefix="parts-order-email"
+        />
+      </div>
 
-        {settings.billing_emails.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {settings.billing_emails.map((email, i) => (
-              <span key={i} className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-sm px-3 py-1.5 rounded-full">
-                {email}
-                <button
-                  onClick={() => setSettings({ ...settings, billing_emails: settings.billing_emails.filter((_, j) => j !== i) })}
-                  className="w-4 h-4 rounded-full bg-blue-200 hover:bg-blue-300 flex items-center justify-center"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
+      {/* Quotation Team */}
+      <div className="bg-white border rounded-lg p-6 space-y-5">
+        <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+          <Phone className="h-4 w-4 text-slate-400" />
+          Quotation Team
+        </h2>
+        <PhoneField
+          label="Quote Team WhatsApp Number"
+          description="WhatsApp number for quotation notifications"
+          value={settings.quote_team_phone}
+          onChange={v => updateField('quote_team_phone', v)}
+          testId="quote-team-phone"
+        />
+        <EmailListField
+          label="Quote Team Emails"
+          description="Email addresses for quotation notifications"
+          emails={settings.quote_team_emails}
+          onAdd={v => addToList('quote_team_emails', v)}
+          onRemove={i => removeFromList('quote_team_emails', i)}
+          testIdPrefix="quote-team-email"
+        />
+      </div>
+
+      {/* Backend / Office Team */}
+      <div className="bg-white border rounded-lg p-6 space-y-5">
+        <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+          <Phone className="h-4 w-4 text-slate-400" />
+          Backend / Office Team
+        </h2>
+        <PhoneField
+          label="Backend Team WhatsApp Number"
+          description="WhatsApp number for general ticket update notifications"
+          value={settings.backend_team_phone}
+          onChange={v => updateField('backend_team_phone', v)}
+          testId="backend-team-phone"
+        />
       </div>
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button 
+        <Button
           onClick={handleSave}
           disabled={saving}
           className="bg-[#0F62FE] hover:bg-[#0043CE] text-white px-8"

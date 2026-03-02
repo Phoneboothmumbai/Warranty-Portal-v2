@@ -1839,3 +1839,280 @@ async def technician_dashboard(admin: dict = Depends(get_current_admin)):
             "completed_this_week": completed_this_week
         }
     }
+
+
+# ============================================================
+# TICKET NOTIFICATIONS (WhatsApp + Email)
+# ============================================================
+
+@router.post("/ticketing/tickets/{ticket_id}/send-notification")
+async def send_ticket_notification(
+    ticket_id: str,
+    data: dict = Body(...),
+    admin: dict = Depends(get_current_admin)
+):
+    """Send email notification for a ticket based on current stage.
+    Body: { "notification_type": "assigned|awaiting_parts|billing|quote|general" }
+    Returns: { "success": true, "wa_phone": "...", "wa_message": "..." } for WhatsApp link generation on frontend.
+    """
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    import logging
+    logger = logging.getLogger("ticketing")
+
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+
+    ticket = await _db.tickets_v2.find_one(
+        {"id": ticket_id, "organization_id": org_id, "is_deleted": {"$ne": True}},
+        {"_id": 0, "timeline": 0}
+    )
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    notification_type = data.get("notification_type", "general")
+
+    # Get settings for phone numbers and emails
+    settings = await _db.settings.find_one(
+        {"organization_id": org_id}, {"_id": 0}
+    )
+    if not settings:
+        settings = {}
+
+    # Get engineer phone if assigned
+    engineer_phone = None
+    eng = None
+    if ticket.get("assigned_to_id"):
+        # Check engineers collection first, then staff_users
+        eng = await _db.engineers.find_one(
+            {"id": ticket["assigned_to_id"], "organization_id": org_id},
+            {"_id": 0, "phone": 1, "name": 1, "email": 1}
+        )
+        if not eng or not eng.get("phone"):
+            eng2 = await _db.staff_users.find_one(
+                {"id": ticket["assigned_to_id"], "organization_id": org_id},
+                {"_id": 0, "phone": 1, "name": 1, "email": 1}
+            )
+            if eng2:
+                engineer_phone = eng2.get("phone")
+                if not eng:
+                    eng = eng2
+            elif eng:
+                engineer_phone = eng.get("phone")
+        else:
+            engineer_phone = eng.get("phone")
+
+    # Build message content based on notification type
+    ticket_num = ticket.get("ticket_number", "")
+    subject = ticket.get("subject", "")
+    company = ticket.get("company_name", "N/A")
+    site = ticket.get("site_name") or "N/A"
+    contact_name = ticket.get("contact_name") or ticket.get("employee_name") or "N/A"
+    contact_phone = ticket.get("contact_phone") or "N/A"
+    stage = ticket.get("current_stage_name", "")
+    engineer_name = ticket.get("assigned_to_name") or "Unassigned"
+    priority = ticket.get("priority_name", "medium")
+    description = ticket.get("description") or ""
+    scheduled_at = ticket.get("scheduled_at") or ""
+
+    # Diagnosis info
+    diag = ticket.get("diagnosis") or {}
+    diag_text = diag.get("findings", "") if diag else ""
+
+    # Parts info
+    parts = ticket.get("parts_required") or []
+    parts_text = ", ".join([f"{p.get('name','')} x{p.get('quantity',1)}" for p in parts]) if parts else "None"
+
+    wa_phone = ""
+    wa_message = ""
+    email_to = []
+    email_subject = ""
+    email_html = ""
+
+    if notification_type == "assigned":
+        wa_phone = engineer_phone or ""
+        wa_message = (
+            f"*Job Assignment - #{ticket_num}*\n\n"
+            f"Subject: {subject}\n"
+            f"Company: {company}\n"
+            f"Site: {site}\n"
+            f"Contact: {contact_name}\n"
+            f"Contact Phone: {contact_phone}\n"
+            f"Priority: {priority}\n"
+            f"Stage: {stage}\n"
+        )
+        if scheduled_at:
+            wa_message += f"Scheduled: {scheduled_at}\n"
+        if description:
+            wa_message += f"\nDescription: {description[:200]}\n"
+        wa_message += f"\nPlease check your portal for full details."
+
+        email_to = [eng.get("email")] if eng and eng.get("email") else []
+        email_subject = f"Job Assignment: #{ticket_num} - {company}"
+        email_html = _build_notification_email(ticket, "assigned", engineer_name)
+
+    elif notification_type == "awaiting_parts":
+        wa_phone = settings.get("parts_order_phone", "")
+        wa_message = (
+            f"*Parts Required - Job #{ticket_num}*\n\n"
+            f"Company: {company}\n"
+            f"Engineer: {engineer_name}\n"
+            f"Stage: {stage}\n\n"
+            f"Parts Needed:\n{parts_text}\n"
+        )
+        if diag_text:
+            wa_message += f"\nDiagnosis: {diag_text[:200]}\n"
+        wa_message += f"\nPlease arrange parts and update the portal."
+
+        email_to = settings.get("parts_order_emails", []) or []
+        email_subject = f"Parts Required: Job #{ticket_num} - {company}"
+        email_html = _build_notification_email(ticket, "awaiting_parts", engineer_name)
+
+    elif notification_type == "billing":
+        wa_phone = settings.get("billing_team_phone", "")
+        wa_message = (
+            f"*Billing Pending - Job #{ticket_num}*\n\n"
+            f"Company: {company}\n"
+            f"Engineer: {engineer_name}\n"
+            f"Parts Used:\n{parts_text}\n\n"
+            f"Please generate invoice and update the portal."
+        )
+        email_to = settings.get("billing_emails", []) or []
+        email_subject = f"Billing Pending: Job #{ticket_num} - {company}"
+        email_html = _build_notification_email(ticket, "billing", engineer_name)
+
+    elif notification_type == "quote":
+        wa_phone = settings.get("quote_team_phone", "")
+        wa_message = (
+            f"*Quotation Required - Job #{ticket_num}*\n\n"
+            f"Company: {company}\n"
+            f"Contact: {contact_name} ({contact_phone})\n"
+            f"Engineer: {engineer_name}\n\n"
+            f"Parts/Items:\n{parts_text}\n\n"
+            f"Please prepare quotation and update the portal."
+        )
+        email_to = settings.get("quote_team_emails", []) or []
+        email_subject = f"Quotation Required: Job #{ticket_num} - {company}"
+        email_html = _build_notification_email(ticket, "quote", engineer_name)
+
+    else:  # general
+        wa_phone = settings.get("backend_team_phone", "")
+        wa_message = (
+            f"*Ticket Update - #{ticket_num}*\n\n"
+            f"Subject: {subject}\n"
+            f"Company: {company}\n"
+            f"Stage: {stage}\n"
+            f"Engineer: {engineer_name}\n"
+            f"Priority: {priority}\n\n"
+            f"Please check the portal for details."
+        )
+        email_to = settings.get("billing_emails", []) or []
+        email_subject = f"Ticket Update: #{ticket_num} - {stage}"
+        email_html = _build_notification_email(ticket, "general", engineer_name)
+
+    # Send email if we have recipients and SMTP is configured
+    email_sent = False
+    if email_to:
+        try:
+            smtp_settings = await _db.settings.find_one(
+                {"organization_id": org_id},
+                {"_id": 0, "smtp_host": 1, "smtp_port": 1, "smtp_user": 1, "smtp_pass": 1, "smtp_from": 1}
+            )
+            if smtp_settings and smtp_settings.get("smtp_host"):
+                msg = MIMEMultipart("alternative")
+                msg["Subject"] = email_subject
+                msg["From"] = smtp_settings.get("smtp_from", smtp_settings.get("smtp_user", ""))
+                msg["To"] = ", ".join(email_to)
+                msg.attach(MIMEText(email_html, "html"))
+
+                with smtplib.SMTP(smtp_settings["smtp_host"], int(smtp_settings.get("smtp_port", 587)), timeout=10) as server:
+                    server.starttls()
+                    server.login(smtp_settings["smtp_user"], smtp_settings["smtp_pass"])
+                    server.send_message(msg)
+                email_sent = True
+                logger.info(f"Notification email sent to {email_to} for ticket {ticket_num}")
+            else:
+                logger.info("SMTP not configured, skipping email")
+        except Exception as e:
+            logger.warning(f"Failed to send notification email: {e}")
+
+    # Add timeline entry
+    await _db.tickets_v2.update_one(
+        {"id": ticket_id},
+        {
+            "$push": {"timeline": {
+                "id": str(uuid.uuid4()),
+                "type": "notification",
+                "description": f"Notification sent ({notification_type}){' - Email sent to ' + ', '.join(email_to) if email_sent else ''}",
+                "user_name": admin.get("name", "Admin"),
+                "is_internal": True,
+                "created_at": get_ist_isoformat()
+            }},
+            "$set": {"updated_at": get_ist_isoformat()}
+        }
+    )
+
+    return {
+        "success": True,
+        "wa_phone": wa_phone or "",
+        "wa_message": wa_message,
+        "email_sent": email_sent,
+        "email_to": email_to,
+        "notification_type": notification_type
+    }
+
+
+def _build_notification_email(ticket: dict, ntype: str, engineer_name: str) -> str:
+    """Build HTML email for ticket notifications."""
+    ticket_num = ticket.get("ticket_number", "")
+    subject = ticket.get("subject", "")
+    company = ticket.get("company_name", "N/A")
+    site = ticket.get("site_name") or "N/A"
+    contact_name = ticket.get("contact_name") or ticket.get("employee_name") or "N/A"
+    contact_phone = ticket.get("contact_phone") or "N/A"
+    stage = ticket.get("current_stage_name", "")
+    priority = ticket.get("priority_name", "medium")
+    description = ticket.get("description") or "N/A"
+
+    parts = ticket.get("parts_required") or []
+    parts_html = ""
+    if parts:
+        parts_html = "<h3 style='margin-top:16px'>Parts:</h3><ul>"
+        for p in parts:
+            parts_html += f"<li>{p.get('name','')} x {p.get('quantity',1)}{' - ' + p.get('notes','') if p.get('notes') else ''}</li>"
+        parts_html += "</ul>"
+
+    diag = ticket.get("diagnosis") or {}
+    diag_html = ""
+    if diag.get("findings"):
+        diag_html = f"<h3 style='margin-top:16px'>Diagnosis:</h3><p>{diag['findings']}</p>"
+
+    titles = {
+        "assigned": "Job Assignment Notification",
+        "awaiting_parts": "Parts Required Notification",
+        "billing": "Billing Pending Notification",
+        "quote": "Quotation Required Notification",
+        "general": "Ticket Update Notification"
+    }
+
+    return f"""
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+        <h2 style="color:#0F62FE">{titles.get(ntype, 'Ticket Notification')}</h2>
+        <table style="width:100%;margin:16px 0;border-collapse:collapse">
+            <tr><td style="padding:4px 8px;font-weight:bold;width:140px">Job #</td><td style="padding:4px 8px">{ticket_num}</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:bold">Subject</td><td style="padding:4px 8px">{subject}</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:bold">Company</td><td style="padding:4px 8px">{company}</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:bold">Site</td><td style="padding:4px 8px">{site}</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:bold">Contact</td><td style="padding:4px 8px">{contact_name} ({contact_phone})</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:bold">Engineer</td><td style="padding:4px 8px">{engineer_name}</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:bold">Stage</td><td style="padding:4px 8px">{stage}</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:bold">Priority</td><td style="padding:4px 8px">{priority}</td></tr>
+        </table>
+        <p><strong>Description:</strong> {description[:500]}</p>
+        {diag_html}
+        {parts_html}
+        <p style="margin-top:16px;color:#64748b;font-size:13px">Please check the portal for full details and take necessary action.</p>
+    </div>
+    """

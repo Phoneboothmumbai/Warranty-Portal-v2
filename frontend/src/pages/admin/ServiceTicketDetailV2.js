@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Clock, User, Building2, MessageSquare, CheckCircle, AlertTriangle,
   ChevronRight, Send, Lock, Tag, Edit2, Users, Calendar, Wrench, FileText,
-  X, Clipboard, Package, MapPin, RefreshCw
+  X, Clipboard, Package, MapPin, RefreshCw, Phone, Mail
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -654,6 +654,146 @@ const TaskCard = ({ task, onComplete }) => (
   </div>
 );
 
+// ========== NOTIFICATION PANEL (WhatsApp + Email) ==========
+const stageNotificationMap = {
+  'Assigned': { type: 'assigned', label: 'Engineer', icon: User, color: 'text-blue-600 bg-blue-50 border-blue-200' },
+  'In Progress': { type: 'assigned', label: 'Engineer', icon: User, color: 'text-blue-600 bg-blue-50 border-blue-200' },
+  'Scheduled': { type: 'assigned', label: 'Engineer', icon: User, color: 'text-blue-600 bg-blue-50 border-blue-200' },
+  'Awaiting Parts': { type: 'awaiting_parts', label: 'Parts Team', icon: Package, color: 'text-orange-600 bg-orange-50 border-orange-200' },
+  'Parts Ordered': { type: 'awaiting_parts', label: 'Parts Team', icon: Package, color: 'text-orange-600 bg-orange-50 border-orange-200' },
+  'Diagnosed': { type: 'quote', label: 'Quote Team', icon: FileText, color: 'text-purple-600 bg-purple-50 border-purple-200' },
+  'Quotation Sent': { type: 'quote', label: 'Quote Team', icon: FileText, color: 'text-purple-600 bg-purple-50 border-purple-200' },
+  'Fixed On-Site': { type: 'billing', label: 'Billing Team', icon: Mail, color: 'text-green-600 bg-green-50 border-green-200' },
+  'Resolved': { type: 'billing', label: 'Billing Team', icon: Mail, color: 'text-green-600 bg-green-50 border-green-200' },
+};
+
+const NotificationPanel = ({ ticket }) => {
+  const [sending, setSending] = useState(false);
+  const [lastResult, setLastResult] = useState(null);
+
+  const stage = ticket?.current_stage_name || '';
+  const mapping = stageNotificationMap[stage];
+
+  // Build notification options based on stage
+  const notificationOptions = [];
+
+  // Always show engineer notification if assigned
+  if (ticket?.assigned_to_name) {
+    notificationOptions.push({ type: 'assigned', label: 'Engineer', sublabel: ticket.assigned_to_name, icon: User, color: 'text-blue-600 bg-blue-50 border-blue-200' });
+  }
+
+  // Stage-specific options
+  if (mapping && mapping.type !== 'assigned') {
+    notificationOptions.push(mapping);
+  }
+
+  // Always show general/backend option
+  notificationOptions.push({ type: 'general', label: 'Backend Team', icon: Users, color: 'text-slate-600 bg-slate-50 border-slate-200' });
+
+  // Add billing option if not already present
+  if (!notificationOptions.find(o => o.type === 'billing')) {
+    notificationOptions.push({ type: 'billing', label: 'Billing Team', icon: Mail, color: 'text-green-600 bg-green-50 border-green-200' });
+  }
+  // Add parts option if not already present
+  if (!notificationOptions.find(o => o.type === 'awaiting_parts')) {
+    notificationOptions.push({ type: 'awaiting_parts', label: 'Parts Team', icon: Package, color: 'text-orange-600 bg-orange-50 border-orange-200' });
+  }
+  // Add quote option if not already present
+  if (!notificationOptions.find(o => o.type === 'quote')) {
+    notificationOptions.push({ type: 'quote', label: 'Quote Team', icon: FileText, color: 'text-purple-600 bg-purple-50 border-purple-200' });
+  }
+
+  const sendNotification = async (notifType) => {
+    setSending(true);
+    setLastResult(null);
+    try {
+      const res = await fetch(`${API}/api/ticketing/tickets/${ticket.id}/send-notification`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ notification_type: notifType }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
+      const result = await res.json();
+      setLastResult(result);
+
+      // Open WhatsApp if phone available
+      if (result.wa_phone) {
+        const phone = result.wa_phone.replace(/[^0-9]/g, '');
+        const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(result.wa_message)}`;
+        window.open(waUrl, '_blank');
+        toast.success('WhatsApp opened' + (result.email_sent ? ' & Email sent' : ''));
+      } else {
+        // No phone - copy message to clipboard
+        try { await navigator.clipboard.writeText(result.wa_message); } catch {}
+        toast.info(
+          result.email_sent
+            ? 'Email sent! No WhatsApp number configured - message copied to clipboard'
+            : 'No WhatsApp number configured. Message copied to clipboard. Configure in Settings.'
+        );
+      }
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Deduplicate by type
+  const seen = new Set();
+  const uniqueOptions = notificationOptions.filter(o => {
+    if (seen.has(o.type)) return false;
+    seen.add(o.type);
+    return true;
+  });
+
+  // Highlight the recommended one based on current stage
+  const recommendedType = mapping?.type || (ticket?.assigned_to_name ? 'assigned' : 'general');
+
+  return (
+    <div className="bg-white border rounded-lg p-4" data-testid="notification-panel">
+      <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-1.5">
+        <Phone className="w-4 h-4 text-slate-400" />
+        Send Notification
+      </h3>
+      <div className="space-y-2">
+        {uniqueOptions.map(opt => {
+          const Icon = opt.icon;
+          const isRecommended = opt.type === recommendedType;
+          return (
+            <button
+              key={opt.type}
+              disabled={sending}
+              onClick={() => sendNotification(opt.type)}
+              className={`w-full flex items-center gap-2.5 p-2.5 rounded-lg border text-left transition-all hover:shadow-sm ${
+                isRecommended ? `${opt.color} ring-1 ring-offset-1` : 'bg-white border-slate-200 hover:border-slate-300'
+              } ${sending ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              data-testid={`notify-${opt.type}`}
+            >
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isRecommended ? '' : 'bg-slate-50'}`}>
+                <Icon className={`w-4 h-4 ${isRecommended ? '' : 'text-slate-400'}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-slate-800">{opt.label}</p>
+                {opt.sublabel && <p className="text-[10px] text-slate-400 truncate">{opt.sublabel}</p>}
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">WA</span>
+                <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">Email</span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      {lastResult && (
+        <div className="mt-2 text-[10px] text-slate-400" data-testid="notification-result">
+          {lastResult.email_sent ? `Email sent to ${lastResult.email_to?.join(', ')}` : 'Email: SMTP not configured or no recipients'}
+          {lastResult.wa_phone ? ` | WA: ${lastResult.wa_phone}` : ' | WA: No number configured'}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ========== MAIN COMPONENT ==========
 export default function ServiceTicketDetailV2() {
   const { ticketId } = useParams();
@@ -1003,6 +1143,9 @@ export default function ServiceTicketDetailV2() {
               </div>
             )}
           </div>
+
+          {/* Notification Panel - WhatsApp + Email */}
+          <NotificationPanel ticket={ticket} />
 
           {ticket.company_name && (
             <div className="bg-white border rounded-lg p-4">

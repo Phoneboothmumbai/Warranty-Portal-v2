@@ -58,6 +58,13 @@ class Settings(BaseModel):
     logo_base64: Optional[str] = None
     accent_color: str = "#0F62FE"
     company_name: str = "Warranty Portal"
+    billing_emails: Optional[list] = None
+    parts_order_phone: Optional[str] = None
+    quote_team_phone: Optional[str] = None
+    billing_team_phone: Optional[str] = None
+    backend_team_phone: Optional[str] = None
+    parts_order_emails: Optional[list] = None
+    quote_team_emails: Optional[list] = None
     updated_at: str = Field(default_factory=get_ist_isoformat)
 
 
@@ -67,3 +74,9 @@ class SettingsUpdate(BaseModel):
     accent_color: Optional[str] = None
     company_name: Optional[str] = None
     billing_emails: Optional[list] = None
+    parts_order_phone: Optional[str] = None
+    quote_team_phone: Optional[str] = None
+    billing_team_phone: Optional[str] = None
+    backend_team_phone: Optional[str] = None
+    parts_order_emails: Optional[list] = None
+    quote_team_emails: Optional[list] = None
