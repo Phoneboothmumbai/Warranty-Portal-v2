@@ -9395,8 +9395,11 @@ app.include_router(vendor_router, tags=["Vendor Master"])
 
 # Ticketing V2 (New configurable system)
 from routes.ticketing_v2 import router as ticketing_v2_router, init_db as init_ticketing_v2_db
+from routes.analytics import router as analytics_router, init_db as init_analytics_db
 init_ticketing_v2_db(db)
+init_analytics_db(db)
 app.include_router(ticketing_v2_router, prefix="/api", tags=["Ticketing V2"])
+app.include_router(analytics_router, prefix="/api", tags=["Analytics"])
 
 # Email Inbox Integration
 from routes.email_inbox import router as email_inbox_router, init_db as init_email_inbox_db

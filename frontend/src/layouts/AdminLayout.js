@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Building2, Users, Laptop, Wrench, 
-  FileCheck, Settings, LogOut, Shield, Menu, X, ChevronRight, ChevronDown, Database, History, FileText, MapPin, Package, Key, ShoppingBag, ClipboardList, UserCircle, Mail, Layers, AlertTriangle, Briefcase, HardDrive, FileBarChart, Globe, Lock, Sparkles, Monitor, BookOpen, UserCog, Keyboard, MessageSquare, User, Calendar, IndianRupee
+  FileCheck, Settings, LogOut, Shield, Menu, X, ChevronRight, ChevronDown, Database, History, FileText, MapPin, Package, Key, ShoppingBag, ClipboardList, UserCircle, Mail, Layers, AlertTriangle, Briefcase, HardDrive, FileBarChart, Globe, Lock, Sparkles, Monitor, BookOpen, UserCog, Keyboard, MessageSquare, User, Calendar, IndianRupee, BarChart3
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -25,6 +25,7 @@ const navGroups = [
       { path: '/admin/calendar', label: 'Calendar', icon: Calendar },
       { path: '/admin/renewal-alerts', label: 'Renewal Alerts', icon: AlertTriangle },
       { path: '/admin/credentials', label: 'Credentials', icon: Lock },
+      { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
     ]
   },
   {
