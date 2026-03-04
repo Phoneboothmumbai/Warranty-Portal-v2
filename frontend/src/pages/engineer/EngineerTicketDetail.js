@@ -92,6 +92,9 @@ export default function EngineerTicketDetail() {
   // Visit history
   const [visitHistory, setVisitHistory] = useState([]);
 
+  // Workflow data
+  const [workflow, setWorkflow] = useState(null);
+
   const hdrs = useCallback(() => ({
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
@@ -135,7 +138,14 @@ export default function EngineerTicketDetail() {
     } catch {}
   }, [ticketId, hdrs]);
 
-  useEffect(() => { fetchDetail(); fetchVisit(); fetchVisitHistory(); }, [fetchDetail, fetchVisit, fetchVisitHistory]);
+  const fetchWorkflow = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/api/engineer/ticket/${ticketId}/workflow`, { headers: hdrs() });
+      if (res.ok) setWorkflow(await res.json());
+    } catch {}
+  }, [ticketId, hdrs]);
+
+  useEffect(() => { fetchDetail(); fetchVisit(); fetchVisitHistory(); fetchWorkflow(); }, [fetchDetail, fetchVisit, fetchVisitHistory, fetchWorkflow]);
 
   // ── Actions ──
   const handleStartVisit = async () => {
@@ -266,6 +276,38 @@ export default function EngineerTicketDetail() {
           <h1 className="text-xl font-bold text-slate-900 mt-1" data-testid="ticket-subject">{ticket.subject}</h1>
         </div>
       </div>
+
+      {/* Workflow Progress */}
+      {workflow && workflow.stages?.length > 0 && (
+        <div className="bg-white border rounded-lg p-4" data-testid="workflow-progress">
+          <div className="flex items-center gap-2 mb-3">
+            <Wrench className="w-4 h-4 text-slate-400" />
+            <span className="text-sm font-semibold text-slate-700">{workflow.workflow_name || 'Workflow'}</span>
+          </div>
+          <div className="flex items-center gap-1 overflow-x-auto pb-1">
+            {workflow.stages.map((stage, i) => {
+              const isCurrent = stage.id === workflow.current_stage_id || stage.name === workflow.current_stage_name;
+              const currentIdx = workflow.stages.findIndex(s => s.id === workflow.current_stage_id || s.name === workflow.current_stage_name);
+              const isPast = i < currentIdx;
+              return (
+                <div key={stage.id} className="flex items-center shrink-0">
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    isCurrent ? 'bg-blue-600 text-white shadow-sm' :
+                    isPast ? 'bg-green-100 text-green-700' :
+                    'bg-slate-100 text-slate-400'
+                  }`}>
+                    {isPast && <CheckCircle className="w-3 h-3" />}
+                    {stage.name}
+                  </div>
+                  {i < workflow.stages.length - 1 && (
+                    <ChevronRight className={`w-3.5 h-3.5 mx-0.5 shrink-0 ${isPast ? 'text-green-400' : 'text-slate-300'}`} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ═══════════════════════════════════════════════════ */}
       {/* VISIT CONTROL BAR */}

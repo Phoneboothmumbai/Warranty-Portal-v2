@@ -7,6 +7,7 @@ Complete API for the new workflow-driven ticketing system.
 import uuid
 import random
 import string
+import os
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, HTTPException, Depends, Query, Body
 from typing import Optional, List, Dict, Any
@@ -2721,3 +2722,267 @@ def _build_notification_email(ticket: dict, ntype: str, engineer_name: str) -> s
         <p style="margin-top:16px;color:#64748b;font-size:13px">Please check the portal for full details and take necessary action.</p>
     </div>
     """
+
+
+# ============================================================
+# CUSTOMER QUOTATION APPROVAL (Public - No Auth)
+# ============================================================
+
+@router.post("/ticketing/tickets/{ticket_id}/send-quotation-email")
+async def send_quotation_approval_email(
+    ticket_id: str,
+    data: dict = Body(...),
+    admin: dict = Depends(get_current_admin)
+):
+    """Send quotation approval email to customer with approve/deny buttons.
+    Body: { "customer_email": "...", "customer_name": "...", "quotation_details": "..." }
+    """
+    import smtplib, hashlib, hmac
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+
+    ticket = await _db.tickets_v2.find_one(
+        {"id": ticket_id, "organization_id": org_id},
+        {"_id": 0, "timeline": 0}
+    )
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    customer_email = data.get("customer_email", "")
+    customer_name = data.get("customer_name", ticket.get("contact_name") or "Customer")
+
+    if not customer_email:
+        raise HTTPException(status_code=400, detail="Customer email is required")
+
+    # Create approval token (store in DB for validation)
+    approval_token = str(uuid.uuid4())
+    await _db.quotation_approvals.insert_one({
+        "token": approval_token,
+        "ticket_id": ticket_id,
+        "organization_id": org_id,
+        "customer_email": customer_email,
+        "status": "pending",
+        "created_at": get_ist_isoformat(),
+        "expires_at": (datetime.now(timezone(timedelta(hours=5, minutes=30))) + timedelta(days=7)).isoformat(),
+    })
+
+    # Build quotation details
+    ticket_num = ticket.get("ticket_number", "")
+    subject = ticket.get("subject", "")
+    company = ticket.get("company_name", "")
+    parts = ticket.get("parts_required") or []
+    parts_html = ""
+    total = 0
+    if parts:
+        parts_html = "<table style='width:100%;border-collapse:collapse;margin:16px 0'>"
+        parts_html += "<tr style='background:#f8fafc'><th style='text-align:left;padding:8px;border:1px solid #e2e8f0'>Item</th><th style='text-align:center;padding:8px;border:1px solid #e2e8f0'>Qty</th><th style='text-align:right;padding:8px;border:1px solid #e2e8f0'>Price</th><th style='text-align:right;padding:8px;border:1px solid #e2e8f0'>Total</th></tr>"
+        for p in parts:
+            qty = p.get('quantity', 1)
+            price = p.get('unit_price', 0)
+            line_total = qty * price
+            total += line_total
+            parts_html += f"<tr><td style='padding:8px;border:1px solid #e2e8f0'>{p.get('name','')}</td><td style='text-align:center;padding:8px;border:1px solid #e2e8f0'>{qty}</td><td style='text-align:right;padding:8px;border:1px solid #e2e8f0'>Rs.{price:,.2f}</td><td style='text-align:right;padding:8px;border:1px solid #e2e8f0'>Rs.{line_total:,.2f}</td></tr>"
+        parts_html += f"<tr style='font-weight:bold;background:#f8fafc'><td colspan='3' style='text-align:right;padding:8px;border:1px solid #e2e8f0'>Total</td><td style='text-align:right;padding:8px;border:1px solid #e2e8f0'>Rs.{total:,.2f}</td></tr></table>"
+
+    additional = data.get("quotation_details", "")
+
+    # Get the base URL from settings or use the org domain
+    settings = await _db.settings.find_one({"organization_id": org_id}, {"_id": 0})
+    base_url = os.environ.get("BASE_URL", "")
+    if not base_url:
+        # Fallback to the request origin
+        base_url = ""
+
+    approve_url = f"{base_url}/api/ticketing/quotation-response/{approval_token}?action=approve"
+    reject_url = f"{base_url}/api/ticketing/quotation-response/{approval_token}?action=reject"
+
+    html = f"""
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#fff;padding:24px">
+        <h2 style="color:#0F62FE;margin-bottom:8px">Quotation for Approval</h2>
+        <p style="color:#64748b;margin-top:0">Job #{ticket_num} - {subject}</p>
+        
+        <table style="width:100%;margin:16px 0;border-collapse:collapse">
+            <tr><td style="padding:6px 0;color:#64748b;width:120px">Company</td><td style="padding:6px 0;font-weight:500">{company}</td></tr>
+            <tr><td style="padding:6px 0;color:#64748b">Ticket #</td><td style="padding:6px 0;font-weight:500">{ticket_num}</td></tr>
+            <tr><td style="padding:6px 0;color:#64748b">Subject</td><td style="padding:6px 0;font-weight:500">{subject}</td></tr>
+        </table>
+
+        {parts_html if parts_html else '<p style="color:#64748b">No itemized pricing available. Please see details below.</p>'}
+        
+        {f'<div style="background:#f8fafc;padding:16px;border-radius:8px;margin:16px 0"><p style="margin:0;color:#334155">{additional}</p></div>' if additional else ''}
+
+        <div style="margin:32px 0;text-align:center">
+            <a href="{approve_url}" style="display:inline-block;padding:12px 32px;background:#10B981;color:white;text-decoration:none;border-radius:8px;font-weight:600;margin-right:16px">Approve Quotation</a>
+            <a href="{reject_url}" style="display:inline-block;padding:12px 32px;background:#EF4444;color:white;text-decoration:none;border-radius:8px;font-weight:600">Reject Quotation</a>
+        </div>
+
+        <p style="font-size:12px;color:#94a3b8;text-align:center">This link expires in 7 days. Please respond at the earliest.</p>
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0" />
+        <p style="font-size:12px;color:#94a3b8;text-align:center">Powered by aftersales.support</p>
+    </div>
+    """
+
+    # Send email
+    email_sent = False
+    try:
+        smtp_settings = await _db.settings.find_one(
+            {"organization_id": org_id},
+            {"_id": 0, "smtp_host": 1, "smtp_port": 1, "smtp_user": 1, "smtp_pass": 1, "smtp_from": 1}
+        )
+        if smtp_settings and smtp_settings.get("smtp_host"):
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = f"Quotation Approval Required - Job #{ticket_num}"
+            msg["From"] = smtp_settings.get("smtp_from", smtp_settings.get("smtp_user", ""))
+            msg["To"] = customer_email
+            msg.attach(MIMEText(html, "html"))
+
+            with smtplib.SMTP(smtp_settings["smtp_host"], int(smtp_settings.get("smtp_port", 587)), timeout=10) as server:
+                server.starttls()
+                server.login(smtp_settings["smtp_user"], smtp_settings["smtp_pass"])
+                server.send_message(msg)
+            email_sent = True
+    except Exception as e:
+        import logging
+        logging.getLogger("ticketing").warning(f"Failed to send quotation email: {e}")
+
+    # Add timeline entry
+    await _db.tickets_v2.update_one(
+        {"id": ticket_id},
+        {"$push": {"timeline": {
+            "id": str(uuid.uuid4()),
+            "type": "quotation_sent",
+            "description": f"Quotation approval email sent to {customer_email}" + (" (delivered)" if email_sent else " (SMTP not configured - use approval links manually)"),
+            "user_name": admin.get("name", "Admin"),
+            "is_internal": False,
+            "created_at": get_ist_isoformat()
+        }}, "$set": {"updated_at": get_ist_isoformat()}}
+    )
+
+    return {
+        "success": True,
+        "email_sent": email_sent,
+        "approval_token": approval_token,
+        "approve_url": approve_url,
+        "reject_url": reject_url,
+        "customer_email": customer_email
+    }
+
+
+@router.get("/ticketing/quotation-response/{token}")
+async def quotation_response(token: str, action: str = Query(...)):
+    """Public endpoint - customer clicks approve/reject link from email.
+    No authentication required. Returns HTML confirmation page.
+    """
+    from fastapi.responses import HTMLResponse
+    
+    if action not in ("approve", "reject"):
+        return HTMLResponse("<h2>Invalid action</h2>", status_code=400)
+
+    approval = await _db.quotation_approvals.find_one({"token": token}, {"_id": 0})
+    if not approval:
+        return HTMLResponse("""
+        <div style="font-family:sans-serif;max-width:500px;margin:80px auto;text-align:center">
+            <h2 style="color:#EF4444">Invalid or Expired Link</h2>
+            <p style="color:#64748b">This quotation approval link is no longer valid.</p>
+        </div>
+        """, status_code=404)
+
+    # Check if already responded
+    if approval.get("status") != "pending":
+        return HTMLResponse(f"""
+        <div style="font-family:sans-serif;max-width:500px;margin:80px auto;text-align:center">
+            <h2 style="color:#F59E0B">Already Responded</h2>
+            <p style="color:#64748b">You have already {approval['status']} this quotation.</p>
+        </div>
+        """)
+
+    # Check expiry
+    if approval.get("expires_at"):
+        try:
+            exp = datetime.fromisoformat(approval["expires_at"])
+            if exp.tzinfo is None:
+                exp = exp.replace(tzinfo=timezone(timedelta(hours=5, minutes=30)))
+            if datetime.now(timezone(timedelta(hours=5, minutes=30))) > exp:
+                return HTMLResponse("""
+                <div style="font-family:sans-serif;max-width:500px;margin:80px auto;text-align:center">
+                    <h2 style="color:#EF4444">Link Expired</h2>
+                    <p style="color:#64748b">This approval link has expired. Please contact the service team.</p>
+                </div>
+                """)
+        except (ValueError, TypeError):
+            pass
+
+    # Update approval status
+    new_status = "approved" if action == "approve" else "rejected"
+    await _db.quotation_approvals.update_one(
+        {"token": token},
+        {"$set": {"status": new_status, "responded_at": get_ist_isoformat()}}
+    )
+
+    # Update ticket stage
+    ticket_id = approval["ticket_id"]
+    org_id = approval["organization_id"]
+
+    ticket = await _db.tickets_v2.find_one({"id": ticket_id}, {"_id": 0, "workflow": 1, "current_stage_id": 1})
+
+    # Find appropriate stage based on action
+    new_stage_name = "Customer Approved" if action == "approve" else "Customer Rejected"
+    new_stage_id = None
+    if ticket and ticket.get("workflow"):
+        for stage in ticket["workflow"].get("stages", []):
+            if stage.get("name") == new_stage_name or stage.get("slug") == new_stage_name.lower().replace(" ", "_"):
+                new_stage_id = stage["id"]
+                break
+
+    update_data = {
+        "current_stage_name": new_stage_name,
+        "is_open": action == "approve",
+        "updated_at": get_ist_isoformat()
+    }
+    if new_stage_id:
+        update_data["current_stage_id"] = new_stage_id
+
+    await _db.tickets_v2.update_one(
+        {"id": ticket_id},
+        {
+            "$set": update_data,
+            "$push": {"timeline": {
+                "id": str(uuid.uuid4()),
+                "type": "quotation_response",
+                "description": f"Customer {new_status} the quotation via email",
+                "user_name": approval.get("customer_email", "Customer"),
+                "is_internal": False,
+                "created_at": get_ist_isoformat()
+            }}
+        }
+    )
+
+    # HTML response
+    if action == "approve":
+        html = """
+        <div style="font-family:sans-serif;max-width:500px;margin:80px auto;text-align:center">
+            <div style="background:#ECFDF5;border-radius:50%;width:80px;height:80px;display:flex;align-items:center;justify-content:center;margin:0 auto 24px">
+                <svg width="40" height="40" fill="none" stroke="#10B981" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <h2 style="color:#10B981;margin-bottom:8px">Quotation Approved!</h2>
+            <p style="color:#64748b">Thank you for approving the quotation. Our team will proceed with the work immediately.</p>
+            <p style="color:#94a3b8;font-size:13px;margin-top:24px">You may close this window.</p>
+        </div>
+        """
+    else:
+        html = """
+        <div style="font-family:sans-serif;max-width:500px;margin:80px auto;text-align:center">
+            <div style="background:#FEF2F2;border-radius:50%;width:80px;height:80px;display:flex;align-items:center;justify-content:center;margin:0 auto 24px">
+                <svg width="40" height="40" fill="none" stroke="#EF4444" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </div>
+            <h2 style="color:#EF4444;margin-bottom:8px">Quotation Rejected</h2>
+            <p style="color:#64748b">The quotation has been rejected. Our team will reach out for further discussion.</p>
+            <p style="color:#94a3b8;font-size:13px;margin-top:24px">You may close this window.</p>
+        </div>
+        """
+
+    return HTMLResponse(html)

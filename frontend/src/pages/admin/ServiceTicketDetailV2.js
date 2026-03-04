@@ -889,6 +889,78 @@ const OEMTrackingPanel = ({ ticket, onUpdate }) => {
   );
 };
 
+// ========== QUOTATION APPROVAL PANEL ==========
+const QuotationApprovalPanel = ({ ticket }) => {
+  const [showForm, setShowForm] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [email, setEmail] = useState(ticket.contact_email || '');
+  const [name, setName] = useState(ticket.contact_name || '');
+  const [details, setDetails] = useState('');
+  const [result, setResult] = useState(null);
+
+  const handleSend = async () => {
+    if (!email.trim()) { toast.error('Customer email is required'); return; }
+    setSending(true);
+    try {
+      const res = await fetch(`${API}/api/ticketing/tickets/${ticket.id}/send-quotation-email`, {
+        method: 'POST', headers: authHeaders(),
+        body: JSON.stringify({ customer_email: email, customer_name: name, quotation_details: details }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
+      const data = await res.json();
+      setResult(data);
+      toast.success(data.email_sent ? 'Quotation email sent to customer!' : 'Approval links generated (SMTP not configured)');
+      setShowForm(false);
+    } catch (e) { toast.error(e.message); }
+    finally { setSending(false); }
+  };
+
+  return (
+    <div className="bg-white border rounded-lg p-4" data-testid="quotation-approval-panel">
+      <h3 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+        <FileText className="w-4 h-4 text-slate-400" /> Customer Quotation Approval
+      </h3>
+      {!showForm && !result && (
+        <Button size="sm" variant="outline" className="w-full" onClick={() => setShowForm(true)} data-testid="send-quotation-btn">
+          <Mail className="w-4 h-4 mr-1" /> Send Quotation for Approval
+        </Button>
+      )}
+      {showForm && (
+        <div className="space-y-2 mt-2">
+          <div><label className="text-xs text-slate-500">Customer Email *</label>
+            <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="customer@company.com" className="h-8 text-sm" data-testid="quotation-email" /></div>
+          <div><label className="text-xs text-slate-500">Customer Name</label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="Contact name" className="h-8 text-sm" /></div>
+          <div><label className="text-xs text-slate-500">Additional Details</label>
+            <textarea className="w-full border rounded-lg px-3 py-1.5 text-sm" rows={2} value={details} onChange={e => setDetails(e.target.value)} placeholder="Pricing notes, terms, etc." /></div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleSend} disabled={sending} data-testid="confirm-send-quotation">
+              {sending ? 'Sending...' : 'Send Email'}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>Cancel</Button>
+          </div>
+        </div>
+      )}
+      {result && (
+        <div className="mt-2 space-y-2">
+          <p className="text-xs text-green-600">{result.email_sent ? 'Email sent!' : 'SMTP not configured — share links manually:'}</p>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 w-14">Approve:</span>
+              <input readOnly value={result.approve_url} className="flex-1 text-xs border rounded px-2 py-1 bg-slate-50" onClick={e => e.target.select()} />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 w-14">Reject:</span>
+              <input readOnly value={result.reject_url} className="flex-1 text-xs border rounded px-2 py-1 bg-slate-50" onClick={e => e.target.select()} />
+            </div>
+          </div>
+          <Button size="sm" variant="ghost" onClick={() => { setResult(null); setShowForm(false); }}>Done</Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ========== MAIN COMPONENT ==========
 export default function ServiceTicketDetailV2() {
   const { ticketId } = useParams();
@@ -1118,6 +1190,9 @@ export default function ServiceTicketDetailV2() {
           {ticket.device_warranty_type === 'oem_warranty' && (
             <OEMTrackingPanel ticket={ticket} onUpdate={fetchTicket} />
           )}
+
+          {/* Quotation Approval Email */}
+          <QuotationApprovalPanel ticket={ticket} />
 
           {/* Schedule Info */}
           {ticket.scheduled_at && (

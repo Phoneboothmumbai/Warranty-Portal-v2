@@ -1206,6 +1206,69 @@ async def engineer_ticket_detail(ticket_id: str, engineer: dict = Depends(get_cu
     }
 
 
+@router.get("/engineer/ticket/{ticket_id}/workflow")
+async def engineer_ticket_workflow(ticket_id: str, engineer: dict = Depends(get_current_engineer)):
+    """Get the workflow stages for a ticket assigned to this engineer."""
+    eng = await _resolve_engineer(engineer)
+    org_id = eng["organization_id"]
+    eng_id = eng["id"]
+
+    ticket = await _db.tickets_v2.find_one(
+        {"id": ticket_id, "assigned_to_id": eng_id, "organization_id": org_id},
+        {"_id": 0, "id": 1, "current_stage_id": 1, "current_stage_name": 1, "workflow": 1, "help_topic_id": 1}
+    )
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    # Get workflow from ticket's embedded workflow or from help topic
+    workflow = ticket.get("workflow")
+    if not workflow:
+        # Find help topic -> workflow
+        ht = await _db.ticket_help_topics.find_one(
+            {"id": ticket.get("help_topic_id"), "organization_id": org_id},
+            {"_id": 0, "workflow_id": 1}
+        )
+        if ht and ht.get("workflow_id"):
+            workflow = await _db.ticket_workflows.find_one(
+                {"id": ht["workflow_id"], "organization_id": org_id},
+                {"_id": 0}
+            )
+
+    if not workflow:
+        return {"stages": [], "current_stage_id": ticket.get("current_stage_id"), "current_stage_name": ticket.get("current_stage_name")}
+
+    stages = workflow.get("stages", [])
+    current_id = ticket.get("current_stage_id")
+
+    # Find current stage and its valid transitions
+    current_stage = None
+    for s in stages:
+        if s.get("id") == current_id or s.get("name") == ticket.get("current_stage_name"):
+            current_stage = s
+            break
+
+    transitions = []
+    if current_stage:
+        for t in current_stage.get("transitions", []):
+            target = next((s for s in stages if s["id"] == t["to_stage_id"]), None)
+            transitions.append({
+                "id": t["id"],
+                "label": t.get("label", ""),
+                "to_stage_id": t["to_stage_id"],
+                "to_stage_name": target["name"] if target else "",
+                "color": t.get("color", "primary"),
+                "requires_input": t.get("requires_input", ""),
+            })
+
+    return {
+        "workflow_name": workflow.get("name", ""),
+        "stages": [{"id": s["id"], "name": s["name"], "stage_type": s.get("stage_type", ""), "order": s.get("order", 0)} for s in sorted(stages, key=lambda x: x.get("order", 0))],
+        "current_stage_id": current_id,
+        "current_stage_name": ticket.get("current_stage_name"),
+        "transitions": transitions,
+    }
+
+
 # ── Admin Workforce Overview ──
 
 @router.get("/ticketing/workforce/overview")
