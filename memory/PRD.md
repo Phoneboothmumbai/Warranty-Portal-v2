@@ -5,48 +5,53 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 
 ## What's Been Implemented
 
+### Comprehensive Analytics Dashboard (Mar 4, 2026)
+- **10-module analytics engine** covering all business intelligence needs:
+  1. **Ticket Intelligence**: Volume trends, stage funnel, resolution times (avg/P95), bottleneck detection, source analysis, priority distribution, heatmap, reopen rate
+  2. **Workforce Performance**: Engineer scorecards (tickets, resolution time, FTF rate), workload distribution, parts cost per engineer, visit tracking
+  3. **Financial Analytics**: Quotation pipeline (sent/approved/rejected), revenue by month, parts cost tracking, pending bills aging, AMC revenue
+  4. **Client Health Score**: Composite health scoring (0-100) based on tickets, SLA breaches, device ratios. At-risk company identification
+  5. **Asset Intelligence**: Warranty expiry timeline (30/60/90d), failure rate by brand/model, device age distribution, lifecycle cost
+  6. **SLA Compliance**: Compliance rate, breach by priority/team, breach trend (weekly), escalation tracking
+  7. **Workflow Analytics**: Stage cycle times, stage backlog per workflow, warranty type distribution, transition patterns
+  8. **Inventory & Parts**: Stock level alerts, consumption trends, transaction volume (in/out), part request status
+  9. **Contract & AMC**: Active/expired/expiring contracts, type distribution, coverage rate, renewal pipeline, by-company breakdown
+  10. **Operational Intelligence (AI)**: Trend prediction, anomaly detection (company spike alerts), actionable recommendations, top issue clustering
+- **Executive Summary**: 8 top-level KPIs with period-over-period change percentages
+- **Period selector**: 7d / 30d / 90d / 365d with dynamic data refresh
+- **In-memory caching**: 5-minute TTL for performance optimization
+- **Interactive charts**: Recharts library (Area, Bar, Pie, Line, Radar charts)
+- **Testing: 100% backend (16/16), 100% frontend (all 11 tabs verified)**
+
 ### P0 Feature Verification Complete (Mar 4, 2026)
-- **Customer Quotation Approval via Email**: Token-based public endpoints for approve/reject. Admin can send quotation emails from ticket detail. Customers click approve/deny buttons in email. Backend: POST /api/ticketing/tickets/{id}/send-quotation-email, GET /api/ticketing/quotation-response/{token}?action=approve|reject
-- **Engineer Portal Workflow Sync**: Progress bar with 13 stages, current stage highlighted, available transitions displayed. Backend: GET /api/engineer/ticket/{id}/workflow
-- **Help Topic -> Form Linking**: All 43 topics linked to forms. Dynamic form fields shown in Create Ticket modal when topic selected.
-- **Testing: 100% backend (10/10), 100% frontend (all flows verified)**
+- **Customer Quotation Approval via Email**: Token-based public approve/reject endpoints
+- **Engineer Portal Workflow Sync**: 13-stage progress bar with transitions
+- **Help Topic -> Form Linking**: All 43 topics linked to dynamic forms
+- **Testing: 100% (10/10 backend, all frontend)**
 
-### Comprehensive Help Topic System (Mar 4, 2026)
-- **8 master categories**: Hardware & Devices, Software & OS, Network & Connectivity, Peripherals & Accessories, Service Requests, Warranty & AMC, Commercial & Billing, General
-- **43 help topics** covering all MSP/warranty scenarios with searchable tags
-- Full CRUD for categories and topics
-- Searchable topic selector in ticket creation (grouped by category, fuzzy search)
-- **Testing: 100% (14/14 backend, all frontend)**
-
-### Warranty-Based Workflow System (Mar 4, 2026)
-- 3 device-type workflows: OEM Warranty (8 stages), AMC Support (10 stages), Non-Warranty (12 stages)
-- Auto-detection engine: checks warranty dates + AMC contracts -> assigns workflow
-- OEM Tracking Panel on ticket detail
-- **Testing: 100% (9/9 backend, all frontend)**
-
-### WhatsApp + Email Notifications (Mar 2, 2026)
-- Stage-based notification panel with 5 team options via wa.me/ links
-- Configurable team phone numbers and emails in Settings
-- **Testing: 100% (15/15 backend, all frontend)**
-
-### Admin Ticket Dashboard Redesign (Mar 2, 2026)
-- "To Be Assigned" / "Assigned Tickets" split with status filter pills
-- **Testing: 100% (13/13 backend, all frontend)**
-
-### Previous Work (Feb-Mar 2026)
-- Engineer reschedule, visit workflow, inventory, pending bills, bulk upload, parts requests, branding
+### Previous Features (Feb-Mar 2026)
+- Help Topic System (8 categories, 43 topics, full CRUD)
+- Warranty-Based Workflows (OEM/AMC/Non-Warranty, auto-detection)
+- WhatsApp + Email Notifications (stage-based, 5 teams)
+- Admin Ticket Dashboard Redesign (split sections, filter pills)
+- Engineer reschedule, visit workflow, inventory, pending bills, bulk upload
 
 ## Architecture
-- Frontend: React + Tailwind + Shadcn/UI
+- Frontend: React + Tailwind + Shadcn/UI + Recharts
 - Backend: FastAPI + Motor (MongoDB async)
 - Database: MongoDB | Auth: JWT-based
+- Analytics: In-memory cached aggregation endpoints (5min TTL)
 
 ## Key Collections
-- `help_topic_categories` - 8 master categories (CRUD)
-- `ticket_help_topics` - 43+ topics with category_id, tags, parent_id, workflow_id, form_id
-- `ticket_workflows` - 7 workflows including OEM, AMC, Non-Warranty
-- `tickets_v2` - with device_warranty_type, OEM tracking fields
-- `quotation_approvals` - token-based customer approval records
+- `tickets_v2` - Main tickets with workflows, timelines
+- `ticket_workflows` - 7 configurable workflows
+- `ticket_help_topics` - 43+ topics with category/form/workflow links
+- `devices` - 58 devices with warranty tracking
+- `companies` - 34 client companies
+- `engineers` - 12 field technicians
+- `quotations` - Financial pipeline
+- `amc_contracts` - AMC/warranty contracts
+- `inventory` / `stock_ledger` - Inventory management
 
 ## Prioritized Backlog
 
@@ -55,10 +60,10 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - Form Builder UI (admin dynamic form creation/editing)
 - Workflow Designer UI (visual workflow editor)
 - Email Inbox UI (IMAP/SMTP)
+- Company-level analytics view for customer portal
 
 ### P1
 - Full CRUD for SLAs, Priorities, Canned Responses
-- Notification Engine (Email/In-app)
 - Quotation PDF Generation
 - Razorpay Integration
 
