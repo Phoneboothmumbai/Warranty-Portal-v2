@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTenant } from '../../context/TenantContext';
 import { Shield, LogIn, Eye, EyeOff } from 'lucide-react';
@@ -14,10 +14,9 @@ export default function PortalLogin() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  if (isAuthenticated) {
-    navigate(`/portal/${tenantCode}`, { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (isAuthenticated) navigate(`/portal/${tenantCode}`, { replace: true });
+  }, [isAuthenticated, navigate, tenantCode]);
 
   const primaryColor = tenant?.portal_theme?.primary_color || tenant?.accent_color || '#0F62FE';
 

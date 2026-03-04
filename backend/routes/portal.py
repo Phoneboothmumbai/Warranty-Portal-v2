@@ -272,6 +272,231 @@ async def company_analytics(tenant_code: str, days: int = Query(30, ge=1, le=365
 
 
 # ══════════════════════════════════════════════════════════
+# COMPANY DATA ENDPOINTS (for portal sub-pages)
+# ══════════════════════════════════════════════════════════
+
+async def _resolve_company(tenant_code: str):
+    """Helper to resolve tenant_code -> company doc"""
+    company = await _db.companies.find_one(
+        {"tenant_code": tenant_code, "portal_enabled": True},
+        {"_id": 0, "id": 1, "organization_id": 1, "name": 1}
+    )
+    if not company:
+        raise HTTPException(status_code=404, detail="Portal not found")
+    return company
+
+
+@router.get("/tenant/{tenant_code}/tickets")
+async def company_tickets(
+    tenant_code: str,
+    status: Optional[str] = Query(None, description="open|closed|all"),
+    search: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """Full ticket list for a company portal"""
+    company = await _resolve_company(tenant_code)
+    cid, org_id = company["id"], company["organization_id"]
+
+    query = {"organization_id": org_id, "company_id": cid, "is_deleted": {"$ne": True}}
+    if status == "open":
+        query["is_open"] = True
+    elif status == "closed":
+        query["is_open"] = False
+
+    if search:
+        query["$or"] = [
+            {"subject": {"$regex": search, "$options": "i"}},
+            {"ticket_number": {"$regex": search, "$options": "i"}},
+        ]
+
+    total = await _db.tickets_v2.count_documents(query)
+    skip = (page - 1) * limit
+    tickets_cursor = _db.tickets_v2.find(
+        query, {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit)
+    tickets = await tickets_cursor.to_list(limit)
+
+    # Enrich with staff name for assigned engineer
+    staff_ids = list({t.get("assigned_to") for t in tickets if t.get("assigned_to")})
+    staff_map = {}
+    if staff_ids:
+        staff_docs = await _db.staff.find(
+            {"id": {"$in": staff_ids}}, {"_id": 0, "id": 1, "name": 1}
+        ).to_list(100)
+        staff_map = {s["id"]: s["name"] for s in staff_docs}
+
+    result = []
+    for t in tickets:
+        result.append({
+            "id": t.get("id"),
+            "ticket_number": t.get("ticket_number"),
+            "subject": t.get("subject"),
+            "description": t.get("description", ""),
+            "status": t.get("current_stage_name", "Open"),
+            "priority": t.get("priority_name", "medium"),
+            "help_topic": t.get("help_topic_name", ""),
+            "is_open": t.get("is_open", True),
+            "assigned_to": staff_map.get(t.get("assigned_to"), "Unassigned"),
+            "created_at": t.get("created_at", ""),
+            "updated_at": t.get("updated_at", ""),
+            "closed_at": t.get("closed_at"),
+            "sla_breached": t.get("sla_breached", False),
+        })
+
+    return {"tickets": result, "total": total, "page": page, "limit": limit}
+
+
+@router.get("/tenant/{tenant_code}/devices")
+async def company_devices(
+    tenant_code: str,
+    search: Optional[str] = Query(None),
+    warranty: Optional[str] = Query(None, description="active|expired|expiring"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """Full device list for a company portal"""
+    company = await _resolve_company(tenant_code)
+    cid, org_id = company["id"], company["organization_id"]
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    query = {"organization_id": org_id, "company_id": cid}
+    if search:
+        query["$or"] = [
+            {"serial_number": {"$regex": search, "$options": "i"}},
+            {"brand": {"$regex": search, "$options": "i"}},
+            {"model": {"$regex": search, "$options": "i"}},
+            {"hostname": {"$regex": search, "$options": "i"}},
+        ]
+
+    total = await _db.devices.count_documents(query)
+    skip = (page - 1) * limit
+    devices = await _db.devices.find(
+        query, {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+
+    result = []
+    for d in devices:
+        we = d.get("warranty_end_date", "")
+        w_status = "unknown"
+        if we:
+            try:
+                we_dt = datetime.strptime(str(we)[:10], "%Y-%m-%d")
+                days_left = (we_dt - datetime.strptime(now_str, "%Y-%m-%d")).days
+                if days_left < 0:
+                    w_status = "expired"
+                elif days_left <= 30:
+                    w_status = "expiring"
+                else:
+                    w_status = "active"
+            except Exception:
+                pass
+
+        if warranty and w_status != warranty:
+            continue
+
+        result.append({
+            "id": d.get("id"),
+            "serial_number": d.get("serial_number", ""),
+            "brand": d.get("brand", ""),
+            "model": d.get("model", ""),
+            "hostname": d.get("hostname", ""),
+            "device_type": d.get("device_type", d.get("type", "")),
+            "os": d.get("os", ""),
+            "warranty_start_date": d.get("warranty_start_date", ""),
+            "warranty_end_date": we,
+            "warranty_status": w_status,
+            "site_name": d.get("site_name", ""),
+            "assigned_user": d.get("assigned_user", d.get("user_name", "")),
+            "status": d.get("status", "active"),
+            "created_at": d.get("created_at", ""),
+        })
+
+    return {"devices": result, "total": total, "page": page, "limit": limit}
+
+
+@router.get("/tenant/{tenant_code}/contracts")
+async def company_contracts(tenant_code: str):
+    """AMC contracts for a company portal"""
+    company = await _resolve_company(tenant_code)
+    cid, org_id = company["id"], company["organization_id"]
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    contracts = await _db.amc_contracts.find(
+        {"organization_id": org_id, "company_id": cid, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    ).to_list(200)
+
+    result = []
+    for c in contracts:
+        end = c.get("end_date", "")
+        status = "expired"
+        if end >= now_str:
+            status = "active"
+
+        # Count devices in contract
+        device_count = 0
+        if c.get("device_ids"):
+            device_count = len(c["device_ids"])
+        elif c.get("id"):
+            device_count = await _db.devices.count_documents({
+                "organization_id": org_id, "company_id": cid,
+                "amc_contract_id": c["id"]
+            })
+
+        result.append({
+            "id": c.get("id"),
+            "contract_number": c.get("contract_number", c.get("id", "")[:8]),
+            "name": c.get("name", c.get("contract_name", "AMC Contract")),
+            "type": c.get("contract_type", c.get("type", "AMC")),
+            "start_date": c.get("start_date", ""),
+            "end_date": end,
+            "status": status,
+            "device_count": device_count,
+            "value": c.get("total_value", c.get("contract_value", 0)),
+            "sla_type": c.get("sla_type", ""),
+            "coverage": c.get("coverage_type", c.get("coverage", "")),
+        })
+
+    active = sum(1 for r in result if r["status"] == "active")
+    expired = sum(1 for r in result if r["status"] == "expired")
+    return {"contracts": result, "total": len(result), "active": active, "expired": expired}
+
+
+@router.get("/tenant/{tenant_code}/profile")
+async def company_profile(tenant_code: str):
+    """Company profile info for portal"""
+    company = await _db.companies.find_one(
+        {"tenant_code": tenant_code, "portal_enabled": True},
+        {"_id": 0, "id": 1, "name": 1, "contact_email": 1, "contact_name": 1,
+         "contact_phone": 1, "address": 1, "city": 1, "state": 1, "pincode": 1,
+         "gst_number": 1, "tenant_code": 1, "portal_welcome_message": 1}
+    )
+    if not company:
+        raise HTTPException(status_code=404, detail="Portal not found")
+
+    org_id = (await _db.companies.find_one(
+        {"tenant_code": tenant_code}, {"_id": 0, "organization_id": 1}
+    ) or {}).get("organization_id")
+
+    # Count summary stats
+    cid = company["id"]
+    device_count = await _db.devices.count_documents({"organization_id": org_id, "company_id": cid})
+    ticket_count = await _db.tickets_v2.count_documents({"organization_id": org_id, "company_id": cid, "is_deleted": {"$ne": True}})
+    contract_count = await _db.amc_contracts.count_documents({"organization_id": org_id, "company_id": cid, "is_deleted": {"$ne": True}})
+
+    return {
+        **company,
+        "stats": {
+            "devices": device_count,
+            "tickets": ticket_count,
+            "contracts": contract_count,
+        }
+    }
+
+
+
+# ══════════════════════════════════════════════════════════
 # ADMIN: Portal Management per company
 # ══════════════════════════════════════════════════════════
 

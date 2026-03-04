@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
 import { useTenant } from '../context/TenantContext';
 import { Shield, LayoutDashboard, Wrench, Laptop, FileText, BarChart3, User, LogOut, AlertTriangle } from 'lucide-react';
 
@@ -24,7 +24,7 @@ const PortalLayout = () => {
   );
 
   if (!isAuthenticated) {
-    return <Outlet />;
+    return <Navigate to={`/portal/${tenantCode}/login`} replace />;
   }
 
   const primaryColor = tenant?.portal_theme?.primary_color || tenant?.accent_color || '#0F62FE';

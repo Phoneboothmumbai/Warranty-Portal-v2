@@ -116,13 +116,37 @@ import EngineerDashboard from "./pages/engineer/EngineerDashboard";
 import EngineerCalendar from "./pages/engineer/EngineerCalendar";
 import EngineerTicketDetail from "./pages/engineer/EngineerTicketDetail";
 
+// Portal Pages
+import PortalLayout from "./layouts/PortalLayout";
+import PortalLogin from "./pages/portal/PortalLogin";
+import PortalDashboard from "./pages/portal/PortalDashboard";
+import PortalTickets from "./pages/portal/PortalTickets";
+import PortalDevices from "./pages/portal/PortalDevices";
+import PortalContracts from "./pages/portal/PortalContracts";
+import PortalProfile from "./pages/portal/PortalProfile";
+
 // Contexts
 import { BrandingProvider } from "./contexts/BrandingContext";
+
+// Portal route wrapper — TenantProvider needs to be inside BrowserRouter for useParams
+const PortalRoutes = () => (
+  <TenantProvider>
+    <Routes>
+      <Route path="login" element={<PortalLogin />} />
+      <Route element={<PortalLayout />}>
+        <Route index element={<PortalDashboard />} />
+        <Route path="tickets" element={<PortalTickets />} />
+        <Route path="devices" element={<PortalDevices />} />
+        <Route path="contracts" element={<PortalContracts />} />
+        <Route path="profile" element={<PortalProfile />} />
+      </Route>
+    </Routes>
+  </TenantProvider>
+);
 
 function App() {
   return (
     <SettingsProvider>
-      <TenantProvider>
         <AuthProvider>
           <BrandingProvider>
             <CompanyAuthProvider>
@@ -246,6 +270,9 @@ function App() {
                     <Route path="calendar" element={<EngineerCalendar />} />
                     <Route path="ticket/:ticketId" element={<EngineerTicketDetail />} />
                   </Route>
+
+                  {/* Multi-tenant Customer Portal */}
+                  <Route path="/portal/:tenantCode/*" element={<PortalRoutes />} />
                 </Routes>
               </div>
               <Toaster position="top-right" richColors />
@@ -254,7 +281,6 @@ function App() {
         </CompanyAuthProvider>
       </BrandingProvider>
     </AuthProvider>
-  </TenantProvider>
   </SettingsProvider>
 );
 }

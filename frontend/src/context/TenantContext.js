@@ -6,12 +6,16 @@ const TenantContext = createContext(null);
 
 export const TenantProvider = ({ children }) => {
   const { tenantCode } = useParams();
+  const storageKey = `portal_${tenantCode}`;
   const [tenant, setTenant] = useState(null);
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem(`portal_token_${tenantCode}`));
+  const [user, setUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`${storageKey}_user`)); } catch { return null; }
+  });
+  const [token, setToken] = useState(() => localStorage.getItem(`${storageKey}_token`));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Resolve tenant
   useEffect(() => {
     if (!tenantCode) return;
     (async () => {
@@ -24,17 +28,6 @@ export const TenantProvider = ({ children }) => {
     })();
   }, [tenantCode]);
 
-  useEffect(() => {
-    if (!token) { setUser(null); return; }
-    (async () => {
-      try {
-        const res = await fetch(`${API}/api/company/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
-        if (res.ok) setUser(await res.json());
-        else { localStorage.removeItem(`portal_token_${tenantCode}`); setToken(null); setUser(null); }
-      } catch { /* ignore */ }
-    })();
-  }, [token, tenantCode]);
-
   const login = async (email, password) => {
     const res = await fetch(`${API}/api/portal/tenant/${tenantCode}/login`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -42,14 +35,16 @@ export const TenantProvider = ({ children }) => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Login failed');
-    localStorage.setItem(`portal_token_${tenantCode}`, data.access_token);
+    localStorage.setItem(`${storageKey}_token`, data.access_token);
+    localStorage.setItem(`${storageKey}_user`, JSON.stringify(data.user));
     setToken(data.access_token);
     setUser(data.user);
     return data;
   };
 
   const logout = () => {
-    localStorage.removeItem(`portal_token_${tenantCode}`);
+    localStorage.removeItem(`${storageKey}_token`);
+    localStorage.removeItem(`${storageKey}_user`);
     setToken(null);
     setUser(null);
   };
@@ -59,11 +54,16 @@ export const TenantProvider = ({ children }) => {
   }), [token]);
 
   return (
-    <TenantContext.Provider value={{ tenant, user, token, loading, error, login, logout, hdrs, tenantCode, isAuthenticated: !!user }}>
+    <TenantContext.Provider value={{ tenant, user, token, loading, error, login, logout, hdrs, tenantCode, isAuthenticated: !!user && !!token }}>
       {children}
     </TenantContext.Provider>
   );
 };
 
-export const useTenant = () => useContext(TenantContext);
+export const useTenant = () => useContext(TenantContext) || {};
+
+// Utility functions for admin pages (pass-through since admin doesn't use tenant routing)
+export const buildTenantUrl = (path) => path;
+export const getTenantRequestConfig = () => ({});
+
 export default TenantContext;
