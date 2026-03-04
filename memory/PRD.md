@@ -5,20 +5,26 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 
 ## What's Been Implemented
 
-### Navigation Restructuring (Mar 4, 2026) - NEW
+### Multi-tenant Customer Portal (Mar 4, 2026) - NEW
+- **Path-based multi-tenancy**: `/portal/{tenant_code}` URL structure for each company
+- **Portal Login**: Branded login page per company with `company_portal_users` auth
+- **Dashboard**: Full analytics (KPIs, charts, trends) scoped to company data
+- **Tickets Page**: Searchable ticket list with status/priority filters, pagination
+- **Devices Page**: Device inventory with warranty status cards (active/expiring/expired), search
+- **Contracts Page**: AMC contract list with active/expired status badges
+- **Profile Page**: User profile, company details, and summary stats
+- **Portal Layout**: Branded top navigation with company logo, user info, and logout
+- **Backend**: 6 new endpoints (`/tickets`, `/devices`, `/contracts`, `/profile`, `/analytics`, `/login`)
+- **Testing: 100% (18/18 backend, all frontend flows verified)**
+
+### Navigation Restructuring (Mar 4, 2026)
 - **Dual-nav pattern**: Horizontal top module bar (6 primary modules) + contextual left sidebar
 - **6 Modules**: Dashboard, Service Desk, Assets, Contracts, Analytics, Settings
-- **Full-width pages**: Dashboard & Analytics (no sidebar — maximum chart space)
-- **Contextual sidebars**: Service Desk (5 items), Assets (6), Contracts (6), Settings (15)
-- **Mobile responsive**: Hamburger menu + horizontal scrolling tabs at 768px
-- **Reduced clutter**: From 30+ items in one sidebar to max 6-15 focused items per module
-- **Testing: 100% (10/10 frontend flows verified)**
+- **Testing: 100%**
 
 ### Device Profitability Module (Mar 4, 2026)
 - Password-protected "Profitability" tab — owner-only access
 - Per-device cost: AMC Revenue vs (Labour + Travel + Parts) = Profit/Loss
-- Engineer hourly_rate field, zone-based travel tiers (4 configurable), expandable call details
-- Company-level profitability rollup with margin %
 - **Testing: 100%**
 
 ### Analytics Dashboard (Mar 4, 2026)
@@ -36,27 +42,43 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - Backend: FastAPI + Motor (MongoDB async)
 - Database: MongoDB | Auth: JWT-based
 - Layout: Top module bar + contextual sidebar (ServiceNow/Freshdesk pattern)
+- Portal: Path-based multi-tenancy with TenantProvider context
 
 ## Navigation Structure
 ```
 Top Bar: [Dashboard] [Service Desk] [Assets] [Contracts] [Analytics] [Settings]
 
-Service Desk → Tickets, Workforce, Calendar, Ticketing Setup, Renewal Alerts
-Assets       → Devices, Accessories, Asset Groups, Parts, Deployments, Catalog
-Contracts    → AMC, AMC Requests, Licenses, Subscriptions, Internet, History
-Analytics    → (full-width, 12 internal tabs)
-Settings     → Organization, Portal, Master Data, Item Master, Credentials, Products, Orders, Parts, Bills, Usage, Integrations
+Service Desk -> Tickets, Workforce, Calendar, Ticketing Setup, Renewal Alerts
+Assets       -> Devices, Accessories, Asset Groups, Parts, Deployments, Catalog
+Contracts    -> AMC, AMC Requests, Licenses, Subscriptions, Internet, History
+Analytics    -> (full-width, 12 internal tabs)
+Settings     -> Organization, Portal, Master Data, Item Master, Credentials, Products, Orders, Parts, Bills, Usage, Integrations
 ```
+
+## Portal Structure
+```
+/portal/{tenant_code}/login     -> Branded login page
+/portal/{tenant_code}/          -> Dashboard (KPIs, charts, trends)
+/portal/{tenant_code}/tickets   -> Company ticket list
+/portal/{tenant_code}/devices   -> Company device inventory
+/portal/{tenant_code}/contracts -> AMC contracts
+/portal/{tenant_code}/profile   -> User & company profile
+```
+
+## Resolved Issues
+- Analytics Workforce Discrepancy: CLOSED (user confirmed active-only is correct behavior)
 
 ## Prioritized Backlog
 
 ### P0 (Next)
-- Multi-tenant Customer Facing Portal (with company-level analytics)
-- Form Builder UI, Workflow Designer UI, Email Inbox UI
+- Form Builder UI for dynamic form creation
+- Workflow Designer UI for visual lifecycle editing
+- Email Inbox UI
 
 ### P1
 - Full CRUD for SLAs, Priorities, Canned Responses
-- Quotation PDF Generation, Razorpay Integration
+- Quotation PDF Generation
+- Razorpay Integration
 
 ### P2
 - CompanySwitcher for platform admins
@@ -65,4 +87,6 @@ Settings     → Organization, Portal, Master Data, Item Master, Credentials, Pr
 ## Credentials
 - Admin: ck@motta.in / Charu@123@
 - Engineer: test_engineer_1bfa72f0@test.com / Test@123
+- Portal (Test Company 085831): portal@test.com / Welcome@123
+- Portal (Acme Corporation): admin@acme.com / Welcome@123
 - Profitability Password: owner123
