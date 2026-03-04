@@ -913,6 +913,7 @@ const TechniciansTab = () => {
                   {eng.open_tickets || 0} active tickets
                 </span>
                 {eng.salary && <span className="text-xs bg-slate-50 text-slate-600 px-2 py-0.5 rounded flex items-center gap-0.5"><DollarSign className="w-3 h-3" />{eng.salary.toLocaleString()}/mo</span>}
+                {eng.hourly_rate && <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded flex items-center gap-0.5"><Clock className="w-3 h-3" />{eng.hourly_rate}/hr</span>}
               </div>
               {eng.working_hours && (
                 <div className="mt-2 flex gap-1">
@@ -943,6 +944,7 @@ const TechnicianEditor = ({ tech, onSave, onCancel }) => {
     name: tech.name || '', email: tech.email || '', phone: tech.phone || '',
     password: '', specialization: tech.specialization || '',
     skills: (tech.skills || []).join(', '), salary: tech.salary || '',
+    hourly_rate: tech.hourly_rate || '',
     working_hours: tech.working_hours || { ...DEFAULT_HOURS },
     holidays: tech.holidays || [],
   });
@@ -968,6 +970,7 @@ const TechnicianEditor = ({ tech, onSave, onCancel }) => {
       specialization: form.specialization || null,
       skills: form.skills ? form.skills.split(',').map(s => s.trim()).filter(Boolean) : [],
       salary: form.salary ? parseFloat(form.salary) : null,
+      hourly_rate: form.hourly_rate ? parseFloat(form.hourly_rate) : null,
       working_hours: form.working_hours,
       holidays: form.holidays,
     };
@@ -997,6 +1000,7 @@ const TechnicianEditor = ({ tech, onSave, onCancel }) => {
           <div><label className="text-sm font-medium block mb-1">Specialization</label><Input value={form.specialization} onChange={e => set('specialization', e.target.value)} placeholder="e.g., Printers, Networking" /></div>
           <div><label className="text-sm font-medium block mb-1">Skills (comma separated)</label><Input value={form.skills} onChange={e => set('skills', e.target.value)} placeholder="Printer repair, Network setup" /></div>
           <div><label className="text-sm font-medium block mb-1">Monthly Salary</label><Input type="number" value={form.salary} onChange={e => set('salary', e.target.value)} placeholder="0" data-testid="tech-salary" /></div>
+          <div><label className="text-sm font-medium block mb-1">Hourly Rate (INR/hr)</label><Input type="number" value={form.hourly_rate} onChange={e => set('hourly_rate', e.target.value)} placeholder="e.g. 500" data-testid="tech-hourly-rate" /></div>
         </div>
 
         {/* Working Hours */}

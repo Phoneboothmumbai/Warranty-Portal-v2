@@ -25,6 +25,7 @@ class Engineer(BaseModel):
     specialization: Optional[str] = None
     skills: List[str] = Field(default_factory=list)
     salary: Optional[float] = None
+    hourly_rate: Optional[float] = None
     working_hours: Dict[str, Dict] = Field(default_factory=lambda: {
         "monday": {"is_working": True, "start": "09:00", "end": "18:00"},
         "tuesday": {"is_working": True, "start": "09:00", "end": "18:00"},
@@ -48,6 +49,7 @@ class EngineerCreate(BaseModel):
     specialization: Optional[str] = None
     skills: Optional[List[str]] = None
     salary: Optional[float] = None
+    hourly_rate: Optional[float] = None
     working_hours: Optional[Dict[str, Dict]] = None
     holidays: Optional[List[str]] = None
 
@@ -60,6 +62,7 @@ class EngineerUpdate(BaseModel):
     specialization: Optional[str] = None
     skills: Optional[List[str]] = None
     salary: Optional[float] = None
+    hourly_rate: Optional[float] = None
     working_hours: Optional[Dict[str, Dict]] = None
     holidays: Optional[List[str]] = None
 

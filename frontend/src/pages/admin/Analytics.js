@@ -7,9 +7,10 @@ import {
 import {
   BarChart3, TrendingUp, Users, DollarSign, Monitor, Clock, GitBranch,
   Package, FileText, Brain, ChevronDown, Calendar, ArrowUp, ArrowDown,
-  AlertTriangle, Shield, Target, Activity, Zap, Heart
+  AlertTriangle, Shield, Target, Activity, Zap, Heart, Lock, IndianRupee
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -588,6 +589,183 @@ const OperationalIntelligence = ({ data }) => {
 
 
 // ══════════════════════════════════════════════════════════
+// PROFITABILITY TAB (Password Protected)
+// ══════════════════════════════════════════════════════════
+
+const ProfitabilityTab = ({ hdrs, setData, data }) => {
+  const [verified, setVerified] = useState(false);
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [profData, setProfData] = useState(null);
+  const [loadingData, setLoadingData] = useState(false);
+  const [expandedDevice, setExpandedDevice] = useState(null);
+
+  const verify = async () => {
+    if (!password) return;
+    setVerifying(true);
+    setError('');
+    try {
+      const res = await fetch(`${API}/api/analytics/verify-profitability-password`, {
+        method: 'POST', headers: hdrs(), body: JSON.stringify({ password })
+      });
+      if (res.ok) {
+        setVerified(true);
+        setLoadingData(true);
+        const profRes = await fetch(`${API}/api/analytics/profitability`, { headers: hdrs() });
+        if (profRes.ok) setProfData(await profRes.json());
+        setLoadingData(false);
+      } else {
+        const d = await res.json();
+        setError(d.detail || 'Incorrect password');
+      }
+    } catch { setError('Connection error'); }
+    finally { setVerifying(false); }
+  };
+
+  if (!verified) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]" data-testid="profitability-gate">
+        <div className="bg-white border rounded-lg p-8 max-w-sm w-full text-center space-y-4">
+          <div className="w-12 h-12 mx-auto bg-slate-100 rounded-full flex items-center justify-center"><Lock className="w-6 h-6 text-slate-600" /></div>
+          <h3 className="text-lg font-semibold text-slate-800">Owner Access Only</h3>
+          <p className="text-sm text-slate-500">Enter the profitability password to view cost & profit data</p>
+          <Input type="password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
+            onKeyDown={e => { if (e.key === 'Enter') verify(); }}
+            placeholder="Enter password" className="text-center" data-testid="profitability-password-input" />
+          {error && <p className="text-xs text-red-500">{error}</p>}
+          <Button onClick={verify} disabled={verifying} className="w-full bg-[#0F62FE] hover:bg-[#0043CE] text-white" data-testid="profitability-verify-btn">
+            {verifying ? 'Verifying...' : 'Unlock'}
+          </Button>
+          <p className="text-xs text-slate-400">Set or change this password in Settings</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadingData || !profData) return <EmptyState msg="Loading profitability data..." />;
+
+  const { summary: s, devices, worst_roi, most_expensive, company_profitability, config } = profData;
+  const plColor = v => v >= 0 ? 'text-emerald-600' : 'text-red-600';
+  const plBg = v => v >= 0 ? 'bg-emerald-50' : 'bg-red-50';
+
+  return (
+    <div className="space-y-4" data-testid="profitability-dashboard">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+        <KpiCard label="Devices with Calls" value={s.devices_with_calls} type="info" />
+        <KpiCard label="AMC Revenue" value={s.total_amc_revenue} prefix="INR" type="success" />
+        <KpiCard label="Service Cost" value={s.total_service_cost} prefix="INR" type="warning" />
+        <KpiCard label="Net P/L" value={s.net_profit_loss} prefix="INR" type={s.net_profit_loss >= 0 ? 'success' : 'warning'} />
+        <KpiCard label="Margin" value={`${s.overall_margin_pct}%`} type={s.overall_margin_pct >= 0 ? 'success' : 'warning'} />
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <KpiCard label="Profitable" value={s.profitable_devices} type="success" />
+        <KpiCard label="Loss Making" value={s.loss_making_devices} type={s.loss_making_devices > 0 ? 'warning' : 'success'} />
+        <KpiCard label="Remote Calls" value={s.total_remote_calls} type="neutral" />
+        <KpiCard label="On-Site Calls" value={s.total_onsite_calls} type="neutral" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ChartCard title="Company Profitability">
+          {company_profitability.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={company_profitability.slice(-10)} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis type="number" tick={{ fontSize: 10 }} /><YAxis dataKey="company_name" type="category" width={100} tick={{ fontSize: 9 }} />
+                <Tooltip contentStyle={{ fontSize: 12 }} formatter={v => [`₹${v.toLocaleString('en-IN')}`, '']} /><Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="amc_revenue" fill="#22C55E" name="AMC Revenue" />
+                <Bar dataKey="total_cost" fill="#F97316" name="Service Cost" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : <EmptyState msg="No data" />}
+        </ChartCard>
+        <ChartCard title="Worst ROI Devices">
+          {worst_roi.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={worst_roi.slice(0, 8)}><CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="device_name" tick={{ fontSize: 8 }} angle={-20} textAnchor="end" height={50} /><YAxis tick={{ fontSize: 10 }} />
+                <Tooltip contentStyle={{ fontSize: 12 }} formatter={v => [`₹${v.toLocaleString('en-IN')}`, '']} /><Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="amc_revenue" fill="#22C55E" name="Revenue" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="total_cost" fill="#DC2626" name="Cost" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : <EmptyState msg="No data" />}
+        </ChartCard>
+      </div>
+
+      {/* Per-Device Table */}
+      <ChartCard title={`Device-Level Profitability (${devices.length} devices with calls)`}>
+        <div className="overflow-auto max-h-[500px]">
+          <table className="w-full text-xs">
+            <thead className="sticky top-0 bg-white z-10"><tr className="border-b">
+              <th className="text-left py-2 px-2 text-slate-500 font-medium">Device</th>
+              <th className="text-left py-2 px-2 text-slate-500 font-medium">Company</th>
+              <th className="text-center py-2 px-2 text-slate-500 font-medium">Calls</th>
+              <th className="text-center py-2 px-2 text-slate-500 font-medium">Remote</th>
+              <th className="text-center py-2 px-2 text-slate-500 font-medium">On-Site</th>
+              <th className="text-right py-2 px-2 text-slate-500 font-medium">AMC Rev</th>
+              <th className="text-right py-2 px-2 text-slate-500 font-medium">Labour</th>
+              <th className="text-right py-2 px-2 text-slate-500 font-medium">Travel</th>
+              <th className="text-right py-2 px-2 text-slate-500 font-medium">Parts</th>
+              <th className="text-right py-2 px-2 text-slate-500 font-medium">Total Cost</th>
+              <th className="text-right py-2 px-2 text-slate-500 font-medium">P/L</th>
+            </tr></thead>
+            <tbody>
+              {devices.map(d => (
+                <React.Fragment key={d.device_id}>
+                  <tr className={`border-b border-slate-50 hover:bg-slate-50 cursor-pointer ${expandedDevice === d.device_id ? 'bg-blue-50' : ''}`}
+                    onClick={() => setExpandedDevice(expandedDevice === d.device_id ? null : d.device_id)}>
+                    <td className="py-2 px-2 font-medium text-slate-700">{d.device_name || `${d.brand} ${d.model}`}<br/><span className="text-slate-400">{d.serial_number}</span></td>
+                    <td className="py-2 px-2 text-slate-600">{d.company_name}</td>
+                    <td className="py-2 px-2 text-center">{d.total_calls}</td>
+                    <td className="py-2 px-2 text-center text-blue-600">{d.remote_calls}</td>
+                    <td className="py-2 px-2 text-center text-amber-600">{d.onsite_calls}</td>
+                    <td className="py-2 px-2 text-right text-emerald-600">₹{d.amc_revenue.toLocaleString('en-IN')}</td>
+                    <td className="py-2 px-2 text-right">₹{d.labour_cost.toLocaleString('en-IN')}</td>
+                    <td className="py-2 px-2 text-right">₹{d.travel_cost.toLocaleString('en-IN')}</td>
+                    <td className="py-2 px-2 text-right">₹{d.parts_cost.toLocaleString('en-IN')}</td>
+                    <td className="py-2 px-2 text-right font-medium">₹{d.total_cost.toLocaleString('en-IN')}</td>
+                    <td className={`py-2 px-2 text-right font-bold ${plColor(d.profit_loss)}`}>
+                      <span className={`px-1.5 py-0.5 rounded ${plBg(d.profit_loss)}`}>₹{d.profit_loss.toLocaleString('en-IN')}</span>
+                    </td>
+                  </tr>
+                  {expandedDevice === d.device_id && d.call_details.length > 0 && (
+                    <tr><td colSpan="11" className="bg-slate-50 p-3">
+                      <p className="text-xs font-semibold text-slate-600 mb-2">Call Breakdown</p>
+                      <table className="w-full text-xs">
+                        <thead><tr className="text-slate-400">
+                          <th className="text-left py-1">Type</th><th className="text-left py-1">Date</th><th className="text-left py-1">Engineer</th>
+                          <th className="text-right py-1">Hours</th><th className="text-right py-1">Labour</th><th className="text-right py-1">Travel</th><th className="text-right py-1">Parts</th>
+                        </tr></thead>
+                        <tbody>{d.call_details.map((c, i) => (
+                          <tr key={i} className="border-t border-slate-100">
+                            <td className="py-1"><span className={`px-1.5 py-0.5 rounded text-[10px] ${c.type === 'remote' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>{c.type}</span></td>
+                            <td className="py-1">{c.date}</td><td className="py-1">{c.engineer}</td>
+                            <td className="py-1 text-right">{c.hours}h</td>
+                            <td className="py-1 text-right">₹{c.labour}</td>
+                            <td className="py-1 text-right">₹{c.travel}</td>
+                            <td className="py-1 text-right">₹{c.parts}</td>
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </td></tr>
+                  )}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </ChartCard>
+
+      <div className="text-xs text-slate-400 p-2 bg-slate-50 rounded">
+        <strong>Calculation basis:</strong> Default hourly rate: ₹{config.default_hourly_rate}/hr | Per KM rate: ₹{config.per_km_rate} |
+        Travel zones: {config.travel_tiers.map(t => `${t.name} (${t.min_km}-${t.max_km}km: ₹${t.cost})`).join(' | ')} |
+        Remote calls estimated at 30min. Configure these in Settings.
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════
 // MAIN ANALYTICS PAGE
 // ══════════════════════════════════════════════════════════
 
@@ -603,6 +781,7 @@ const TABS = [
   { id: 'inventory', label: 'Inventory', icon: Package },
   { id: 'contracts', label: 'Contracts', icon: FileText },
   { id: 'intelligence', label: 'AI Insights', icon: Brain },
+  { id: 'profitability', label: 'Profitability', icon: Lock },
 ];
 
 const PERIODS = [
@@ -665,6 +844,7 @@ export default function Analytics() {
     } else if (activeTab === 'intelligence') {
       promises.push(fetchData(`operational?days=${days}`, 'operational'));
     }
+    // Profitability is fetched separately (password-gated)
 
     Promise.all(promises).finally(() => setLoading(false));
   }, [activeTab, days, fetchData]);
@@ -798,6 +978,7 @@ export default function Analytics() {
         {activeTab === 'inventory' && <InventoryAnalytics data={data.inventory} />}
         {activeTab === 'contracts' && <ContractAnalytics data={data.contracts} />}
         {activeTab === 'intelligence' && <OperationalIntelligence data={data.operational} />}
+        {activeTab === 'profitability' && <ProfitabilityTab hdrs={hdrs} setData={setData} data={data} />}
       </div>
     </div>
   );

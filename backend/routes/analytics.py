@@ -3,10 +3,12 @@ Analytics Engine - Comprehensive analytics for Warranty & Asset Tracking Portal
 Covers 10 modules: Ticket Intelligence, Workforce, Financial, Client Health,
 Asset Intelligence, SLA Compliance, Workflow, Inventory, Contracts, Operational Intelligence
 """
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
+from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict
-import time, logging
+from typing import Optional, List
+import time, logging, bcrypt
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 _db = None
@@ -1105,6 +1107,389 @@ async def executive_summary(
             {"label": "Active Contracts", "value": len([c for c in contracts if c.get("end_date", "") >= now_str]), "type": "neutral"},
         ],
         "period_days": days,
+    }
+    _set_cache(cache_key, result)
+    return result
+
+
+
+# ══════════════════════════════════════════════════════════
+# TRAVEL COST TIERS & PROFITABILITY PASSWORD (Settings)
+# ══════════════════════════════════════════════════════════
+
+class TravelTier(BaseModel):
+    name: str
+    min_km: float
+    max_km: float
+    cost: float
+
+class ServiceCostConfig(BaseModel):
+    travel_tiers: Optional[List[dict]] = None
+    default_hourly_rate: Optional[float] = None
+    per_km_rate: Optional[float] = None
+
+class ProfitabilityPasswordSet(BaseModel):
+    password: str
+
+class ProfitabilityPasswordVerify(BaseModel):
+    password: str
+
+DEFAULT_TRAVEL_TIERS = [
+    {"name": "Local", "min_km": 0, "max_km": 15, "cost": 200},
+    {"name": "City", "min_km": 15, "max_km": 30, "cost": 400},
+    {"name": "Outstation", "min_km": 30, "max_km": 50, "cost": 700},
+    {"name": "Long Distance", "min_km": 50, "max_km": 9999, "cost": 1200},
+]
+
+
+@router.get("/service-cost-config")
+async def get_service_cost_config(admin: dict = Depends(get_current_admin)):
+    org_id = admin.get("organization_id")
+    settings = await _db.settings.find_one({"organization_id": org_id}, {"_id": 0})
+    return {
+        "travel_tiers": (settings or {}).get("travel_tiers", DEFAULT_TRAVEL_TIERS),
+        "default_hourly_rate": (settings or {}).get("default_hourly_rate", 500),
+        "per_km_rate": (settings or {}).get("per_km_rate", 10),
+    }
+
+
+@router.put("/service-cost-config")
+async def update_service_cost_config(
+    config: ServiceCostConfig,
+    admin: dict = Depends(get_current_admin)
+):
+    org_id = admin.get("organization_id")
+    update = {}
+    if config.travel_tiers is not None:
+        update["travel_tiers"] = config.travel_tiers
+    if config.default_hourly_rate is not None:
+        update["default_hourly_rate"] = config.default_hourly_rate
+    if config.per_km_rate is not None:
+        update["per_km_rate"] = config.per_km_rate
+    if update:
+        await _db.settings.update_one(
+            {"organization_id": org_id},
+            {"$set": update},
+            upsert=True
+        )
+    return {"success": True}
+
+
+@router.post("/profitability-password")
+async def set_profitability_password(
+    data: ProfitabilityPasswordSet,
+    admin: dict = Depends(get_current_admin)
+):
+    org_id = admin.get("organization_id")
+    hashed = bcrypt.hashpw(data.password.encode(), bcrypt.gensalt()).decode()
+    await _db.settings.update_one(
+        {"organization_id": org_id},
+        {"$set": {"profitability_password_hash": hashed}},
+        upsert=True
+    )
+    return {"success": True}
+
+
+@router.post("/verify-profitability-password")
+async def verify_profitability_password(
+    data: ProfitabilityPasswordVerify,
+    admin: dict = Depends(get_current_admin)
+):
+    org_id = admin.get("organization_id")
+    settings = await _db.settings.find_one({"organization_id": org_id}, {"_id": 0})
+    stored_hash = (settings or {}).get("profitability_password_hash")
+    if not stored_hash:
+        raise HTTPException(status_code=400, detail="No profitability password set. Please set one in Settings.")
+    if bcrypt.checkpw(data.password.encode(), stored_hash.encode()):
+        return {"verified": True}
+    raise HTTPException(status_code=403, detail="Incorrect password")
+
+
+# ══════════════════════════════════════════════════════════
+# 11. DEVICE PROFITABILITY
+# ══════════════════════════════════════════════════════════
+
+def _get_travel_cost(distance_km: float, tiers: list) -> float:
+    """Calculate travel cost from distance using tier system"""
+    if not distance_km or distance_km <= 0:
+        # No distance recorded — use the lowest tier cost as default for on-site
+        return tiers[0]["cost"] if tiers else 200
+    for tier in sorted(tiers, key=lambda t: t["min_km"]):
+        if tier["min_km"] <= distance_km <= tier["max_km"]:
+            return tier["cost"]
+    return tiers[-1]["cost"] if tiers else 200
+
+
+@router.get("/profitability")
+async def device_profitability(
+    admin: dict = Depends(get_current_admin)
+):
+    org_id = admin.get("organization_id")
+    cache_key = f"profitability:{org_id}"
+    cached = _cached(cache_key, ttl=120)
+    if cached:
+        return cached
+
+    # Load all required data
+    settings = await _db.settings.find_one({"organization_id": org_id}, {"_id": 0}) or {}
+    travel_tiers = settings.get("travel_tiers", DEFAULT_TRAVEL_TIERS)
+    default_hourly = settings.get("default_hourly_rate", 500)
+    per_km_rate = settings.get("per_km_rate", 10)
+
+    devices = await _db.devices.find(
+        {"organization_id": org_id}, {"_id": 0}
+    ).to_list(10000)
+
+    tickets = await _db.tickets_v2.find(
+        {"organization_id": org_id, "is_deleted": {"$ne": True}},
+        {"_id": 0, "id": 1, "device_id": 1, "device_name": 1, "company_id": 1,
+         "company_name": 1, "created_at": 1, "closed_at": 1, "is_open": 1,
+         "current_stage_name": 1, "help_topic_name": 1, "assigned_to_id": 1,
+         "assigned_to_name": 1, "device_warranty_type": 1}
+    ).to_list(10000)
+
+    visits = await _db.service_visits_new.find(
+        {"organization_id": org_id}, {"_id": 0}
+    ).to_list(10000)
+
+    engineers = await _db.engineers.find(
+        {"organization_id": org_id, "is_deleted": {"$ne": True}},
+        {"_id": 0, "id": 1, "name": 1, "hourly_rate": 1}
+    ).to_list(500)
+
+    contracts = await _db.amc_contracts.find(
+        {"organization_id": org_id, "is_deleted": {"$ne": True}},
+        {"_id": 0, "id": 1, "company_id": 1, "custom_price": 1, "name": 1,
+         "start_date": 1, "end_date": 1, "amc_type": 1}
+    ).to_list(500)
+
+    amc_assignments = await _db.amc_device_assignments.find(
+        {"organization_id": org_id}, {"_id": 0}
+    ).to_list(10000)
+
+    part_issues = await _db.ticket_part_issues.find(
+        {"organization_id": org_id}, {"_id": 0}
+    ).to_list(5000)
+
+    part_requests = await _db.parts_requests.find(
+        {"organization_id": org_id}, {"_id": 0}
+    ).to_list(5000)
+
+    # Build lookup maps
+    eng_rate_map = {e["id"]: e.get("hourly_rate") or default_hourly for e in engineers}
+    eng_name_map = {e["id"]: e["name"] for e in engineers}
+
+    # Map devices to AMC contracts and revenue
+    device_amc = {}  # device_id -> contract info
+    for assign in amc_assignments:
+        did = assign.get("device_id")
+        cid = assign.get("contract_id")
+        if did and cid:
+            contract = next((c for c in contracts if c["id"] == cid), None)
+            if contract:
+                device_amc[did] = {
+                    "contract_id": cid,
+                    "contract_name": contract.get("name", ""),
+                    "amc_type": contract.get("amc_type", ""),
+                    "annual_price": contract.get("custom_price", 0),
+                }
+
+    # Map tickets and visits to devices
+    device_tickets = defaultdict(list)
+    for t in tickets:
+        did = t.get("device_id")
+        if did:
+            device_tickets[did].append(t)
+
+    ticket_visits = defaultdict(list)
+    for v in visits:
+        tid = v.get("ticket_id")
+        if tid:
+            ticket_visits[tid].append(v)
+
+    # Map parts to tickets
+    ticket_parts_cost = defaultdict(float)
+    for pr in part_requests:
+        tid = pr.get("ticket_id")
+        if tid:
+            ticket_parts_cost[tid] += pr.get("grand_total", 0)
+    for pi in part_issues:
+        tid = pi.get("ticket_id")
+        if tid:
+            ticket_parts_cost[tid] += pi.get("total_cost", 0)
+
+    # Company map
+    companies = await _db.companies.find(
+        {"organization_id": org_id}, {"_id": 0, "id": 1, "name": 1}
+    ).to_list(500)
+    company_map = {c["id"]: c["name"] for c in companies}
+
+    # Calculate per-device profitability
+    device_results = []
+    company_rollup = defaultdict(lambda: {"revenue": 0, "cost": 0, "devices": 0, "calls": 0})
+
+    for device in devices:
+        did = device["id"]
+        d_tickets = device_tickets.get(did, [])
+        amc_info = device_amc.get(did)
+        amc_revenue = amc_info["annual_price"] if amc_info else 0
+
+        total_calls = len(d_tickets)
+        remote_calls = 0
+        onsite_calls = 0
+        total_labour_cost = 0
+        total_travel_cost = 0
+        total_parts_cost = 0
+        total_visit_hours = 0
+        call_details = []
+
+        for ticket in d_tickets:
+            tid = ticket["id"]
+            t_visits = ticket_visits.get(tid, [])
+            t_parts = ticket_parts_cost.get(tid, 0)
+            total_parts_cost += t_parts
+
+            if t_visits:
+                # Has on-site visits
+                for visit in t_visits:
+                    onsite_calls += 1
+                    duration_min = visit.get("duration_minutes") or 0
+                    duration_hrs = duration_min / 60
+
+                    # Use visit's own costs if filled, else calculate
+                    if visit.get("labour_cost") and visit["labour_cost"] > 0:
+                        labour = visit["labour_cost"]
+                    else:
+                        eng_id = visit.get("technician_id", "")
+                        rate = eng_rate_map.get(eng_id, default_hourly)
+                        labour = rate * max(duration_hrs, 1)  # Min 1 hour charge
+
+                    if visit.get("travel_cost") and visit["travel_cost"] > 0:
+                        travel = visit["travel_cost"]
+                    else:
+                        distance = visit.get("distance_km") or 0
+                        travel = _get_travel_cost(distance, travel_tiers)
+
+                    total_labour_cost += labour
+                    total_travel_cost += travel
+                    total_visit_hours += max(duration_hrs, 1)
+
+                    call_details.append({
+                        "type": "on-site",
+                        "date": visit.get("scheduled_date") or visit.get("created_at", "")[:10],
+                        "engineer": visit.get("technician_name", "Unknown"),
+                        "hours": round(max(duration_hrs, 1), 1),
+                        "labour": round(labour, 2),
+                        "travel": round(travel, 2),
+                        "parts": round(t_parts / max(len(t_visits), 1), 2),
+                    })
+            else:
+                # Remote call (no visits)
+                remote_calls += 1
+                # Estimate remote call cost: 30 min engineer time
+                eng_id = ticket.get("assigned_to_id", "")
+                rate = eng_rate_map.get(eng_id, default_hourly)
+                labour = rate * 0.5  # 30 min for remote
+                total_labour_cost += labour
+
+                call_details.append({
+                    "type": "remote",
+                    "date": ticket.get("created_at", "")[:10],
+                    "engineer": ticket.get("assigned_to_name") or "Unassigned",
+                    "hours": 0.5,
+                    "labour": round(labour, 2),
+                    "travel": 0,
+                    "parts": round(t_parts, 2),
+                })
+
+        total_cost = total_labour_cost + total_travel_cost + total_parts_cost
+        profit_loss = amc_revenue - total_cost
+
+        cid = device.get("company_id")
+        company_rollup[cid]["revenue"] += amc_revenue
+        company_rollup[cid]["cost"] += total_cost
+        company_rollup[cid]["devices"] += 1
+        company_rollup[cid]["calls"] += total_calls
+
+        device_results.append({
+            "device_id": did,
+            "device_name": device.get("device_name") or device.get("name") or f"{device.get('brand','')} {device.get('model','')}",
+            "serial_number": device.get("serial_number", ""),
+            "brand": device.get("brand", ""),
+            "model": device.get("model", ""),
+            "company_id": cid,
+            "company_name": company_map.get(cid, device.get("company_name", "Unknown")),
+            "warranty_type": device.get("warranty_type") or (amc_info["amc_type"] if amc_info else "none"),
+            "amc_revenue": round(amc_revenue, 2),
+            "total_calls": total_calls,
+            "remote_calls": remote_calls,
+            "onsite_calls": onsite_calls,
+            "total_visit_hours": round(total_visit_hours, 1),
+            "labour_cost": round(total_labour_cost, 2),
+            "travel_cost": round(total_travel_cost, 2),
+            "parts_cost": round(total_parts_cost, 2),
+            "total_cost": round(total_cost, 2),
+            "profit_loss": round(profit_loss, 2),
+            "call_details": call_details,
+        })
+
+    # Company-level rollup
+    company_profitability = []
+    for cid, data in company_rollup.items():
+        company_profitability.append({
+            "company_id": cid,
+            "company_name": company_map.get(cid, "Unknown"),
+            "devices": data["devices"],
+            "total_calls": data["calls"],
+            "amc_revenue": round(data["revenue"], 2),
+            "total_cost": round(data["cost"], 2),
+            "profit_loss": round(data["revenue"] - data["cost"], 2),
+            "margin_pct": round((data["revenue"] - data["cost"]) / data["revenue"] * 100, 1) if data["revenue"] > 0 else (0 if data["cost"] == 0 else -100),
+        })
+
+    # Summary
+    total_revenue = sum(d["amc_revenue"] for d in device_results)
+    total_cost = sum(d["total_cost"] for d in device_results)
+    profitable_devices = sum(1 for d in device_results if d["profit_loss"] >= 0 and d["total_calls"] > 0)
+    loss_devices = sum(1 for d in device_results if d["profit_loss"] < 0 and d["total_calls"] > 0)
+
+    # Worst ROI devices (highest loss)
+    worst_roi = sorted(
+        [d for d in device_results if d["total_calls"] > 0],
+        key=lambda x: x["profit_loss"]
+    )[:10]
+
+    # Most expensive devices (highest cost)
+    most_expensive = sorted(
+        [d for d in device_results if d["total_calls"] > 0],
+        key=lambda x: -x["total_cost"]
+    )[:10]
+
+    result = {
+        "summary": {
+            "total_devices": len(devices),
+            "devices_with_calls": sum(1 for d in device_results if d["total_calls"] > 0),
+            "total_amc_revenue": round(total_revenue, 2),
+            "total_service_cost": round(total_cost, 2),
+            "net_profit_loss": round(total_revenue - total_cost, 2),
+            "overall_margin_pct": round((total_revenue - total_cost) / total_revenue * 100, 1) if total_revenue > 0 else (0 if total_cost == 0 else -100),
+            "profitable_devices": profitable_devices,
+            "loss_making_devices": loss_devices,
+            "total_remote_calls": sum(d["remote_calls"] for d in device_results),
+            "total_onsite_calls": sum(d["onsite_calls"] for d in device_results),
+        },
+        "config": {
+            "default_hourly_rate": default_hourly,
+            "per_km_rate": per_km_rate,
+            "travel_tiers": travel_tiers,
+        },
+        "devices": sorted(
+            [d for d in device_results if d["total_calls"] > 0],
+            key=lambda x: x["profit_loss"]
+        ),
+        "worst_roi": worst_roi,
+        "most_expensive": most_expensive,
+        "company_profitability": sorted(company_profitability, key=lambda x: x["profit_loss"]),
     }
     _set_cache(cache_key, result)
     return result
