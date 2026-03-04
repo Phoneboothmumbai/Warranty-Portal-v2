@@ -94,6 +94,79 @@ const SearchSelect = ({ options, value, onChange, placeholder, renderOption, sea
 };
 
 // ── Create Ticket Modal ──
+// Searchable Help Topic Selector grouped by category
+const HelpTopicSelector = ({ topics, value, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const selected = topics.find(t => t.id === value);
+
+  const filtered = topics.filter(t => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return t.name.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q) || (t.tags || []).some(tag => tag.includes(q));
+  });
+
+  // Group by category
+  const grouped = {};
+  filtered.forEach(t => {
+    const cat = t.category || 'general';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(t);
+  });
+
+  return (
+    <div className="relative" data-testid="help-topic-selector">
+      <button
+        type="button"
+        className="w-full border rounded-lg px-3 py-2 text-sm text-left flex items-center justify-between hover:border-slate-400 transition-colors"
+        onClick={() => setOpen(!open)}
+        data-testid="help-topic-select"
+      >
+        <span className={selected ? 'text-slate-900' : 'text-slate-400'}>
+          {selected ? selected.name : 'Search & select help topic...'}
+        </span>
+        <ChevronDown className="w-4 h-4 text-slate-400" />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-80 overflow-hidden" data-testid="help-topic-dropdown">
+          <div className="p-2 border-b sticky top-0 bg-white">
+            <input
+              autoFocus
+              type="text"
+              className="w-full border rounded px-2.5 py-1.5 text-sm"
+              placeholder="Search by name, description, or tags..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              data-testid="help-topic-search"
+            />
+          </div>
+          <div className="overflow-y-auto max-h-64 p-1">
+            {Object.entries(grouped).map(([cat, catTopics]) => (
+              <div key={cat}>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 pt-2 pb-1">{cat}</p>
+                {catTopics.map(t => (
+                  <button
+                    key={t.id}
+                    className={`w-full text-left px-2.5 py-2 rounded text-sm transition-colors ${t.id === value ? 'bg-blue-50 text-blue-700' : 'hover:bg-slate-50'}`}
+                    onClick={() => { onChange(t.id); setOpen(false); setSearch(''); }}
+                    data-testid={`topic-option-${t.slug || t.id}`}
+                  >
+                    <span className="font-medium">{t.name}</span>
+                    {t.description && <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">{t.description}</p>}
+                  </button>
+                ))}
+              </div>
+            ))}
+            {Object.keys(grouped).length === 0 && (
+              <p className="text-center text-slate-400 text-sm py-4">No topics match "{search}"</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const CreateTicketModal = ({ open, onClose, onCreated }) => {
   const token = localStorage.getItem('admin_token');
   const hdrs = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
@@ -308,10 +381,11 @@ const CreateTicketModal = ({ open, onClose, onCreated }) => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-slate-700 block mb-1.5">Help Topic *</label>
-              <select data-testid="help-topic-select" className="w-full border rounded-lg px-3 py-2 text-sm" value={selectedTopic || ''} onChange={e => { setSelectedTopic(e.target.value); setFormValues({}); }}>
-                <option value="">Select a help topic...</option>
-                {helpTopics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
+              <HelpTopicSelector
+                topics={helpTopics}
+                value={selectedTopic}
+                onChange={id => { setSelectedTopic(id); setFormValues({}); }}
+              />
             </div>
             <div>
               <label className="text-sm font-medium text-slate-700 block mb-1.5">Priority</label>

@@ -200,6 +200,20 @@ class TicketWorkflow(BaseModel):
 
 # ==================== HELP TOPIC ====================
 
+class HelpTopicCategory(BaseModel):
+    """Help topic category for grouping"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    organization_id: str
+    name: str
+    slug: str
+    description: Optional[str] = None
+    icon: str = "folder"
+    color: str = "#6B7280"
+    order: int = 0
+    is_active: bool = True
+    created_at: str = Field(default_factory=get_ist_isoformat)
+
+
 class HelpTopic(BaseModel):
     """Help topic - the master controller"""
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -212,6 +226,8 @@ class HelpTopic(BaseModel):
     icon: str = "ticket"
     color: str = "#3B82F6"
     category: str = "general"  # support, sales, operations, etc.
+    category_id: Optional[str] = None  # Link to help_topic_categories
+    parent_id: Optional[str] = None  # For sub-topic hierarchy
     
     # Linked entities
     form_id: Optional[str] = None
@@ -226,6 +242,9 @@ class HelpTopic(BaseModel):
     require_company: bool = True
     require_contact: bool = True
     require_device: bool = False
+    
+    # Search tags for quick finding
+    tags: List[str] = Field(default_factory=list)
     
     # Visibility
     is_public: bool = True  # Show in customer portal

@@ -45,26 +45,31 @@ const ConfigCard = ({ item, onEdit, onDelete, children }) => (
 // ========== HELP TOPICS TAB ==========
 const HelpTopicsTab = () => {
   const [topics, setTopics] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [forms, setForms] = useState([]);
   const [workflows, setWorkflows] = useState([]);
   const [teams, setTeams] = useState([]);
   const [slas, setSlas] = useState([]);
   const [editing, setEditing] = useState(null);
+  const [editingCat, setEditingCat] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [selectedCat, setSelectedCat] = useState(null);
 
   const fetch_ = useCallback(async () => {
     setLoading(true);
     try {
-      const [t, f, w, tm, s] = await Promise.all([
+      const [t, cats, f, w, tm, s] = await Promise.all([
         fetch(`${API}/api/ticketing/help-topics?include_inactive=true`, { headers: headers() }).then(r => r.json()),
+        fetch(`${API}/api/ticketing/help-topic-categories`, { headers: headers() }).then(r => r.json()),
         fetch(`${API}/api/ticketing/forms`, { headers: headers() }).then(r => r.json()),
         fetch(`${API}/api/ticketing/workflows`, { headers: headers() }).then(r => r.json()),
         fetch(`${API}/api/ticketing/teams`, { headers: headers() }).then(r => r.json()),
         fetch(`${API}/api/ticketing/sla-policies`, { headers: headers() }).then(r => r.json()),
       ]);
-      setTopics(Array.isArray(t) ? t : []); setForms(Array.isArray(f) ? f : []);
-      setWorkflows(Array.isArray(w) ? w : []); setTeams(Array.isArray(tm) ? tm : []);
-      setSlas(Array.isArray(s) ? s : []);
+      setTopics(Array.isArray(t) ? t : []); setCategories(Array.isArray(cats) ? cats : []);
+      setForms(Array.isArray(f) ? f : []); setWorkflows(Array.isArray(w) ? w : []);
+      setTeams(Array.isArray(tm) ? tm : []); setSlas(Array.isArray(s) ? s : []);
     } catch { toast.error('Failed to load'); } finally { setLoading(false); }
   }, []);
   useEffect(() => { fetch_(); }, [fetch_]);
@@ -79,43 +84,182 @@ const HelpTopicsTab = () => {
   };
   const handleDelete = async (id) => { if (!window.confirm('Delete?')) return; await fetch(`${API}/api/ticketing/help-topics/${id}`, { method: 'DELETE', headers: headers() }); toast.success('Deleted'); fetch_(); };
 
+  const handleSaveCat = async (data) => {
+    try {
+      const method = editingCat?.id ? 'PUT' : 'POST';
+      const url = editingCat?.id ? `${API}/api/ticketing/help-topic-categories/${editingCat.id}` : `${API}/api/ticketing/help-topic-categories`;
+      await fetch(url, { method, headers: headers(), body: JSON.stringify(data) });
+      toast.success('Category saved'); setEditingCat(null); fetch_();
+    } catch { toast.error('Failed'); }
+  };
+  const handleDeleteCat = async (id) => { if (!window.confirm('Delete category?')) return; await fetch(`${API}/api/ticketing/help-topic-categories/${id}`, { method: 'DELETE', headers: headers() }); toast.success('Deleted'); fetch_(); };
+
   if (editing !== null) {
-    return <HelpTopicEditor topic={editing} forms={forms} workflows={workflows} teams={teams} slas={slas} onSave={handleSave} onCancel={() => setEditing(null)} />;
+    return <HelpTopicEditor topic={editing} forms={forms} workflows={workflows} teams={teams} slas={slas} categories={categories} onSave={handleSave} onCancel={() => setEditing(null)} />;
   }
+
+  // Filter topics
+  const filtered = topics.filter(t => {
+    if (selectedCat && t.category_id !== selectedCat && t.category !== categories.find(c => c.id === selectedCat)?.slug) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return t.name.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q) || (t.tags || []).some(tag => tag.includes(q));
+    }
+    return true;
+  });
+
+  // Group by category
+  const grouped = {};
+  filtered.forEach(t => {
+    const catId = t.category_id || t.category || 'uncategorized';
+    if (!grouped[catId]) grouped[catId] = [];
+    grouped[catId].push(t);
+  });
+
   return (
     <div data-testid="help-topics-tab">
+      {/* Header */}
       <div className="flex justify-between items-center mb-4">
-        <p className="text-sm text-slate-500">{topics.length} help topics</p>
-        <Button size="sm" onClick={() => setEditing({})} data-testid="add-help-topic"><Plus className="w-4 h-4 mr-1" /> Add Help Topic</Button>
+        <p className="text-sm text-slate-500">{topics.length} help topics in {categories.length} categories</p>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setEditingCat({})} data-testid="add-category">
+            <Plus className="w-4 h-4 mr-1" /> Category
+          </Button>
+          <Button size="sm" onClick={() => setEditing({})} data-testid="add-help-topic">
+            <Plus className="w-4 h-4 mr-1" /> Help Topic
+          </Button>
+        </div>
       </div>
+
+      {/* Search */}
+      <div className="relative mb-4">
+        <input
+          type="text"
+          className="w-full border rounded-lg pl-9 pr-4 py-2 text-sm"
+          placeholder="Search topics by name, description, or tags..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          data-testid="search-topics"
+        />
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      </div>
+
+      {/* Category pills */}
+      <div className="flex flex-wrap gap-2 mb-4" data-testid="category-filters">
+        <button
+          className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${!selectedCat ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}
+          onClick={() => setSelectedCat(null)}
+        >
+          All ({topics.length})
+        </button>
+        {categories.map(cat => {
+          const count = topics.filter(t => t.category_id === cat.id || t.category === cat.slug).length;
+          return (
+            <button
+              key={cat.id}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${selectedCat === cat.id ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}
+              onClick={() => setSelectedCat(selectedCat === cat.id ? null : cat.id)}
+            >
+              {cat.name} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Category edit modal */}
+      {editingCat !== null && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-5 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">{editingCat.id ? 'Edit' : 'New'} Category</h3>
+            <CategoryEditor cat={editingCat} onSave={handleSaveCat} onCancel={() => setEditingCat(null)} onDelete={editingCat.id ? () => handleDeleteCat(editingCat.id) : null} />
+          </div>
+        </div>
+      )}
+
       {loading ? <p className="text-center py-8 text-slate-400">Loading...</p> : (
-        <div className="grid grid-cols-2 gap-3">
-          {topics.map(t => (
-            <ConfigCard key={t.id} item={t} onEdit={setEditing} onDelete={handleDelete}>
-              <div className="flex gap-2 mt-2 flex-wrap">
-                {t.category && <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded">{t.category}</span>}
-                {t.form_id && <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded">Form</span>}
-                {t.workflow_id && <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded">Workflow</span>}
-                {!t.is_active && <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded">Inactive</span>}
+        <div className="space-y-6">
+          {Object.entries(grouped).map(([catId, catTopics]) => {
+            const cat = categories.find(c => c.id === catId) || categories.find(c => c.slug === catId) || { name: catId, color: '#6B7280' };
+            return (
+              <div key={catId}>
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-sm font-semibold text-slate-700">{cat.name || catId}</h3>
+                  <span className="text-xs text-slate-400">({catTopics.length})</span>
+                  <button onClick={() => setEditingCat(cat)} className="p-0.5 hover:bg-slate-100 rounded"><Edit2 className="w-3 h-3 text-slate-400" /></button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {catTopics.map(t => (
+                    <ConfigCard key={t.id} item={t} onEdit={setEditing} onDelete={handleDelete}>
+                      <div className="flex gap-1.5 mt-2 flex-wrap">
+                        {t.form_id && <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded">Form</span>}
+                        {t.workflow_id && <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded">Workflow</span>}
+                        {t.require_device && <span className="text-xs bg-amber-50 text-amber-600 px-2 py-0.5 rounded">Device</span>}
+                        {!t.is_active && <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded">Inactive</span>}
+                        {t.default_priority === 'critical' && <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded">Critical</span>}
+                        {t.default_priority === 'high' && <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded">High</span>}
+                      </div>
+                      {t.tags?.length > 0 && (
+                        <div className="flex gap-1 mt-1.5 flex-wrap">
+                          {t.tags.slice(0, 5).map(tag => (
+                            <span key={tag} className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">{tag}</span>
+                          ))}
+                          {t.tags.length > 5 && <span className="text-[10px] text-slate-400">+{t.tags.length - 5}</span>}
+                        </div>
+                      )}
+                    </ConfigCard>
+                  ))}
+                </div>
               </div>
-            </ConfigCard>
-          ))}
+            );
+          })}
+          {Object.keys(grouped).length === 0 && (
+            <p className="text-center text-slate-400 py-8">{search ? 'No topics match your search' : 'No help topics yet'}</p>
+          )}
         </div>
       )}
     </div>
   );
 };
 
-const HelpTopicEditor = ({ topic, forms, workflows, teams, slas, onSave, onCancel }) => {
+const CategoryEditor = ({ cat, onSave, onCancel, onDelete }) => {
+  const [data, setData] = useState({
+    name: cat.name || '', slug: cat.slug || '', description: cat.description || '',
+    icon: cat.icon || 'folder', color: cat.color || '#6B7280', order: cat.order || 0,
+  });
+  return (
+    <div className="space-y-3">
+      <div><label className="text-sm font-medium block mb-1">Name *</label><Input value={data.name} onChange={e => { setData(d => ({...d, name: e.target.value, slug: cat.id ? d.slug : e.target.value.toLowerCase().replace(/\s+/g, '-')})); }} /></div>
+      <div><label className="text-sm font-medium block mb-1">Description</label><Input value={data.description} onChange={e => setData(d => ({...d, description: e.target.value}))} /></div>
+      <div className="grid grid-cols-3 gap-3">
+        <div><label className="text-sm font-medium block mb-1">Icon</label><Input value={data.icon} onChange={e => setData(d => ({...d, icon: e.target.value}))} /></div>
+        <div><label className="text-sm font-medium block mb-1">Color</label><input type="color" value={data.color} onChange={e => setData(d => ({...d, color: e.target.value}))} className="w-full h-9 border rounded" /></div>
+        <div><label className="text-sm font-medium block mb-1">Order</label><Input type="number" value={data.order} onChange={e => setData(d => ({...d, order: parseInt(e.target.value) || 0}))} /></div>
+      </div>
+      <div className="flex justify-between pt-3 border-t">
+        {onDelete ? <Button variant="ghost" size="sm" className="text-red-500" onClick={onDelete}>Delete</Button> : <div />}
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
+          <Button size="sm" onClick={() => onSave(data)}><Save className="w-4 h-4 mr-1" /> Save</Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const HelpTopicEditor = ({ topic, forms, workflows, teams, slas, categories, onSave, onCancel }) => {
   const [data, setData] = useState({
     name: topic.name || '', slug: topic.slug || '', description: topic.description || '',
-    category: topic.category || 'support', form_id: topic.form_id || '', workflow_id: topic.workflow_id || '',
+    category: topic.category || 'general', category_id: topic.category_id || '',
+    form_id: topic.form_id || '', workflow_id: topic.workflow_id || '',
     default_team_id: topic.default_team_id || '', sla_policy_id: topic.sla_policy_id || '',
     default_priority: topic.default_priority || 'medium', is_active: topic.is_active !== false,
     is_public: topic.is_public !== false, require_company: topic.require_company !== false,
     require_contact: topic.require_contact !== false, require_device: topic.require_device || false,
+    tags: topic.tags || [], parent_id: topic.parent_id || '',
   });
+  const [tagInput, setTagInput] = useState('');
   const set = (k, v) => setData(d => ({ ...d, [k]: v }));
+  const addTag = () => { if (tagInput.trim() && !data.tags.includes(tagInput.trim())) { set('tags', [...data.tags, tagInput.trim().toLowerCase()]); setTagInput(''); } };
   return (
     <div className="bg-white border rounded-lg p-5" data-testid="help-topic-editor">
       <div className="flex justify-between mb-4">
@@ -126,12 +270,32 @@ const HelpTopicEditor = ({ topic, forms, workflows, teams, slas, onSave, onCance
         <div><label className="text-sm font-medium block mb-1">Name *</label><Input value={data.name} onChange={e => { set('name', e.target.value); if (!topic.id) set('slug', e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')); }} data-testid="topic-name" /></div>
         <div><label className="text-sm font-medium block mb-1">Slug</label><Input value={data.slug} onChange={e => set('slug', e.target.value)} /></div>
         <div className="col-span-2"><label className="text-sm font-medium block mb-1">Description</label><textarea className="w-full border rounded-lg px-3 py-2 text-sm" value={data.description} onChange={e => set('description', e.target.value)} /></div>
-        <div><label className="text-sm font-medium block mb-1">Category</label><select className="w-full border rounded-lg px-3 py-2 text-sm" value={data.category} onChange={e => set('category', e.target.value)}><option value="support">Support</option><option value="sales">Sales</option><option value="operations">Operations</option><option value="general">General</option></select></div>
+        <div>
+          <label className="text-sm font-medium block mb-1">Category</label>
+          <select className="w-full border rounded-lg px-3 py-2 text-sm" value={data.category_id} onChange={e => { set('category_id', e.target.value); const c = categories.find(c => c.id === e.target.value); if (c) set('category', c.slug); }}>
+            <option value="">Uncategorized</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
         <div><label className="text-sm font-medium block mb-1">Priority</label><select className="w-full border rounded-lg px-3 py-2 text-sm" value={data.default_priority} onChange={e => set('default_priority', e.target.value)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></div>
         <div><label className="text-sm font-medium block mb-1">Form</label><select className="w-full border rounded-lg px-3 py-2 text-sm" value={data.form_id} onChange={e => set('form_id', e.target.value)}><option value="">None</option>{forms.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}</select></div>
         <div><label className="text-sm font-medium block mb-1">Workflow</label><select className="w-full border rounded-lg px-3 py-2 text-sm" value={data.workflow_id} onChange={e => set('workflow_id', e.target.value)}><option value="">None</option>{workflows.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}</select></div>
         <div><label className="text-sm font-medium block mb-1">Default Team</label><select className="w-full border rounded-lg px-3 py-2 text-sm" value={data.default_team_id} onChange={e => set('default_team_id', e.target.value)}><option value="">None</option>{teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
         <div><label className="text-sm font-medium block mb-1">SLA Policy</label><select className="w-full border rounded-lg px-3 py-2 text-sm" value={data.sla_policy_id} onChange={e => set('sla_policy_id', e.target.value)}><option value="">None</option>{slas.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+        <div className="col-span-2">
+          <label className="text-sm font-medium block mb-1">Search Tags</label>
+          <div className="flex gap-2 mb-2">
+            <Input className="flex-1" placeholder="Add tag..." value={tagInput} onChange={e => setTagInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); }}} />
+            <Button variant="outline" size="sm" onClick={addTag}>Add</Button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {data.tags.map((tag, i) => (
+              <span key={tag} className="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full">
+                {tag} <button onClick={() => set('tags', data.tags.filter((_, j) => j !== i))} className="hover:text-red-500"><X className="w-3 h-3" /></button>
+              </span>
+            ))}
+          </div>
+        </div>
         <div className="col-span-2 flex gap-4 flex-wrap">
           {[['is_active','Active'],['is_public','Public'],['require_company','Require Company'],['require_contact','Require Contact'],['require_device','Require Device']].map(([k,l]) => (
             <label key={k} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={data[k]} onChange={e => set(k, e.target.checked)} /> {l}</label>

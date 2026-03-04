@@ -156,6 +156,62 @@ async def seed_ticketing_system(admin: dict = Depends(get_current_admin)):
 
 
 # ============================================================
+# HELP TOPIC CATEGORIES (Master)
+# ============================================================
+
+@router.get("/ticketing/help-topic-categories")
+async def list_help_topic_categories(admin: dict = Depends(get_current_admin)):
+    """List all help topic categories"""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    cats = await _db.help_topic_categories.find(
+        {"organization_id": org_id}, {"_id": 0}
+    ).sort("order", 1).to_list(50)
+    return cats
+
+
+@router.post("/ticketing/help-topic-categories")
+async def create_help_topic_category(data: dict = Body(...), admin: dict = Depends(get_current_admin)):
+    """Create a help topic category"""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    cat = {
+        "id": str(uuid.uuid4()), "organization_id": org_id,
+        "name": data["name"], "slug": data.get("slug", data["name"].lower().replace(" ", "-")),
+        "description": data.get("description"), "icon": data.get("icon", "folder"),
+        "color": data.get("color", "#6B7280"), "order": data.get("order", 0),
+        "is_active": True, "created_at": get_ist_isoformat()
+    }
+    await _db.help_topic_categories.insert_one(cat)
+    return {k: v for k, v in cat.items() if k != "_id"}
+
+
+@router.put("/ticketing/help-topic-categories/{cat_id}")
+async def update_help_topic_category(cat_id: str, data: dict = Body(...), admin: dict = Depends(get_current_admin)):
+    """Update a help topic category"""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    update = {k: v for k, v in data.items() if k not in ("id", "organization_id", "_id")}
+    await _db.help_topic_categories.update_one(
+        {"id": cat_id, "organization_id": org_id}, {"$set": update}
+    )
+    return await _db.help_topic_categories.find_one({"id": cat_id}, {"_id": 0})
+
+
+@router.delete("/ticketing/help-topic-categories/{cat_id}")
+async def delete_help_topic_category(cat_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete a help topic category"""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+    await _db.help_topic_categories.delete_one({"id": cat_id, "organization_id": org_id})
+    return {"message": "Deleted"}
+
+
+# ============================================================
 # HELP TOPICS
 # ============================================================
 
@@ -672,6 +728,238 @@ async def seed_warranty_workflows(admin: dict = Depends(get_current_admin)):
     return {
         "message": f"Created {len(created['workflows'])} workflows and {len(created['help_topics'])} help topics",
         "created": created
+    }
+
+
+@router.post("/ticketing/seed-comprehensive-topics")
+async def seed_comprehensive_topics(admin: dict = Depends(get_current_admin)):
+    """Seed comprehensive help topic categories and topics covering all MSP/warranty scenarios.
+    Fully master-driven — everything is editable after creation.
+    """
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+
+    # Get existing workflows for linking
+    workflows = {}
+    async for wf in _db.ticket_workflows.find({"organization_id": org_id}, {"_id": 0, "id": 1, "slug": 1}):
+        workflows[wf["slug"]] = wf["id"]
+
+    # Get existing forms for linking
+    forms = {}
+    async for f in _db.ticket_forms.find({"organization_id": org_id}, {"_id": 0, "id": 1, "slug": 1}):
+        forms[f["slug"]] = f["id"]
+
+    stats = {"categories": 0, "topics": 0, "skipped": 0}
+
+    # ── CATEGORIES ──
+    category_defs = [
+        {"name": "Hardware & Devices", "slug": "hardware", "icon": "monitor", "color": "#3B82F6", "order": 1,
+         "description": "Hardware repairs, device issues, component failures"},
+        {"name": "Software & OS", "slug": "software", "icon": "code", "color": "#8B5CF6", "order": 2,
+         "description": "Software installation, OS issues, driver problems"},
+        {"name": "Network & Connectivity", "slug": "network", "icon": "wifi", "color": "#06B6D4", "order": 3,
+         "description": "Network, internet, WiFi, VPN issues"},
+        {"name": "Peripherals & Accessories", "slug": "peripherals", "icon": "printer", "color": "#F59E0B", "order": 4,
+         "description": "Printers, scanners, monitors, docking stations"},
+        {"name": "Service Requests", "slug": "service", "icon": "wrench", "color": "#10B981", "order": 5,
+         "description": "Installation, relocation, upgrades, setup"},
+        {"name": "Warranty & AMC", "slug": "warranty", "icon": "shield", "color": "#EF4444", "order": 6,
+         "description": "Warranty claims, AMC support, OEM coordination"},
+        {"name": "Commercial & Billing", "slug": "commercial", "icon": "receipt", "color": "#EC4899", "order": 7,
+         "description": "Quotations, billing, AMC renewals, invoicing"},
+        {"name": "General", "slug": "general", "icon": "help-circle", "color": "#6B7280", "order": 8,
+         "description": "General inquiries, feedback, complaints"},
+    ]
+
+    cat_ids = {}
+    for cdef in category_defs:
+        existing = await _db.help_topic_categories.find_one(
+            {"organization_id": org_id, "slug": cdef["slug"]}
+        )
+        if existing:
+            cat_ids[cdef["slug"]] = existing["id"]
+        else:
+            cdef["id"] = str(uuid.uuid4())
+            cdef["organization_id"] = org_id
+            cdef["is_active"] = True
+            cdef["created_at"] = get_ist_isoformat()
+            await _db.help_topic_categories.insert_one(cdef)
+            cat_ids[cdef["slug"]] = cdef["id"]
+            stats["categories"] += 1
+
+    # Default workflow mapping by category
+    wf_map = {
+        "hardware": workflows.get("amc-support") or workflows.get("onsite_support_workflow"),
+        "software": workflows.get("remote_support_workflow") or workflows.get("simple_support_workflow"),
+        "network": workflows.get("remote_support_workflow") or workflows.get("simple_support_workflow"),
+        "peripherals": workflows.get("amc-support") or workflows.get("onsite_support_workflow"),
+        "service": workflows.get("onsite_support_workflow") or workflows.get("amc-support"),
+        "warranty": workflows.get("oem-warranty"),
+        "commercial": workflows.get("sales_pipeline_workflow") or workflows.get("simple_support_workflow"),
+        "general": workflows.get("simple_support_workflow"),
+    }
+
+    # ── TOPICS ──
+    topic_defs = [
+        # Hardware & Devices
+        {"name": "Laptop Repair", "slug": "laptop-repair", "cat": "hardware", "desc": "Laptop hardware issues - screen, keyboard, motherboard, battery",
+         "icon": "laptop", "require_device": True, "priority": "high",
+         "tags": ["laptop", "screen", "keyboard", "motherboard", "battery", "hinge", "charging"]},
+        {"name": "Desktop Repair", "slug": "desktop-repair", "cat": "hardware", "desc": "Desktop/PC hardware issues - power supply, motherboard, RAM, storage",
+         "icon": "monitor", "require_device": True, "priority": "high",
+         "tags": ["desktop", "pc", "power supply", "ram", "storage", "motherboard"]},
+        {"name": "Server Issue", "slug": "server-issue", "cat": "hardware", "desc": "Server hardware failures, RAID issues, component replacement",
+         "icon": "server", "require_device": True, "priority": "critical",
+         "tags": ["server", "raid", "hard drive", "memory", "power", "fan"]},
+        {"name": "Tablet / Mobile Device", "slug": "tablet-mobile", "cat": "hardware", "desc": "Tablet or mobile device repair and issues",
+         "icon": "smartphone", "require_device": True, "priority": "medium",
+         "tags": ["tablet", "mobile", "ipad", "screen crack", "battery"]},
+        {"name": "Data Recovery", "slug": "data-recovery", "cat": "hardware", "desc": "Hard drive failure, data recovery, backup restoration",
+         "icon": "hard-drive", "require_device": True, "priority": "critical",
+         "tags": ["data", "recovery", "hard drive", "backup", "restore", "deleted"]},
+
+        # Software & OS
+        {"name": "OS Crash / Blue Screen", "slug": "os-crash", "cat": "software", "desc": "Operating system crash, BSOD, boot failure",
+         "icon": "alert-circle", "require_device": True, "priority": "high",
+         "tags": ["crash", "bsod", "blue screen", "boot", "startup", "windows", "os"]},
+        {"name": "Software Installation", "slug": "software-install", "cat": "software", "desc": "Install, update, or configure software applications",
+         "icon": "download", "require_device": True, "priority": "medium",
+         "tags": ["install", "software", "application", "update", "license", "activation"]},
+        {"name": "Virus / Malware", "slug": "virus-malware", "cat": "software", "desc": "Virus infection, malware removal, security threats",
+         "icon": "shield-alert", "require_device": True, "priority": "high",
+         "tags": ["virus", "malware", "ransomware", "infection", "security", "antivirus"]},
+        {"name": "Performance Issue", "slug": "performance-issue", "cat": "software", "desc": "Slow system, hanging, high CPU/memory usage",
+         "icon": "activity", "require_device": True, "priority": "medium",
+         "tags": ["slow", "hanging", "performance", "lag", "freeze", "cpu", "memory"]},
+        {"name": "Email Configuration", "slug": "email-config", "cat": "software", "desc": "Email client setup, Outlook configuration, email sync issues",
+         "icon": "mail", "require_device": True, "priority": "medium",
+         "tags": ["email", "outlook", "gmail", "mail", "sync", "configuration"]},
+        {"name": "OS Re-installation", "slug": "os-reinstall", "cat": "software", "desc": "Fresh OS installation, format and reinstall",
+         "icon": "refresh-cw", "require_device": True, "priority": "medium",
+         "tags": ["reinstall", "format", "fresh install", "os", "windows", "recovery"]},
+
+        # Network & Connectivity
+        {"name": "Internet Not Working", "slug": "internet-down", "cat": "network", "desc": "No internet connection, slow browsing, DNS issues",
+         "icon": "wifi-off", "require_device": False, "priority": "high",
+         "tags": ["internet", "wifi", "connection", "dns", "browsing", "no network"]},
+        {"name": "VPN Issue", "slug": "vpn-issue", "cat": "network", "desc": "VPN connection failure, slow VPN, configuration",
+         "icon": "lock", "require_device": True, "priority": "high",
+         "tags": ["vpn", "remote access", "connection", "tunnel", "firewall"]},
+        {"name": "Network Setup", "slug": "network-setup", "cat": "network", "desc": "LAN configuration, switch setup, cabling",
+         "icon": "git-branch", "require_device": False, "priority": "medium",
+         "tags": ["lan", "switch", "cable", "ethernet", "network setup", "ip address"]},
+        {"name": "Firewall / Security", "slug": "firewall-security", "cat": "network", "desc": "Firewall configuration, security policies, access control",
+         "icon": "shield", "require_device": False, "priority": "high",
+         "tags": ["firewall", "security", "access", "block", "policy", "port"]},
+
+        # Peripherals & Accessories
+        {"name": "Printer Issue", "slug": "printer-issue", "cat": "peripherals", "desc": "Printer not printing, paper jam, toner replacement",
+         "icon": "printer", "require_device": True, "priority": "medium",
+         "tags": ["printer", "print", "jam", "toner", "ink", "cartridge", "paper"]},
+        {"name": "Monitor / Display", "slug": "monitor-issue", "cat": "peripherals", "desc": "Monitor not working, display flicker, resolution issues",
+         "icon": "monitor", "require_device": True, "priority": "medium",
+         "tags": ["monitor", "display", "screen", "flicker", "resolution", "hdmi"]},
+        {"name": "UPS / Power", "slug": "ups-power", "cat": "peripherals", "desc": "UPS failure, battery replacement, power issues",
+         "icon": "battery", "require_device": True, "priority": "high",
+         "tags": ["ups", "power", "battery", "backup", "surge", "electricity"]},
+        {"name": "CCTV / Surveillance", "slug": "cctv-surveillance", "cat": "peripherals", "desc": "CCTV camera issues, DVR/NVR problems, recording failure",
+         "icon": "camera", "require_device": True, "priority": "high",
+         "tags": ["cctv", "camera", "dvr", "nvr", "recording", "surveillance", "video"]},
+        {"name": "Scanner / Copier", "slug": "scanner-copier", "cat": "peripherals", "desc": "Scanner not working, copier issues, document feeder problems",
+         "icon": "scan", "require_device": True, "priority": "medium",
+         "tags": ["scanner", "copier", "scan", "copy", "document", "feeder"]},
+        {"name": "Access Control / Biometric", "slug": "access-control", "cat": "peripherals", "desc": "Biometric device, access control, attendance system",
+         "icon": "fingerprint", "require_device": True, "priority": "medium",
+         "tags": ["biometric", "fingerprint", "access control", "attendance", "door lock"]},
+
+        # Service Requests
+        {"name": "New Installation / Setup", "slug": "new-installation", "cat": "service", "desc": "Fresh device setup, workstation configuration, deployment",
+         "icon": "box", "require_device": False, "priority": "medium",
+         "tags": ["install", "setup", "new", "deployment", "configuration", "workstation"]},
+        {"name": "Device Relocation", "slug": "device-relocation", "cat": "service", "desc": "Moving equipment between sites, offices, or floors",
+         "icon": "truck", "require_device": True, "priority": "low",
+         "tags": ["relocation", "move", "shift", "transfer", "site change"]},
+        {"name": "Asset Disposal", "slug": "asset-disposal", "cat": "service", "desc": "End-of-life device handling, data wiping, disposal",
+         "icon": "trash-2", "require_device": True, "priority": "low",
+         "tags": ["disposal", "decommission", "end of life", "scrap", "data wipe"]},
+        {"name": "Upgrade Request", "slug": "upgrade-request", "cat": "service", "desc": "RAM upgrade, SSD upgrade, OS upgrade",
+         "icon": "arrow-up-circle", "require_device": True, "priority": "medium",
+         "tags": ["upgrade", "ram", "ssd", "memory", "storage", "os upgrade"]},
+        {"name": "Preventive Maintenance", "slug": "preventive-maintenance", "cat": "service", "desc": "Scheduled maintenance, cleaning, health check",
+         "icon": "calendar", "require_device": True, "priority": "low",
+         "tags": ["maintenance", "preventive", "cleaning", "health check", "scheduled"]},
+
+        # Warranty & AMC (these link to existing warranty workflows)
+        # Note: AMC Support, Non-Warranty Repair, Warranty Claim (OEM) already exist
+
+        # Commercial & Billing
+        {"name": "AMC Renewal", "slug": "amc-renewal", "cat": "commercial", "desc": "AMC contract renewal request",
+         "icon": "refresh-cw", "require_device": False, "priority": "medium",
+         "tags": ["amc", "renewal", "contract", "annual", "maintenance"]},
+        {"name": "Billing Dispute", "slug": "billing-dispute", "cat": "commercial", "desc": "Invoice queries, payment issues, billing corrections",
+         "icon": "alert-triangle", "require_device": False, "priority": "medium",
+         "tags": ["billing", "invoice", "payment", "dispute", "correction", "credit"]},
+
+        # General (some already exist: General Inquiry, Feedback, Complaint)
+        {"name": "Escalation", "slug": "escalation", "cat": "general", "desc": "Escalate an existing issue to management",
+         "icon": "arrow-up", "require_device": False, "priority": "critical",
+         "tags": ["escalation", "urgent", "management", "priority", "sla breach"]},
+        {"name": "Training Request", "slug": "training-request", "cat": "general", "desc": "Request training for software or hardware",
+         "icon": "book-open", "require_device": False, "priority": "low",
+         "tags": ["training", "education", "learn", "guide", "how to"]},
+    ]
+
+    for tdef in topic_defs:
+        existing = await _db.ticket_help_topics.find_one(
+            {"organization_id": org_id, "slug": tdef["slug"]}
+        )
+        if existing:
+            stats["skipped"] += 1
+            continue
+
+        cat_slug = tdef.pop("cat")
+        topic = {
+            "id": str(uuid.uuid4()),
+            "organization_id": org_id,
+            "name": tdef["name"],
+            "slug": tdef["slug"],
+            "description": tdef.get("desc", ""),
+            "icon": tdef.get("icon", "ticket"),
+            "color": next((c["color"] for c in category_defs if c["slug"] == cat_slug), "#3B82F6"),
+            "category": cat_slug,
+            "category_id": cat_ids.get(cat_slug),
+            "parent_id": None,
+            "workflow_id": wf_map.get(cat_slug),
+            "form_id": None,
+            "default_priority": tdef.get("priority", "medium"),
+            "require_device": tdef.get("require_device", False),
+            "require_company": True,
+            "require_contact": True,
+            "auto_assign": False,
+            "assignment_method": "manual",
+            "tags": tdef.get("tags", []),
+            "is_public": True,
+            "is_active": True,
+            "is_system": False,
+            "ticket_count": 0,
+            "created_at": get_ist_isoformat(),
+            "updated_at": get_ist_isoformat(),
+        }
+        await _db.ticket_help_topics.insert_one(topic)
+        stats["topics"] += 1
+
+    # Update existing topics to have category_ids
+    for cat_slug, cat_id in cat_ids.items():
+        await _db.ticket_help_topics.update_many(
+            {"organization_id": org_id, "category": cat_slug, "category_id": None},
+            {"$set": {"category_id": cat_id}}
+        )
+
+    return {
+        "message": f"Created {stats['categories']} categories, {stats['topics']} topics ({stats['skipped']} already existed)",
+        "stats": stats,
+        "categories": list(cat_ids.keys())
     }
 
 
