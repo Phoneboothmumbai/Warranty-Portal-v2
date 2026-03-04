@@ -539,6 +539,15 @@ class TicketV2(BaseModel):
     device_id: Optional[str] = None
     device_name: Optional[str] = None
     device_description: Optional[str] = None
+    device_warranty_type: Optional[str] = None  # "oem_warranty", "amc", "non_warranty"
+    
+    # OEM Tracking (for warranty devices managed by OEM)
+    oem_case_number: Optional[str] = None
+    oem_engineer_name: Optional[str] = None
+    oem_engineer_phone: Optional[str] = None
+    oem_brand_reference: Optional[str] = None
+    oem_status: Optional[str] = None  # e.g., "Escalated", "Case Logged", "Dispatched", "Resolved"
+    oem_notes: Optional[str] = None
     
     # Priority & SLA
     priority_id: Optional[str] = None
@@ -676,6 +685,13 @@ class TicketUpdateV2(BaseModel):
     assigned_team_id: Optional[str] = None
     assigned_to_id: Optional[str] = None
     tags: Optional[List[str]] = None
+    # OEM Tracking
+    oem_case_number: Optional[str] = None
+    oem_engineer_name: Optional[str] = None
+    oem_engineer_phone: Optional[str] = None
+    oem_brand_reference: Optional[str] = None
+    oem_status: Optional[str] = None
+    oem_notes: Optional[str] = None
 
 
 class StageTransitionRequest(BaseModel):

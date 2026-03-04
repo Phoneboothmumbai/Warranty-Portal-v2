@@ -134,8 +134,31 @@ const CreateTicketModal = ({ open, onClose, onCreated }) => {
   const [selectedDevice, setSelectedDevice] = useState('');
   const [useCustomDevice, setUseCustomDevice] = useState(false);
   const [deviceDescription, setDeviceDescription] = useState('');
+  const [warrantyCheck, setWarrantyCheck] = useState(null);
+  const [warrantyLoading, setWarrantyLoading] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
+
+  // Auto-detect device warranty when device is selected
+  useEffect(() => {
+    setWarrantyCheck(null);
+    if (!selectedDevice || useCustomDevice) return;
+    setWarrantyLoading(true);
+    fetch(`${API}/api/ticketing/device-warranty-check/${selectedDevice}`, { headers: hdrs })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          setWarrantyCheck(data);
+          // Auto-select suggested help topic if available
+          if (data.suggested_help_topic_id && !selectedTopic) {
+            setSelectedTopic(data.suggested_help_topic_id);
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => setWarrantyLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDevice, useCustomDevice]);
 
   // Init data
   useEffect(() => {
@@ -444,6 +467,46 @@ const CreateTicketModal = ({ open, onClose, onCreated }) => {
                   emptyText="No devices found"
                   testId="device-select"
                 />
+              )}
+            </div>
+          )}
+
+          {/* Warranty Auto-Detection Result */}
+          {warrantyLoading && (
+            <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border text-sm text-slate-500">
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              Checking device warranty status...
+            </div>
+          )}
+          {warrantyCheck && !warrantyLoading && (
+            <div className={`p-3 rounded-lg border text-sm ${
+              warrantyCheck.warranty_type === 'oem_warranty' ? 'bg-amber-50 border-amber-200' :
+              warrantyCheck.warranty_type === 'amc' ? 'bg-emerald-50 border-emerald-200' :
+              'bg-red-50 border-red-200'
+            }`} data-testid="warranty-detection-result">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className={`font-semibold ${
+                    warrantyCheck.warranty_type === 'oem_warranty' ? 'text-amber-700' :
+                    warrantyCheck.warranty_type === 'amc' ? 'text-emerald-700' : 'text-red-700'
+                  }`}>{warrantyCheck.warranty_type_label}</span>
+                  <span className="text-slate-500 ml-2">- {warrantyCheck.managed_by}</span>
+                </div>
+                {warrantyCheck.suggested_help_topic_name && (
+                  <button
+                    className="text-xs bg-white border rounded px-2 py-1 hover:bg-slate-50"
+                    onClick={() => setSelectedTopic(warrantyCheck.suggested_help_topic_id)}
+                    data-testid="apply-suggested-topic"
+                  >
+                    Use: {warrantyCheck.suggested_help_topic_name}
+                  </button>
+                )}
+              </div>
+              {warrantyCheck.details?.warranty_end_date && (
+                <p className="text-xs text-slate-500 mt-1">Warranty ends: {warrantyCheck.details.warranty_end_date}</p>
+              )}
+              {warrantyCheck.details?.amc_end_date && (
+                <p className="text-xs text-slate-500 mt-1">AMC ends: {warrantyCheck.details.amc_end_date}</p>
               )}
             </div>
           )}

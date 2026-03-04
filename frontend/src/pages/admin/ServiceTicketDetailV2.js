@@ -794,6 +794,101 @@ const NotificationPanel = ({ ticket }) => {
   );
 };
 
+// ========== OEM TRACKING PANEL ==========
+const OEMTrackingPanel = ({ ticket, onUpdate }) => {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [oem, setOem] = useState({
+    oem_case_number: ticket.oem_case_number || '',
+    oem_engineer_name: ticket.oem_engineer_name || '',
+    oem_engineer_phone: ticket.oem_engineer_phone || '',
+    oem_brand_reference: ticket.oem_brand_reference || '',
+    oem_status: ticket.oem_status || '',
+    oem_notes: ticket.oem_notes || '',
+  });
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`${API}/api/ticketing/tickets/${ticket.id}`, {
+        method: 'PUT', headers: authHeaders(),
+        body: JSON.stringify(oem),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      toast.success('OEM details updated');
+      setEditing(false);
+      onUpdate();
+    } catch (e) {
+      toast.error(e.message);
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4" data-testid="oem-tracking-panel">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-yellow-800 flex items-center gap-1.5">
+          <AlertTriangle className="w-4 h-4" /> OEM Tracking
+        </h3>
+        <Button variant="ghost" size="sm" onClick={() => setEditing(!editing)} data-testid="oem-edit-btn">
+          <Edit2 className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+      {editing ? (
+        <div className="space-y-2">
+          <div>
+            <label className="text-xs text-yellow-700 font-medium">OEM Case #</label>
+            <Input value={oem.oem_case_number} onChange={e => setOem(o => ({...o, oem_case_number: e.target.value}))} className="h-8 text-sm" data-testid="oem-case-input" />
+          </div>
+          <div>
+            <label className="text-xs text-yellow-700 font-medium">OEM Engineer Name</label>
+            <Input value={oem.oem_engineer_name} onChange={e => setOem(o => ({...o, oem_engineer_name: e.target.value}))} className="h-8 text-sm" data-testid="oem-engineer-name-input" />
+          </div>
+          <div>
+            <label className="text-xs text-yellow-700 font-medium">OEM Engineer Phone</label>
+            <Input value={oem.oem_engineer_phone} onChange={e => setOem(o => ({...o, oem_engineer_phone: e.target.value}))} className="h-8 text-sm" data-testid="oem-engineer-phone-input" />
+          </div>
+          <div>
+            <label className="text-xs text-yellow-700 font-medium">Brand Reference #</label>
+            <Input value={oem.oem_brand_reference} onChange={e => setOem(o => ({...o, oem_brand_reference: e.target.value}))} className="h-8 text-sm" data-testid="oem-brand-ref-input" />
+          </div>
+          <div>
+            <label className="text-xs text-yellow-700 font-medium">OEM Status</label>
+            <select className="w-full border rounded-lg px-3 py-1.5 text-sm h-8" value={oem.oem_status} onChange={e => setOem(o => ({...o, oem_status: e.target.value}))} data-testid="oem-status-select">
+              <option value="">Select status...</option>
+              <option value="Escalated">Escalated</option>
+              <option value="Case Logged">Case Logged</option>
+              <option value="Engineer Dispatched">Engineer Dispatched</option>
+              <option value="Under Repair">Under Repair</option>
+              <option value="Resolved by OEM">Resolved by OEM</option>
+              <option value="Replacement Approved">Replacement Approved</option>
+              <option value="Waiting for Parts">Waiting for Parts</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-yellow-700 font-medium">Notes</label>
+            <textarea className="w-full border rounded-lg px-3 py-1.5 text-sm" rows={2} value={oem.oem_notes} onChange={e => setOem(o => ({...o, oem_notes: e.target.value}))} data-testid="oem-notes-input" />
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleSave} disabled={saving} data-testid="oem-save-btn">
+              {saving ? 'Saving...' : 'Save OEM Details'}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-1.5 text-sm">
+          <div className="flex justify-between"><span className="text-yellow-600">Case #</span><span className="font-medium text-yellow-800">{ticket.oem_case_number || '-'}</span></div>
+          <div className="flex justify-between"><span className="text-yellow-600">Engineer</span><span className="font-medium text-yellow-800">{ticket.oem_engineer_name || '-'}</span></div>
+          <div className="flex justify-between"><span className="text-yellow-600">Phone</span><span className="font-medium text-yellow-800">{ticket.oem_engineer_phone || '-'}</span></div>
+          <div className="flex justify-between"><span className="text-yellow-600">Brand Ref</span><span className="font-medium text-yellow-800">{ticket.oem_brand_reference || '-'}</span></div>
+          <div className="flex justify-between"><span className="text-yellow-600">OEM Status</span><span className="font-medium text-yellow-800">{ticket.oem_status || '-'}</span></div>
+          {ticket.oem_notes && <div className="text-xs text-yellow-600 mt-2 border-t border-yellow-200 pt-2">{ticket.oem_notes}</div>}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ========== MAIN COMPONENT ==========
 export default function ServiceTicketDetailV2() {
   const { ticketId } = useParams();
@@ -1019,6 +1114,11 @@ export default function ServiceTicketDetailV2() {
             </div>
           )}
 
+          {/* OEM Tracking Section */}
+          {ticket.device_warranty_type === 'oem_warranty' && (
+            <OEMTrackingPanel ticket={ticket} onUpdate={fetchTicket} />
+          )}
+
           {/* Schedule Info */}
           {ticket.scheduled_at && (
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-4" data-testid="schedule-section">
@@ -1146,6 +1246,31 @@ export default function ServiceTicketDetailV2() {
 
           {/* Notification Panel - WhatsApp + Email */}
           <NotificationPanel ticket={ticket} />
+
+          {/* Warranty Type Badge */}
+          {ticket.device_warranty_type && (
+            <div className={`border rounded-lg p-4 ${
+              ticket.device_warranty_type === 'oem_warranty' ? 'bg-amber-50 border-amber-200' :
+              ticket.device_warranty_type === 'amc' ? 'bg-emerald-50 border-emerald-200' :
+              'bg-red-50 border-red-200'
+            }`} data-testid="warranty-type-badge">
+              <h3 className="text-xs font-medium text-slate-500 mb-1.5">Device Coverage</h3>
+              <span className={`text-sm font-semibold ${
+                ticket.device_warranty_type === 'oem_warranty' ? 'text-amber-700' :
+                ticket.device_warranty_type === 'amc' ? 'text-emerald-700' :
+                'text-red-700'
+              }`}>
+                {ticket.device_warranty_type === 'oem_warranty' ? 'Brand Warranty / ADP' :
+                 ticket.device_warranty_type === 'amc' ? 'AMC Contract' :
+                 'Non-Warranty (Out of Warranty)'}
+              </span>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {ticket.device_warranty_type === 'oem_warranty' ? 'Managed by OEM' :
+                 ticket.device_warranty_type === 'amc' ? 'Managed by MSP' :
+                 'Customer pays for service'}
+              </p>
+            </div>
+          )}
 
           {ticket.company_name && (
             <div className="bg-white border rounded-lg p-4">

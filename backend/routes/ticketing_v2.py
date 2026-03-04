@@ -396,6 +396,286 @@ async def delete_workflow(workflow_id: str, admin: dict = Depends(get_current_ad
 
 
 # ============================================================
+# DEVICE WARRANTY DETECTION
+# ============================================================
+
+@router.get("/ticketing/device-warranty-check/{device_id}")
+async def check_device_warranty(device_id: str, admin: dict = Depends(get_current_admin)):
+    """Check device warranty/AMC status and suggest appropriate workflow.
+    Returns: { warranty_type, suggested_workflow_id, suggested_help_topic_id, details }
+    """
+    from datetime import datetime, timezone, timedelta
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+
+    device = await _db.devices.find_one(
+        {"id": device_id, "organization_id": org_id},
+        {"_id": 0}
+    )
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    now = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+    warranty_type = "non_warranty"
+    details = {}
+
+    # Check AMC first (higher priority)
+    amc = await _db.amc_contracts.find_one(
+        {"organization_id": org_id, "device_id": device_id, "status": "active"},
+        {"_id": 0}
+    )
+    if not amc:
+        # Check if device's company has an AMC covering this device type
+        amc = await _db.amc_contracts.find_one(
+            {"organization_id": org_id, "company_id": device.get("company_id"), "status": "active"},
+            {"_id": 0}
+        )
+
+    if amc:
+        end_date = amc.get("end_date") or amc.get("amc_end_date")
+        if end_date:
+            try:
+                end_dt = datetime.fromisoformat(str(end_date).replace('Z', '+00:00'))
+                if end_dt.tzinfo is None:
+                    end_dt = end_dt.replace(tzinfo=timezone(timedelta(hours=5, minutes=30)))
+                if end_dt > now:
+                    warranty_type = "amc"
+                    details = {"amc_contract_id": amc.get("id"), "amc_end_date": str(end_date), "amc_provider": amc.get("provider_name") or "MSP"}
+            except (ValueError, TypeError):
+                pass
+
+    # If not AMC, check brand warranty
+    if warranty_type == "non_warranty" and device.get("warranty_end_date"):
+        try:
+            wdate = str(device["warranty_end_date"])
+            w_dt = datetime.fromisoformat(wdate.replace('Z', '+00:00'))
+            if w_dt.tzinfo is None:
+                w_dt = w_dt.replace(tzinfo=timezone(timedelta(hours=5, minutes=30)))
+            if w_dt > now:
+                warranty_type = "oem_warranty"
+                details = {
+                    "warranty_end_date": wdate,
+                    "brand": device.get("brand", ""),
+                    "model": device.get("model", ""),
+                    "serial_number": device.get("serial_number", "")
+                }
+        except (ValueError, TypeError):
+            pass
+
+    if warranty_type == "non_warranty":
+        details = {"reason": "No active warranty or AMC found"}
+
+    # Find matching workflow and help topic
+    slug_map = {
+        "oem_warranty": "oem-warranty",
+        "amc": "amc-support",
+        "non_warranty": "non-warranty"
+    }
+    slug = slug_map.get(warranty_type)
+
+    workflow = await _db.ticket_workflows.find_one(
+        {"organization_id": org_id, "slug": slug, "is_active": True},
+        {"_id": 0, "id": 1, "name": 1}
+    )
+    topic = await _db.ticket_help_topics.find_one(
+        {"organization_id": org_id, "workflow_id": workflow["id"] if workflow else None, "is_active": True},
+        {"_id": 0, "id": 1, "name": 1}
+    ) if workflow else None
+
+    return {
+        "device_id": device_id,
+        "warranty_type": warranty_type,
+        "warranty_type_label": {"oem_warranty": "Brand Warranty / ADP", "amc": "AMC Contract", "non_warranty": "Non-Warranty"}[warranty_type],
+        "managed_by": {"oem_warranty": "OEM (Brand)", "amc": "MSP (Your Team)", "non_warranty": "MSP (Your Team)"}[warranty_type],
+        "suggested_workflow_id": workflow["id"] if workflow else None,
+        "suggested_workflow_name": workflow["name"] if workflow else None,
+        "suggested_help_topic_id": topic["id"] if topic else None,
+        "suggested_help_topic_name": topic["name"] if topic else None,
+        "details": details
+    }
+
+
+@router.post("/ticketing/seed-warranty-workflows")
+async def seed_warranty_workflows(admin: dict = Depends(get_current_admin)):
+    """Create the 3 standard warranty-based workflows and corresponding help topics."""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+
+    created = {"workflows": [], "help_topics": []}
+
+    # Helper to create stages
+    def make_stage(name, slug, stype, order, transitions=None):
+        return {
+            "id": str(uuid.uuid4()), "name": name, "slug": slug,
+            "stage_type": stype, "order": order,
+            "transitions": transitions or [], "entry_actions": [],
+            "assigned_team_id": None, "color": "#6B7280"
+        }
+
+    def make_trans(label, to_id, color="primary", requires_input=""):
+        return {
+            "id": str(uuid.uuid4()), "to_stage_id": to_id,
+            "label": label, "color": color, "requires_input": requires_input, "order": 0
+        }
+
+    # ── 1. OEM WARRANTY WORKFLOW ──
+    existing = await _db.ticket_workflows.find_one({"organization_id": org_id, "slug": "oem-warranty"})
+    if not existing:
+        s = [None] * 8
+        ids = [str(uuid.uuid4()) for _ in range(8)]
+        s[0] = make_stage("New", "new", "initial", 0)
+        s[0]["id"] = ids[0]
+        s[1] = make_stage("Verified Warranty", "verified_warranty", "in_progress", 1)
+        s[1]["id"] = ids[1]
+        s[2] = make_stage("Escalated to OEM", "escalated_to_oem", "in_progress", 2)
+        s[2]["id"] = ids[2]
+        s[3] = make_stage("OEM Case Logged", "oem_case_logged", "waiting", 3)
+        s[3]["id"] = ids[3]
+        s[4] = make_stage("OEM Engineer Dispatched", "oem_engineer_dispatched", "in_progress", 4)
+        s[4]["id"] = ids[4]
+        s[5] = make_stage("OEM Resolution", "oem_resolution", "in_progress", 5)
+        s[5]["id"] = ids[5]
+        s[6] = make_stage("Closed", "closed", "terminal_success", 6)
+        s[6]["id"] = ids[6]
+        s[7] = make_stage("Cancelled", "cancelled", "terminal_failure", 7)
+        s[7]["id"] = ids[7]
+
+        s[0]["transitions"] = [make_trans("Verify Warranty", ids[1], "primary")]
+        s[1]["transitions"] = [make_trans("Escalate to OEM", ids[2], "warning"), make_trans("Cancel", ids[7], "danger")]
+        s[2]["transitions"] = [make_trans("Log OEM Case", ids[3], "primary")]
+        s[3]["transitions"] = [make_trans("OEM Dispatched Engineer", ids[4], "primary")]
+        s[4]["transitions"] = [make_trans("OEM Resolved", ids[5], "success"), make_trans("Back to OEM", ids[3], "warning")]
+        s[5]["transitions"] = [make_trans("Close Ticket", ids[6], "success")]
+
+        wf = {
+            "id": str(uuid.uuid4()), "organization_id": org_id,
+            "name": "OEM Warranty Workflow", "slug": "oem-warranty",
+            "description": "For devices under brand warranty or ADP. Coordinated with OEM.",
+            "stages": s, "is_active": True, "is_system": False,
+            "created_at": get_ist_isoformat(), "updated_at": get_ist_isoformat()
+        }
+        await _db.ticket_workflows.insert_one(wf)
+        created["workflows"].append({"id": wf["id"], "name": wf["name"]})
+
+        # Create matching help topic
+        ht = {
+            "id": str(uuid.uuid4()), "organization_id": org_id,
+            "name": "Warranty Claim (OEM)", "slug": "warranty-claim-oem",
+            "description": "Device under brand warranty or ADP plan. Managed by OEM.",
+            "icon": "shield", "color": "#F59E0B", "category": "support",
+            "workflow_id": wf["id"], "default_priority": "high",
+            "require_device": True, "is_active": True, "is_public": True,
+            "created_at": get_ist_isoformat(), "updated_at": get_ist_isoformat()
+        }
+        await _db.ticket_help_topics.insert_one(ht)
+        created["help_topics"].append({"id": ht["id"], "name": ht["name"]})
+
+    # ── 2. AMC WORKFLOW ──
+    existing = await _db.ticket_workflows.find_one({"organization_id": org_id, "slug": "amc-support"})
+    if not existing:
+        ids = [str(uuid.uuid4()) for _ in range(10)]
+        s = []
+        s.append({**make_stage("New", "new", "initial", 0), "id": ids[0]})
+        s.append({**make_stage("Assigned", "assigned", "in_progress", 1), "id": ids[1]})
+        s.append({**make_stage("Scheduled", "scheduled", "in_progress", 2), "id": ids[2]})
+        s.append({**make_stage("In Progress", "in_progress", "in_progress", 3), "id": ids[3]})
+        s.append({**make_stage("Diagnosed", "diagnosed", "in_progress", 4), "id": ids[4]})
+        s.append({**make_stage("Awaiting Parts", "awaiting_parts", "waiting", 5), "id": ids[5]})
+        s.append({**make_stage("Parts Received", "parts_received", "in_progress", 6), "id": ids[6]})
+        s.append({**make_stage("Fixed On-Site", "fixed_onsite", "in_progress", 7), "id": ids[7]})
+        s.append({**make_stage("Resolved", "resolved", "terminal_success", 8), "id": ids[8]})
+        s.append({**make_stage("Cancelled", "cancelled", "terminal_failure", 9), "id": ids[9]})
+
+        s[0]["transitions"] = [make_trans("Assign Engineer", ids[1], "primary", "assign_engineer")]
+        s[1]["transitions"] = [make_trans("Schedule Visit", ids[2], "primary", "schedule_visit"), make_trans("Start Work", ids[3], "success")]
+        s[2]["transitions"] = [make_trans("Start Work", ids[3], "success")]
+        s[3]["transitions"] = [make_trans("Record Diagnosis", ids[4], "primary", "diagnosis"), make_trans("Fixed On-Site", ids[7], "success", "resolution")]
+        s[4]["transitions"] = [make_trans("Request Parts", ids[5], "warning", "parts_list"), make_trans("Fixed On-Site", ids[7], "success", "resolution"), make_trans("Create Quotation", ids[5], "primary", "quotation")]
+        s[5]["transitions"] = [make_trans("Parts Received", ids[6], "success")]
+        s[6]["transitions"] = [make_trans("Resume Work", ids[3], "primary")]
+        s[7]["transitions"] = [make_trans("Mark Resolved", ids[8], "success")]
+
+        wf = {
+            "id": str(uuid.uuid4()), "organization_id": org_id,
+            "name": "AMC Support Workflow", "slug": "amc-support",
+            "description": "For devices under AMC contract. Managed by MSP team.",
+            "stages": s, "is_active": True, "is_system": False,
+            "created_at": get_ist_isoformat(), "updated_at": get_ist_isoformat()
+        }
+        await _db.ticket_workflows.insert_one(wf)
+        created["workflows"].append({"id": wf["id"], "name": wf["name"]})
+
+        ht = {
+            "id": str(uuid.uuid4()), "organization_id": org_id,
+            "name": "AMC Support", "slug": "amc-support",
+            "description": "Device under Annual Maintenance Contract. Managed by MSP.",
+            "icon": "wrench", "color": "#10B981", "category": "support",
+            "workflow_id": wf["id"], "default_priority": "medium",
+            "require_device": True, "is_active": True, "is_public": True,
+            "created_at": get_ist_isoformat(), "updated_at": get_ist_isoformat()
+        }
+        await _db.ticket_help_topics.insert_one(ht)
+        created["help_topics"].append({"id": ht["id"], "name": ht["name"]})
+
+    # ── 3. NON-WARRANTY WORKFLOW ──
+    existing = await _db.ticket_workflows.find_one({"organization_id": org_id, "slug": "non-warranty"})
+    if not existing:
+        ids = [str(uuid.uuid4()) for _ in range(12)]
+        s = []
+        s.append({**make_stage("New", "new", "initial", 0), "id": ids[0]})
+        s.append({**make_stage("Assigned", "assigned", "in_progress", 1), "id": ids[1]})
+        s.append({**make_stage("Diagnosed", "diagnosed", "in_progress", 2), "id": ids[2]})
+        s.append({**make_stage("Quotation Sent", "quotation_sent", "waiting", 3), "id": ids[3]})
+        s.append({**make_stage("Customer Approved", "customer_approved", "in_progress", 4), "id": ids[4]})
+        s.append({**make_stage("Customer Rejected", "customer_rejected", "terminal_failure", 5), "id": ids[5]})
+        s.append({**make_stage("Parts Ordered", "parts_ordered", "waiting", 6), "id": ids[6]})
+        s.append({**make_stage("In Progress", "in_progress", "in_progress", 7), "id": ids[7]})
+        s.append({**make_stage("Fixed On-Site", "fixed_onsite", "in_progress", 8), "id": ids[8]})
+        s.append({**make_stage("Billing Pending", "billing_pending", "waiting", 9), "id": ids[9]})
+        s.append({**make_stage("Resolved", "resolved", "terminal_success", 10), "id": ids[10]})
+        s.append({**make_stage("Cancelled", "cancelled", "terminal_failure", 11), "id": ids[11]})
+
+        s[0]["transitions"] = [make_trans("Assign Engineer", ids[1], "primary", "assign_engineer")]
+        s[1]["transitions"] = [make_trans("Record Diagnosis", ids[2], "primary", "diagnosis")]
+        s[2]["transitions"] = [make_trans("Send Quotation", ids[3], "primary", "quotation"), make_trans("Cancel", ids[11], "danger")]
+        s[3]["transitions"] = [make_trans("Customer Approved", ids[4], "success"), make_trans("Customer Rejected", ids[5], "danger")]
+        s[4]["transitions"] = [make_trans("Order Parts", ids[6], "primary", "parts_list"), make_trans("Start Work", ids[7], "success")]
+        s[6]["transitions"] = [make_trans("Parts Received - Start Work", ids[7], "success")]
+        s[7]["transitions"] = [make_trans("Fixed On-Site", ids[8], "success", "resolution")]
+        s[8]["transitions"] = [make_trans("Generate Bill", ids[9], "primary")]
+        s[9]["transitions"] = [make_trans("Mark Resolved", ids[10], "success")]
+
+        wf = {
+            "id": str(uuid.uuid4()), "organization_id": org_id,
+            "name": "Non-Warranty Workflow", "slug": "non-warranty",
+            "description": "For out-of-warranty devices. Requires quotation and customer approval.",
+            "stages": s, "is_active": True, "is_system": False,
+            "created_at": get_ist_isoformat(), "updated_at": get_ist_isoformat()
+        }
+        await _db.ticket_workflows.insert_one(wf)
+        created["workflows"].append({"id": wf["id"], "name": wf["name"]})
+
+        ht = {
+            "id": str(uuid.uuid4()), "organization_id": org_id,
+            "name": "Non-Warranty Repair", "slug": "non-warranty-repair",
+            "description": "Device out of warranty. Customer pays for parts and service.",
+            "icon": "alert-triangle", "color": "#EF4444", "category": "support",
+            "workflow_id": wf["id"], "default_priority": "medium",
+            "require_device": True, "is_active": True, "is_public": True,
+            "created_at": get_ist_isoformat(), "updated_at": get_ist_isoformat()
+        }
+        await _db.ticket_help_topics.insert_one(ht)
+        created["help_topics"].append({"id": ht["id"], "name": ht["name"]})
+
+    return {
+        "message": f"Created {len(created['workflows'])} workflows and {len(created['help_topics'])} help topics",
+        "created": created
+    }
+
+
+# ============================================================
 # TEAMS
 # ============================================================
 
@@ -889,10 +1169,46 @@ async def create_ticket(data: TicketCreateV2, admin: dict = Depends(get_current_
     
     # Get device name if provided
     device_name = None
+    device_warranty_type = None
     if data.device_id:
-        device = await _db.devices.find_one({"id": data.device_id}, {"_id": 0, "name": 1, "display_name": 1, "brand": 1, "model": 1, "serial_number": 1})
+        device = await _db.devices.find_one({"id": data.device_id}, {"_id": 0, "name": 1, "display_name": 1, "brand": 1, "model": 1, "serial_number": 1, "warranty_end_date": 1, "company_id": 1})
         if device:
             device_name = device.get("display_name") or f"{device.get('brand','')} {device.get('model','')}".strip() or device.get("name")
+            
+            # Auto-detect warranty type
+            from datetime import datetime as dt_cls, timezone as tz_cls, timedelta as td_cls
+            now = dt_cls.now(tz_cls(td_cls(hours=5, minutes=30)))
+            
+            # Check AMC
+            amc = await _db.amc_contracts.find_one(
+                {"organization_id": org_id, "$or": [{"device_id": data.device_id}, {"company_id": device.get("company_id")}], "status": "active"},
+                {"_id": 0, "end_date": 1, "amc_end_date": 1}
+            )
+            if amc:
+                end_date = amc.get("end_date") or amc.get("amc_end_date")
+                if end_date:
+                    try:
+                        end_dt = dt_cls.fromisoformat(str(end_date).replace('Z', '+00:00'))
+                        if end_dt.tzinfo is None:
+                            end_dt = end_dt.replace(tzinfo=tz_cls(td_cls(hours=5, minutes=30)))
+                        if end_dt > now:
+                            device_warranty_type = "amc"
+                    except (ValueError, TypeError):
+                        pass
+            
+            # Check brand warranty
+            if not device_warranty_type and device.get("warranty_end_date"):
+                try:
+                    w_dt = dt_cls.fromisoformat(str(device["warranty_end_date"]).replace('Z', '+00:00'))
+                    if w_dt.tzinfo is None:
+                        w_dt = w_dt.replace(tzinfo=tz_cls(td_cls(hours=5, minutes=30)))
+                    if w_dt > now:
+                        device_warranty_type = "oem_warranty"
+                except (ValueError, TypeError):
+                    pass
+            
+            if not device_warranty_type:
+                device_warranty_type = "non_warranty"
     
     # Get priority name
     priority_name = "medium"
@@ -935,6 +1251,7 @@ async def create_ticket(data: TicketCreateV2, admin: dict = Depends(get_current_
         device_id=data.device_id,
         device_name=device_name,
         device_description=data.device_description,
+        device_warranty_type=device_warranty_type,
         priority_name=priority_name,
         assigned_team_id=topic.get("default_team_id"),
         source=data.source,
