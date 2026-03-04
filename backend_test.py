@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timedelta
 
 class WarrantyPortalTester:
-    def __init__(self, base_url="https://asset-lifecycle-mgmt-1.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://service-hub-522.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.token = None
         self.tests_run = 0
