@@ -14,7 +14,7 @@ import {
   ClipboardList, UserCircle, Mail, Layers, AlertTriangle, Briefcase,
   HardDrive, FileBarChart, Globe, Lock, Sparkles, Monitor, BookOpen,
   UserCog, Keyboard, MessageSquare, User, Calendar, IndianRupee,
-  BarChart3, Headphones, Cable, Activity
+  BarChart3, Headphones, Cable, Activity, FolderKanban
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -40,6 +40,16 @@ const MODULES = [
       { path: '/admin/calendar', label: 'Calendar', icon: Calendar },
       { path: '/admin/ticketing-config', label: 'Ticketing Setup', icon: ClipboardList },
       { path: '/admin/renewal-alerts', label: 'Renewal Alerts', icon: AlertTriangle },
+    ],
+  },
+  {
+    id: 'projects',
+    label: 'Projects',
+    icon: FolderKanban,
+    path: '/admin/projects',
+    items: [
+      { path: '/admin/projects', label: 'All Projects', icon: FolderKanban },
+      { path: '/admin/project-templates', label: 'Task Templates', icon: ClipboardList },
     ],
   },
   {

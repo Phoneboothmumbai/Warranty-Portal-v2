@@ -85,6 +85,9 @@ import StaticPages from "./pages/admin/StaticPages";
 import UsageDashboard from "./pages/admin/UsageDashboard";
 import Analytics from "./pages/admin/Analytics";
 import CompanyDomains from "./pages/admin/CompanyDomains";
+import Projects from "./pages/admin/Projects";
+import ProjectDetail from "./pages/admin/ProjectDetail";
+import ProjectTemplates from "./pages/admin/ProjectTemplates";
 
 // Company Portal Pages
 import CompanyLayout from "./layouts/CompanyLayout";
@@ -225,6 +228,9 @@ function App() {
                     <Route path="static-pages" element={<StaticPages />} />
                     <Route path="usage" element={<UsageDashboard />} />
                     <Route path="analytics" element={<Analytics />} />
+                    <Route path="projects" element={<Projects />} />
+                    <Route path="projects/:projectId" element={<ProjectDetail />} />
+                    <Route path="project-templates" element={<ProjectTemplates />} />
                     <Route path="company-domains" element={<CompanyDomains />} />
                     <Route path="integrations/watchtower" element={<WatchTowerIntegration />} />
                     <Route path="integrations/moltbot" element={<MoltBotIntegration />} />

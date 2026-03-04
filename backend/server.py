@@ -9421,6 +9421,10 @@ from routes.engineer_visits import router as engineer_visits_router, init_db as 
 init_visits_db(db)
 app.include_router(engineer_visits_router, tags=["Engineer Visits"])
 
+from routes.projects import router as projects_router, init_db as init_projects_db
+init_projects_db(db)
+app.include_router(projects_router, prefix="/api", tags=["Project Management"])
+
 
 from routes.inventory import router as inventory_router
 app.include_router(inventory_router, tags=["Inventory"])
