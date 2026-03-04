@@ -5,20 +5,24 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 
 ## What's Been Implemented
 
+### P0 Feature Verification Complete (Mar 4, 2026)
+- **Customer Quotation Approval via Email**: Token-based public endpoints for approve/reject. Admin can send quotation emails from ticket detail. Customers click approve/deny buttons in email. Backend: POST /api/ticketing/tickets/{id}/send-quotation-email, GET /api/ticketing/quotation-response/{token}?action=approve|reject
+- **Engineer Portal Workflow Sync**: Progress bar with 13 stages, current stage highlighted, available transitions displayed. Backend: GET /api/engineer/ticket/{id}/workflow
+- **Help Topic -> Form Linking**: All 43 topics linked to forms. Dynamic form fields shown in Create Ticket modal when topic selected.
+- **Testing: 100% backend (10/10), 100% frontend (all flows verified)**
+
 ### Comprehensive Help Topic System (Mar 4, 2026)
 - **8 master categories**: Hardware & Devices, Software & OS, Network & Connectivity, Peripherals & Accessories, Service Requests, Warranty & AMC, Commercial & Billing, General
 - **43 help topics** covering all MSP/warranty scenarios with searchable tags
-- Full CRUD for categories (create, edit, delete, reorder)
-- Full CRUD for topics with: category linking, workflow linking, form linking, tags, priority, device requirement
-- Searchable topic selector in ticket creation (grouped by category, fuzzy search by name/description/tags)
-- Category filter pills on Ticketing Setup page
-- **Testing: 100% backend (14/14), 100% frontend**
+- Full CRUD for categories and topics
+- Searchable topic selector in ticket creation (grouped by category, fuzzy search)
+- **Testing: 100% (14/14 backend, all frontend)**
 
 ### Warranty-Based Workflow System (Mar 4, 2026)
 - 3 device-type workflows: OEM Warranty (8 stages), AMC Support (10 stages), Non-Warranty (12 stages)
-- Auto-detection engine: checks warranty dates + AMC contracts → assigns workflow
-- OEM Tracking Panel on ticket detail (case#, OEM engineer, brand reference, status)
-- **Testing: 100% backend (9/9), 100% frontend**
+- Auto-detection engine: checks warranty dates + AMC contracts -> assigns workflow
+- OEM Tracking Panel on ticket detail
+- **Testing: 100% (9/9 backend, all frontend)**
 
 ### WhatsApp + Email Notifications (Mar 2, 2026)
 - Stage-based notification panel with 5 team options via wa.me/ links
@@ -38,27 +42,31 @@ Build an enterprise-grade Warranty & Asset Tracking Portal with a highly configu
 - Database: MongoDB | Auth: JWT-based
 
 ## Key Collections
-- `help_topic_categories` — 8 master categories (CRUD)
-- `ticket_help_topics` — 43+ topics with category_id, tags, parent_id, workflow_id
-- `ticket_workflows` — 7 workflows including OEM, AMC, Non-Warranty
-- `tickets_v2` — with device_warranty_type and OEM tracking fields
+- `help_topic_categories` - 8 master categories (CRUD)
+- `ticket_help_topics` - 43+ topics with category_id, tags, parent_id, workflow_id, form_id
+- `ticket_workflows` - 7 workflows including OEM, AMC, Non-Warranty
+- `tickets_v2` - with device_warranty_type, OEM tracking fields
+- `quotation_approvals` - token-based customer approval records
 
 ## Prioritized Backlog
 
 ### P0 (Next)
-- Customer Quotation Approval via Email (approve/deny buttons for non-warranty flow)
-- Engineer portal sync with workflow-specific stages
-- Form Builder improvements (link forms to help topics)
+- Multi-tenant Customer Facing Portal (portal.aftersales.support/{tenant_code})
+- Form Builder UI (admin dynamic form creation/editing)
+- Workflow Designer UI (visual workflow editor)
+- Email Inbox UI (IMAP/SMTP)
 
 ### P1
 - Full CRUD for SLAs, Priorities, Canned Responses
 - Notification Engine (Email/In-app)
-- Quotation PDF Generation, Razorpay Integration
-- Email Inbox UI (IMAP/SMTP)
+- Quotation PDF Generation
+- Razorpay Integration
 
 ### P2
-- CompanySwitcher, server.py refactor, ESLint cleanup, scalability
+- CompanySwitcher for platform admins
+- server.py refactor & User/Staff model unification
+- ESLint warnings cleanup & legacy-peer-deps fix
 
 ## Credentials
 - Admin: ck@motta.in / Charu@123@
-- Test Engineer: testeng@test.com / Test@123
+- Test Engineer: test_engineer_1bfa72f0@test.com / Test@123
