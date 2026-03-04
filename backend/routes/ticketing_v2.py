@@ -964,9 +964,85 @@ async def seed_comprehensive_topics(admin: dict = Depends(get_current_admin)):
     }
 
 
-# ============================================================
-# TEAMS
-# ============================================================
+@router.post("/ticketing/auto-link-forms")
+async def auto_link_forms_to_topics(admin: dict = Depends(get_current_admin)):
+    """Automatically link forms to help topics based on category/name matching."""
+    org_id = admin.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="Organization context required")
+
+    # Build form lookup
+    forms = {}
+    async for f in _db.ticket_forms.find({"organization_id": org_id}, {"_id": 0, "id": 1, "slug": 1, "name": 1}):
+        forms[f.get("slug", "")] = f["id"]
+        forms[f["name"].lower()] = f["id"]
+
+    # Mapping rules: topic category/slug -> form slug
+    form_map = {
+        # Hardware topics -> On-Site Support Form
+        "hardware": forms.get("onsite_support_form"),
+        "laptop-repair": forms.get("onsite_support_form"),
+        "desktop-repair": forms.get("onsite_support_form"),
+        "server-issue": forms.get("onsite_support_form"),
+        "tablet-mobile": forms.get("onsite_support_form"),
+        "data-recovery": forms.get("onsite_support_form"),
+        # Software -> Remote Support Form
+        "software": forms.get("remote_support_form"),
+        "os-crash": forms.get("remote_support_form"),
+        "software-install": forms.get("remote_support_form"),
+        "virus-malware": forms.get("remote_support_form"),
+        "performance-issue": forms.get("remote_support_form"),
+        "email-config": forms.get("remote_support_form"),
+        "os-reinstall": forms.get("onsite_support_form"),
+        # Network -> Remote Support Form
+        "network": forms.get("remote_support_form"),
+        "internet-down": forms.get("remote_support_form"),
+        "vpn-issue": forms.get("remote_support_form"),
+        "network-setup": forms.get("onsite_support_form"),
+        "firewall-security": forms.get("remote_support_form"),
+        # Peripherals -> On-Site Support Form
+        "peripherals": forms.get("onsite_support_form"),
+        "printer-issue": forms.get("onsite_support_form"),
+        "monitor-issue": forms.get("onsite_support_form"),
+        "ups-power": forms.get("onsite_support_form"),
+        "cctv-surveillance": forms.get("onsite_support_form"),
+        "scanner-copier": forms.get("onsite_support_form"),
+        "access-control": forms.get("onsite_support_form"),
+        # Service -> Installation Form
+        "new-installation": forms.get("installation_form"),
+        "upgrade-request": forms.get("onsite_support_form"),
+        "preventive-maintenance": forms.get("onsite_support_form"),
+        "device-relocation": forms.get("installation_form"),
+        "asset-disposal": forms.get("general_inquiry_form"),
+        # Warranty -> Warranty Claim Form
+        "warranty-claim-oem": forms.get("warranty_claim_form"),
+        "amc-support": forms.get("warranty_claim_form"),
+        "non-warranty-repair": forms.get("warranty_claim_form"),
+        # Commercial
+        "amc-renewal": forms.get("quote_request_form"),
+        "billing-dispute": forms.get("complaint_form"),
+        # General
+        "escalation": forms.get("complaint_form"),
+        "training-request": forms.get("general_inquiry_form"),
+        "general-inquiry": forms.get("general_inquiry_form"),
+        "feedback": forms.get("feedback_form"),
+        "complaint": forms.get("complaint_form"),
+    }
+
+    updated = 0
+    async for topic in _db.ticket_help_topics.find(
+        {"organization_id": org_id, "$or": [{"form_id": None}, {"form_id": ""}, {"form_id": {"$exists": False}}]},
+        {"_id": 0, "id": 1, "slug": 1, "category": 1}
+    ):
+        form_id = form_map.get(topic.get("slug")) or form_map.get(topic.get("category"))
+        if form_id:
+            await _db.ticket_help_topics.update_one(
+                {"id": topic["id"]},
+                {"$set": {"form_id": form_id}}
+            )
+            updated += 1
+
+    return {"message": f"Linked forms to {updated} help topics"}
 
 @router.get("/ticketing/teams")
 async def list_teams(admin: dict = Depends(get_current_admin)):

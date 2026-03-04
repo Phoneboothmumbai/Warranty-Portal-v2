@@ -1223,16 +1223,36 @@ async def engineer_ticket_workflow(ticket_id: str, engineer: dict = Depends(get_
     # Get workflow from ticket's embedded workflow or from help topic
     workflow = ticket.get("workflow")
     if not workflow:
-        # Find help topic -> workflow
-        ht = await _db.ticket_help_topics.find_one(
-            {"id": ticket.get("help_topic_id"), "organization_id": org_id},
-            {"_id": 0, "workflow_id": 1}
-        )
+        # Try by help_topic_id first
+        ht = None
+        if ticket.get("help_topic_id"):
+            ht = await _db.ticket_help_topics.find_one(
+                {"id": ticket["help_topic_id"], "organization_id": org_id},
+                {"_id": 0, "workflow_id": 1}
+            )
+        # Fallback: try by help_topic_name
+        if not ht and ticket.get("help_topic_name"):
+            ht = await _db.ticket_help_topics.find_one(
+                {"name": ticket["help_topic_name"], "organization_id": org_id},
+                {"_id": 0, "workflow_id": 1}
+            )
         if ht and ht.get("workflow_id"):
             workflow = await _db.ticket_workflows.find_one(
                 {"id": ht["workflow_id"], "organization_id": org_id},
                 {"_id": 0}
             )
+        # Last fallback: find any workflow that contains the current stage
+        if not workflow and ticket.get("current_stage_name"):
+            async for wf in _db.ticket_workflows.find(
+                {"organization_id": org_id, "is_active": True},
+                {"_id": 0}
+            ):
+                for s in wf.get("stages", []):
+                    if s.get("name") == ticket["current_stage_name"]:
+                        workflow = wf
+                        break
+                if workflow:
+                    break
 
     if not workflow:
         return {"stages": [], "current_stage_id": ticket.get("current_stage_id"), "current_stage_name": ticket.get("current_stage_name")}
